@@ -1,0 +1,35 @@
+[
+  {
+    "category": "company",
+    "datetime": 1792076400,
+    "headline": "Apple unveils new MacBook Pro lineup",
+    "id": 131000001,
+    "image": "https://example.com/img/mbp.jpg",
+    "related": "AAPL",
+    "source": "Reuters",
+    "summary": "Apple announced an updated MacBook Pro.",
+    "url": "https://example.com/news/apple-macbook-pro"
+  },
+  {
+    "category": "company",
+    "datetime": 1791792000,
+    "headline": "Apple supplier shares rise on iPhone demand",
+    "id": 131000002,
+    "image": "",
+    "related": "AAPL",
+    "source": "Bloomberg",
+    "summary": "Suppliers rallied.",
+    "url": "https://example.com/news/apple-suppliers"
+  },
+  {
+    "category": "company",
+    "datetime": 1791979200,
+    "headline": "Big Tech earnings preview: Apple and Microsoft",
+    "id": 131000003,
+    "image": "",
+    "related": "AAPL,MSFT",
+    "source": "CNBC",
+    "summary": "What to expect.",
+    "url": "https://example.com/news/big-tech-preview"
+  }
+]

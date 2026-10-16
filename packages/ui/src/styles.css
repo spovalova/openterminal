@@ -1,1 +1,131 @@
+/*
+ * @terminal/ui design tokens. Dark only. The web app imports this file once.
+ * The same values live in src/tokens.ts for JS consumers (chart theme, views).
+ */
 @import "tailwindcss";
+
+@theme {
+  /* Reset Tailwind's default palette so only our tokens exist. */
+  --color-*: initial;
+
+  /* Surfaces: page → panel → raised. */
+  --color-bg: #0b0c0e;
+  --color-surface: #141518;
+  --color-surface-2: #1b1d21;
+  --color-surface-3: #23262b;
+
+  /* Hairlines. */
+  --color-border: #26282d;
+  --color-border-strong: #34373d;
+
+  /* Ink. fg 14.8:1, fg-2 7.3:1, fg-3 4.3:1 on surface. */
+  --color-fg: #e6e7ea;
+  --color-fg-2: #a0a4ab;
+  --color-fg-3: #7a7f88;
+
+  /* One accent (violet, kept off the series palette). 5.8:1 on surface. */
+  --color-accent: #9085e9;
+  --color-accent-fg: #0b0c0e;
+
+  /* Direction. UP 7.6:1, DOWN 5.4:1 on surface. */
+  --color-up: #2fbf6b;
+  --color-down: #f0575a;
+
+  /* Categorical palette for multi-symbol series, fixed order, never cycled.
+     Validated with the dataviz validator on surface #141518 (dark band, chroma,
+     adjacent CVD ΔE 8.4, normal-vision ΔE 19.3, contrast ≥ 3:1). */
+  --color-series-1: #3987e5;
+  --color-series-2: #d95926;
+  --color-series-3: #199e70;
+  --color-series-4: #c98500;
+  --color-series-5: #d55181;
+  --color-series-6: #008300;
+
+  /* 8px grid: spacing utilities step by 4px, so `2` is one unit. */
+  --spacing: 4px;
+  --spacing-unit: 8px;
+
+  /* 13px base type. */
+  --text-xs: 11px;
+  --text-xs--line-height: 16px;
+  --text-sm: 12px;
+  --text-sm--line-height: 16px;
+  --text-base: 13px;
+  --text-base--line-height: 20px;
+  --text-lg: 15px;
+  --text-lg--line-height: 22px;
+  --text-xl: 18px;
+  --text-xl--line-height: 24px;
+  --text-2xl: 24px;
+  --text-2xl--line-height: 30px;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+
+  --shadow-dialog: 0 16px 48px rgb(0 0 0 / 0.6), 0 0 0 1px var(--color-border-strong);
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  html,
+  body {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  #root {
+    min-height: 100%;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--color-accent) 35%, transparent);
+  }
+  :focus-visible {
+    outline: 1px solid var(--color-accent);
+    outline-offset: 1px;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  dialog::backdrop {
+    background: rgb(0 0 0 / 0.6);
+  }
+  kbd {
+    font-family: var(--font-mono);
+  }
+  a {
+    color: inherit;
+  }
+}
+
+/* Marker used by the view transition when the PromptBox moves from center to sidebar. */
+::view-transition-old(prompt-box),
+::view-transition-new(prompt-box) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}

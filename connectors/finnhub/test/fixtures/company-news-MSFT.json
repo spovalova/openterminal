@@ -1,0 +1,35 @@
+[
+  {
+    "category": "company",
+    "datetime": 1792143000,
+    "headline": "Microsoft expands Azure AI capacity",
+    "id": 131000010,
+    "image": "",
+    "related": "MSFT",
+    "source": "Reuters",
+    "summary": "New data centers.",
+    "url": "https://example.com/news/msft-azure"
+  },
+  {
+    "category": "company",
+    "datetime": 1791979200,
+    "headline": "Big Tech earnings preview: Apple and Microsoft",
+    "id": 131000003,
+    "image": "",
+    "related": "AAPL,MSFT",
+    "source": "CNBC",
+    "summary": "What to expect.",
+    "url": "https://example.com/news/big-tech-preview"
+  },
+  {
+    "category": "company",
+    "datetime": 1791921900,
+    "headline": "Microsoft raises Xbox prices",
+    "id": 131000011,
+    "image": "",
+    "related": "MSFT",
+    "source": "The Verge",
+    "summary": "Price changes.",
+    "url": "https://example.com/news/msft-xbox"
+  }
+]

@@ -1,8 +1,11 @@
 // M0 check: `pnpm query ohlcv AAPL 1d 3mo` prints a frame.
 // Usage: pnpm query search micron sandisk | quote MU SNDK | ohlcv MU 1d 3mo | news NVDA [limit] | earnings MU 2026-10-16 2026-12-15
+// Connectors come from ~/.terminal/config.yml (TERMINAL_HOME overrides the directory) when it exists, else yahoo only.
+import { existsSync } from 'node:fs'
 import { ConnectorRegistry, MemoryCache, type QueryInput } from '@terminal/core'
 import yahoo from '@terminal/connector-yahoo'
-import finnhub from '@terminal/connector-finnhub'
+import { configPath, loadConfig, terminalHome } from '../packages/server/src/config.js'
+import { buildRegistry } from '../packages/server/src/connectors.js'
 
 const [kind, ...rest] = process.argv.slice(2)
 if (!kind) {
@@ -31,9 +34,17 @@ function toQuery(): QueryInput {
   }
 }
 
-const registry = new ConnectorRegistry({ cache: new MemoryCache(), log: (m) => console.error(m) })
-registry.register(yahoo, {})
-if (process.env.FINNHUB_API_KEY) registry.register(finnhub, { apiKey: process.env.FINNHUB_API_KEY })
+const log = (m: string) => console.error(m)
+const home = terminalHome()
+let registry: ConnectorRegistry
+if (existsSync(configPath(home))) {
+  log(`connectors from ${configPath(home)}`)
+  registry = buildRegistry(loadConfig({ home }), { cache: new MemoryCache(), log })
+} else {
+  log('no config.yml; using yahoo only')
+  registry = new ConnectorRegistry({ cache: new MemoryCache(), log })
+  registry.register(yahoo, {})
+}
 
 const frame = await registry.run(toQuery())
 console.error(`${frame.rows.length} rows from ${frame.meta.connector} (ttl ${frame.meta.ttl}ms)`)

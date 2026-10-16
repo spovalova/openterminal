@@ -1,0 +1,18 @@
+/*
+ * Fallback tokens so the shell renders dark before @terminal/ui ships its @theme.
+ * The ui stylesheet is imported after this file, so any token it defines with the
+ * same name wins. Delete this file in Phase 2 once the ui tokens are final.
+ */
+@theme {
+  --color-bg: #0b0d10;
+  --color-surface: #12151a;
+  --color-raised: #181c23;
+  --color-border: #262b33;
+  --color-fg: #e6e8eb;
+  --color-muted: #8b93a1;
+  --color-accent: #6ea8fe;
+  --color-up: #3fb950;
+  --color-down: #f85149;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

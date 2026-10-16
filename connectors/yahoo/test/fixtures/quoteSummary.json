@@ -1,0 +1,52 @@
+{
+  "recordedAt": "2026-10-16T20:42:21.254Z",
+  "bySymbol": {
+    "MU": {
+      "calendarEvents": {
+        "maxAge": 1,
+        "earnings": {
+          "earningsDate": [
+            "2026-12-23T20:00:00.000Z"
+          ],
+          "earningsCallDate": [
+            "2026-09-30T22:00:00.000Z"
+          ],
+          "isEarningsDateEstimate": true,
+          "earningsAverage": 38.21235,
+          "earningsLow": 35.85,
+          "earningsHigh": 40.47,
+          "revenueAverage": 61666930780,
+          "revenueLow": 58065000000,
+          "revenueHigh": 65610000000
+        },
+        "exDividendDate": "2026-10-14T00:00:00.000Z",
+        "dividendDate": "2026-10-29T00:00:00.000Z"
+      }
+    },
+    "NVDA": {
+      "calendarEvents": {
+        "maxAge": 1,
+        "earnings": {
+          "earningsDate": [
+            "2026-11-17T20:00:00.000Z"
+          ],
+          "earningsCallDate": [
+            "2026-08-26T21:00:00.000Z"
+          ],
+          "isEarningsDateEstimate": false,
+          "earningsAverage": 2.47325,
+          "earningsLow": 2.34,
+          "earningsHigh": 2.7,
+          "revenueAverage": 108976837760,
+          "revenueLow": 104937000000,
+          "revenueHigh": 116251000000
+        },
+        "exDividendDate": "2026-09-10T00:00:00.000Z",
+        "dividendDate": "2026-10-01T00:00:00.000Z"
+      }
+    },
+    "SPY": {
+      "error": "Error: No fundamentals data found for symbol: SPY"
+    }
+  }
+}
