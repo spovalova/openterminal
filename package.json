@@ -1,0 +1,33 @@
+{
+  "name": "terminal-monorepo",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "description": "An open-source, local-first, AI-native terminal for retail traders.",
+  "license": "MIT",
+  "packageManager": "pnpm@10.34.7",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --if-present dev",
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "query": "tsx scripts/query.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.0.0",
+    "eslint": "^10.13.0",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.0",
+    "typescript-eslint": "^8.71.2",
+    "vitest": "^5.0.5",
+    "@terminal/core": "workspace:*",
+    "@terminal/connector-yahoo": "workspace:*",
+    "@terminal/connector-finnhub": "workspace:*"
+  }
+}

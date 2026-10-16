@@ -4,7 +4,7 @@ Repository: https://github.com/williammtan/terminal. Until code exists, this fil
 
 ## 0. Handoff
 
-**Status (2026-10-16).** Planning is complete. The repo holds this file and a README. There is no code and no scaffold. Nothing is waiting on the user except the product name.
+**Status (2026-10-16, later).** Phase 0 is done: the pnpm monorepo is scaffolded with every package and dependency declared, `packages/core` implements section 7.4 with 29 unit tests, yahoo-finance2 is probed (`docs/notes/yahoo-probe.md`), and every Phase 1 seam exists as a typed stub (`docs/notes/phase1-contracts.md`). `pnpm typecheck && pnpm test` are green. Phase 1 is next. Nothing is waiting on the user except the product name.
 
 **If you are taking over**, read this file once top to bottom, then:
 
@@ -24,12 +24,14 @@ Repository: https://github.com/williammtan/terminal. Until code exists, this fil
 - Layout feels like Cursor: a centered prompt that becomes a right sidebar after the first prompt (section 6).
 - US equities only. Yahoo is the zero-key connector so the app works on first run; Finnhub (free key) adds news and proves the contributor path.
 - Stack: Node 22, pnpm, TypeScript, Zod, Hono, Vite + React, Tailwind, lightweight-charts, cmdk, Vercel AI SDK, Vitest. MIT.
+- Phase 0 contract details, decided while writing core and reflected in section 7.4: `time` columns are epoch milliseconds; any cell may be null; `Stats.changePct` is `number | null` (null when the first value is 0); `Step` has an optional `error`; the `widgets` server message carries an optional workspace `name`; `Registry.run` takes `{ signal?, bypassCache? }`; `Cache.set` takes an optional ttl; the registry validates frame columns against the catalog by name, type, and order. Ports and seam signatures are in `docs/notes/phase1-contracts.md`.
+- Vercel AI SDK v7 and Zod 4 are what installed. Read the installed types in `node_modules` rather than remembering older APIs.
 
 **Open, in priority order.**
 
 - **Ask** Product name. The user's shortlist: Aerotyne, Sideways, Blotter, Candle. "Wally" is a candidate name for the agent persona. Keep `terminal` as the placeholder and keep it in one place (package scope and CLI bin) so renaming is one change.
 - Default model. Use the latest Claude Sonnet through the Vercel AI SDK; read the provider's current model list at build time instead of guessing an id.
-- yahoo-finance2 coverage. Verify in Phase 0 with a scratch script that the current version exposes search, quote with pre and post-market fields, chart at 5m for one day, and quoteSummary calendarEvents. Adjust the yahoo row in section 7 if not.
+- ~~yahoo-finance2 coverage.~~ Verified in Phase 0: search, quote with pre and post-market fields, chart at 5m and 1wk, and quoteSummary calendarEvents all work on 4.0.4. Chart takes period1/period2 only (no `range`), and intraday includes pre/post bars unless `includePrePost: false`. Details in `docs/notes/yahoo-probe.md`.
 
 **Reference material.** The visual reference is Instinct (instinct.xyz, YC, launched 2026-10-14): a dark terminal with a top tab bar of workspaces, a three-column grid of chart widgets each with edit, refresh, and expand actions, and a right chat panel whose reply links back to the workspace. Background: cordis (github.com/cordiverse/cordis) and DeepSeek Harness (github.com/deepseek-ai/deepseek-harness) for the plugin model to adopt later; OpenBB Workspace (docs.openbb.co/workspace) for the incumbent's widget and MCP model.
 
@@ -237,12 +239,12 @@ type View = { type: 'series'; candle?: boolean; normalize?: boolean } | { type: 
 type Widget = { id: string; title: string; size: 'lg' | 'md' | 'sm'; query: Query; view: View }
 
 // workspace.ts
-type Step = { tool: 'query' | 'set_workspace'; args: unknown; summary: string; ms: number }
+type Step = { tool: 'query' | 'set_workspace'; args: unknown; summary: string; ms: number; error?: string }
 type Message = { role: 'user' | 'agent'; text: string; steps?: Step[] }
 type Workspace = { id: string; name: string; widgets: Widget[]; messages: Message[]; createdAt: number; updatedAt: number }
 
 // preview.ts
-type Stats = { first: number; last: number; min: number; max: number; changePct: number }
+type Stats = { first: number; last: number; min: number; max: number; changePct: number | null }
 type Preview = { columns: Column[]; rowCount: number; rows: unknown[][]; stats: Record<string, Record<string, Stats>> } // symbol → column → stats
 function preview(frame: Frame): Preview
 
@@ -253,8 +255,8 @@ function defineConnector<C>(def: { name: string; config: ZodSchema<C>; queries: 
 function toFrame(kind: Kind, rows: Record<string, unknown>[], meta?: Partial<Frame['meta']>): Frame
 
 // registry.ts, cache.ts
-interface Registry { register(c: Connector, config: unknown): void; kinds(): Kind[]; run(q: Query): Promise<Frame> }
-interface Cache { get(q: Query): Frame | undefined; set(q: Query, f: Frame): void }
+interface Registry { register(c: Connector, config: unknown): RegisteredConnector; kinds(): Kind[]; connectors(): RegisteredConnector[]; run(q: QueryInput, opts?: { signal?: AbortSignal; bypassCache?: boolean }): Promise<Frame> }
+interface Cache { get(q: Query): Frame | undefined; set(q: Query, f: Frame, ttl?: number): void; delete(q: Query): void; clear(): void }
 
 // protocol.ts — one WebSocket per client
 type ClientMsg =
@@ -265,7 +267,7 @@ type ClientMsg =
 type ServerMsg =
   | { t: 'started'; workspaceId: string }
   | { t: 'step'; workspaceId: string; step: Step }
-  | { t: 'widgets'; workspaceId: string; widgets: Widget[] }
+  | { t: 'widgets'; workspaceId: string; widgets: Widget[]; name?: string }
   | { t: 'frame'; widgetId: string; frame: Frame }
   | { t: 'frameError'; widgetId: string; error: string }
   | { t: 'delta'; workspaceId: string; text: string }
