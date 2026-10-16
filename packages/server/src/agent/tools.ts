@@ -3,6 +3,7 @@ import { z } from 'zod'
 import {
   KIND_NAMES,
   QuerySchema,
+  KINDS,
   WidgetSchema,
   parseQuery,
   preview,
@@ -39,8 +40,25 @@ export type ToolDeps = {
 
 // ---------- input schemas, derived from core ----------
 
-/** `query` takes exactly a core Query: the kind discriminates the params. */
-export const QueryToolInput = QuerySchema
+/**
+ * `query` takes a core Query. The top level must be a plain object (the Anthropic API rejects a
+ * top-level anyOf), so the per-kind coupling is a union on `params` and parseQuery enforces the pair.
+ */
+export const QueryToolInput = z.object({
+  kind: z.enum(KIND_NAMES).describe('Which kind to run.'),
+  // Most specific first: a union member strips keys it does not know, so `news` before `earnings`
+  // would drop from/to. parseQuery validates the real (kind, params) pair in execute.
+  params: z
+    .union([
+      KINDS.search.params.describe('search: { q: string[] }'),
+      KINDS.earnings.params.describe('earnings: { symbols, from, to }'),
+      KINDS.ohlcv.params.describe('ohlcv: { symbols, interval, range }'),
+      KINDS.news.params.describe('news: { symbols, limit? }'),
+      KINDS.quote.params.describe('quote: { symbols }'),
+    ])
+    .describe('Params for the kind, exactly as the catalog lists them.'),
+})
+void QuerySchema
 
 const widgetShape = WidgetSchema.shape
 /** A Widget whose id is optional; ids are assigned (w1..wN) when missing or colliding. */

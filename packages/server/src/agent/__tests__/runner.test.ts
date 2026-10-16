@@ -291,7 +291,8 @@ describe('query tool', () => {
   })
 
   it('records a rejected step when the model sends input the schema refuses', async () => {
-    const turns: Turn[] = [{ toolCalls: [q('ohlcv', { symbols: ['MU'], interval: '2h', range: '3mo' })] }, { text: 'Retrying is left to the model.' }]
+    // symbols as a string matches no params shape, so the SDK refuses the input before execute.
+    const turns: Turn[] = [{ toolCalls: [q('ohlcv', { symbols: 'MU', interval: '1d', range: '3mo' } as never)] }, { text: 'Retrying is left to the model.' }]
     const { promise, model, fake } = run(turns)
     const message = await promise
     expect(fake.calls).toHaveLength(0)
