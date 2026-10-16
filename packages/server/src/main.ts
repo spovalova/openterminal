@@ -70,7 +70,7 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
     real = true
     log(`agent: ${llm.provider} ${llm.model}`)
   } else {
-    agent = createStubAgentRunner()
+    agent = createStubAgentRunner({ kinds: () => registry.kinds() })
     log('agent: stub (no LLM key in config.yml or ANTHROPIC_API_KEY / OPENAI_API_KEY); prompts return the canned memory workspace')
   }
 

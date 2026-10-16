@@ -29,14 +29,14 @@ export function Palette({ open, onClose, onConnectors }: { open: boolean; onClos
           value={query}
           onValueChange={setQuery}
           placeholder="Type a command, a workspace, or a ticker like MU…"
-          className="w-full border-b border-border bg-transparent px-2 py-2 text-fg outline-none placeholder:text-muted"
+          className="w-full border-b border-border bg-transparent px-2 py-2 text-fg outline-none placeholder:text-fg-2"
         />
-        <Command.List className="max-h-[50vh] overflow-y-auto py-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted [&_[cmdk-item]]:cursor-pointer [&_[cmdk-item]]:rounded [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-1.5 [&_[cmdk-item][data-selected=true]]:bg-raised">
-          <Command.Empty className="px-2 py-3 text-muted">Nothing matches.</Command.Empty>
+        <Command.List className="max-h-[50vh] overflow-y-auto py-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-fg-2 [&_[cmdk-item]]:cursor-pointer [&_[cmdk-item]]:rounded [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-1.5 [&_[cmdk-item][data-selected=true]]:bg-surface-2">
+          <Command.Empty className="px-2 py-3 text-fg-2">Nothing matches.</Command.Empty>
           {ticker && (
             <Command.Group heading="Ticker">
               <Command.Item value={`ticker ${ticker}`} onSelect={() => run(() => openTicker(ticker))}>
-                Overview of {ticker} <span className="text-muted">— new workspace</span>
+                Overview of {ticker} <span className="text-fg-2">— new workspace</span>
               </Command.Item>
             </Command.Group>
           )}
@@ -47,7 +47,7 @@ export function Palette({ open, onClose, onConnectors }: { open: boolean; onClos
             {state.workspaces.map((w) => (
               <Command.Item key={w.id} value={`jump ${w.name} ${w.id}`} onSelect={() => run(() => dispatch({ type: 'activate', id: w.id }))}>
                 {w.name}
-                {w.id === state.activeId && <span className="ml-2 text-muted">current</span>}
+                {w.id === state.activeId && <span className="ml-2 text-fg-2">current</span>}
               </Command.Item>
             ))}
           </Command.Group>

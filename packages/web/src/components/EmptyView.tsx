@@ -28,7 +28,7 @@ export function EmptyView({ workspace, ws }: { workspace: Workspace; ws: Workspa
       <div className="flex w-full max-w-[640px] flex-col gap-4 py-8">
         <div className="text-center">
           <h1 className="text-lg font-medium text-fg">What do you want to look at?</h1>
-          <p className="mt-1 text-muted">A question becomes a workspace: live widgets plus a reply that points at them.</p>
+          <p className="mt-1 text-fg-2">A question becomes a workspace: live widgets plus a reply that points at them.</p>
         </div>
         {noKeys && <NoKeys />}
         {ws.status === 'error' && ws.lastError && <ErrorBanner error={ws.lastError} onRetry={() => retry(workspace.id)} />}
@@ -48,7 +48,7 @@ export function EmptyView({ workspace, ws }: { workspace: Workspace; ws: Workspa
             </Chip>
           ))}
         </div>
-        <div className="text-center text-muted">
+        <div className="text-center text-fg-2">
           <Kbd>{MOD}</Kbd> <Kbd>K</Kbd> for the palette
         </div>
       </div>

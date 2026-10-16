@@ -103,7 +103,7 @@ export function App() {
       void api
         .widgetFrame(widget.id)
         .then((frame) => dispatch({ type: 'frameLoaded', widgetId: widget.id, frame }))
-        .catch(() => socket.refresh(widget.id))
+        .catch(() => socket.refresh(widget.id, activeWorkspace?.id))
     }
   }, [state.activeId, widgetKey, socket])
 
@@ -149,9 +149,9 @@ export function App() {
           <TabBar />
           <main className="relative flex min-h-0 flex-1">
             {!state.loaded ? (
-              <div className="flex flex-1 items-center justify-center text-muted">Loading…</div>
+              <div className="flex flex-1 items-center justify-center text-fg-2">Loading…</div>
             ) : !activeWorkspace ? (
-              <div className="flex flex-1 items-center justify-center text-muted">Creating a workspace…</div>
+              <div className="flex flex-1 items-center justify-center text-fg-2">Creating a workspace…</div>
             ) : layout === 'empty' ? (
               <div className="flex-1">
                 <EmptyView workspace={activeWorkspace} ws={activeWs} />
@@ -166,7 +166,7 @@ export function App() {
                 ) : (
                   <button
                     type="button"
-                    className="absolute top-2 right-2 z-10 rounded border border-border bg-surface px-2 py-1 text-muted hover:text-fg"
+                    className="absolute top-2 right-2 z-10 rounded border border-border bg-surface px-2 py-1 text-fg-2 hover:text-fg"
                     onClick={() => dispatch({ type: 'sidebar', open: true })}
                     title={`Show sidebar (${MOD}+\\)`}
                   >
@@ -176,9 +176,9 @@ export function App() {
               </>
             )}
           </main>
-          <footer className="flex items-center justify-between border-t border-border bg-surface px-3 py-1 text-muted">
+          <footer className="flex items-center justify-between border-t border-border bg-surface px-3 py-1 text-fg-2">
             <div className="flex items-center gap-2">
-              <span className={state.socket === 'open' ? 'text-up' : state.socket === 'connecting' ? 'text-muted' : 'text-down'} aria-hidden>
+              <span className={state.socket === 'open' ? 'text-up' : state.socket === 'connecting' ? 'text-fg-2' : 'text-down'} aria-hidden>
                 ●
               </span>
               <span>{state.socket === 'open' ? 'connected' : state.socket === 'connecting' ? 'connecting…' : 'disconnected, retrying'}</span>

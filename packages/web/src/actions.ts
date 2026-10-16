@@ -51,7 +51,7 @@ export function useActions() {
 
   const cancel = (workspaceId: string): void => socket.cancel(workspaceId)
 
-  const refreshWidget = (widgetId: string): void => socket.refresh(widgetId)
+  const refreshWidget = (widgetId: string, workspaceId?: string): void => socket.refresh(widgetId, workspaceId)
 
   /** Ticker shortcut from the palette: a new workspace named after the ticker, then "Overview of <ticker>". */
   const openTicker = async (ticker: string): Promise<void> => {
@@ -71,7 +71,7 @@ export function useActions() {
     const widgets = exists ? workspace.widgets.map((w) => (w.id === widget.id ? widget : w)) : [...workspace.widgets, widget]
     const saved = await api.patchWorkspace(workspaceId, { widgets })
     dispatch({ type: 'workspace', workspace: saved })
-    socket.refresh(widget.id)
+    socket.refresh(widget.id, workspaceId)
   }
 
   const removeWidget = async (workspaceId: string, widgetId: string): Promise<void> => {

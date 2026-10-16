@@ -65,6 +65,25 @@ describe('ConnectorRegistry', () => {
     await expect(r.run({ kind: 'quote', params: { symbols: ['MU'] } })).rejects.toThrow(/do not match catalog/)
   })
 
+  it('rejects cells whose type does not match the column', async () => {
+    const r = new ConnectorRegistry()
+    r.register(
+      defineConnector({ name: 'dates', config: z.object({}), queries: { ohlcv: async () => toFrame('ohlcv', [{ symbol: 'MU', time: new Date(), open: 1, high: 1, low: 1, close: 1, volume: 1 }]) } }),
+      {},
+    )
+    await expect(r.run({ kind: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '1mo' } })).rejects.toThrow(/column time: expected time, got Date/)
+    r.register(defineConnector({ name: 'strs', config: z.object({}), queries: { quote: async () => toFrame('quote', [{ symbol: 'MU', price: '10' }]) } }), {})
+    await expect(r.run({ kind: 'quote', params: { symbols: ['MU'] } })).rejects.toThrow(/column price: expected number, got string/)
+  })
+
+  it('keeps routing priority when a connector is re-registered', async () => {
+    const r = new ConnectorRegistry()
+    r.register(needsKey, {})
+    r.register(good, {})
+    r.register(needsKey, { apiKey: 'k' })
+    expect(r.connectors().map((c) => c.name)).toEqual(['keyed', 'good'])
+  })
+
   it('rejects invalid queries before touching connectors', async () => {
     const r = new ConnectorRegistry()
     r.register(good, {})

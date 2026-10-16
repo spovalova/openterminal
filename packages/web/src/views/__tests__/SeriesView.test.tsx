@@ -2,7 +2,7 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { preview, type Frame } from '@terminal/core'
-import { makeChartsMock, makeUiMock, DOWN, UP } from './mocks'
+import { DOWN, UP } from './mocks'
 
 const charts = vi.hoisted(() => ({ current: null as null | ReturnType<typeof import('./mocks')['makeChartsMock']> }))
 vi.mock('lightweight-charts', async () => {

@@ -27,14 +27,14 @@ export function WidgetCell({ widget, workspaceId }: { widget: Widget; workspaceI
         error={error}
         empty={!!frame && frame.rows.length === 0}
         onEdit={() => setEditing(true)}
-        onRefresh={() => refreshWidget(widget.id)}
+        onRefresh={() => refreshWidget(widget.id, workspaceId)}
         onExpand={() => setExpanded(true)}
       >
         {frame && <View widget={widget} frame={frame} />}
       </WidgetFrame>
 
       <Dialog open={expanded} onClose={() => setExpanded(false)} title={widget.title}>
-        <div className="h-[70vh] w-[min(90vw,1200px)] min-h-0">{frame ? <View widget={widget} frame={frame} /> : <div className="text-muted">{error ?? 'Loading…'}</div>}</div>
+        <div className="h-[70vh] w-[min(90vw,1200px)] min-h-0">{frame ? <View widget={widget} frame={frame} /> : <div className="text-fg-2">{error ?? 'Loading…'}</div>}</div>
       </Dialog>
 
       <WidgetEditor open={editing} onClose={() => setEditing(false)} workspaceId={workspaceId} widget={widget} />

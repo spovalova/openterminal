@@ -27,7 +27,7 @@ export function Sidebar({ workspace, ws }: { workspace: Workspace; ws: Workspace
   return (
     <aside className="sidebar flex h-full flex-col border-l border-border bg-surface" aria-label="Conversation">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <span className="text-[11px] uppercase tracking-wide text-muted">Conversation</span>
+        <span className="text-[11px] uppercase tracking-wide text-fg-2">Conversation</span>
         <IconButton label={`Hide sidebar (${MOD}+\\)`} onClick={() => dispatch({ type: 'sidebar', open: false })}>
           ×
         </IconButton>
@@ -35,7 +35,7 @@ export function Sidebar({ workspace, ws }: { workspace: Workspace; ws: Workspace
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-3">
         {messages.length === 0 && ws.status !== 'streaming' && !ws.sending && (
-          <div className="text-muted">Ask a follow-up to rewrite the workspace. The agent sees the current widgets.</div>
+          <div className="text-fg-2">Ask a follow-up to rewrite the workspace. The agent sees the current widgets.</div>
         )}
         {messages.map((m, i) => (
           <MessageView key={i} message={m} workspace={workspace} durationMs={i === lastAgentIndex && ws.lastRunMs != null ? ws.lastRunMs : undefined} />
@@ -45,10 +45,10 @@ export function Sidebar({ workspace, ws }: { workspace: Workspace; ws: Workspace
         {ws.status === 'streaming' && (
           <div className="flex flex-col gap-2">
             <Steps steps={ws.steps} durationMs={elapsed} defaultOpen={false} />
-            {ws.streamingText ? <Reply text={ws.streamingText} widgets={workspace.widgets} streaming /> : <div className="text-muted">Working…</div>}
+            {ws.streamingText ? <Reply text={ws.streamingText} widgets={workspace.widgets} streaming /> : <div className="text-fg-2">Working…</div>}
           </div>
         )}
-        {ws.sending && ws.status !== 'streaming' && <div className="text-muted">Sending…</div>}
+        {ws.sending && ws.status !== 'streaming' && <div className="text-fg-2">Sending…</div>}
       </div>
 
       <div className="flex flex-col gap-2 border-t border-border p-3">
@@ -72,7 +72,7 @@ function MessageView({ message, workspace, durationMs }: { message: Message; wor
 }
 
 function UserMessage({ text }: { text: string }) {
-  return <div className="self-end rounded bg-raised px-3 py-2 text-fg whitespace-pre-wrap max-w-[90%]">{text}</div>
+  return <div className="self-end rounded bg-surface-2 px-3 py-2 text-fg whitespace-pre-wrap max-w-[90%]">{text}</div>
 }
 
 function useElapsed(startedAt: number | null): number {

@@ -1,6 +1,6 @@
 // An AgentRunner that never calls an LLM: two fake steps, then use case A's widget set (PLAN.md section 5).
 // Used when no LLM key is configured and in tests.
-import type { AgentRunner, Message, ServerMsg, Step, Widget } from '@terminal/core'
+import type { AgentRunner, Kind, Message, ServerMsg, Step, Widget } from '@terminal/core'
 
 export const STUB_SYMBOLS = ['MU', 'SNDK', 'WDC', 'STX'] as const
 export const STUB_WORKSPACE_NAME = 'Memory'
@@ -28,7 +28,13 @@ export const STUB_REPLY =
   'MU, SNDK, WDC, and STX over three months, MU daily, a basket snapshot, upcoming earnings, and news. ' +
   'Add an LLM key to ~/.terminal/config.yml to get real answers. [[widget:memory-3mo]] [[widget:memory-news]]'
 
-export type StubAgentOptions = { now?: () => Date; /** Pause between emitted messages, for a visible sequence in the UI. */ delayMs?: number }
+export type StubAgentOptions = {
+  now?: () => Date
+  /** Pause between emitted messages, for a visible sequence in the UI. */
+  delayMs?: number
+  /** Kinds a connector can answer right now; widgets on other kinds are left out (e.g. news without a Finnhub key). */
+  kinds?: () => Kind[]
+}
 
 export function createStubAgentRunner(opts: StubAgentOptions = {}): AgentRunner {
   const now = opts.now ?? (() => new Date())
@@ -47,10 +53,13 @@ export function createStubAgentRunner(opts: StubAgentOptions = {}): AgentRunner 
         emit(m)
       }
       for (const step of steps) await send({ t: 'step', workspaceId, step })
-      const widgets = stubWidgets(now())
+      const answerable = opts.kinds?.()
+      const widgets = stubWidgets(now()).filter((w) => !answerable || answerable.includes(w.query.kind))
       await send({ t: 'widgets', workspaceId, widgets, name: STUB_WORKSPACE_NAME })
       if (signal.aborted) throw new Error('cancelled')
-      const message: Message = { role: 'agent', text: STUB_REPLY, steps, at: now().getTime() }
+      const ids = new Set(widgets.map((w) => w.id))
+      const text = STUB_REPLY.replace(/\s*\[\[widget:([^\]]+)\]\]/g, (m, id: string) => (ids.has(id) ? m : ''))
+      const message: Message = { role: 'agent', text, steps, at: now().getTime() }
       return message
     },
   }

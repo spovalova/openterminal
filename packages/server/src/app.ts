@@ -194,7 +194,7 @@ export function createApp(deps: AppDeps) {
             inflight.get(msg.workspaceId)?.controller.abort()
             break
           case 'refresh':
-            await this.refresh(msg.widgetId)
+            await this.refresh(msg.widgetId, msg.workspaceId)
             break
           case 'focus':
             await this.focus(msg.workspaceId)
@@ -215,14 +215,16 @@ export function createApp(deps: AppDeps) {
       await this.poller.focus(workspace)
     }
 
-    private async refresh(widgetId: string) {
+    private async refresh(widgetId: string, workspaceId?: string) {
       if (await this.poller.refresh(widgetId)) return
-      const found = await store.findWidget(widgetId)
-      if (!found) {
+      // Widget ids are unique only within a workspace, so prefer the workspace the client names.
+      const scoped = workspaceId ? (await store.get(workspaceId))?.widgets.find((w) => w.id === widgetId) : undefined
+      const widget = scoped ?? (await store.findWidget(widgetId))?.widget
+      if (!widget) {
         this.send({ t: 'frameError', widgetId, error: 'widget not found' })
         return
       }
-      await executor.run(found.widget, this.send, { bypassCache: true })
+      await executor.run(widget, this.send, { bypassCache: true })
     }
 
     /** started → step… → widgets (persist, execute, frame…) → done; failed replaces anything after started. */

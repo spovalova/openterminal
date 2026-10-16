@@ -91,7 +91,6 @@ export const SeriesView: FC<ViewProps> = ({ widget, frame }) => {
       chart.remove()
     }
     // theme is a module constant
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, intraday, empty])
 
   // (Re)load series whenever the data changes; fit the visible range to it.

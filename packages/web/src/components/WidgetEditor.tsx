@@ -161,7 +161,7 @@ export function WidgetEditor({ open, onClose, workspaceId, widget }: { open: boo
                 </option>
               ))}
             </select>
-            <div className="mt-1 text-muted">{KINDS[draft.kind].description}</div>
+            <div className="mt-1 text-fg-2">{KINDS[draft.kind].description}</div>
           </Field>
           <Field label="Size">
             <select className={inputCls} value={draft.size} onChange={(e) => set('size', e.target.value as Size)}>
@@ -284,7 +284,7 @@ const inputCls = 'w-full rounded border border-border bg-bg px-2 py-1 text-fg ou
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[11px] uppercase tracking-wide text-muted">{label}</span>
+      <span className="text-[11px] uppercase tracking-wide text-fg-2">{label}</span>
       {children}
     </label>
   )

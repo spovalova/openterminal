@@ -4,7 +4,13 @@ Repository: https://github.com/williammtan/terminal. Until code exists, this fil
 
 ## 0. Handoff
 
-**Status (2026-10-16, later).** Phase 0 is done: the pnpm monorepo is scaffolded with every package and dependency declared, `packages/core` implements section 7.4 with 29 unit tests, yahoo-finance2 is probed (`docs/notes/yahoo-probe.md`), and every Phase 1 seam exists as a typed stub (`docs/notes/phase1-contracts.md`). `pnpm typecheck && pnpm test` are green. Phase 1 is next. Nothing is waiting on the user except the product name.
+**Status (2026-10-16, evening).** Phases 0 and 1 are done and Phase 2 is partly done. Every package is built, `pnpm typecheck`, `pnpm test` (191 tests across 28 files, no network), and `pnpm lint` are green, and the integrated stack runs: `node packages/cli/bin/terminal.js` starts the server, serves the built web app, and with the stub agent use case A's prompt produces `started → step → widgets → frame ×4 → done` over the socket with live Yahoo data in under half a second (verified with a socket script, not in a browser). What remains of Phase 2 and all of Phase 3 is blocked on things only the user has:
+
+- **Ask** An LLM key (`ANTHROPIC_API_KEY` in the environment or `llm:` in `~/.terminal/config.yml`). Without it the real agent loop has only been exercised against the AI SDK's mock model; use cases A, B, and C with the real model, and the per-use-case verifiers, have not run.
+- **Ask** A free Finnhub key, so `news` is answerable; the finnhub connector has never hit the live API (fixtures are hand-written from the docs). `FINNHUB_API_KEY=… pnpm --filter @terminal/connector-finnhub smoke` is the check.
+- **Ask** One look at the web app in a browser (`pnpm dev` then http://localhost:5173, or the CLI on :4242) and at the ui preview (`pnpm --filter @terminal/ui dev`, :5174). This machine has no browser, so the shell, grid, view transition, charts, and palette have been verified by typecheck, jsdom tests, and build only.
+
+Phase 2 integration changes already made: web token classes renamed to the ui's names and the web fallback theme deleted; views tests folded into the web package's Vitest config; `ConnectorRegistry.register` keeps a connector's routing priority when it is re-registered (saving a key no longer demotes it); `validateFrame` checks every non-null cell's type against its column (a `Date` in a `time` column is now rejected at the registry); the `refresh` client message carries an optional `workspaceId` because widget ids are only unique within a workspace; the stub agent leaves out widgets on kinds no connector answers.
 
 **If you are taking over**, read this file once top to bottom, then:
 
@@ -29,8 +35,8 @@ Repository: https://github.com/williammtan/terminal. Until code exists, this fil
 
 **Open, in priority order.**
 
-- **Ask** Product name. The user's shortlist: Aerotyne, Sideways, Blotter, Candle. "Wally" is a candidate name for the agent persona. Keep `terminal` as the placeholder and keep it in one place (package scope and CLI bin) so renaming is one change.
-- Default model. Use the latest Claude Sonnet through the Vercel AI SDK; read the provider's current model list at build time instead of guessing an id.
+- **Ask** Product name (unchanged). The user's shortlist: Aerotyne, Sideways, Blotter, Candle. "Wally" is a candidate name for the agent persona. Keep `terminal` as the placeholder and keep it in one place (package scope and CLI bin) so renaming is one change.
+- Default model: `claude-sonnet-5-5` for anthropic and `gpt-6-luna` for openai, read from the installed provider packages' model id unions on 2026-10-16 and kept in `DEFAULT_MODEL` in `packages/server/src/agent/index.ts` (the server's `config.ts` mirrors it; collapse to one place when touching either).
 - ~~yahoo-finance2 coverage.~~ Verified in Phase 0: search, quote with pre and post-market fields, chart at 5m and 1wk, and quoteSummary calendarEvents all work on 4.0.4. Chart takes period1/period2 only (no `range`), and intraday includes pre/post bars unless `includePrePost: false`. Details in `docs/notes/yahoo-probe.md`.
 
 **Reference material.** The visual reference is Instinct (instinct.xyz, YC, launched 2026-10-14): a dark terminal with a top tab bar of workspaces, a three-column grid of chart widgets each with edit, refresh, and expand actions, and a right chat panel whose reply links back to the workspace. Background: cordis (github.com/cordiverse/cordis) and DeepSeek Harness (github.com/deepseek-ai/deepseek-harness) for the plugin model to adopt later; OpenBB Workspace (docs.openbb.co/workspace) for the incumbent's widget and MCP model.
@@ -262,7 +268,7 @@ interface Cache { get(q: Query): Frame | undefined; set(q: Query, f: Frame, ttl?
 type ClientMsg =
   | { t: 'prompt'; workspaceId: string; text: string }
   | { t: 'cancel'; workspaceId: string }
-  | { t: 'refresh'; widgetId: string }
+  | { t: 'refresh'; widgetId: string; workspaceId?: string }
   | { t: 'focus'; workspaceId: string }
 type ServerMsg =
   | { t: 'started'; workspaceId: string }

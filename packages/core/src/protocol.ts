@@ -7,7 +7,7 @@ import { WidgetSchema } from './widget.js'
 export const ClientMsgSchema = z.discriminatedUnion('t', [
   z.object({ t: z.literal('prompt'), workspaceId: z.string(), text: z.string().min(1) }),
   z.object({ t: z.literal('cancel'), workspaceId: z.string() }),
-  z.object({ t: z.literal('refresh'), widgetId: z.string() }),
+  z.object({ t: z.literal('refresh'), widgetId: z.string(), workspaceId: z.string().optional() }),
   z.object({ t: z.literal('focus'), workspaceId: z.string() }),
 ])
 export type ClientMsg = z.infer<typeof ClientMsgSchema>

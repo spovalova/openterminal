@@ -4,7 +4,7 @@ import type { RegisteredConnector } from '@terminal/core'
 import { api } from '../api'
 
 const STATUS_LABEL: Record<RegisteredConnector['status'], string> = { ok: 'ok', missing_config: 'missing key', error: 'error' }
-const STATUS_CLASS: Record<RegisteredConnector['status'], string> = { ok: 'text-up', missing_config: 'text-muted', error: 'text-down' }
+const STATUS_CLASS: Record<RegisteredConnector['status'], string> = { ok: 'text-up', missing_config: 'text-fg-2', error: 'text-down' }
 
 /** Lists every connector with its status and a key field that PUTs the config. */
 export function ConnectorsPage({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -26,12 +26,12 @@ export function ConnectorsPage({ open, onClose }: { open: boolean; onClose: () =
   return (
     <Dialog open={open} onClose={onClose} title="Connectors">
       <div className="flex w-[min(90vw,560px)] flex-col gap-3">
-        <p className="text-muted">
+        <p className="text-fg-2">
           Connectors answer kinds from an external source. Keys stay on this machine in <code className="font-mono">~/.terminal/config.yml</code>.
         </p>
         {error && <div className="text-down">{error}</div>}
         {!connectors && !error && <Spinner />}
-        {connectors?.length === 0 && <div className="text-muted">No connectors configured.</div>}
+        {connectors?.length === 0 && <div className="text-fg-2">No connectors configured.</div>}
         {connectors?.map((c) => (
           <ConnectorRow key={c.name} connector={c} onSaved={(saved) => setConnectors((cs) => cs?.map((x) => (x.name === saved.name ? saved : x)) ?? null)} />
         ))}
@@ -66,11 +66,11 @@ function ConnectorRow({ connector, onSaved }: { connector: RegisteredConnector; 
       <div className="flex items-center justify-between gap-2">
         <div>
           <span className="font-medium text-fg">{connector.name}</span>
-          <span className="ml-2 text-muted">{connector.kinds.join(', ')}</span>
+          <span className="ml-2 text-fg-2">{connector.kinds.join(', ')}</span>
         </div>
         <span className={STATUS_CLASS[connector.status]}>{STATUS_LABEL[connector.status]}</span>
       </div>
-      {connector.error && <div className="text-muted">{connector.error}</div>}
+      {connector.error && <div className="text-fg-2">{connector.error}</div>}
       <div className="flex gap-2">
         <input
           className="flex-1 rounded border border-border bg-surface px-2 py-1 font-mono text-fg outline-none focus:border-accent"
@@ -84,7 +84,7 @@ function ConnectorRow({ connector, onSaved }: { connector: RegisteredConnector; 
           {saving ? 'Saving…' : 'Save'}
         </Button>
       </div>
-      {message && <div className="text-muted">{message}</div>}
+      {message && <div className="text-fg-2">{message}</div>}
     </form>
   )
 }

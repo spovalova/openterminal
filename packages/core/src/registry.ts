@@ -58,8 +58,10 @@ export class ConnectorRegistry implements Registry {
       config: parsed.success ? parsed.data : undefined,
       log: (msg) => this.log(`[${c.name}] ${msg}`),
     }
-    this.entries = this.entries.filter((e) => e.connector.name !== c.name)
-    this.entries.push({ connector: c, ctx, info })
+    // Re-registering (for example after a key is saved) keeps the connector's routing priority.
+    const existing = this.entries.findIndex((e) => e.connector.name === c.name)
+    if (existing >= 0) this.entries[existing] = { connector: c, ctx, info }
+    else this.entries.push({ connector: c, ctx, info })
     return info
   }
 
@@ -102,7 +104,7 @@ export class ConnectorRegistry implements Registry {
   }
 }
 
-/** Validates the frame's columns against the catalog exactly (names, types, order) and stamps meta. */
+/** Validates columns against the catalog exactly (names, types, order), checks every non-null cell's type, and stamps meta. */
 export function validateFrame(q: Query, frame: Frame, connector: string): Frame {
   const expected = KINDS[q.kind].columns
   const got = frame.columns
@@ -112,8 +114,17 @@ export function validateFrame(q: Query, frame: Frame, connector: string): Frame 
       `frame columns for ${q.kind} do not match catalog. expected [${expected.map((c) => c.name).join(', ')}] got [${got.map((c) => c.name).join(', ')}]`,
     )
   }
-  for (const row of frame.rows) {
-    if (row.length !== expected.length) throw new Error(`row has ${row.length} cells, expected ${expected.length}`)
-  }
+  frame.rows.forEach((row, r) => {
+    if (row.length !== expected.length) throw new Error(`row ${r} has ${row.length} cells, expected ${expected.length}`)
+    row.forEach((cell, i) => {
+      if (cell === null || cell === undefined) return
+      const want = expected[i]!.type
+      const ok =
+        want === 'string' ? typeof cell === 'string'
+        : want === 'boolean' ? typeof cell === 'boolean'
+        : typeof cell === 'number' && Number.isFinite(cell) // number and time (epoch ms)
+      if (!ok) throw new Error(`row ${r} column ${expected[i]!.name}: expected ${want}, got ${cell instanceof Date ? 'Date' : typeof cell}`)
+    })
+  })
   return { ...frame, meta: { connector, fetchedAt: frame.meta?.fetchedAt ?? Date.now(), ttl: ttlFor(q) } }
 }

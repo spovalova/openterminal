@@ -1,7 +1,7 @@
 /** Shown in the Empty state when /api/health reports llm: false. Prompts still run against the stub agent. */
 export function NoKeys() {
   return (
-    <div className="rounded border border-border bg-surface px-3 py-2 text-muted">
+    <div className="rounded border border-border bg-surface px-3 py-2 text-fg-2">
       <div className="text-fg">No LLM key configured.</div>
       <div className="mt-1">
         Add one to <code className="font-mono text-fg">~/.terminal/config.yml</code> (or <code className="font-mono">$TERMINAL_HOME/config.yml</code>) and

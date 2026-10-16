@@ -1,4 +1,3 @@
-@import './theme-fallback.css';
 @import '@terminal/ui/styles.css';
 @source '../../ui/src';
 

@@ -96,8 +96,8 @@ export class TerminalSocket {
   cancel(workspaceId: string): void {
     this.send({ t: 'cancel', workspaceId })
   }
-  refresh(widgetId: string): void {
-    this.send({ t: 'refresh', widgetId })
+  refresh(widgetId: string, workspaceId?: string): void {
+    this.send(workspaceId ? { t: 'refresh', widgetId, workspaceId } : { t: 'refresh', widgetId })
   }
   focus(workspaceId: string): void {
     this.send({ t: 'focus', workspaceId })
