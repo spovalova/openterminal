@@ -5,15 +5,13 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { Document, parse, parseDocument, isMap, isSeq, YAMLSeq } from 'yaml'
 import { z } from 'zod'
+import { DEFAULT_MODEL } from './agent/index.js'
 
 export const PROVIDERS = ['anthropic', 'openai'] as const
 export type Provider = (typeof PROVIDERS)[number]
 
-/** Model used when config.yml names a provider but no model. */
-export const DEFAULT_MODELS: Record<Provider, string> = {
-  anthropic: 'claude-sonnet-5-5',
-  openai: 'gpt-5',
-}
+/** Model used when config.yml names a provider but no model. Defined once in agent/index.ts. */
+export const DEFAULT_MODELS: Record<Provider, string> = DEFAULT_MODEL
 
 const ENV_KEYS: Record<Provider, string> = { anthropic: 'ANTHROPIC_API_KEY', openai: 'OPENAI_API_KEY' }
 

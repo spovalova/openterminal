@@ -8,11 +8,12 @@ import { createRunner } from './runner.js'
 export type LlmConfig = { provider: 'anthropic' | 'openai'; model: string; apiKey: string }
 
 /**
- * Model used when config.yml gives a provider but no model id. Chosen from the provider packages'
- * model id unions: the current mid-tier model of each provider (PLAN.md: "latest Claude Sonnet").
+ * Model used when config.yml gives a provider but no model id. The one place this is defined;
+ * config.ts re-exports it. Ids come from the provider packages' model id unions. The user chose
+ * Opus 5.5 for anthropic on 2026-10-17 (was Sonnet 5.5).
  */
 export const DEFAULT_MODEL: Record<LlmConfig['provider'], string> = {
-  anthropic: 'claude-sonnet-5-5',
+  anthropic: 'claude-opus-5-5',
   openai: 'gpt-6-luna',
 }
 
