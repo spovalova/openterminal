@@ -17,7 +17,7 @@ describe('config', () => {
     const cfg = loadConfig({ home, env: {} })
     expect(existsSync(configPath(home))).toBe(true)
     expect(existsSync(workspacesDir(home))).toBe(true)
-    expect(cfg.connectors).toEqual([{ name: 'yahoo' }])
+    expect(cfg.connectors).toEqual([{ name: 'openbb' }, { name: 'yahoo' }])
     expect(cfg.llm).toBeUndefined()
   })
 
@@ -46,11 +46,11 @@ describe('config', () => {
   it('writes a connector config back, keeping comments, and updates in place', () => {
     loadConfig({ home, env: {} })
     let cfg = saveConnectorConfig(home, 'finnhub', { apiKey: 'abc' })
-    expect(cfg.connectors).toEqual([{ name: 'yahoo' }, { name: 'finnhub', config: { apiKey: 'abc' } }])
+    expect(cfg.connectors).toEqual([{ name: 'openbb' }, { name: 'yahoo' }, { name: 'finnhub', config: { apiKey: 'abc' } }])
     const text = readFileSync(configPath(home), 'utf8')
     expect(text).toContain('Keys never leave this machine')
     cfg = saveConnectorConfig(home, 'finnhub', { apiKey: 'def' })
-    expect(cfg.connectors).toEqual([{ name: 'yahoo' }, { name: 'finnhub', config: { apiKey: 'def' } }])
-    expect(loadConfig({ home, env: {} }).connectors).toHaveLength(2)
+    expect(cfg.connectors).toEqual([{ name: 'openbb' }, { name: 'yahoo' }, { name: 'finnhub', config: { apiKey: 'def' } }])
+    expect(loadConfig({ home, env: {} }).connectors).toHaveLength(3)
   })
 })

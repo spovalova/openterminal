@@ -3,14 +3,19 @@ import { createHttp, type Connector, type Ctx, type Http } from './connector.js'
 import type { Frame } from './frame.js'
 import { KINDS, KIND_NAMES, parseQuery, ttlFor, type Kind, type Query, type QueryInput } from './kinds.js'
 
-export type ConnectorStatus = 'ok' | 'missing_config' | 'error'
+/** `unreachable` is reported by health probes (see Registry.health), never by registration itself. */
+export type ConnectorStatus = 'ok' | 'missing_config' | 'unreachable' | 'error'
 
 export type RegisteredConnector = {
   name: string
   kinds: Kind[]
   status: ConnectorStatus
   error?: string
+  /** One line from the connector's health probe, when it has one and it passed. */
+  detail?: string
 }
+
+export type HealthResult = { ok: true; detail?: string } | { ok: false; error: string }
 
 export interface Registry {
   /** Register a connector with its raw config. Registration order is routing priority. */
@@ -20,6 +25,8 @@ export interface Registry {
   connectors(): RegisteredConnector[]
   /** Validate the query, serve from cache, else try connectors in order and validate the frame. */
   run(q: QueryInput, opts?: { signal?: AbortSignal; bypassCache?: boolean }): Promise<Frame>
+  /** Run a registered connector's health probe (ok when it has none). Unknown or unconfigured connectors are not ok. */
+  health?(name: string, opts?: { timeoutMs?: number }): Promise<HealthResult>
 }
 
 export class RegistryError extends Error {
@@ -73,6 +80,26 @@ export class ConnectorRegistry implements Registry {
 
   connectors(): RegisteredConnector[] {
     return this.entries.map((e) => ({ ...e.info }))
+  }
+
+  async health(name: string, opts: { timeoutMs?: number } = {}): Promise<HealthResult> {
+    const e = this.entries.find((x) => x.connector.name === name)
+    if (!e) return { ok: false, error: `connector "${name}" is not registered` }
+    if (e.info.status !== 'ok') return { ok: false, error: e.info.error ?? e.info.status }
+    const probe = e.connector.health
+    if (!probe) return { ok: true }
+    const ac = new AbortController()
+    const timeoutMs = opts.timeoutMs ?? 2_000
+    const timer = setTimeout(() => ac.abort(new Error(`health probe timed out after ${timeoutMs} ms`)), timeoutMs)
+    try {
+      const detail = await probe({ ...e.ctx, signal: ac.signal })
+      return typeof detail === 'string' && detail ? { ok: true, detail } : { ok: true }
+    } catch (err) {
+      const reason = ac.signal.aborted && ac.signal.reason instanceof Error ? ac.signal.reason : err
+      return { ok: false, error: reason instanceof Error ? reason.message : String(reason) }
+    } finally {
+      clearTimeout(timer)
+    }
   }
 
   async run(input: QueryInput, opts: { signal?: AbortSignal; bypassCache?: boolean } = {}): Promise<Frame> {

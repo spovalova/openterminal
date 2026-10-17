@@ -1,0 +1,11 @@
+{
+ "yfinance": [
+  "/equity/price/quote"
+ ],
+ "nasdaq": [
+  "/equity/search"
+ ],
+ "cboe": [
+  "/equity/price/quote"
+ ]
+}

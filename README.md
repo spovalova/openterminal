@@ -69,6 +69,17 @@ Without an LLM key the app explains how to add one and you can still build works
 
 For news, add a free Finnhub key on the connectors page in the app (it is saved to the same `config.yml`). Finnhub also answers quotes and earnings, so price tables survive a Yahoo outage.
 
+### More data with OpenBB
+
+The `openbb` connector answers all five kinds through a locally running [OpenBB Platform](https://docs.openbb.co/platform) API, which is the on-ramp to its providers: yfinance, nasdaq, cboe and sec with no key; FMP, Polygon, Intrinio, Tiingo and others with keys you keep on the OpenBB side. It is listed first in the default config, so when the API is running every query goes to it and yahoo and finnhub become fallbacks; when it is not, the miss costs nothing. Two commands:
+
+```sh
+pip install "openbb[routers]" openbb-yfinance
+openbb-api
+```
+
+Python 3.10 to 3.12. The Connectors page shows `not running` with those commands until the API answers at `http://127.0.0.1:6900`. OpenBB is AGPL-3.0 and runs as its own process; this repo only sends it HTTP requests. Details and per-kind provider overrides: [connectors/openbb/README.md](connectors/openbb/README.md).
+
 Keys never leave your machine. There are no accounts and no hosted backend.
 
 ## Development
@@ -85,7 +96,7 @@ pnpm query ohlcv AAPL 1d 3mo    # print a frame from the registry without the ap
 
 `pnpm query` takes `search <terms…>`, `quote <symbols…>`, `ohlcv <symbols…> <interval> <range>`, `news <symbols…> [limit]`, or `earnings <symbols…> <from> <to>`.
 
-Repo layout: `packages/core` (the contract: frame, kinds, widgets, registry, protocol), `packages/server` (loader, HTTP and WebSocket API, store, agent), `packages/ui` (design system), `packages/web` (React app and views), `packages/cli` (`npx terminal`), `connectors/yahoo` and `connectors/finnhub`. The full tour is in [docs/architecture.md](docs/architecture.md); the plan and the decisions behind it are in [PLAN.md](PLAN.md).
+Repo layout: `packages/core` (the contract: frame, kinds, widgets, registry, protocol), `packages/server` (loader, HTTP and WebSocket API, store, agent), `packages/ui` (design system), `packages/web` (React app and views), `packages/cli` (`npx terminal`), `connectors/openbb`, `connectors/yahoo` and `connectors/finnhub`. The full tour is in [docs/architecture.md](docs/architecture.md); the plan and the decisions behind it are in [PLAN.md](PLAN.md).
 
 ## How it compares
 

@@ -126,3 +126,27 @@ describe('MemoryCache', () => {
     expect(c.get(q)).toBeUndefined()
   })
 })
+
+describe('ConnectorRegistry.health', () => {
+  const okFrame = async () => toFrame('quote', [{ symbol: 'MU', price: 1 }])
+  it('is ok for a connector without a probe and for a probe that resolves', async () => {
+    const r = new ConnectorRegistry()
+    r.register(defineConnector({ name: 'plain', config: z.object({}), queries: { quote: okFrame } }), {})
+    r.register(defineConnector({ name: 'probed', config: z.object({}), queries: { quote: okFrame }, health: async () => 'service 1.0 at http://x' }), {})
+    expect(await r.health('plain')).toEqual({ ok: true })
+    expect(await r.health('probed')).toEqual({ ok: true, detail: 'service 1.0 at http://x' })
+  })
+  it('reports a throwing probe, a timeout, and unknown or unconfigured connectors as not ok', async () => {
+    const r = new ConnectorRegistry()
+    r.register(defineConnector({ name: 'down', config: z.object({}), queries: { quote: okFrame }, health: async () => { throw new Error('not running at http://x') } }), {})
+    r.register(
+      defineConnector({ name: 'slow', config: z.object({}), queries: { quote: okFrame }, health: (ctx) => new Promise((_, reject) => ctx.signal?.addEventListener('abort', () => reject(ctx.signal?.reason))) }),
+      {},
+    )
+    r.register(defineConnector({ name: 'nokey', config: z.object({ apiKey: z.string() }), queries: { quote: okFrame } }), {})
+    expect(await r.health('down')).toEqual({ ok: false, error: 'not running at http://x' })
+    expect(await r.health('slow', { timeoutMs: 20 })).toEqual({ ok: false, error: 'health probe timed out after 20 ms' })
+    expect((await r.health('nokey')).ok).toBe(false)
+    expect((await r.health('nope')).ok).toBe(false)
+  })
+})

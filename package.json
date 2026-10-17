@@ -20,14 +20,15 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@terminal/connector-finnhub": "workspace:*",
+    "@terminal/connector-openbb": "workspace:*",
+    "@terminal/connector-yahoo": "workspace:*",
+    "@terminal/core": "workspace:*",
     "@types/node": "^22.0.0",
     "eslint": "^10.13.0",
     "tsx": "^4.23.15",
     "typescript": "~5.9.0",
     "typescript-eslint": "^8.71.2",
-    "vitest": "^5.0.5",
-    "@terminal/core": "workspace:*",
-    "@terminal/connector-yahoo": "workspace:*",
-    "@terminal/connector-finnhub": "workspace:*"
+    "vitest": "^5.0.5"
   }
 }

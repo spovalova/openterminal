@@ -45,8 +45,12 @@ export const DEFAULT_CONFIG_YML = `# terminal config. Keys never leave this mach
 llm:
 
 # connectors: answered in this order (first wins, the rest are fallbacks).
+# openbb routes first when a local OpenBB Platform API is running
+#   (pip install "openbb[routers]" openbb-yfinance, then openbb-api); when it is
+#   not, the miss costs nothing and yahoo answers. Options: { baseUrl, providers: { ohlcv: yfinance, ... } }.
 # yahoo needs no key. finnhub takes { apiKey } (free key at finnhub.io).
 connectors:
+  - name: openbb
   - name: yahoo
 `
 

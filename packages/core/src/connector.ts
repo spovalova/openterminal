@@ -49,6 +49,12 @@ export type ConnectorDef<C> = {
   /** Zod schema for the connector's config (API keys and options). Use z.object({}) when none. */
   config: z.ZodType<C, any>
   queries: { [K in Kind]?: Handler<KindParams<K>, C> }
+  /**
+   * Optional reachability probe for connectors that depend on a local service (an OpenBB API, a broker gateway).
+   * Resolve with a short human-readable detail ("OpenBB Platform 4.4 at http://127.0.0.1:6900") or nothing;
+   * throw with a message that tells the user how to fix it. Never called on the query path.
+   */
+  health?: (ctx: Ctx<C>) => Promise<string | void>
 }
 
 export type Connector<C = any> = ConnectorDef<C> & {

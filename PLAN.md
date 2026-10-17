@@ -13,6 +13,8 @@ Phase 3 ran on headless Chromium (Playwright with `channel: 'chromium'`, since t
 
 Observations from the verifiers worth a follow-up, none blocking: the agent never cites the candle widget with a chip; a news widget titled "24h" has no time window, only `limit`; the yahoo earnings `session` is always null, so replies cannot say "before the open" (Finnhub, second in routing order, does carry it, so swapping priority for `earnings` is a one-line config change); quote fields fetched for a widget can differ by cents from the preview the agent saw when extended hours are moving.
 
+**v1.1 (2026-10-17, afternoon): OpenBB connector, section 13.** Done and verified live against OpenBB 5.0.0 installed in a venv on this machine (`~/.venvs/openbb`): the connector answers all five kinds, the Connectors page shows it as running (with its provider list) or not running (with the two install commands), the default config lists it first, and with it running the three use cases build their workspaces from `openbb` frames while a stopped API falls back to yahoo within the breaker. One contract addition: an optional `health` probe on `defineConnector`, run by `Registry.health` with a timeout, never on the query path. Findings that changed the plan are in `docs/notes/openbb-probe.md`: OpenBB 5's base package has no unified `equity/...` routes and no yfinance (hence the two-package install line), yfinance has no equity search and its company news is empty, `change_percent` is a fraction, and the earnings calendar is market-wide (nasdaq, 60 days in about 2 s).
+
 **If you are taking over**, read this file once top to bottom, then:
 
 1. Start at Phase 0 in section 11. Do not fan out to parallel work before Phase 0 is green.
@@ -225,6 +227,7 @@ Long format throughout: multi-symbol results carry a `symbol` column. `symbols` 
 |---|---|---|---|
 | yahoo | none | search, quote, ohlcv, earnings | via yahoo-finance2, pinned and fixture-tested. Quote has pre and post-market fields. Chart takes period1/period2 and `1wk`, so the connector maps range and interval. Earnings via quoteSummary calendarEvents: next date and estimate only, session null. |
 | finnhub | free | quote, news, earnings | 60 calls/min. Quote has no extended hours (fallback only). Company news is one symbol per call with day granularity, so the connector fans out and filters to the window locally. Earnings calendar includes an hour field that maps to session. |
+| openbb | none (keys live on the OpenBB side) | search, quote, ohlcv, news, earnings | v1.1, section 13. A local OpenBB Platform API (`openbb-api`, 127.0.0.1:6900) answers every kind through a provider chosen per kind (defaults yfinance and nasdaq, both keyless). Listed first in the default config; a 30 s breaker makes it free when it is not running. |
 
 Finnhub `quote` exists so price tables survive a Yahoo breakage.
 
@@ -365,3 +368,26 @@ Theme pass, recordings of the three use cases for the README, fresh-clone `npx t
 - **M1**: build a workspace by hand matching use case A's widget table; charts render; refresh works; reload restores it.
 - **M2 and M3**: run each use case prompt three times; assert the workspace contains the expected kinds and views, every number in the reply appears in the tool transcript's previews, and total time stays under 30 seconds.
 - **M4**: fresh clone, `npx terminal`, type the use case A prompt, workspace appears with no keys configured (yahoo only), then add a Finnhub key on the connectors page and re-run to get news.
+
+## 13. v1.1: OpenBB Platform as a connector
+
+**Why.** OpenBB open-sourced a data layer with dozens of providers behind one REST API. Linking to it gives the terminal every provider OpenBB has (yfinance, nasdaq, cboe, sec with no key; FMP, Polygon, Intrinio, Tiingo, Benzinga with keys) through one connector, without changing the agent, the kinds, or the views.
+
+**Decisions (user, 2026-10-17).**
+
+- OpenBB is a **data connector**, not a Workspace backend. The other direction (serving `widgets.json` so our workspaces appear inside OpenBB's closed Workspace UI) is out of scope.
+- **The user installs OpenBB** (`pip install "openbb[routers]" openbb-yfinance`, then `openbb-api`). We detect it; we never bundle, spawn, or import it. OpenBB Platform is AGPL-3.0 and stays on its side of an HTTP boundary; this repo is unchanged MIT.
+- **OpenBB routes first when it is running.** It is first in the default `config.yml`; yahoo and finnhub are fallbacks. When it is not running, a 30 s circuit breaker inside the connector makes every miss immediate, so the first-run experience without OpenBB is unchanged apart from a `not running` row on the Connectors page.
+- Still five kinds. OpenBB could feed fundamentals, options, economy and more; each of those is a catalog change with its own use case, not part of this.
+- OpenBB's MCP server is not used as agent tools: numbers would bypass previews and frames, which product rule 2 forbids.
+
+**What was built.**
+
+- `packages/core`: `ConnectorDef.health?` and `Registry.health(name, { timeoutMs })` (section 7.4). `ConnectorStatus` gains `unreachable`, reported only by probes.
+- `connectors/openbb`: `defineConnector` with all five kinds, config `{ baseUrl, providers: { <kind>: <provider> }, username?, password? }` (all optional, so it registers with `{}`), fixture tests recorded from the live API, `pnpm smoke`.
+- `packages/server`: `BUILTIN_CONNECTORS` gains `openbb`; `describeConnectors` is async and runs the probes; the default config lists `openbb` first.
+- `packages/web`: the Connectors page renders keyless connectors without a key field and shows `not running` with the connector's own instructions.
+- Docs: `connectors/openbb/README.md`, `docs/notes/openbb-probe.md`, a health section in `docs/writing-a-connector.md`, a README section.
+
+**Verification.** `pnpm test` offline; `pnpm --filter @terminal/connector-openbb smoke` live; use cases A, B, C with the API running, every widget frame `meta.connector: openbb`; the same prompt with the API stopped answered by yahoo; Connectors page screenshots in both states.
+

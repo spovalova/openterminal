@@ -106,7 +106,7 @@ export function createApp(deps: AppDeps) {
   })
 
   // ---- connectors ----
-  app.get('/api/connectors', (c) => c.json(describeConnectors(registry.connectors())))
+  app.get('/api/connectors', async (c) => c.json(await describeConnectors(registry)))
 
   app.put('/api/connectors/:name/config', async (c) => {
     const name = c.req.param('name')

@@ -78,7 +78,7 @@ describe('routes', () => {
   it('GET /api/connectors lists built-ins with status and key requirement', async () => {
     const list = await body(await app.request('/api/connectors'))
     const names = list.map((c: { name: string }) => c.name)
-    expect(names).toEqual(['fake', 'yahoo', 'finnhub'])
+    expect(names).toEqual(['fake', 'openbb', 'yahoo', 'finnhub'])
     const finnhub = list.find((c: { name: string }) => c.name === 'finnhub')
     expect(finnhub.configured).toBe(false)
     expect(finnhub.status).toBe('missing_config')
@@ -92,7 +92,7 @@ describe('routes', () => {
     expect(res.status).toBe(200)
     const info = await body(res)
     expect(info).toMatchObject({ name: 'yahoo', configured: true })
-    expect(loadConfig({ home, env: {} }).connectors.map((c) => c.name)).toEqual(['yahoo'])
+    expect(loadConfig({ home, env: {} }).connectors.map((c) => c.name)).toEqual(['openbb', 'yahoo'])
     expect(registry.connectors().map((c) => c.name)).toEqual(['fake', 'yahoo'])
   })
 

@@ -119,6 +119,19 @@ Notes on `ohlcv` ranges: `1d` means the last trading session, not the last 24 ho
 
 The TTLs are the registry's, not yours: the cache holds a frame for the kind's TTL and your handler is not called again until it expires or the user hits refresh.
 
+## Health (optional)
+
+A connector that depends on a local service can add a `health` probe next to `queries`:
+
+```ts
+health: async (ctx) => {
+  await ctx.http.get(`${ctx.config.baseUrl}/api/v1/coverage/providers`, { signal: ctx.signal })
+  return `OpenBB API at ${ctx.config.baseUrl}` // one line for the Connectors page, or return nothing
+},
+```
+
+The registry runs it with a 2 s timeout when the Connectors page loads, never on the query path. Resolve with a short detail string or nothing; throw with a message that tells the user what to do (`connectors/openbb` throws the two install commands). A connector without a probe is simply `ok` once its config parses. The page shows a failing probe as `not running`.
+
 ## Errors and fallback
 
 The registry tries connectors in config order and falls back to the next one when a handler throws. So:

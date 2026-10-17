@@ -1,0 +1,69 @@
+{
+ "id": "fixture",
+ "results": [
+  {
+   "date": "2026-10-17T00:00:00",
+   "title": "Stock Indexes Finish Sharply Lower as Tech Stocks Plunge",
+   "excerpt": "The S&P 500 Index ($SPX ) (SPY ) closed down by -1.09% on Fr",
+   "images": null,
+   "url": "https://www.nasdaq.com/articles/stock-indexes-finish-sharply-lower-tech-stocks-plunge",
+   "symbols": "GOOGL,ANET,AAPL,HRL,SNDK,KHC,SLB,LITE,CRWV,OXY,TSLA,FANG,STX,WDC,AMD,SPY,META,NOC,MU,BKR,ORCL,OMER,HSY,QQQ,GEN,PSX,FTNT,XOM,ZS,ARM,MRVL,AMAT,MDLZ,AVGO,CVX,MSFT,S,RTX,SJM,LRCX,DIA,LHX,GD,PANW,KLAC,NVDA,CRWD,MKC,COP,HII,OKTA,APA,HAL,LMT,INTC,APLD,NBIS,NET,DVN,AMZN",
+   "publisher": "Barchart",
+   "topic": "Stocks"
+  },
+  {
+   "date": "2026-10-17T00:00:00",
+   "title": "The Nasdaq-100's 6 Best Stocks This Year, and Whether They Can Keep Going",
+   "excerpt": "Key PointsIt comes as no surprise that artificial intelligen",
+   "images": null,
+   "url": "https://www.nasdaq.com/articles/nasdaq-100s-6-best-stocks-year-and-whether-they-can-keep-going",
+   "symbols": "INTC,MRVL,AMD,MU,MRNA,SNDK,NVDA",
+   "publisher": "The Motley Fool",
+   "topic": "Markets"
+  },
+  {
+   "date": "2026-10-17T00:00:00",
+   "title": "Sandisk Stock Is Still Up 488% This Year Despite a 40% Drop. Is It a Buy Now?",
+   "excerpt": "Key PointsSandisk shares finished Oct. 15 up about 488% in 2",
+   "images": null,
+   "url": "https://www.nasdaq.com/articles/sandisk-stock-still-488-year-despite-40-drop-it-buy-now",
+   "symbols": "SNDK",
+   "publisher": "The Motley Fool",
+   "topic": "Markets"
+  },
+  {
+   "date": "2026-10-17T00:00:00",
+   "title": "Missed Out On Micron and Sandisk? Make Sure You Don't Miss Out On This Memory Stock.",
+   "excerpt": "Key PointsPenguin Solutions' memory segment more than double",
+   "images": null,
+   "url": "https://www.nasdaq.com/articles/missed-out-micron-and-sandisk-make-sure-you-dont-miss-out-memory-stock",
+   "symbols": "PENG,WMT,MU,AAPL,TSLA,AMZN,NVDA,PLTR,SNDK",
+   "publisher": "The Motley Fool",
+   "topic": "Markets"
+  },
+  {
+   "date": "2026-10-17T00:00:00",
+   "title": "Is Micron's Incredible Run About to End?",
+   "excerpt": "Key PointsMicron, Samsung, and SK Hynix control the vast maj",
+   "images": null,
+   "url": "https://www.nasdaq.com/articles/microns-incredible-run-about-end",
+   "symbols": "MU",
+   "publisher": "The Motley Fool",
+   "topic": "Markets"
+  },
+  {
+   "date": "2026-10-17T00:00:00",
+   "title": "Stock Indexes Finish Sharply Lower as Tech Stocks Plunge",
+   "excerpt": "The S&P 500 Index ($SPX ) (SPY ) closed down by -1.09% on Fr",
+   "images": null,
+   "url": "https://www.nasdaq.com/articles/stock-indexes-finish-sharply-lower-tech-stocks-plunge",
+   "symbols": "GOOGL,ANET,AAPL,HRL,SNDK,KHC,SLB,LITE,CRWV,OXY,TSLA,FANG,STX,WDC,AMD,SPY,META,NOC,MU,BKR,ORCL,OMER,HSY,QQQ,GEN,PSX,FTNT,XOM,ZS,ARM,MRVL,AMAT,MDLZ,AVGO,CVX,MSFT,S,RTX,SJM,LRCX,DIA,LHX,GD,PANW,KLAC,NVDA,CRWD,MKC,COP,HII,OKTA,APA,HAL,LMT,INTC,APLD,NBIS,NET,DVN,AMZN",
+   "publisher": "Barchart",
+   "topic": "Stocks"
+  }
+ ],
+ "provider": "nasdaq",
+ "warnings": null,
+ "chart": null,
+ "extra": {}
+}

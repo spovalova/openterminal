@@ -1,0 +1,81 @@
+{
+ "id": "fixture",
+ "results": [
+  {
+   "report_date": "2026-11-18",
+   "symbol": "NVDA",
+   "name": "NVIDIA Corporation",
+   "eps_previous": 1.24,
+   "eps_consensus": 2.48,
+   "num_estimates": 12,
+   "period_ending": "2026-10",
+   "previous_report_date": "2025-11-19",
+   "reporting_time": "not-supplied",
+   "market_cap": 5235243200000.0
+  },
+  {
+   "report_date": "2026-10-29",
+   "symbol": "SNDK",
+   "name": "Sandisk Corporation",
+   "eps_previous": 0.9,
+   "eps_consensus": 45.22,
+   "num_estimates": 4,
+   "period_ending": "2026-09",
+   "previous_report_date": "2025-11-06",
+   "reporting_time": "after-hours",
+   "market_cap": 202707403000.0
+  },
+  {
+   "report_date": "2026-10-27",
+   "symbol": "STX",
+   "name": "Seagate Technology Holdings PLC",
+   "eps_previous": 2.51,
+   "eps_consensus": 7.11,
+   "num_estimates": 4,
+   "period_ending": "2026-09",
+   "previous_report_date": "2025-10-28",
+   "reporting_time": "after-hours",
+   "market_cap": 158001070000.0
+  },
+  {
+   "report_date": "2026-10-22",
+   "symbol": "WDC",
+   "name": "Western Digital Corporation",
+   "eps_previous": 1.64,
+   "eps_consensus": 3.97,
+   "num_estimates": 4,
+   "period_ending": "2026-09",
+   "previous_report_date": "2025-10-30",
+   "reporting_time": "after-hours",
+   "market_cap": 133158306000.0
+  },
+  {
+   "report_date": "2026-12-10",
+   "symbol": "AVGO",
+   "name": "Broadcom Inc.",
+   "eps_previous": 1.61,
+   "eps_consensus": 3.45,
+   "num_estimates": 10,
+   "period_ending": "2026-10",
+   "previous_report_date": "2025-12-11",
+   "reporting_time": "not-supplied",
+   "market_cap": 1643703960000.0
+  },
+  {
+   "report_date": "2026-12-10",
+   "symbol": "COST",
+   "name": "Costco Wholesale Corporation",
+   "eps_previous": 4.34,
+   "eps_consensus": 4.87,
+   "num_estimates": 10,
+   "period_ending": "2026-11",
+   "previous_report_date": "2025-12-11",
+   "reporting_time": "not-supplied",
+   "market_cap": 433384948000.0
+  }
+ ],
+ "provider": "nasdaq",
+ "warnings": null,
+ "chart": null,
+ "extra": {}
+}

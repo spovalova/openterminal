@@ -1,0 +1,23 @@
+{
+ "id": "fixture",
+ "results": [
+  {
+   "symbol": "MU",
+   "name": "Micron Technology, Inc. - Common Stock",
+   "nasdaq_traded": "Y",
+   "market_category": "Q",
+   "etf": "N",
+   "round_lot_size": 40.0,
+   "test_issue": "N",
+   "financial_status": "N",
+   "cqs_symbol": null,
+   "nasdaq_symbol": "MU",
+   "next_shares": "N",
+   "Listing Exchange": "Q"
+  }
+ ],
+ "provider": "nasdaq",
+ "warnings": null,
+ "chart": null,
+ "extra": {}
+}

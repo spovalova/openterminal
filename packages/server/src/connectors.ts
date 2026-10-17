@@ -1,11 +1,12 @@
 // Built-in connector map and registry wiring. Config order is routing priority.
-import { ConnectorRegistry, MemoryCache, type Cache, type Connector, type Kind, type RegisteredConnector } from '@terminal/core'
+import { ConnectorRegistry, MemoryCache, type Cache, type Connector, type Kind, type RegisteredConnector, type Registry } from '@terminal/core'
+import openbb from '@terminal/connector-openbb'
 import yahoo from '@terminal/connector-yahoo'
 import finnhub from '@terminal/connector-finnhub'
 import type { Config } from './config.js'
 
 /** Name in config.yml → connector module. The only thing the server assumes about a module is that its default export is a Connector. */
-export const BUILTIN_CONNECTORS: Record<string, Connector> = { yahoo, finnhub }
+export const BUILTIN_CONNECTORS: Record<string, Connector> = { openbb, yahoo, finnhub }
 
 export function builtinConnector(name: string): Connector | undefined {
   return Object.prototype.hasOwnProperty.call(BUILTIN_CONNECTORS, name) ? BUILTIN_CONNECTORS[name] : undefined
@@ -44,15 +45,31 @@ export type ConnectorInfo = {
   /** True when the connector is listed in config.yml. */
   configured: boolean
   error?: string
+  /** One line from the health probe, e.g. the service version and URL. */
+  detail?: string
 }
 
-export function describeConnectors(registered: RegisteredConnector[]): ConnectorInfo[] {
+/**
+ * Every built-in connector, configured or not. Configured ones come first in priority order and carry the result of
+ * their health probe (a connector without a probe is simply `ok`); the rest are `missing_config`.
+ */
+export async function describeConnectors(registry: Registry, opts: { timeoutMs?: number } = {}): Promise<ConnectorInfo[]> {
+  const registered = registry.connectors()
   const byName = new Map(registered.map((r) => [r.name, r]))
   const out: ConnectorInfo[] = []
-  // Configured connectors first, in priority order; then the built-ins that are not configured.
   for (const r of registered) {
     const c = builtinConnector(r.name)
-    out.push({ name: r.name, kinds: r.kinds, status: r.status, needsKey: c ? connectorNeedsKey(c) : false, configured: true, ...(r.error ? { error: r.error } : {}) })
+    const info: ConnectorInfo = { name: r.name, kinds: r.kinds, status: r.status, needsKey: c ? connectorNeedsKey(c) : false, configured: true, ...(r.error ? { error: r.error } : {}) }
+    if (r.status === 'ok' && registry.health) {
+      const h = await registry.health(r.name, opts)
+      if (h.ok) {
+        if (h.detail) info.detail = h.detail
+      } else {
+        info.status = 'unreachable'
+        info.error = h.error
+      }
+    }
+    out.push(info)
   }
   for (const [name, c] of Object.entries(BUILTIN_CONNECTORS)) {
     if (byName.has(name)) continue
