@@ -75,7 +75,7 @@ export const WidgetFrame: FC<WidgetFrameProps> = ({
       id={id}
       data-size={size}
       className={clsx(
-        'group/widget flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface',
+        'group/widget flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface',
         sizeClass[size],
         className,
       )}

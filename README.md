@@ -6,7 +6,7 @@ An open-source, local-first, AI-native terminal for retail traders. You type a q
 
 ## What it looks like
 
-Three prompts that v1 is built around. Each has a recording that will be added in Phase 3.
+Three prompts that v1 is built around. Each recording below is a real run against the live connectors and `claude-sonnet-5-5`, captured in headless Chromium.
 
 ### "What's happening with memory?"
 
@@ -20,7 +20,7 @@ Theme research. The agent resolves the basket (MU, SNDK, WDC, STX) and builds:
 
 Reply: "Over three months MU is up A%, SNDK B%, WDC C%, STX D%. MU reports on DATE. Recent news clusters around HBM demand and contract pricing." with chips to the chart and the news table. Every figure comes from a query the agent ran.
 
-Recording: `docs/recordings/a.gif` (to be added in Phase 3)
+![Use case A: a memory theme workspace being built from the prompt](docs/recordings/a.gif)
 
 ### "Is NVDA's drop today news or just the market?"
 
@@ -33,7 +33,7 @@ Event diagnosis. The agent names the peers (AMD, AVGO, TSM, SMH, SPY) and builds
 
 Reply: "NVDA is down X% today against SMH down Y% and SPY down Z%, so most of the move is sector. The only NVDA-specific headline in the last 24h is ..." with chips.
 
-Recording: `docs/recordings/b.gif` (to be added in Phase 3)
+![Use case B: NVDA against SPY and SMH, intraday, with a diagnosis](docs/recordings/b.gif)
 
 ### "Morning check on my watchlist"
 
@@ -46,7 +46,7 @@ Recurring monitoring. You keep a workspace named Morning and re-run the same pro
 
 Reply: "Three names are moving pre-market: ... X reports before the open. SPY and QQQ are flat pre-market." with chips.
 
-Recording: `docs/recordings/c.gif` (to be added in Phase 3)
+![Use case C: a watchlist morning check](docs/recordings/c.gif)
 
 ## Quick start
 

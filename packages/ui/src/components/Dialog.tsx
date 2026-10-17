@@ -9,11 +9,18 @@ export type DialogProps = PropsWithChildren<{
   title: string
   /** Footer slot (buttons). */
   footer?: ReactNode
+  /** md (default) is a 520px form; wide is for an expanded widget and takes most of the viewport. */
+  size?: 'md' | 'wide'
   className?: string
 }>
 
+const widthClass: Record<NonNullable<DialogProps['size']>, string> = {
+  md: 'w-[min(520px,calc(100vw-32px))]',
+  wide: 'w-[min(1200px,calc(100vw-32px))]',
+}
+
 /** Native <dialog> shown modally. Escape and backdrop clicks call onClose. */
-export const Dialog: FC<DialogProps> = ({ open, onClose, title, footer, className, children }) => {
+export const Dialog: FC<DialogProps> = ({ open, onClose, title, footer, size = 'md', className, children }) => {
   const ref = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -35,7 +42,9 @@ export const Dialog: FC<DialogProps> = ({ open, onClose, title, footer, classNam
         if (e.target === ref.current) onClose()
       }}
       className={clsx(
-        'm-auto w-[min(520px,calc(100vw-32px))] max-h-[calc(100vh-32px)] rounded-lg border border-border-strong bg-surface p-0 text-fg shadow-dialog',
+        'm-auto max-h-[calc(100vh-32px)] rounded-lg',
+        widthClass[size],
+        ' border border-border-strong bg-surface p-0 text-fg shadow-dialog',
         'backdrop:bg-black/60',
         className,
       )}

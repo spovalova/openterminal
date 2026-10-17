@@ -80,7 +80,11 @@ export const SeriesView: FC<ViewProps> = ({ widget, frame }) => {
     if (typeof ResizeObserver !== 'undefined') {
       observer = new ResizeObserver((entries) => {
         const rect = entries[0]?.contentRect
-        if (rect && rect.width > 0 && rect.height > 0) chart.applyOptions({ width: rect.width, height: rect.height })
+        if (rect && rect.width > 0 && rect.height > 0) {
+          chart.applyOptions({ width: rect.width, height: rect.height })
+          // Widgets always show the whole range: refit after a resize (the grid cell or the expand dialog changing size).
+          chart.timeScale().fitContent()
+        }
       })
       observer.observe(el)
     }
