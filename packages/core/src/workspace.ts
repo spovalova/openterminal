@@ -1,8 +1,10 @@
 import { z } from 'zod'
 import { WidgetSchema } from './widget.js'
 
+/** Agent tools: `query` and `set_workspace` (v1), plus `find_route` and `transform` (v2, PLAN.md section 17). */
+export const TOOL_NAMES = ['query', 'set_workspace', 'find_route', 'transform'] as const
 export const StepSchema = z.object({
-  tool: z.enum(['query', 'set_workspace']),
+  tool: z.enum(TOOL_NAMES),
   args: z.unknown(),
   /** One line for the Steps list, e.g. "ohlcv MU, SNDK, WDC, STX 1d 3mo · 252 rows". */
   summary: z.string(),

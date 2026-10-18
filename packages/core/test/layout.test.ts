@@ -1,16 +1,59 @@
 import { describe, expect, it } from 'vitest'
-import { MIN_ROW_HEIGHT, columnsFor, hasHoles, packLayout, rowHeightFor, spanFor, type Size } from '../src/index.js'
+import { MIN_ROW_HEIGHT, THREE_COLUMNS_MIN, columnsFor, effectiveSpan, hasHoles, packLayout, rowHeightFor, spanFor, type ContentHint, type Size } from '../src/index.js'
 
 const sizes = (...s: Size[]) => s.map((size) => ({ size }))
 const cells = (p: ReturnType<typeof packLayout>) => p.map((x) => [x.col, x.row, x.cols, x.rows])
 
 describe('columnsFor', () => {
-  it('is 1 under 720, 2 under 1100, 3 from there', () => {
+  it('is 1 under 720, 2 under 960, 3 from there (v2: a 1440px laptop with the panel open gets three columns)', () => {
+    expect(THREE_COLUMNS_MIN).toBe(960)
     expect(columnsFor(600)).toBe(1)
     expect(columnsFor(884)).toBe(2)
-    expect(columnsFor(1099)).toBe(2)
-    expect(columnsFor(1100)).toBe(3)
+    expect(columnsFor(959)).toBe(2)
+    expect(columnsFor(960)).toBe(3)
+    expect(columnsFor(1060)).toBe(3) // 1440 minus the 380px panel
     expect(columnsFor(1900)).toBe(3)
+  })
+})
+
+describe('effectiveSpan (size by content)', () => {
+  const hint = (size: Size, contentHint: ContentHint) => ({ size, contentHint })
+  it('keeps the size span without a hint (v1 behaviour)', () => {
+    expect(effectiveSpan({ size: 'lg' }, 3, 5)).toEqual({ cols: 2, rows: 2, demoted: false })
+    expect(effectiveSpan({ size: 'md' }, 3, 5)).toEqual({ cols: 2, rows: 1, demoted: false })
+  })
+  it('makes a table with six rows or fewer one row tall, and leaves longer tables alone', () => {
+    expect(effectiveSpan(hint('lg', { kind: 'table', rows: 6 }), 3, 5)).toEqual({ cols: 2, rows: 1, demoted: true })
+    expect(effectiveSpan(hint('lg', { kind: 'table', rows: 1 }), 3, 5)).toEqual({ cols: 2, rows: 1, demoted: true })
+    expect(effectiveSpan(hint('lg', { kind: 'table', rows: 7 }), 3, 5)).toEqual({ cols: 2, rows: 2, demoted: false })
+    expect(effectiveSpan(hint('lg', { kind: 'table' }), 3, 5)).toEqual({ cols: 2, rows: 2, demoted: false })
+  })
+  it('makes a stat and a facts card one row tall whatever the size', () => {
+    expect(effectiveSpan(hint('lg', { kind: 'stat', rows: 1 }), 3, 4)).toEqual({ cols: 2, rows: 1, demoted: true })
+    expect(effectiveSpan(hint('lg', { kind: 'facts', rows: 1 }), 3, 4)).toEqual({ cols: 2, rows: 1, demoted: true })
+    expect(effectiveSpan(hint('sm', { kind: 'stat' }), 3, 4)).toEqual({ cols: 1, rows: 1, demoted: false })
+  })
+  it('makes charts two rows tall unless there are more than six widgets', () => {
+    expect(effectiveSpan(hint('md', { kind: 'chart' }), 3, 6)).toEqual({ cols: 2, rows: 2, demoted: true })
+    expect(effectiveSpan(hint('sm', { kind: 'chart' }), 3, 3)).toEqual({ cols: 1, rows: 2, demoted: true })
+    expect(effectiveSpan(hint('md', { kind: 'chart' }), 3, 7)).toEqual({ cols: 2, rows: 1, demoted: false })
+    expect(effectiveSpan(hint('lg', { kind: 'chart' }), 3, 7)).toEqual({ cols: 2, rows: 2, demoted: false })
+  })
+  it('leaves the chain alone and clamps columns to the grid', () => {
+    expect(effectiveSpan(hint('lg', { kind: 'chain', rows: 40 }), 3, 5)).toEqual({ cols: 2, rows: 2, demoted: false })
+    expect(effectiveSpan(hint('lg', { kind: 'table', rows: 3 }), 1, 5)).toEqual({ cols: 1, rows: 1, demoted: true })
+  })
+  it('packs demoted widgets without holes and reports the demotion', () => {
+    const widgets = [hint('lg', { kind: 'chart' }), hint('lg', { kind: 'table', rows: 4 }), hint('sm', { kind: 'stat', rows: 1 }), hint('md', { kind: 'table', rows: 12 }), hint('sm', { kind: 'facts', rows: 1 })]
+    for (const columns of [1, 2, 3]) {
+      const p = packLayout(widgets, columns)
+      expect(hasHoles(p, columns)).toBe(false)
+      expect(p[1]!.demoted).toBe(true)
+      expect(p[3]!.demoted).toBe(false)
+    }
+    const three = packLayout(widgets, 3)
+    expect(three[0]!.rows).toBe(2)
+    expect(three[1]!.rows).toBe(1)
   })
 })
 

@@ -1,6 +1,8 @@
 import type { z } from 'zod'
+import { parseParams, type Descriptor, type ValidatedParams } from './descriptor.js'
 import type { Frame, FrameMeta } from './frame.js'
-import { KINDS, type Kind, type KindParams } from './kinds.js'
+import { jsonSchemaToParams, zodToJsonSchemaObject } from './json-schema.js'
+import { KINDS, KIND_NAMES, parseQuery, type Kind, type KindParams } from './kinds.js'
 
 /** Everything a connector handler gets besides its params. */
 export type Ctx<C> = {
@@ -42,13 +44,28 @@ export function createHttp(fetchImpl: typeof fetch = fetch): Http {
 }
 
 export type Handler<P, C> = (params: P, ctx: Ctx<C>) => Promise<Frame>
+export type Queries<C> = { [K in Kind]?: Handler<KindParams<K>, C> }
+
+/**
+ * v2: answer one route with params already validated against its descriptor (`string[]` params arrive as arrays;
+ * `provider` is present when the caller chose one). Return a Frame; `inferFrame` builds one from provider rows.
+ */
+export type CallHandler<C> = (route: string, params: ValidatedParams, ctx: Ctx<C>) => Promise<Frame>
 
 export type ConnectorDef<C> = {
   /** Unique, lowercase, used in config.yml and frame.meta.connector. */
   name: string
   /** Zod schema for the connector's config (API keys and options). Use z.object({}) when none. */
   config: z.ZodType<C, any>
-  queries: { [K in Kind]?: Handler<KindParams<K>, C> }
+  /** v1: a handler per kind. Either this or `descriptors` + `call` (or both). */
+  queries?: Queries<C>
+  /**
+   * v2: the routes this connector answers, as descriptors (PLAN.md section 17). OpenBB generates them from its
+   * OpenAPI document; yahoo and finnhub ship a file. Called once per registration and cached by the registry.
+   */
+  descriptors?: () => Descriptor[] | Promise<Descriptor[]>
+  /** v2: answer a route. Required with `descriptors`. */
+  call?: CallHandler<C>
   /**
    * Optional reachability probe for connectors that depend on a local service (an OpenBB API, a broker gateway).
    * Resolve with a short human-readable detail ("OpenBB Platform 4.4 at http://127.0.0.1:6900") or nothing;
@@ -57,21 +74,75 @@ export type ConnectorDef<C> = {
   health?: (ctx: Ctx<C>) => Promise<string | void>
 }
 
-export type Connector<C = any> = ConnectorDef<C> & {
-  /** Kinds this connector answers, in catalog order. */
+export type Connector<C = any> = Omit<ConnectorDef<C>, 'queries' | 'descriptors' | 'call'> & {
+  /** Kinds this connector answers, in catalog order ([] for a routes-only connector). */
   kinds: Kind[]
+  /** v1 handlers ({} for a routes-only connector). */
+  queries: Queries<C>
+  /** Every route the connector answers: its own descriptors, plus one per kind derived from the catalog. */
+  descriptors(): Promise<Descriptor[]>
+  /** Answer a route: the connector's own `call`, or the kind handler of that name for v1 connectors. */
+  call: CallHandler<C>
+  /** How the connector was defined. */
+  mode: 'kinds' | 'routes' | 'both'
 }
 
 /**
- * The one helper contributors use. Fixed from day one; the loader behind it may change.
+ * The one helper contributors use. Fixed from day one; the loader behind it may change. Accepts the v1 form
+ * (`queries`) or the v2 form (`descriptors` + `call`); a v1 connector appears in the catalog with one route per
+ * kind, named after the kind, so existing connectors need no change.
  *
  * export default defineConnector({ name, config: z.object({ apiKey: z.string() }), queries: { quote: async (params, ctx) => toFrame('quote', rows) } })
+ * export default defineConnector({ name, config, descriptors: () => descriptorsFromOpenApi(doc, name), call: (route, params, ctx) => … })
  */
 export function defineConnector<C>(def: ConnectorDef<C>): Connector<C> {
   if (!/^[a-z][a-z0-9-]*$/.test(def.name)) throw new Error(`connector name must be lowercase kebab-case: ${def.name}`)
-  const kinds = (Object.keys(KINDS) as Kind[]).filter((k) => typeof def.queries[k] === 'function')
-  if (kinds.length === 0) throw new Error(`connector ${def.name} answers no kinds`)
-  return { ...def, kinds }
+  const queries: Queries<C> = def.queries ?? {}
+  const kinds = KIND_NAMES.filter((k) => typeof queries[k] === 'function')
+  const hasRoutes = typeof def.descriptors === 'function'
+  if (hasRoutes && typeof def.call !== 'function') throw new Error(`connector ${def.name} has descriptors but no call(route, params, ctx)`)
+  if (!hasRoutes && typeof def.call === 'function') throw new Error(`connector ${def.name} has call but no descriptors()`)
+  if (kinds.length === 0 && !hasRoutes) throw new Error(`connector ${def.name} answers no kinds and has no descriptors`)
+  const ownDescriptors = def.descriptors
+  const ownCall = def.call
+  const mode: Connector['mode'] = hasRoutes && kinds.length > 0 ? 'both' : hasRoutes ? 'routes' : 'kinds'
+  const rest: Omit<ConnectorDef<C>, 'queries' | 'descriptors' | 'call'> = { name: def.name, config: def.config }
+  if (def.health) rest.health = def.health
+  return {
+    ...rest,
+    kinds,
+    queries,
+    mode,
+    async descriptors() {
+      const own = ownDescriptors ? await ownDescriptors() : []
+      const fromKinds = kinds.filter((k) => !own.some((d) => d.route === k)).map((k) => descriptorFromKind(def.name, k))
+      return [...own, ...fromKinds]
+    },
+    async call(route, params, ctx) {
+      const handler = queries[route as Kind] as Handler<unknown, C> | undefined
+      if (handler && (kinds as string[]).includes(route)) {
+        const q = parseQuery({ kind: route, params })
+        return handler(q.params, ctx)
+      }
+      if (ownCall) return ownCall(route, params, ctx)
+      throw new Error(`connector ${def.name} does not answer route "${route}"`)
+    },
+  }
+}
+
+/** A kind of the v1 catalog as a descriptor of `connector`: route named after the kind, params from its Zod schema, fields from its columns. */
+export function descriptorFromKind(connector: string, kind: Kind): Descriptor {
+  const def = KINDS[kind]
+  const params = jsonSchemaToParams(zodToJsonSchemaObject(def.params))
+  const summary = def.description.split(/(?<=\.)\s/)[0] ?? def.description
+  const d: Descriptor = { connector, route: kind, summary, params, providers: [], fields: def.columns.map((c) => ({ name: c.name, type: c.type })) }
+  if (def.description !== summary) d.description = def.description
+  return d
+}
+
+/** Validate route params against a descriptor and call the connector. What the registry's route path does. */
+export async function callRoute<C>(connector: Connector<C>, descriptor: Descriptor, params: Record<string, unknown>, ctx: Ctx<C>): Promise<Frame> {
+  return connector.call(descriptor.route, parseParams(descriptor, params), ctx)
 }
 
 /**
