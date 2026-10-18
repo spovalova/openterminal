@@ -618,10 +618,33 @@ Tools: `find_route(query: string)` returns up to five catalog entries; `query(co
 
 `packages/core/src/kinds.ts` and its 22 schemas; per-kind handlers in all three connectors (OpenBB's 600-line `index.ts` becomes the descriptor generator plus a 60-line caller); `formatsFor`, `KIND_PRIORITY`, `subtitleFor` per kind (replaced by shape and annotations: subtitle is route summary plus the params that matter); `STAT_KEY_COLUMN` (replaced by annotation `key: true` or the first numeric). Section 7.1's table becomes the recipe list in `recipes.yml`.
 
+### Also in v2
+
+Changes outside the data and view model that v2 should carry, because the schema migration makes them cheapest now or because the model makes them nearly free.
+
+Must:
+
+- **Reply verification on the server.** Rule 4 was enforced only by the prompt, and bench v2 caught it failing. The server extracts every number from the streamed reply, matches each against that run's previews with unit-aware tolerance (percent vs fraction, rounding), flags unmatched figures in the reply UI and records the result in the run log. The bench reads the log instead of re-verifying by hand.
+- **Store on SQLite** (`node:sqlite`, Node 22, no native dependency): workspaces, widgets with their data graphs, recipes, the catalog cache, probe results, run logs, and a persistent frame cache keyed by route and params so a restart does not refetch two years of bars. One-time migration from the JSON store.
+- **Run log.** Each prompt records steps, timings, tokens, cost, and the verification result; shown as the steps in the conversation panel, kept for the bench and for "why did it do that".
+- **Editor with three tabs**: data (the graph, each dataset's preview), transform (CodeMirror 6 with the traceback inline), view (preset options and the expanded layers). The expand dialog shows the same plus the whole frame.
+- **Data page** replaces the Connectors page: catalog browser with search, liveness and a probe button, keys, per-route provider overrides, and the recipe library with promote and edit.
+- **Virtualised tables** for transform and screener outputs in the thousands of rows.
+- **The rename**: `@openterminal/*` scope, `openterminal` bin, `~/.openterminal` config directory with migration from `~/.terminal`, npm publish. v2 is a migration anyway.
+
+Should:
+
+- **Workspace export and import** as one JSON file carrying data graphs, transforms, presets and recipes; how workspaces get shared and how bug reports arrive.
+- **Widget-scoped prompts**: "make this weekly" edits one widget's graph or preset without rewriting the workspace, same agent with a smaller context.
+- **Beyond US equities for data** (routes already serve crypto, FX and non-US listings); the clock module stays on the US calendar in v2, per-exchange calendars follow.
+- **Docs rewrite**: adding a data source by descriptor, writing a recipe, writing a preset; architecture and vocabulary pages updated for the new nouns.
+
+Deferred with a reason: Arrow for frames over the socket and into Pyodide (until a measured prompt is slow from serialisation); scheduling and alerts (section 9); a Pyodide worker pool (until one worker measurably queues).
+
 ### Phases
 
 0. **Trunk** (one agent, sequential): descriptor type, catalog with search, shape detection, annotations loader, unit conversion, the runner, and tests with a recorded `openapi.json` fixture. Nothing user-visible changes.
-1. **Parallel**: (a) OpenBB descriptor generator, caller, probe script and liveness; (b) yahoo and finnhub descriptor files and callers; (c) agent tools and prompt with recipes; (d) web: views by shape, editor from descriptors, Connectors page catalog, subtitles from routes; (e) store migration, `pnpm query`, docs (`writing-a-connector.md` rewritten around descriptors, the README kinds table replaced by "any route, plus these recipes"); (f) transforms: the Pyodide worker, the `ot` helpers, the tool, the widget type, editor and subtitle; (g) views: the field config pipeline, presets, the pane-and-layer chart renderer (markers, levels, bands, histogram, numeric x), table control, facts card and the one-row rule, heatmap.
+1. **Parallel**: (a) OpenBB descriptor generator, caller, probe script and liveness; (b) yahoo and finnhub descriptor files and callers; (c) agent tools and prompt with recipes; (d) web: views by shape, editor from descriptors, Connectors page catalog, subtitles from routes; (e) SQLite store and migration, persistent cache, run log, `pnpm query`, docs (`writing-a-connector.md` rewritten around descriptors, the README kinds table replaced by "any route, plus these recipes"); (f) transforms: the Pyodide worker, the `ot` helpers, the tool, the widget type, editor and subtitle; (h) shell: the three-tab editor, the Data page, virtualised tables, export and import, widget-scoped prompts, the rename; (i) reply verification; (g) views: the field config pipeline, presets, the pane-and-layer chart renderer (markers, levels, bands, histogram, numeric x), table control, facts card and the one-row rule, heatmap.
 2. **Integrate and accept**: bench v2 rerun; the target is the three user prompts passing and no regression on bench v1; new annotations added for every unit mistake found.
 3. **Remove**: delete the kind code once the bench passes; PLAN.md sections 7.1, 14 marked superseded.
 
