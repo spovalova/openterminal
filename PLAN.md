@@ -479,3 +479,217 @@ Theme pass, recordings of the three use cases for the README, fresh-clone `npx t
 - A series view takes `labels?: Record<string, string>`: a legend label per symbol (ohlcv) or series (macro), trimmed, 1 to 32 characters, and every key must be one of the query's own symbols or series so a label never outlives its line. The legend shows the override in place of the symbol and keeps the symbol as the row's `title`; numbers are unchanged. The widget editor shows one input per line of the query (placeholder: the default label), derived from the params as typed, so adding a symbol adds an input and removing one drops its label. The field flows into `set_workspace` through `WidgetSchema`, with one line in the prompt telling the agent to use it only when the user names a line. Hiding a line is not part of this: that would be a query change, not a label.
 
 **Verification.** 382 tests on the branch, 415 after merging the design system (schema accept/reject, legend override, editor inputs and round trip, reply with bold, list, code, chips, table, raw HTML), typecheck and lint green; before and after screenshots of the same production workspace in `docs/screenshots/chat-markdown-*.png` and `legend-*.png`.
+
+## 17. v2: routes replace kinds (proposal)
+
+**Status: proposal, 2026-10-18.** Not built. Reviewed as a PR; becomes the plan when merged.
+
+### Why
+
+Bench v2 (section 0, `docs/notes/prompt-bench-v2-2026-10-18.md`) failed six of seven prompts, and five of the six were data the OpenBB API on this machine already serves with no kind in front of it: corporate bond yields, a screener, sector performance, the full economic calendar, earnings reactions. The catalog model means every new question costs a day of kind-writing before the agent can even try, and the long tail never ends. OpenBB describes itself completely (1,012 GET routes, 5,031 parameters, 1,102 response models with 12,755 fields, 99% of them with a description, all in `/openapi.json`), so the description work is already done by the provider. What the product adds should be discovery, typing, and guarantees, not a second copy of the schema.
+
+The user's decision: remove kinds and work directly on provider APIs, with infrastructure designed to grow. The two things kinds guaranteed, correct units and views that know their columns, are kept by two smaller mechanisms, annotations and shapes, described below.
+
+### Vocabulary changes (section 3)
+
+| Term | v2 definition |
+|---|---|
+| **Route** | One endpoint of a provider API, described by a **descriptor**: path, parameters (name, type, enum, default, description), providers, response fields (name, type, description), and a liveness record. Replaces **kind** as the unit of data. |
+| **Connector** | A plugin that exposes routes and answers them. It publishes its descriptors (OpenBB: generated from its OpenAPI document at startup; yahoo and finnhub: a hand-written descriptor file in the same format, one entry per endpoint they wrap). Holds its config. Runs server-side. |
+| **Query** | `{ connector, route, params }`. Params are validated against the descriptor, not a Zod schema per kind. |
+| **Catalog** | The searchable union of every connector's descriptors, with liveness. Generated, never edited. What `find_route` searches and the Connectors page lists. |
+| **Frame** | Unchanged: typed columns plus rows. Columns come from the descriptor's response fields, with runtime inference as the fallback. |
+| **Shape** | What a frame has, detected from its columns: a time column, numeric columns, a group column (symbol, series, ticker), option columns (strike, expiration, option_type), one row per group. Views declare the shape they need. Replaces per-kind view wiring. |
+| **Annotation** | A hand-written fact about one field of one route: unit (`fraction`, `percent`, `ratio`, `usd`, `shares`), display label, format, priority for narrow widgets. Lives in a data file, grown by the bench. The residue of kinds. |
+| **Recipe** | A named, saved query with a title template, preferred view and size, and an ordered list of alternative routes (fallback). Data, not code. The 22 kinds become 22 recipes. The prompt lists the top recipes as examples; the agent may use any route. |
+
+Widget, Workspace, View, Agent, preview, reply, chip and step are unchanged. Registry becomes the catalog plus a runner.
+
+### The descriptor format
+
+One JSON document per connector, `Descriptor[]`:
+
+```ts
+type Descriptor = {
+  connector: string            // 'openbb' | 'yahoo' | 'finnhub' | ...
+  route: string                // 'equity/price/historical', 'fixedincome/corporate/bond_prices', 'quote'
+  summary: string              // one line from the schema
+  description?: string
+  params: Array<{ name: string; type: 'string'|'number'|'integer'|'boolean'|'date'|'string[]'; enum?: string[]; default?: unknown; required: boolean; description?: string; providers?: string[] }>
+  providers: string[]          // [] for connectors without the concept
+  fields: Array<{ name: string; type: 'number'|'string'|'time'|'boolean'; description?: string }>
+  liveness?: { checkedAt: number; ok: boolean; rows?: number; ms?: number; error?: string; sampleColumns?: string[] }
+}
+```
+
+`connectors/openbb/src/descriptors.ts` generates it from `/openapi.json`: one entry per GET route, parameter unions collapsed to one entry with a `providers` list, response model resolved to fields, `date`/`datetime` fields typed `time`. The 8.5 MB document becomes about 300 KB, cached in `~/.terminal/catalog/openbb.json` with the OpenBB version, regenerated when the version changes. yahoo and finnhub ship `descriptors.json` in the package (about 15 and 3 entries), so the same code path serves all three.
+
+A new connector is therefore either: an OpenAPI URL plus auth plus an envelope rule (a generic `openapi` connector that OpenBB is the first instance of; any REST API with a schema becomes a connector by config), or a code connector that ships a descriptor file. `defineConnector` keeps its name and config schema and gains `descriptors()` and `call(route, params, ctx)` in place of per-kind `queries`.
+
+### Catalog, search, liveness
+
+- `packages/core/src/catalog.ts`: load every connector's descriptors, index them for keyword search (route path, summary, description, field names; BM25 over tokens, no embeddings, no network), `find(query, { limit })` returning compact entries (route, summary, required params, top fields). Ranked with a bias toward equity, options, fixed income, news, economy and index namespaces over commodity and agriculture series.
+- Liveness: `scripts/probe-catalog.ts` calls every route once with default params and a sample symbol, records the liveness block. Runs on demand from the Connectors page ("Probe routes", a few minutes for 1,000 routes, concurrency 8) and in CI against a recorded OpenBB fixture. The agent only sees routes whose liveness is ok or unknown; dead routes are listed on the Connectors page with their error.
+- The Connectors page shows the catalog per connector: route count, alive count, last probe, and a searchable table. This is the human view of the same index.
+
+### Frames, shapes, annotations
+
+- Column inference: descriptor fields first; if the response has fields the descriptor lacks, add them with the type inferred from the first non-null value; `time` when the field is typed date/datetime or every value parses as a date. Nested objects are flattened one level with dotted names; arrays of scalars are joined.
+- Shape detection (`packages/core/src/shape.ts`): pure function of columns and row sample. `time`: first `time` column. `group`: first of `symbol`, `series`, `ticker`, `cusip`, `name` when the frame has several distinct values. `numeric`: all number columns. `options`: has strike + expiration + option_type (or type). `oneRowPerGroup`: group column with no duplicates.
+- Views declare requirements: `series` needs time and at least one numeric; `chain` needs options; `stat` needs oneRowPerGroup and a numeric; `table` needs nothing. `view-for` picks by shape; the editor offers only views whose requirements the frame meets. Candle needs open, high, low, close by name; normalize needs a group.
+- Annotations (`packages/core/annotations.yml`, loaded at startup, about 100 lines to start): `openbb.equity/price/quote.change_percent: { unit: fraction, label: "Chg %" }`, `openbb.*.market_cap: { unit: usd, format: compact }`, `*.volume: { format: integer, priority: 3 }`. Matching by connector, route glob, and field. The runner converts units to the product's conventions (fractions become percent) and stamps the column with its unit, so previews and views are consistent. A field without an annotation is shown as-is with its description available in the tooltip and the preview, and the prompt tells the agent that unannotated numbers carry no unit guarantee.
+
+### Transforms: deriving frames from frames
+
+The user wants the agent to manipulate, merge and modify what it fetched, with "P/E over time" as the example: daily closes joined to trailing-twelve-month EPS, which no provider route returns. A **transform** is a Python script over one or more frames that returns one DataFrame. It is the fourth kind of thing a widget can hold, and the result goes through the same inference, annotations, preview and view path as a route's frame, so product rule 4 is untouched: every number in a reply still comes from a preview.
+
+**Why pandas, and why in WebAssembly.** The prompts that need derivation split in two. Joins, windows and aggregates (P/E over time, rebasing, spreads, drawdown, rolling volatility, earnings reactions, put/call ratios) are fine in SQL. The other quarter is not: every technical indicator is recursive (EMA, RSI, MACD), implied volatility and yield to maturity need a solver, pairs trades need cointegration, expected moves need distributions, backtests need state, and a correlation matrix is one line of pandas and a self-join mess in SQL. Those are the prompts that make the product feel like a real tool, so the engine must cover them, and that means Python. Running the agent's Python as a native process on the user's machine is not acceptable for a local-first product (arbitrary code with the user's privileges, sandboxing that differs per OS, a Python install to manage). Pyodide runs CPython, pandas, numpy and scipy in WebAssembly inside the Node process: no filesystem or network unless handed in, nothing to install, about 30 MB vendored in the npm package, 2 to 4 s of warm-up once per server start, then tens of milliseconds per run on widget-sized data. One engine; DuckDB was considered and dropped to keep one prompt rule, one lineage format and one worker to maintain. It can return behind the same contract if the refresh loop ever needs it.
+
+- **Contract:** `{ inputs: Record<name, Query>, code: string, columns?: Record<name, Annotation> }`. Each input is bound as a DataFrame of that name (time columns as tz-aware datetimes, ET); the script must assign `result`, a DataFrame. The `columns` block lets the agent declare the unit and label of columns it created (`pe: { unit: ratio, label: "P/E (TTM)" }`); columns that keep an input's name keep its annotation. A widget's query may be a route, a recipe, or a transform.
+- **Agent tool:** `transform(inputs, code, columns?)`. Inputs are queries the agent already ran (cache hits) or new ones (run first, in parallel). The tool returns the preview of the result, or the Python traceback on failure so the agent can fix it in the next step. The prompt gets one rule and one worked example:
+
+  ```python
+  # P/E over time: close / trailing-twelve-month EPS as of each trading day
+  e = eps.sort_values("date")
+  e["eps_ttm"] = e.groupby("symbol")["eps_actual"].transform(lambda s: s.rolling(4).sum())
+  e = e.dropna(subset=["eps_ttm"]).rename(columns={"date": "time"})
+  p = price.sort_values("time")
+  m = pd.merge_asof(p, e[["symbol", "time", "eps_ttm"]], on="time", by="symbol")
+  m = m[m.eps_ttm > 0]
+  m["pe"] = m.close / m.eps_ttm
+  result = m[["symbol", "time", "close", "eps_ttm", "pe"]]
+  ```
+
+  with inputs `price = ohlcv NVDA 1d 2y` and `eps = eps_history NVDA limit 12`. The result has a time column and a numeric `pe`, so the series view renders it as a line, and the stat view shows the latest value.
+- **Widgets refresh their derivations.** A transform widget re-runs its inputs on their TTLs (cache hits when nothing changed) and the script after, so a derived chart stays live. The editor shows the inputs and the code and lets the user edit both; the subtitle reads "derived from 2 queries".
+- **Lineage in previews.** The preview of a transform carries the code and the input queries, so a reply can say "P/E (TTM) is 42.1, derived from closes and reported EPS" and the chip opens a widget that shows exactly that derivation.
+- **Guardrails.** One warm Pyodide worker per server, restarted on any breach; imports limited to pandas, numpy, scipy, math, datetime and a small `ot` helper module (trading calendar, rebase, returns); 10 s CPU and 512 MB per run; input rows capped at 250k and output at 50k; no `fetch`, no filesystem mounted. The bench grades derivations by recomputing one value by hand, as it did for trailing P/E in v2.
+- **Helpers (`ot` module):** `ot.trading_days(start, end)`, `ot.last_week()`, `ot.prev_close(df)`, `ot.rebase(df, by="symbol")`, `ot.returns(df)`, `ot.ema/rsi/macd/bollinger`, `ot.bs_iv(price, S, K, t, r, kind)`. Thin, tested, documented in the prompt; the agent may ignore them and write pandas directly.
+- **Scope:** joins, windows, aggregation, resampling, rebasing, spreads, ratios, filters, indicators, solvers, statistics, simple backtests. Not in v2: user-defined packages, plotting from Python (views render), network from Python.
+
+Transforms are workstream (f) in phase 1 and get their own bench prompts in phase 2: P/E over time, 10y minus 2y from two macro series, an equal-weighted basket index, net debt from the balance sheet, RSI and MACD on a daily chart, implied volatility from a quoted option price, a 20-name correlation matrix, and an SMA-crossover backtest with the equity curve.
+
+### The widget model: datasets, fields, layers, presets
+
+The features below must be configurations of one model, not ten features. The model borrows from the three designs that have aged best: Grafana (data source, then transformations, then a panel with field config and overrides, with annotations as separate queries drawn over time series), Vega-Lite (a chart is layers of marks bound to fields), and lightweight-charts 5 itself (panes, several price scales, series markers, price lines, primitives for custom drawing, yield-curve and options charts with a numeric x-axis). Four parts:
+
+1. **Datasets.** A widget holds a named data graph, not one query: `data: { price: Route|Recipe, eps: Route|Recipe, pe: Transform(price, eps), events: Recipe }`. Every node is a frame with lineage. Markers, overlays, a second pane's series and a comparison's second table are datasets of the same widget, fetched and cached by the same runner, refreshed on their own TTLs. A plain widget is a graph with one node.
+2. **Fields.** Every column carries a field config: role (`time`, `group`, `measure`, `label`, `level`, `x`), unit, label, format, colour, priority, key. It comes from three layers, later ones overriding: shape detection (roles), annotations by route and field (units, labels), and per-widget overrides (`fields: { pe: { label: "P/E (TTM)", unit: ratio } }`). Table control, stat key column, marker labels, heatmap value, subtitle, column priority and the preview's unit stamps all read field config; nothing reads a kind.
+3. **Layers.** A chart is panes, a pane is layers, a layer is one mark bound to one dataset's fields: `{ mark: line|area|candle|bar|histogram|marker|level|band|cell, data: 'price', x: 'time', y: 'close', group: 'symbol', scale: left|right }`. Panes stack with relative heights; the x-axis is `time` or `number`. Markers are a `marker` layer over an `events` dataset (time, label, kind). Horizontal levels are a `level` layer with a constant or a dataset (strikes, 52-week high, target). Shaded ranges are a `band` layer. Volume is a `histogram` layer in a second pane. RSI is a line in its own pane with fixed levels at 30 and 70. A yield curve is a `line` layer with `x: maturity_years` on a number axis. A heatmap is a `cell` layer with x, y and a value field. The renderer knows marks and panes only; it never knows what the data means.
+4. **Presets.** The agent and the editor do not write layer specs. They name a preset with options: `view: { preset: 'price', candle: true, volume: true, events: 'earnings' }`, `{ preset: 'compare', normalize: true }`, `{ preset: 'curve' }`, `{ preset: 'indicator', rsi: 14 }`, `{ preset: 'table', columns: [...], sort: ... }`, `{ preset: 'stat', column: 'pe' }`, `{ preset: 'heatmap' }`. A preset is a pure function from (options, field config of the datasets) to panes and layers, defined in data where possible and in a small TypeScript module otherwise, with tests. Presets bind by role, so `compare` works on any dataset with time, group and a measure, whether it came from a route or a transform. Users and advanced agents may write layers directly; the editor shows the expanded spec.
+
+Each feature on the list, through the model: markers are a dataset plus a layer; panes and axes are the pane list and `scale`; numeric x is the axis type; table control is field config plus the `table` preset's options; the compare pivot is a transform plus `table`; the heatmap is one mark; steerable previews are a preview spec on the query (rows, sort, slice, columns) with time bounds and event rows always included; time semantics are one `clock` module used by the runner, the `ot` helpers, previews and the prompt; index, sector and screener are recipes; a recipe is a saved widget (data graph, preset, title template, param schema, fallbacks), so promote-to-recipe serialises the widget the user has; frames are keyed by workspace, widget and dataset in the web state. Further out, an alert is a transform with a condition over a dataset, a user drawing is a hand-authored layer, and streaming is a dataset update channel; none of them touches the model.
+
+What this costs: a renderer rewrite of the series view around panes and layers (lightweight-charts 5.2 has every primitive needed: `addPane`, `priceScaleId`, `createSeriesMarkers`, `createPriceLine`, `attachPrimitive`, histogram series, `createYieldCurveChart`), the field config pipeline in core, and the preset module. The table, stat, chain and facts card views become presets over the same field config with their current renderers.
+
+### Views and features for v2
+
+Bench v2's fails were as much about what the user could not *see* as about data. Ranked, with the fail each one clears:
+
+1. **Markers on charts.** A series view takes an optional `events` input: any frame with a time column, a label and a kind, rendered as markers on the price line (lightweight-charts series markers) with a tooltip and a legend entry. Recipes supply the common ones: earnings dates with the reaction, dividends, insider trades, splits, macro releases, the news cluster the reply names. The agent can also place its own: `events: [{ time, label }]` typed by hand ("the drop"), for the reply to point at. Also horizontal levels (strikes, 52-week high and low, a target price) and shaded ranges (the earnings window, last week). Clears: TSLA earnings reactions ("the chart marks the reactions" becomes true), CRWV "what moved it".
+2. **Panes and axes.** A series view can stack panes (price above, volume or RSI below), put a second series on a right axis (price against a yield), and use a numeric x-axis instead of time (a yield curve by maturity, the IV term structure, open interest by strike). The transform engine produces these frames; the view must be able to draw them. Clears: rates week (curve view), options (term structure), any indicator prompt.
+3. **Table control by the agent.** `view.columns` (which, in what order), `view.sort`, a highlighted row, and conditional colour on percent columns. A compare prompt renders metrics × symbols as a pivot with best and worst marked. Clears: neoclouds (debt and FCF were fetched but hidden), cheap-tech (40-row dump).
+4. **Previews the agent can steer.** Default stays 25 rows plus stats; the agent can ask for a slice (`tail`, a time range, top-N by a column) through a transform, and previews of a frame with a time column always include the first and last timestamps and the row dates that fall on recipe-known events. Clears: S&P last week (PPI and retail sales were past row 25), rates week (Friday's rows).
+5. **Time semantics in one place.** `ot.last_week()`, `prev_close`, ET session awareness, weekday labels in calendar frames, baseline from the close before the period (bench v1's TSMC finding). Used by recipes, transforms and the prompt. Clears: wrong weekdays, 1mo change from the first bar, "last week" meaning the last 30 days.
+6. **Index and sector recipes.** "The S&P" resolves to `^GSPC` with SPY as the tradable; sector performance derived from the eleven sector ETFs; constituents from holdings; leaders and laggards from movers filtered to an index. Clears: S&P last week.
+7. **Screener recipe.** The yfinance screener route with the agent's filters, then a transform for anything the route cannot filter. Clears: cheap-tech.
+8. **Frames keyed by workspace.** Widget ids repeat across workspaces; the web state keys frames by workspace and widget, and the `frameMatches` guard stays as belt and braces. A defect, not a feature; first in phase 1(d).
+9. **No one-row tables (product rule 8).** A table's job is comparison, and one row compares nothing. Two layers: the table view renders a one-row frame as a **facts card** (label over value, wrapped to the width, same formats and mono numbers), so hand-built widgets and frames that shrink on refresh never show a lonely row under ten headers; and `set_workspace`, which sees preview row counts, rejects a table over a one-row frame with the rule: stat for one or two headline numbers, the facts card for a snapshot with several, the reply or a chart marker for a single date or fact, a pivot through a transform for one symbol's financials. The prompt carries the same table. Clears: the 73%-blank cells in the TSLA puts and CRWV workspaces.
+10. **Heatmap view.** A matrix frame (correlations, sector × week returns, holdings by weight) as a coloured grid. Small, and the transform engine makes the frames trivial to produce.
+11. **Promote to recipe.** A transform or query the user likes can be saved as a recipe from the widget menu, with a name and a title template, into `~/.terminal/recipes.yml`; the agent sees user recipes beside the built-in ones. This is how the catalog grows from use.
+
+Deferred past v2, each with a reason: histogram and distribution views (one prompt in the bench set, pandas can tabulate for now), text or note widgets (the reply is the narrative), alerts and conditions (section 9), user drawing on charts (markers are data-driven first), streaming (polling on TTL holds).
+
+### Caching and TTL
+
+Cache key is `connector + route + canonical params`. TTL by route pattern in a small table: `*/quote*` and `*/price/quote` 10 s, `*/historical*` with intraday intervals 1 min else 10 min, `news/*` 5 min, `*/calendar/*` 1 h, fundamentals and ownership 1 day, default 10 min. Recipes can override.
+
+### Agent
+
+Tools: `find_route(query: string)` returns up to five catalog entries; `query(connector, route, params)` validates against the descriptor and returns a preview as today; `transform(inputs, code, columns?)` as above; `set_workspace` unchanged except widgets hold `{ connector, route, params }`, a `recipe` name with params, or a transform. Prompt: the recipe list with one example query each (about 25 lines, replacing the kind guidance), the rule "use a recipe when one fits; search the catalog when none does; never write a figure that is not in a preview", the unit rule above, and the worked examples rewritten with routes. Expected cost: one extra tool call on prompts that leave the recipes, about two seconds.
+
+### Migration
+
+- Stored widgets with `{ kind, params }` are read as `{ recipe: kind, params }` by a one-time migration in the store; recipes carry the exact routes the kinds used, so every existing workspace renders unchanged.
+- `pnpm query` takes `<connector> <route> key=value…` and keeps `pnpm query <recipe> …`.
+- The bench and its notes are unchanged; bench v2 is the acceptance test.
+
+### Removed
+
+`packages/core/src/kinds.ts` and its 22 schemas; per-kind handlers in all three connectors (OpenBB's 600-line `index.ts` becomes the descriptor generator plus a 60-line caller); `formatsFor`, `KIND_PRIORITY`, `subtitleFor` per kind (replaced by shape and annotations: subtitle is route summary plus the params that matter); `STAT_KEY_COLUMN` (replaced by annotation `key: true` or the first numeric). Section 7.1's table becomes the recipe list in `recipes.yml`.
+
+### UI changes from the Instinct reference (ss.png, 2026-10-18)
+
+The user's screenshot of Instinct's "CL market summary" workspace sets the bar. What it does and what v2 takes from it:
+
+- **Three columns beside the open panel.** Its grid is about 1,470 CSS px wide with a 380 px panel, six widgets in two rows of three, each about 480 px wide and 450 px tall, filling the viewport with no vertical scroll. Our packer gives three columns from 1,100 px of grid width; v2 lowers that to 960 px (widgets about 320 px wide), so a 1,440 px laptop with the panel open gets three columns. Charts, stat cards and facts cards work at 320; tables shed columns by priority as they do now.
+- **Size by content, not by the agent's guess.** Instinct's widgets are uniform; ours vary by an agent-chosen size that does not know the data. v2 keeps lg, md and sm as hints but lets the packer demote: a table with six rows or fewer, a stat, a facts card and a one-symbol quote are one row tall; charts are two rows tall unless there are more than six widgets. The rule lives in `packLayout` beside the no-holes rule and is what removes the blank space inside tables.
+- **Charts before tables.** Every one of Instinct's six widgets is a chart. The prompt's widget guidance flips its default: a chart or a stat for anything with a time column or a headline number; a table only for comparison across rows (more than one row, more than two columns). The bench's widgets criterion grades it.
+- **Presets the screenshot uses that we lack**: signed bars (funding rate: positive green, negative red, zero line), a diverging colour scale with a legend (monthly returns), a horizontal volume profile beside the price, event markers on the line with icons by kind, last-value badges on the price axis in the series colour, legend chips inside the plot's top-left. All are marks or options in the layer model; the first three are new marks (`bar` with signed colour, `cell` with a diverging scale, `profile`).
+- **Shell**: a ticker strip under the tabs with four to six live quotes the user chooses (SPX, NDX, 10y, VIX, oil, gold by default) and a market strip in the status bar; the conversation panel header shows "Worked for 16 s · 4 steps" with the steps expandable, which our run log provides. Not taken: drag handles (rule 3 stands), a Feed or Home page (rule 2), alerts (section 9).
+
+### Visual acceptance: test cases and the iteration loop
+
+Every phase 1 workstream that touches what the user sees ships with screenshots, and phase 2 does not end until the cases below look right. "Look right" is a checklist a headless browser can score, plus a human look at the final set.
+
+Checklist per workspace, measured in headless Chromium at 1440x900 and 1920x1080 with the panel open: no element with `scrollWidth > clientWidth`; no empty grid cell; no widget whose content box fills less than 60% of its height (tables and cards) or 80% (charts); no table with one row; three columns at 1440 with the panel open; every widget has a title and a sub-header; every chart has a legend and a last-value label; no text clipped mid-word; the reply has no unverified number (reply verification) and at least one chip per cited widget. Plus a human pass on the set for taste: alignment, density, colour, that it reads like a terminal.
+
+Cases (prompt, then what the workspace must contain):
+
+1. "Why is CRWV down?" — price with the drop marked and news markers; bond yields line (FINRA) with the 2030 notes; peers compare; a stat for today's move; the reply names the catalyst.
+2. "Compare the neoclouds" — rebased performance chart; a compare table (metrics by symbol, best and worst marked) with growth, margins, debt, FCF, valuation; estimates; no table under seven rows.
+3. "What's happening to the S&P last week?" — `^GSPC` for exactly last week with macro-release markers; sector performance bars for the week; leaders and laggards; the calendar rows for that week in the reply.
+4. "TSLA puts for next Friday" — the chain with the underlying from the quote; IV term structure on a numeric axis; a stat for IV rank; the implied move in the reply.
+5. "TSLA earnings reactions" — candle chart with every report marked and its reaction; a table of reports with the reaction column; the reply gives all seven.
+6. "Large-cap tech under 20x" — the screener as a table sorted by P/E, virtualised; a stat for the count; a heatmap of P/E by sector.
+7. "P/E over time for NVDA" — the derived line with the EPS dates marked; the current value as a stat; the transform visible in the editor.
+8. "RSI and MACD on AMD" — price pane, RSI pane with 30/70 levels, MACD pane with histogram, one widget.
+9. "10y minus 2y and the curve today" — the spread line from two macro series with recession-style shading when negative; the yield curve on a numeric axis.
+10. "Morning check on my watchlist" — a ticker strip, a quote stat row, reporting-today markers, overnight news; three columns, two rows, no scroll.
+11. "Correlation of the Mag 7 over 6 months" — a heatmap with a diverging scale and the pairs named in the reply.
+12. "Backtest a 50/200 SMA cross on SPY since 2020" — equity curve against buy-and-hold, trade markers, a facts card with the summary statistics.
+
+The loop: a bot builds the workspace through the agent on its own server, screenshots it, runs the checklist, fixes what fails (preset, prompt rule, packer rule, annotation), and repeats until the checklist passes; then a second bot, briefed only with the screenshot and the case, grades taste and lists what it would change; the first bot addresses that once more. The PR carries the final screenshots in a before/after table against production, and the bench note records the checklist results. No case is marked done on a bot's say-so; the user looks at the final set.
+
+### Also in v2
+
+Changes outside the data and view model that v2 should carry, because the schema migration makes them cheapest now or because the model makes them nearly free.
+
+Must:
+
+- **Reply verification on the server.** Rule 4 was enforced only by the prompt, and bench v2 caught it failing. The server extracts every number from the streamed reply, matches each against that run's previews with unit-aware tolerance (percent vs fraction, rounding), flags unmatched figures in the reply UI and records the result in the run log. The bench reads the log instead of re-verifying by hand.
+- **Store on SQLite** (`node:sqlite`, Node 22, no native dependency): workspaces, widgets with their data graphs, recipes, the catalog cache, probe results, run logs, and a persistent frame cache keyed by route and params so a restart does not refetch two years of bars. One-time migration from the JSON store.
+- **Run log.** Each prompt records steps, timings, tokens, cost, and the verification result; shown as the steps in the conversation panel, kept for the bench and for "why did it do that".
+- **Editor with three tabs**: data (the graph, each dataset's preview), transform (CodeMirror 6 with the traceback inline), view (preset options and the expanded layers). The expand dialog shows the same plus the whole frame.
+- **Data page** replaces the Connectors page: catalog browser with search, liveness and a probe button, keys, per-route provider overrides, and the recipe library with promote and edit.
+- **Virtualised tables** for transform and screener outputs in the thousands of rows.
+- **The rename**: `@openterminal/*` scope, `openterminal` bin, `~/.openterminal` config directory with migration from `~/.terminal`, npm publish. v2 is a migration anyway.
+
+Should:
+
+- **Workspace export and import** as one JSON file carrying data graphs, transforms, presets and recipes; how workspaces get shared and how bug reports arrive.
+- **Widget-scoped prompts**: "make this weekly" edits one widget's graph or preset without rewriting the workspace, same agent with a smaller context.
+- **Beyond US equities for data** (routes already serve crypto, FX and non-US listings); the clock module stays on the US calendar in v2, per-exchange calendars follow.
+- **Docs rewrite**: adding a data source by descriptor, writing a recipe, writing a preset; architecture and vocabulary pages updated for the new nouns.
+
+Deferred with a reason: Arrow for frames over the socket and into Pyodide (until a measured prompt is slow from serialisation); scheduling and alerts (section 9); a Pyodide worker pool (until one worker measurably queues).
+
+### Phases
+
+0. **Trunk** (one agent, sequential): descriptor type, catalog with search, shape detection, annotations loader, unit conversion, the runner, and tests with a recorded `openapi.json` fixture. Nothing user-visible changes.
+1. **Parallel**: (a) OpenBB descriptor generator, caller, probe script and liveness; (b) yahoo and finnhub descriptor files and callers; (c) agent tools and prompt with recipes; (d) web: views by shape, editor from descriptors, Connectors page catalog, subtitles from routes; (e) SQLite store and migration, persistent cache, run log, `pnpm query`, docs (`writing-a-connector.md` rewritten around descriptors, the README kinds table replaced by "any route, plus these recipes"); (f) transforms: the Pyodide worker, the `ot` helpers, the tool, the widget type, editor and subtitle; (h) shell: the three-tab editor, the Data page, virtualised tables, export and import, widget-scoped prompts, the rename; (i) reply verification; (g) views: the field config pipeline, presets, the pane-and-layer chart renderer (markers, levels, bands, histogram, numeric x), table control, facts card and the one-row rule, heatmap.
+2. **Integrate and accept**: bench v2 rerun and the twelve visual cases above through the iteration loop; the target is the three user prompts passing, the checklist green on all twelve at both viewports, and no regression on bench v1; new annotations added for every unit mistake found.
+3. **Remove**: delete the kind code once the bench passes; PLAN.md sections 7.1, 14 marked superseded.
+
+### Risks and answers
+
+- *Wrong units in replies.* Annotations for every field the recipes touch before phase 2; the preview shows the unit per column; the prompt forbids stating a unit the column does not carry. The bench grades it.
+- *The agent picks a bad route.* Liveness filters dead ones; ranking prefers the trading namespaces; recipes cover the common 80%. Measured by bench v2.
+- *Views that render garbage.* Shapes gate the views; the table is the floor and always renders.
+- *Prompt latency.* One extra tool call only off the recipe path.
+- *Fixtures.* Tests run against a recorded `openapi.json` and a dozen recorded responses, never the network, as today.
+- *Losing the typed contributor contract.* A contributor adds a REST API by descriptor file, which is simpler than 50 lines per kind, and the catalog validates it at load.
+
+### Out of scope
+
+Write routes (orders), authentication flows beyond API keys and basic auth, embeddings for search, streaming routes, user-installed Python packages, plotting or network from transforms.
