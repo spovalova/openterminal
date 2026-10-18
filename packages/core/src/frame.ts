@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { FieldConfigSchema } from './fields.js'
 
 /**
  * A Frame is the only data shape that crosses from a connector to a view.
@@ -15,6 +16,23 @@ export type ColumnType = z.infer<typeof ColumnTypeSchema>
 export const ColumnSchema = z.object({ name: z.string().min(1), type: ColumnTypeSchema })
 export type Column = z.infer<typeof ColumnSchema>
 
+/**
+ * Where a frame came from (v2). A route frame names its connector, route and params; a recipe frame also the recipe;
+ * a transform frame carries its code and one lineage per input dataset. Previews show it so a reply can say
+ * "derived from closes and reported EPS".
+ */
+export const LineageSchema = z.object({
+  connector: z.string().optional(),
+  route: z.string().optional(),
+  params: z.record(z.string(), z.unknown()).optional(),
+  provider: z.string().optional(),
+  recipe: z.string().optional(),
+  /** Transform inputs: dataset name → that input's lineage. */
+  inputs: z.record(z.string(), z.unknown()).optional(),
+  code: z.string().optional(),
+})
+export type Lineage = z.infer<typeof LineageSchema>
+
 export const FrameMetaSchema = z.object({
   /** Name of the connector that produced the frame. */
   connector: z.string(),
@@ -22,6 +40,10 @@ export const FrameMetaSchema = z.object({
   fetchedAt: z.number(),
   /** Milliseconds the frame may be served from cache. */
   ttl: z.number().nonnegative(),
+  /** v2: field config per column (unit, label, format, role) as stamped by annotations and overrides. Absent on v1 frames. */
+  fields: z.record(z.string(), FieldConfigSchema).optional(),
+  /** v2: the query graph that produced the frame. Absent on v1 frames. */
+  lineage: LineageSchema.optional(),
 })
 export type FrameMeta = z.infer<typeof FrameMetaSchema>
 

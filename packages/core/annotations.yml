@@ -1,0 +1,479 @@
+# Field annotations (PLAN.md section 17): hand-written facts about one field of one route. Key is
+# connector:route-glob:field (route globs match across "/"; "*" alone matches everything). Values are field
+# config: unit (fraction | percent | ratio | usd | shares | count | days | years | bps), label, format, priority
+# (1 shows first and survives the narrowest widget), key (the stat view's headline column), hidden.
+#
+# A more specific rule wins field by field: "*:*:volume" sets the format, "openbb:equity/price/quote:volume" may
+# add a label. The runner converts `fraction` to percent (x100) and stamps the column `percent`, so views and the
+# agent never see a fraction. Units come from the v1 handlers (connectors/openbb/src/index.ts, connectors/yahoo/src/*,
+# connectors/finnhub/src/index.ts): what they multiplied by 100 is a fraction here, what they passed through is not.
+#
+# Seed coverage: every field the 22 recipes touch on their OpenBB, yahoo and finnhub routes, plus the v1 kind routes
+# (a v1 connector appears in the catalog with one route per kind, already in product units).
+
+annotations:
+  # ---------------------------------------------------------------- generic, by field name on any route
+  "*:*:symbol": { label: Symbol, priority: 1 }
+  "*:*:name": { label: Name, priority: 4 }
+  "*:*:exchange": { label: Exchange, priority: 6 }
+  "*:*:volume": { unit: shares, format: compact, label: Volume, priority: 3 }
+  "*:*:market_cap": { unit: usd, format: compact, label: Mkt cap, priority: 2 }
+  "*:*:url": { format: link, label: Link, priority: 9 }
+  "*:*:description": { label: Description, priority: 9 }
+  "*:*:long_description": { label: Description, priority: 9 }
+  "*:*:change_pct": { unit: percent, format: change, label: "Chg %", priority: 2 }
+  "*:*:change_percent": { unit: fraction, format: change, label: "Chg %", priority: 2 }
+  "*:*:percent_change": { unit: fraction, format: change, label: "Chg %", priority: 2 }
+  "*:*:open": { unit: usd, format: price, label: Open, priority: 5 }
+  "*:*:high": { unit: usd, format: price, label: High, priority: 5 }
+  "*:*:low": { unit: usd, format: price, label: Low, priority: 5 }
+  "*:*:close": { unit: usd, format: price, label: Close, priority: 2, key: true }
+  "*:*:date": { label: Date, priority: 1 }
+  "*:*:time": { label: Time, priority: 1 }
+
+  # ---------------------------------------------------------------- openbb: prices and quotes
+  "openbb:equity/price/quote:last_price": { unit: usd, format: price, label: Last, priority: 1, key: true }
+  "openbb:equity/price/quote:change": { unit: usd, format: change, label: Chg, priority: 3 }
+  "openbb:equity/price/quote:prev_close": { unit: usd, format: price, label: Prev close, priority: 4 }
+  "openbb:equity/price/quote:bid": { unit: usd, format: price, label: Bid, priority: 6 }
+  "openbb:equity/price/quote:ask": { unit: usd, format: price, label: Ask, priority: 6 }
+  "openbb:equity/price/quote:year_high": { unit: usd, format: price, label: 52w high, priority: 5 }
+  "openbb:equity/price/quote:year_low": { unit: usd, format: price, label: 52w low, priority: 5 }
+  "openbb:equity/price/quote:market_status": { label: Market, priority: 7 }
+  "openbb:equity/price/quote:iv30": { unit: fraction, label: IV30, priority: 2 }
+  "openbb:equity/price/quote:iv30_change": { unit: fraction, format: change, label: IV30 chg, priority: 6 }
+  "openbb:equity/price/quote:iv30_change_percent": { unit: fraction, format: change, label: "IV30 chg %", priority: 7 }
+  "openbb:equity/price/quote:iv30_annual_high": { unit: fraction, label: IV30 high, priority: 3 }
+  "openbb:equity/price/quote:iv30_annual_low": { unit: fraction, label: IV30 low, priority: 3 }
+  "openbb:equity/price/quote:hv30": { unit: fraction, label: HV30, priority: 4 }
+  "openbb:equity/price/quote:hv30_annual_high": { unit: fraction, label: HV30 high, priority: 5 }
+  "openbb:equity/price/quote:hv30_annual_low": { unit: fraction, label: HV30 low, priority: 5 }
+  "openbb:equity/price/quote:iv60": { unit: fraction, label: IV60, priority: 6 }
+  "openbb:equity/price/quote:iv90": { unit: fraction, label: IV90, priority: 6 }
+  "openbb:equity/price/historical:vwap": { unit: usd, format: price, label: VWAP, priority: 6 }
+  "openbb:index/price/historical:close": { unit: count, format: ratio, label: Close, priority: 2, key: true }
+  "openbb:index/price/historical:open": { unit: count, format: ratio, label: Open }
+  "openbb:index/price/historical:high": { unit: count, format: ratio, label: High }
+  "openbb:index/price/historical:low": { unit: count, format: ratio, label: Low }
+
+  # ---------------------------------------------------------------- openbb: news
+  "openbb:news/*:title": { label: Headline, priority: 1 }
+  "openbb:news/*:publisher": { label: Source, priority: 3 }
+  "openbb:news/*:source": { label: Source, priority: 4 }
+  "openbb:news/*:text": { label: Text, priority: 9 }
+  "openbb:news/*:symbols": { label: Symbols, priority: 5 }
+  "openbb:news/*:images": { hidden: true }
+
+  # ---------------------------------------------------------------- openbb: calendars
+  "openbb:equity/calendar/earnings:report_date": { label: Date, priority: 1 }
+  "openbb:equity/calendar/earnings:reporting_time": { label: Session, priority: 3 }
+  "openbb:equity/calendar/earnings:eps_consensus": { unit: usd, format: price, label: EPS est., priority: 2 }
+  "openbb:equity/calendar/earnings:eps_previous": { unit: usd, format: price, label: EPS prior, priority: 5 }
+  "openbb:equity/calendar/earnings:eps_actual": { unit: usd, format: price, label: EPS, priority: 2 }
+  "openbb:equity/calendar/earnings:surprise_percent": { unit: percent, format: change, label: "Surprise %", priority: 4 }
+  "openbb:equity/calendar/earnings:market_cap": { unit: usd, format: compact, label: Mkt cap, priority: 6 }
+  "openbb:equity/calendar/ipo:ipo_date": { label: Date, priority: 1 }
+  "openbb:equity/calendar/ipo:share_price": { unit: usd, format: price, label: Price, priority: 2 }
+  "openbb:equity/calendar/ipo:offer_amount": { unit: usd, format: compact, label: Raised, priority: 3 }
+  "openbb:equity/calendar/ipo:deal_status": { label: Status, priority: 4 }
+  "openbb:equity/calendar/ipo:exchange": { label: Exchange, priority: 5 }
+  "openbb:economy/calendar:event": { label: Event, priority: 1 }
+  "openbb:economy/calendar:actual": { label: Actual, priority: 2 }
+  "openbb:economy/calendar:consensus": { label: Consensus, priority: 3 }
+  "openbb:economy/calendar:previous": { label: Previous, priority: 4 }
+  "openbb:economy/calendar:country": { label: Country, priority: 6 }
+  "openbb:economy/calendar:importance": { label: Importance, priority: 7 }
+
+  # ---------------------------------------------------------------- openbb: company
+  "openbb:equity/profile:employees": { unit: count, format: compact, label: Employees, priority: 5 }
+  "openbb:equity/profile:beta": { unit: ratio, format: ratio, label: Beta, priority: 4 }
+  "openbb:equity/profile:sector": { label: Sector, priority: 3 }
+  "openbb:equity/profile:industry_category": { label: Industry, priority: 4 }
+  "openbb:equity/profile:industry": { label: Industry, priority: 4 }
+  "openbb:equity/profile:stock_exchange": { label: Exchange, priority: 6 }
+  "openbb:equity/profile:dividend_yield": { unit: fraction, label: Div yield, priority: 6 }
+  "openbb:equity/fundamental/metrics:pe_ratio": { unit: ratio, format: ratio, label: P/E, priority: 2, key: true }
+  "openbb:equity/fundamental/metrics:forward_pe": { unit: ratio, format: ratio, label: Fwd P/E, priority: 3 }
+  "openbb:equity/fundamental/metrics:peg_ratio": { unit: ratio, format: ratio, label: PEG, priority: 4 }
+  "openbb:equity/fundamental/metrics:enterprise_to_ebitda": { unit: ratio, format: ratio, label: EV/EBITDA, priority: 4 }
+  "openbb:equity/fundamental/metrics:enterprise_to_revenue": { unit: ratio, format: ratio, label: EV/Rev, priority: 5 }
+  "openbb:equity/fundamental/metrics:price_to_book": { unit: ratio, format: ratio, label: P/B, priority: 5 }
+  "openbb:equity/fundamental/metrics:gross_margin": { unit: fraction, label: Gross margin, priority: 3 }
+  "openbb:equity/fundamental/metrics:operating_margin": { unit: fraction, label: Op margin, priority: 4 }
+  "openbb:equity/fundamental/metrics:profit_margin": { unit: fraction, label: Net margin, priority: 3 }
+  "openbb:equity/fundamental/metrics:ebitda_margin": { unit: fraction, label: EBITDA margin, priority: 6 }
+  "openbb:equity/fundamental/metrics:revenue_growth": { unit: fraction, format: change, label: Rev growth, priority: 3 }
+  "openbb:equity/fundamental/metrics:earnings_growth": { unit: fraction, format: change, label: EPS growth, priority: 4 }
+  "openbb:equity/fundamental/metrics:earnings_growth_quarterly": { unit: fraction, format: change, label: EPS growth (q), priority: 7 }
+  "openbb:equity/fundamental/metrics:return_on_equity": { unit: fraction, label: ROE, priority: 4 }
+  "openbb:equity/fundamental/metrics:return_on_assets": { unit: fraction, label: ROA, priority: 6 }
+  "openbb:equity/fundamental/metrics:debt_to_equity": { unit: percent, format: ratio, label: "D/E %", priority: 5 }
+  "openbb:equity/fundamental/metrics:dividend_yield": { unit: percent, label: Div yield, priority: 5 }
+  "openbb:equity/fundamental/metrics:payout_ratio": { unit: fraction, label: Payout, priority: 7 }
+  "openbb:equity/fundamental/metrics:quick_ratio": { unit: ratio, format: ratio, label: Quick, priority: 7 }
+  "openbb:equity/fundamental/metrics:current_ratio": { unit: ratio, format: ratio, label: Current, priority: 7 }
+  "openbb:equity/fundamental/metrics:enterprise_value": { unit: usd, format: compact, label: EV, priority: 6 }
+  "openbb:equity/fundamental/metrics:price_to_sales": { unit: ratio, format: ratio, label: P/S, priority: 5 }
+  "openbb:equity/fundamental/income:total_revenue": { unit: usd, format: compact, label: Revenue, priority: 1 }
+  "openbb:equity/fundamental/income:revenue": { unit: usd, format: compact, label: Revenue, priority: 1 }
+  "openbb:equity/fundamental/income:gross_profit": { unit: usd, format: compact, label: Gross profit, priority: 3 }
+  "openbb:equity/fundamental/income:operating_income": { unit: usd, format: compact, label: Op income, priority: 2 }
+  "openbb:equity/fundamental/income:net_income": { unit: usd, format: compact, label: Net income, priority: 2 }
+  "openbb:equity/fundamental/income:ebitda": { unit: usd, format: compact, label: EBITDA, priority: 4 }
+  "openbb:equity/fundamental/income:diluted_earnings_per_share": { unit: usd, format: price, label: EPS, priority: 2 }
+  "openbb:equity/fundamental/income:basic_earnings_per_share": { unit: usd, format: price, label: EPS (basic), priority: 6 }
+  "openbb:equity/fundamental/income:weighted_average_diluted_shares_outstanding": { unit: shares, format: compact, label: Shares, priority: 5 }
+  "openbb:equity/fundamental/income:period_ending": { label: Period, priority: 1 }
+  "openbb:equity/fundamental/cash:operating_cash_flow": { unit: usd, format: compact, label: Op cash flow, priority: 2 }
+  "openbb:equity/fundamental/cash:capital_expenditure": { unit: usd, format: compact, label: Capex, priority: 3 }
+  "openbb:equity/fundamental/cash:capital_expenditure_reported": { unit: usd, format: compact, label: Capex, priority: 3 }
+  "openbb:equity/fundamental/cash:free_cash_flow": { unit: usd, format: compact, label: FCF, priority: 2 }
+  "openbb:equity/fundamental/cash:period_ending": { label: Period, priority: 1 }
+  "openbb:equity/fundamental/balance:cash_and_cash_equivalents": { unit: usd, format: compact, label: Cash, priority: 2 }
+  "openbb:equity/fundamental/balance:cash_cash_equivalents_and_short_term_investments": { unit: usd, format: compact, label: Cash + ST inv, priority: 3 }
+  "openbb:equity/fundamental/balance:total_debt": { unit: usd, format: compact, label: Debt, priority: 2 }
+  "openbb:equity/fundamental/balance:ordinary_shares_number": { unit: shares, format: compact, label: Shares, priority: 4 }
+  "openbb:equity/fundamental/balance:total_assets": { unit: usd, format: compact, label: Assets, priority: 5 }
+  "openbb:equity/fundamental/balance:total_liabilities_net_minority_interest": { unit: usd, format: compact, label: Liabilities, priority: 6 }
+  "openbb:equity/fundamental/balance:period_ending": { label: Period, priority: 1 }
+  "openbb:equity/estimates/consensus:target_consensus": { unit: usd, format: price, label: Target, priority: 2, key: true }
+  "openbb:equity/estimates/consensus:target_low": { unit: usd, format: price, label: Low target, priority: 4 }
+  "openbb:equity/estimates/consensus:target_high": { unit: usd, format: price, label: High target, priority: 4 }
+  "openbb:equity/estimates/consensus:target_median": { unit: usd, format: price, label: Median target, priority: 5 }
+  "openbb:equity/estimates/consensus:current_price": { unit: usd, format: price, label: Price, priority: 3 }
+  "openbb:equity/estimates/consensus:number_of_analysts": { unit: count, format: integer, label: Analysts, priority: 5 }
+  "openbb:equity/estimates/consensus:recommendation": { label: Rating, priority: 3 }
+  "openbb:equity/estimates/consensus:recommendation_mean": { unit: ratio, format: ratio, label: Rating (mean), priority: 6 }
+  "openbb:yfinance/estimates/earnings:mean": { unit: usd, format: price, label: EPS est., priority: 2 }
+  "openbb:yfinance/estimates/earnings:low": { unit: usd, format: price, label: Low est., priority: 5 }
+  "openbb:yfinance/estimates/earnings:high": { unit: usd, format: price, label: High est., priority: 5 }
+  "openbb:yfinance/estimates/earnings:growth": { unit: fraction, format: change, label: EPS growth, priority: 3 }
+  "openbb:yfinance/estimates/earnings:period": { label: Period, priority: 1 }
+  "openbb:yfinance/estimates/earnings:number_of_analysts": { unit: count, format: integer, label: Analysts, priority: 6 }
+  "openbb:equity/fundamental/historical_eps:eps_actual": { unit: usd, format: price, label: EPS, priority: 2 }
+  "openbb:equity/fundamental/historical_eps:eps_estimated": { unit: usd, format: price, label: EPS est., priority: 3 }
+  "openbb:equity/fundamental/historical_eps:surprise_percent": { unit: percent, format: change, label: "Surprise %", priority: 2 }
+  "openbb:equity/fundamental/historical_eps:surprise": { unit: usd, format: change, label: Surprise, priority: 5 }
+  "openbb:equity/fundamental/dividends:ex_dividend_date": { label: Ex-date, priority: 1 }
+  "openbb:equity/fundamental/dividends:amount": { unit: usd, format: price, label: Amount, priority: 2, key: true }
+
+  # ---------------------------------------------------------------- openbb: ownership and positioning
+  "openbb:equity/ownership/insider_trading:transaction_date": { label: Date, priority: 1 }
+  "openbb:equity/ownership/insider_trading:owner_name": { label: Insider, priority: 2 }
+  "openbb:equity/ownership/insider_trading:owner_title": { label: Title, priority: 5 }
+  "openbb:equity/ownership/insider_trading:acquisition_or_disposition": { label: A/D, priority: 3 }
+  "openbb:equity/ownership/insider_trading:transaction_type": { label: Type, priority: 6 }
+  "openbb:equity/ownership/insider_trading:securities_transacted": { unit: shares, format: compact, label: Shares, priority: 3 }
+  "openbb:equity/ownership/insider_trading:transaction_price": { unit: usd, format: price, label: Price, priority: 4 }
+  "openbb:equity/ownership/insider_trading:transaction_value": { unit: usd, format: compact, label: Value, priority: 4 }
+  "openbb:equity/ownership/insider_trading:securities_owned": { unit: shares, format: compact, label: Owned after, priority: 7 }
+  "openbb:equity/ownership/insider_trading:filing_url": { format: link, label: Filing, priority: 9 }
+  "openbb:equity/ownership/insider_trading:filing_date": { label: Filed, priority: 8 }
+  "openbb:equity/ownership/institutional:owner_name": { label: Holder, priority: 1 }
+  "openbb:equity/ownership/institutional:shares_held": { unit: shares, format: compact, label: Shares, priority: 2 }
+  "openbb:equity/ownership/institutional:shares_change": { unit: shares, format: compact, label: Chg (sh), priority: 5 }
+  "openbb:equity/ownership/institutional:shares_change_percent": { unit: fraction, format: change, label: "Chg %", priority: 3 }
+  "openbb:equity/ownership/institutional:market_value": { unit: usd, format: compact, label: Value ($k), priority: 4 }
+  "openbb:equity/ownership/institutional:date": { label: Filed, priority: 6 }
+  "openbb:yfinance/ownership/institutional:holder": { label: Holder, priority: 1 }
+  "openbb:yfinance/ownership/institutional:shares": { unit: shares, format: compact, label: Shares, priority: 2 }
+  "openbb:yfinance/ownership/institutional:value": { unit: usd, format: compact, label: Value, priority: 3 }
+  "openbb:yfinance/ownership/institutional:percent_change": { unit: fraction, format: change, label: "Chg %", priority: 3 }
+  "openbb:yfinance/ownership/institutional:date_reported": { label: Filed, priority: 6 }
+  "openbb:equity/shorts/short_interest:settlement_date": { label: Settlement, priority: 1 }
+  "openbb:equity/shorts/short_interest:current_short_position": { unit: shares, format: compact, label: Short interest, priority: 2, key: true }
+  "openbb:equity/shorts/short_interest:short_interest": { unit: shares, format: compact, label: Short interest, priority: 2 }
+  "openbb:equity/shorts/short_interest:previous_short_position": { unit: shares, format: compact, label: Prior, priority: 5 }
+  "openbb:equity/shorts/short_interest:avg_daily_volume": { unit: shares, format: compact, label: Avg volume, priority: 4 }
+  "openbb:equity/shorts/short_interest:days_to_cover": { unit: days, format: ratio, label: Days to cover, priority: 3 }
+  "openbb:equity/shorts/short_interest:change": { unit: shares, format: compact, label: Chg (sh), priority: 6 }
+  "openbb:equity/shorts/short_interest:change_pct": { unit: percent, format: change, label: "Chg %", priority: 3 }
+
+  # ---------------------------------------------------------------- openbb: options
+  "openbb:derivatives/options/chains:expiration": { label: Expiry, priority: 1 }
+  "openbb:derivatives/options/chains:option_type": { label: Type, priority: 1 }
+  "openbb:derivatives/options/chains:strike": { unit: usd, format: price, label: Strike, priority: 1, role: x }
+  "openbb:derivatives/options/chains:bid": { unit: usd, format: price, label: Bid, priority: 2 }
+  "openbb:derivatives/options/chains:ask": { unit: usd, format: price, label: Ask, priority: 2 }
+  "openbb:derivatives/options/chains:last_trade_price": { unit: usd, format: price, label: Last, priority: 3 }
+  "openbb:derivatives/options/chains:open_interest": { unit: count, format: compact, label: OI, priority: 3 }
+  "openbb:derivatives/options/chains:implied_volatility": { unit: fraction, label: IV, priority: 2 }
+  "openbb:derivatives/options/chains:delta": { unit: ratio, format: ratio, label: Delta, priority: 4 }
+  "openbb:derivatives/options/chains:gamma": { unit: ratio, format: ratio, label: Gamma, priority: 6 }
+  "openbb:derivatives/options/chains:theta": { unit: ratio, format: ratio, label: Theta, priority: 5 }
+  "openbb:derivatives/options/chains:vega": { unit: ratio, format: ratio, label: Vega, priority: 6 }
+  "openbb:derivatives/options/chains:rho": { unit: ratio, format: ratio, label: Rho, priority: 8 }
+  "openbb:derivatives/options/chains:underlying_price": { unit: usd, format: price, label: Underlying, priority: 5 }
+  "openbb:derivatives/options/chains:underlying_symbol": { label: Underlying, priority: 7 }
+  "openbb:derivatives/options/chains:dte": { unit: days, format: integer, label: DTE, priority: 4 }
+  "openbb:derivatives/options/chains:contract_symbol": { label: Contract, priority: 8 }
+  "openbb:derivatives/options/chains:change_percent": { unit: fraction, format: change, label: "Chg %", priority: 6 }
+
+  # ---------------------------------------------------------------- openbb: market-wide
+  "openbb:equity/screener:price": { unit: usd, format: price, label: Price, priority: 2 }
+  "openbb:equity/screener:change_percent": { unit: fraction, format: change, label: "Chg %", priority: 2 }
+  "openbb:equity/screener:percent_change": { unit: fraction, format: change, label: "Chg %", priority: 2 }
+  "openbb:equity/screener:pe_ratio": { unit: ratio, format: ratio, label: P/E, priority: 4 }
+  "openbb:equity/screener:forward_pe": { unit: ratio, format: ratio, label: Fwd P/E, priority: 6 }
+  "openbb:equity/screener:price_to_book": { unit: ratio, format: ratio, label: P/B, priority: 7 }
+  "openbb:equity/screener:dividend_yield": { unit: fraction, label: Div yield, priority: 7 }
+  "openbb:equity/screener:sector": { label: Sector, priority: 5 }
+  "openbb:equity/screener:industry": { label: Industry, priority: 8 }
+  "openbb:nasdaq/markets/movers:last_price": { unit: usd, format: price, label: Price, priority: 2 }
+  "openbb:nasdaq/markets/movers:change": { unit: usd, format: change, label: Chg, priority: 4 }
+  "openbb:etf/holdings:weight": { unit: fraction, label: Weight, priority: 2, key: true }
+  "openbb:etf/holdings:shares": { unit: shares, format: compact, label: Shares, priority: 5 }
+  "openbb:etf/holdings:market_value": { unit: usd, format: compact, label: Value, priority: 5 }
+  "openbb:index/constituents:weight": { unit: fraction, label: Weight, priority: 3 }
+  "openbb:index/constituents:sector": { label: Sector, priority: 4 }
+
+  # ---------------------------------------------------------------- openbb: rates and macro (federal_reserve fractions)
+  "openbb:fixedincome/government/treasury_rates:month_1": { unit: fraction, label: 1M, priority: 4 }
+  "openbb:fixedincome/government/treasury_rates:month_3": { unit: fraction, label: 3M, priority: 2 }
+  "openbb:fixedincome/government/treasury_rates:month_6": { unit: fraction, label: 6M, priority: 4 }
+  "openbb:fixedincome/government/treasury_rates:year_1": { unit: fraction, label: 1Y, priority: 3 }
+  "openbb:fixedincome/government/treasury_rates:year_2": { unit: fraction, label: 2Y, priority: 1 }
+  "openbb:fixedincome/government/treasury_rates:year_3": { unit: fraction, label: 3Y, priority: 5 }
+  "openbb:fixedincome/government/treasury_rates:year_5": { unit: fraction, label: 5Y, priority: 3 }
+  "openbb:fixedincome/government/treasury_rates:year_7": { unit: fraction, label: 7Y, priority: 5 }
+  "openbb:fixedincome/government/treasury_rates:year_10": { unit: fraction, label: 10Y, priority: 1, key: true }
+  "openbb:fixedincome/government/treasury_rates:year_20": { unit: fraction, label: 20Y, priority: 4 }
+  "openbb:fixedincome/government/treasury_rates:year_30": { unit: fraction, label: 30Y, priority: 2 }
+  "openbb:fixedincome/government/yield_curve:rate": { unit: fraction, label: Yield, priority: 1, key: true }
+  "openbb:fixedincome/government/yield_curve:maturity": { label: Maturity, priority: 1 }
+  "openbb:fixedincome/government/yield_curve:maturity_years": { unit: years, format: ratio, label: Years, priority: 2, role: x }
+  "openbb:fixedincome/rate/effr:rate": { unit: fraction, label: Fed funds, priority: 1, key: true }
+  "openbb:fixedincome/rate/effr:target_range_upper": { unit: fraction, label: Target upper, priority: 5 }
+  "openbb:fixedincome/rate/effr:target_range_lower": { unit: fraction, label: Target lower, priority: 5 }
+  "openbb:fixedincome/rate/sofr:rate": { unit: fraction, label: SOFR, priority: 1, key: true }
+  "openbb:fixedincome/rate/sofr:volume": { unit: usd, format: compact, label: Volume ($bn), priority: 6 }
+  "openbb:fixedincome/spreads/tcm:rate": { unit: fraction, label: Spread, priority: 1 }
+  "openbb:fixedincome/corporate/bond_prices:price": { unit: usd, format: price, label: Price, priority: 2 }
+  "openbb:fixedincome/corporate/bond_prices:yield_to_maturity": { unit: fraction, label: YTM, priority: 1, key: true }
+  "openbb:fixedincome/corporate/bond_prices:coupon_rate": { unit: fraction, label: Coupon, priority: 3 }
+  "openbb:fixedincome/corporate/bond_prices:maturity_date": { label: Maturity, priority: 2 }
+  "openbb:fixedincome/corporate/bond_prices:volume": { unit: count, format: compact, label: Volume, priority: 5 }
+  "openbb:economy/money_measures:m2": { unit: usd, format: compact, label: M2, priority: 1, key: true }
+  "openbb:economy/money_measures:m1": { unit: usd, format: compact, label: M1, priority: 2 }
+  "openbb:economy/money_measures:month": { label: Month, priority: 1 }
+  "openbb:economy/cpi:value": { unit: fraction, label: CPI YoY, priority: 1, key: true }
+  "openbb:economy/unemployment:value": { unit: fraction, label: Unemployment, priority: 1, key: true }
+  "openbb:economy/*:country": { label: Country, priority: 6 }
+
+  # ---------------------------------------------------------------- yahoo (yahoo-finance2 endpoints; quoteSummary flattened to module.field)
+  "yahoo:quote:regularMarketPrice": { unit: usd, format: price, label: Last, priority: 1, key: true }
+  "yahoo:quote:regularMarketChangePercent": { unit: percent, format: change, label: "Chg %", priority: 2 }
+  "yahoo:quote:regularMarketChange": { unit: usd, format: change, label: Chg, priority: 4 }
+  "yahoo:quote:regularMarketVolume": { unit: shares, format: compact, label: Volume, priority: 3 }
+  "yahoo:quote:regularMarketPreviousClose": { unit: usd, format: price, label: Prev close, priority: 5 }
+  "yahoo:quote:preMarketPrice": { unit: usd, format: price, label: Pre, priority: 4 }
+  "yahoo:quote:preMarketChangePercent": { unit: percent, format: change, label: "Pre %", priority: 4 }
+  "yahoo:quote:postMarketPrice": { unit: usd, format: price, label: Post, priority: 4 }
+  "yahoo:quote:postMarketChangePercent": { unit: percent, format: change, label: "Post %", priority: 4 }
+  "yahoo:quote:marketState": { label: Market, priority: 6 }
+  "yahoo:quote:marketCap": { unit: usd, format: compact, label: Mkt cap, priority: 5 }
+  "yahoo:quote:fiftyTwoWeekHigh": { unit: usd, format: price, label: 52w high, priority: 6 }
+  "yahoo:quote:fiftyTwoWeekLow": { unit: usd, format: price, label: 52w low, priority: 6 }
+  "yahoo:chart:adjclose": { unit: usd, format: price, label: Adj close, priority: 6 }
+  "yahoo:options:strike": { unit: usd, format: price, label: Strike, priority: 1, role: x }
+  "yahoo:options:lastPrice": { unit: usd, format: price, label: Last, priority: 3 }
+  "yahoo:options:bid": { unit: usd, format: price, label: Bid, priority: 2 }
+  "yahoo:options:ask": { unit: usd, format: price, label: Ask, priority: 2 }
+  "yahoo:options:openInterest": { unit: count, format: compact, label: OI, priority: 3 }
+  "yahoo:options:impliedVolatility": { unit: fraction, label: IV, priority: 2 }
+  "yahoo:options:percentChange": { unit: percent, format: change, label: "Chg %", priority: 6 }
+  "yahoo:options:expiration": { label: Expiry, priority: 1 }
+  "yahoo:options:inTheMoney": { label: ITM, priority: 7 }
+  "yahoo:quoteSummary:price.regularMarketPrice": { unit: usd, format: price, label: Last, priority: 1 }
+  "yahoo:quoteSummary:price.marketCap": { unit: usd, format: compact, label: Mkt cap, priority: 2 }
+  "yahoo:quoteSummary:price.longName": { label: Name, priority: 1 }
+  "yahoo:quoteSummary:price.exchangeName": { label: Exchange, priority: 6 }
+  "yahoo:quoteSummary:summaryDetail.marketCap": { unit: usd, format: compact, label: Mkt cap, priority: 2 }
+  "yahoo:quoteSummary:summaryDetail.trailingPE": { unit: ratio, format: ratio, label: P/E, priority: 2, key: true }
+  "yahoo:quoteSummary:summaryDetail.forwardPE": { unit: ratio, format: ratio, label: Fwd P/E, priority: 3 }
+  "yahoo:quoteSummary:summaryDetail.priceToSalesTrailing12Months": { unit: ratio, format: ratio, label: P/S, priority: 5 }
+  "yahoo:quoteSummary:summaryDetail.dividendYield": { unit: fraction, label: Div yield, priority: 5 }
+  "yahoo:quoteSummary:summaryDetail.dividendRate": { unit: usd, format: price, label: Dividend, priority: 6 }
+  "yahoo:quoteSummary:summaryDetail.beta": { unit: ratio, format: ratio, label: Beta, priority: 4 }
+  "yahoo:quoteSummary:defaultKeyStatistics.forwardPE": { unit: ratio, format: ratio, label: Fwd P/E, priority: 3 }
+  "yahoo:quoteSummary:defaultKeyStatistics.pegRatio": { unit: ratio, format: ratio, label: PEG, priority: 4 }
+  "yahoo:quoteSummary:defaultKeyStatistics.enterpriseToEbitda": { unit: ratio, format: ratio, label: EV/EBITDA, priority: 4 }
+  "yahoo:quoteSummary:defaultKeyStatistics.priceToBook": { unit: ratio, format: ratio, label: P/B, priority: 5 }
+  "yahoo:quoteSummary:defaultKeyStatistics.profitMargins": { unit: fraction, label: Net margin, priority: 3 }
+  "yahoo:quoteSummary:defaultKeyStatistics.sharesShort": { unit: shares, format: compact, label: Short interest, priority: 2, key: true }
+  "yahoo:quoteSummary:defaultKeyStatistics.sharesShortPriorMonth": { unit: shares, format: compact, label: Prior, priority: 5 }
+  "yahoo:quoteSummary:defaultKeyStatistics.shortRatio": { unit: days, format: ratio, label: Days to cover, priority: 3 }
+  "yahoo:quoteSummary:defaultKeyStatistics.shortPercentOfFloat": { unit: fraction, label: "% float", priority: 4 }
+  "yahoo:quoteSummary:defaultKeyStatistics.dateShortInterest": { label: Settlement, priority: 1 }
+  "yahoo:quoteSummary:defaultKeyStatistics.beta3Year": { unit: ratio, format: ratio, label: Beta (3y), priority: 6 }
+  "yahoo:quoteSummary:financialData.currentPrice": { unit: usd, format: price, label: Price, priority: 3 }
+  "yahoo:quoteSummary:financialData.targetMeanPrice": { unit: usd, format: price, label: Target, priority: 2, key: true }
+  "yahoo:quoteSummary:financialData.targetLowPrice": { unit: usd, format: price, label: Low target, priority: 4 }
+  "yahoo:quoteSummary:financialData.targetHighPrice": { unit: usd, format: price, label: High target, priority: 4 }
+  "yahoo:quoteSummary:financialData.numberOfAnalystOpinions": { unit: count, format: integer, label: Analysts, priority: 5 }
+  "yahoo:quoteSummary:financialData.recommendationKey": { label: Rating, priority: 3 }
+  "yahoo:quoteSummary:financialData.grossMargins": { unit: fraction, label: Gross margin, priority: 3 }
+  "yahoo:quoteSummary:financialData.operatingMargins": { unit: fraction, label: Op margin, priority: 4 }
+  "yahoo:quoteSummary:financialData.profitMargins": { unit: fraction, label: Net margin, priority: 3 }
+  "yahoo:quoteSummary:financialData.revenueGrowth": { unit: fraction, format: change, label: Rev growth, priority: 3 }
+  "yahoo:quoteSummary:financialData.earningsGrowth": { unit: fraction, format: change, label: EPS growth, priority: 4 }
+  "yahoo:quoteSummary:financialData.returnOnEquity": { unit: fraction, label: ROE, priority: 4 }
+  "yahoo:quoteSummary:financialData.debtToEquity": { unit: percent, format: ratio, label: "D/E %", priority: 5 }
+  "yahoo:quoteSummary:financialData.totalCash": { unit: usd, format: compact, label: Cash, priority: 6 }
+  "yahoo:quoteSummary:financialData.totalDebt": { unit: usd, format: compact, label: Debt, priority: 6 }
+  "yahoo:quoteSummary:financialData.freeCashflow": { unit: usd, format: compact, label: FCF, priority: 6 }
+  "yahoo:quoteSummary:assetProfile.sector": { label: Sector, priority: 3 }
+  "yahoo:quoteSummary:assetProfile.industry": { label: Industry, priority: 4 }
+  "yahoo:quoteSummary:assetProfile.fullTimeEmployees": { unit: count, format: compact, label: Employees, priority: 5 }
+  "yahoo:quoteSummary:assetProfile.longBusinessSummary": { label: Description, priority: 9 }
+  "yahoo:quoteSummary:calendarEvents.earnings.earningsAverage": { unit: usd, format: price, label: EPS est., priority: 2 }
+  "yahoo:quoteSummary:calendarEvents.earnings.earningsDate": { label: Date, priority: 1 }
+  "yahoo:quoteSummary:earningsHistory.epsActual": { unit: usd, format: price, label: EPS, priority: 2 }
+  "yahoo:quoteSummary:earningsHistory.epsEstimate": { unit: usd, format: price, label: EPS est., priority: 3 }
+  "yahoo:quoteSummary:earningsHistory.surprisePercent": { unit: fraction, format: change, label: "Surprise %", priority: 2 }
+  "yahoo:quoteSummary:earningsTrend.earningsEstimate.avg": { unit: usd, format: price, label: EPS est., priority: 2 }
+  "yahoo:quoteSummary:earningsTrend.earningsEstimate.growth": { unit: fraction, format: change, label: EPS growth, priority: 3 }
+  "yahoo:quoteSummary:insiderTransactions.shares": { unit: shares, format: compact, label: Shares, priority: 3 }
+  "yahoo:quoteSummary:insiderTransactions.value": { unit: usd, format: compact, label: Value, priority: 4 }
+  "yahoo:quoteSummary:insiderTransactions.filerName": { label: Insider, priority: 2 }
+  "yahoo:quoteSummary:insiderTransactions.filerRelation": { label: Title, priority: 5 }
+  "yahoo:quoteSummary:insiderTransactions.transactionText": { label: Transaction, priority: 3 }
+  "yahoo:quoteSummary:insiderTransactions.filerUrl": { format: link, label: Filing, priority: 9 }
+  "yahoo:quoteSummary:institutionOwnership.organization": { label: Holder, priority: 1 }
+  "yahoo:quoteSummary:institutionOwnership.position": { unit: shares, format: compact, label: Shares, priority: 2 }
+  "yahoo:quoteSummary:institutionOwnership.value": { unit: usd, format: compact, label: Value, priority: 3 }
+  "yahoo:quoteSummary:institutionOwnership.pctChange": { unit: fraction, format: change, label: "Chg %", priority: 3 }
+  "yahoo:quoteSummary:institutionOwnership.pctHeld": { unit: fraction, label: "% held", priority: 4 }
+  "yahoo:quoteSummary:topHoldings.holdingName": { label: Name, priority: 2 }
+  "yahoo:quoteSummary:topHoldings.holdingPercent": { unit: fraction, label: Weight, priority: 2, key: true }
+  "yahoo:chart:dividends.amount": { unit: usd, format: price, label: Amount, priority: 2 }
+
+  # ---------------------------------------------------------------- finnhub (REST paths)
+  "finnhub:quote:c": { unit: usd, format: price, label: Last, priority: 1, key: true }
+  "finnhub:quote:d": { unit: usd, format: change, label: Chg, priority: 3 }
+  "finnhub:quote:dp": { unit: percent, format: change, label: "Chg %", priority: 2 }
+  "finnhub:quote:h": { unit: usd, format: price, label: High, priority: 5 }
+  "finnhub:quote:l": { unit: usd, format: price, label: Low, priority: 5 }
+  "finnhub:quote:o": { unit: usd, format: price, label: Open, priority: 5 }
+  "finnhub:quote:pc": { unit: usd, format: price, label: Prev close, priority: 4 }
+  "finnhub:company-news:headline": { label: Headline, priority: 1 }
+  "finnhub:company-news:source": { label: Source, priority: 3 }
+  "finnhub:company-news:summary": { label: Summary, priority: 8 }
+  "finnhub:company-news:image": { hidden: true }
+  "finnhub:company-news:category": { label: Category, priority: 7 }
+  "finnhub:calendar/earnings:epsEstimate": { unit: usd, format: price, label: EPS est., priority: 2 }
+  "finnhub:calendar/earnings:epsActual": { unit: usd, format: price, label: EPS, priority: 2 }
+  "finnhub:calendar/earnings:revenueEstimate": { unit: usd, format: compact, label: Rev est., priority: 4 }
+  "finnhub:calendar/earnings:revenueActual": { unit: usd, format: compact, label: Revenue, priority: 4 }
+  "finnhub:calendar/earnings:hour": { label: Session, priority: 3 }
+  "finnhub:calendar/earnings:quarter": { label: Quarter, priority: 6 }
+
+  # ---------------------------------------------------------------- v1 kind routes (any connector; already in product units)
+  "*:quote:price": { unit: usd, format: price, label: Last, priority: 1, key: true }
+  "*:quote:market_state": { label: Market, priority: 6 }
+  "*:quote:extended_price": { unit: usd, format: price, label: Ext, priority: 4 }
+  "*:quote:extended_change_pct": { unit: percent, format: change, label: "Ext %", priority: 4 }
+  "*:ohlcv:*": { priority: 5 }
+  "*:news:headline": { label: Headline, priority: 1 }
+  "*:news:source": { label: Source, priority: 3 }
+  "*:earnings:session": { label: Session, priority: 3 }
+  "*:earnings:eps_estimate": { unit: usd, format: price, label: EPS est., priority: 2 }
+  "*:profile:market_cap": { unit: usd, format: compact, label: Mkt cap, priority: 2, key: true }
+  "*:profile:employees": { unit: count, format: compact, label: Employees, priority: 5 }
+  "*:profile:beta": { unit: ratio, format: ratio, label: Beta, priority: 4 }
+  "*:profile:sector": { label: Sector, priority: 3 }
+  "*:profile:industry": { label: Industry, priority: 4 }
+  "*:profile:exchange": { label: Exchange, priority: 6 }
+  "*:metrics:pe": { unit: ratio, format: ratio, label: P/E, priority: 2, key: true }
+  "*:metrics:forward_pe": { unit: ratio, format: ratio, label: Fwd P/E, priority: 3 }
+  "*:metrics:peg": { unit: ratio, format: ratio, label: PEG, priority: 4 }
+  "*:metrics:ev_ebitda": { unit: ratio, format: ratio, label: EV/EBITDA, priority: 4 }
+  "*:metrics:ps": { unit: ratio, format: ratio, label: P/S, priority: 5 }
+  "*:metrics:pb": { unit: ratio, format: ratio, label: P/B, priority: 5 }
+  "*:metrics:gross_margin": { unit: percent, label: Gross margin, priority: 3 }
+  "*:metrics:operating_margin": { unit: percent, label: Op margin, priority: 4 }
+  "*:metrics:profit_margin": { unit: percent, label: Net margin, priority: 3 }
+  "*:metrics:revenue_growth": { unit: percent, format: change, label: Rev growth, priority: 3 }
+  "*:metrics:earnings_growth": { unit: percent, format: change, label: EPS growth, priority: 4 }
+  "*:metrics:roe": { unit: percent, label: ROE, priority: 4 }
+  "*:metrics:debt_to_equity": { unit: ratio, format: ratio, label: D/E, priority: 5 }
+  "*:metrics:dividend_yield": { unit: percent, label: Div yield, priority: 5 }
+  "*:financials:period_ending": { label: Period, priority: 1 }
+  "*:financials:revenue": { unit: usd, format: compact, label: Revenue, priority: 1 }
+  "*:financials:gross_profit": { unit: usd, format: compact, label: Gross profit, priority: 3 }
+  "*:financials:operating_income": { unit: usd, format: compact, label: Op income, priority: 2 }
+  "*:financials:net_income": { unit: usd, format: compact, label: Net income, priority: 2 }
+  "*:financials:eps": { unit: usd, format: price, label: EPS, priority: 2 }
+  "*:financials:operating_cash_flow": { unit: usd, format: compact, label: Op cash flow, priority: 3 }
+  "*:financials:capex": { unit: usd, format: compact, label: Capex, priority: 4 }
+  "*:financials:free_cash_flow": { unit: usd, format: compact, label: FCF, priority: 2 }
+  "*:financials:cash": { unit: usd, format: compact, label: Cash, priority: 3 }
+  "*:financials:debt": { unit: usd, format: compact, label: Debt, priority: 3 }
+  "*:financials:shares": { unit: shares, format: compact, label: Shares, priority: 5 }
+  "*:estimates:recommendation": { label: Rating, priority: 3 }
+  "*:estimates:analysts": { unit: count, format: integer, label: Analysts, priority: 5 }
+  "*:estimates:target_low": { unit: usd, format: price, label: Low target, priority: 4 }
+  "*:estimates:target_consensus": { unit: usd, format: price, label: Target, priority: 2, key: true }
+  "*:estimates:target_high": { unit: usd, format: price, label: High target, priority: 4 }
+  "*:estimates:upside_pct": { unit: percent, format: change, label: Upside, priority: 2 }
+  "*:estimates:eps_estimate_q": { unit: usd, format: price, label: EPS est. (q), priority: 3 }
+  "*:estimates:eps_estimate_y": { unit: usd, format: price, label: EPS est. (y), priority: 3 }
+  "*:estimates:eps_growth_y": { unit: percent, format: change, label: EPS growth, priority: 4 }
+  "*:eps_history:eps_actual": { unit: usd, format: price, label: EPS, priority: 2 }
+  "*:eps_history:eps_estimate": { unit: usd, format: price, label: EPS est., priority: 3 }
+  "*:eps_history:surprise_pct": { unit: percent, format: change, label: "Surprise %", priority: 2 }
+  "*:dividends:ex_date": { label: Ex-date, priority: 1 }
+  "*:dividends:amount": { unit: usd, format: price, label: Amount, priority: 2, key: true }
+  "*:insiders:title": { label: Title, priority: 5 }
+  "*:insiders:action": { label: Action, priority: 2 }
+  "*:insiders:shares": { unit: shares, format: compact, label: Shares, priority: 3 }
+  "*:insiders:price": { unit: usd, format: price, label: Price, priority: 4 }
+  "*:insiders:value": { unit: usd, format: compact, label: Value, priority: 3 }
+  "*:institutions:holder": { label: Holder, priority: 1 }
+  "*:institutions:shares": { unit: shares, format: compact, label: Shares, priority: 2 }
+  "*:institutions:value": { unit: usd, format: compact, label: Value, priority: 3 }
+  "*:short_interest:short_interest": { unit: shares, format: compact, label: Short interest, priority: 2, key: true }
+  "*:short_interest:avg_volume": { unit: shares, format: compact, label: Avg volume, priority: 4 }
+  "*:short_interest:days_to_cover": { unit: days, format: ratio, label: Days to cover, priority: 3 }
+  "*:options:expiration": { label: Expiry, priority: 1 }
+  "*:options:type": { label: Type, priority: 1 }
+  "*:options:strike": { unit: usd, format: price, label: Strike, priority: 1, role: x }
+  "*:options:bid": { unit: usd, format: price, label: Bid, priority: 2 }
+  "*:options:ask": { unit: usd, format: price, label: Ask, priority: 2 }
+  "*:options:last": { unit: usd, format: price, label: Last, priority: 3 }
+  "*:options:open_interest": { unit: count, format: compact, label: OI, priority: 3 }
+  "*:options:iv": { unit: percent, label: IV, priority: 2 }
+  "*:options:delta": { unit: ratio, format: ratio, label: Delta, priority: 4 }
+  "*:options:gamma": { unit: ratio, format: ratio, label: Gamma, priority: 6 }
+  "*:options:theta": { unit: ratio, format: ratio, label: Theta, priority: 5 }
+  "*:options:vega": { unit: ratio, format: ratio, label: Vega, priority: 6 }
+  "*:options:underlying_price": { unit: usd, format: price, label: Underlying, priority: 5 }
+  "*:options:dte": { unit: days, format: integer, label: DTE, priority: 4 }
+  "*:volatility:iv30": { unit: percent, label: IV30, priority: 1, key: true }
+  "*:volatility:iv30_high": { unit: percent, label: IV30 high, priority: 2 }
+  "*:volatility:iv30_low": { unit: percent, label: IV30 low, priority: 2 }
+  "*:volatility:iv_rank": { unit: count, format: integer, label: IV rank, priority: 2 }
+  "*:volatility:hv30": { unit: percent, label: HV30, priority: 3 }
+  "*:volatility:hv30_high": { unit: percent, label: HV30 high, priority: 4 }
+  "*:volatility:hv30_low": { unit: percent, label: HV30 low, priority: 4 }
+  "*:volatility:year_high": { unit: usd, format: price, label: 52w high, priority: 5 }
+  "*:volatility:year_low": { unit: usd, format: price, label: 52w low, priority: 5 }
+  "*:calendar:event": { label: Event, priority: 1 }
+  "*:calendar:actual": { label: Actual, priority: 2 }
+  "*:calendar:consensus": { label: Consensus, priority: 3 }
+  "*:calendar:previous": { label: Previous, priority: 4 }
+  "*:calendar:country": { label: Country, priority: 6 }
+  "*:ipos:price": { unit: usd, format: price, label: Price, priority: 2 }
+  "*:ipos:offer_amount": { unit: usd, format: compact, label: Raised, priority: 3 }
+  "*:ipos:status": { label: Status, priority: 4 }
+  "*:ipos:exchange": { label: Exchange, priority: 5 }
+  "*:movers:price": { unit: usd, format: price, label: Price, priority: 2 }
+  "*:holdings:etf": { label: ETF, priority: 6 }
+  "*:holdings:weight": { unit: percent, label: Weight, priority: 2, key: true }
+  "*:macro:series": { label: Series, priority: 1 }
+  "*:macro:value": { unit: percent, label: Value, priority: 1, key: true }
+  "*:yield_curve:maturity": { label: Maturity, priority: 1 }
+  "*:yield_curve:years": { unit: years, format: ratio, label: Years, priority: 2, role: x }
+  "*:yield_curve:rate": { unit: percent, label: Yield, priority: 1, key: true }
+  "*:search:query": { label: Query, priority: 1 }
+  "*:search:exchange": { label: Exchange, priority: 4 }

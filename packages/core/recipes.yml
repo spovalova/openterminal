@@ -1,0 +1,583 @@
+# Built-in recipes (PLAN.md section 17). Data, not code: a recipe is a named, saved query with a title template,
+# a param schema (JSON schema), a preferred preset and size, and ordered route alternatives with param mappings
+# per connector. The 22 v1 kinds are the first 22 recipes; their routes are the exact ones the v1 handlers
+# called (connectors/openbb/src/index.ts, connectors/yahoo/src/*, connectors/finnhub/src/index.ts).
+#
+# Param mappings are templates over the recipe params: "{symbols}" passes the value through (arrays stay arrays;
+# the connector joins them), "{range|start_date}" applies a filter (see FILTERS in recipes.ts), literals pass.
+# A route's `when` keeps it only for matching params. `note` records what the v1 handler did on top of the raw
+# route, which phase 1 either moves into the connector's `call` or into a transform dataset.
+#
+# Yahoo routes are yahoo-finance2 endpoints: search, quote, chart, options, quoteSummary (with `modules`).
+# Finnhub routes are its REST paths: quote, company-news, calendar/earnings.
+
+recipes:
+  # ------------------------------------------------------------------------------------------------- v1
+  - name: search
+    title: "Search {q}"
+    summary: Resolve a free-text name or ticker to symbols. One query per call; batch by calling it in parallel.
+    params:
+      type: object
+      properties:
+        q: { type: string, description: A name or ticker to look up, minLength: 1 }
+      required: [q]
+    view: { preset: table, columns: [symbol, name, exchange] }
+    size: sm
+    ttl: 86400000
+    routes:
+      - connector: openbb
+        route: equity/search
+        provider: nasdaq
+        params: { query: "{q}" }
+        note: nasdaq rows carry a listing-exchange code; the v1 handler mapped it to an exchange name and kept 10 rows.
+      - connector: yahoo
+        route: search
+        params: { q: "{q}" }
+        note: the v1 handler kept the first US equity or ETF hit only.
+
+  - name: quote
+    title: "{symbols} quote"
+    summary: Latest price, day change, volume, market state and extended-hours price per symbol.
+    params:
+      type: object
+      properties:
+        symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50, description: Ticker symbols }
+      required: [symbols]
+    view: { preset: stat, column: last_price, change: change_percent }
+    size: sm
+    routes:
+      - connector: openbb
+        route: equity/price/quote
+        provider: yfinance
+        params: { symbol: "{symbols}" }
+        note: yfinance has no change field (v1 computed it from prev_close) and no market state; ETFs answer without last_price.
+      - connector: yahoo
+        route: quote
+        params: { symbols: "{symbols}" }
+      - connector: finnhub
+        route: quote
+        params: { symbol: "{symbols|first}" }
+        note: one symbol per call, no volume, no extended hours.
+
+  - name: ohlcv
+    title: "{symbols} {interval} {range}"
+    summary: Price bars per symbol over a range at an interval, long format with a symbol column.
+    params:
+      type: object
+      properties:
+        symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50, description: Ticker symbols }
+        interval: { type: string, enum: [1m, 5m, 15m, 1h, 1d, 1w], default: 1d }
+        range: { type: string, enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y], default: 3mo }
+      required: [symbols]
+    view: { preset: price, volume: false }
+    size: lg
+    events: earnings
+    routes:
+      - connector: openbb
+        route: equity/price/historical
+        provider: yfinance
+        params: { symbol: "{symbols}", start_date: "{range|start_date}", interval: "{interval|openbb_interval}" }
+        note: single-symbol rows carry no symbol field; v1 added it and sorted by symbol then time.
+      - connector: yahoo
+        route: chart
+        params: { symbol: "{symbols}", period1: "{range|start_date}", interval: "{interval|yahoo_interval}", includePrePost: false }
+
+  - name: news
+    title: "{symbols} news"
+    summary: Recent headlines per symbol, newest first.
+    params:
+      type: object
+      properties:
+        symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
+        limit: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      required: [symbols]
+    view: { preset: table, columns: [date, title, publisher, url], sort: { column: date, dir: desc } }
+    size: md
+    routes:
+      - connector: openbb
+        route: news/company
+        provider: nasdaq
+        params: { symbol: "{symbols}", limit: "{limit}" }
+        note: rows carry a comma-separated `symbols`; v1 attributed each row to the first requested symbol it listed and deduped by url.
+      - connector: finnhub
+        route: company-news
+        params: { symbol: "{symbols|first}", from: "{limit|days_ago:7}", to: "{limit|today}" }
+
+  - name: earnings
+    title: "Earnings {from} to {to}"
+    summary: Earnings dates inside a date window; session is bmo, amc or null. The market-wide calendar, filtered to the symbols by the connector.
+    params:
+      type: object
+      properties:
+        symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
+        from: { type: string, format: date, description: "Calendar date, YYYY-MM-DD" }
+        to: { type: string, format: date }
+      required: [symbols, from, to]
+    view: { preset: table, columns: [symbol, report_date, reporting_time, eps_consensus] }
+    size: sm
+    ttl: 3600000
+    routes:
+      - connector: openbb
+        route: equity/calendar/earnings
+        provider: nasdaq
+        params: { start_date: "{from}", end_date: "{to}" }
+        note: the whole market; v1 kept the requested symbols. The caller filters by `symbols` until a transform does.
+      - connector: yahoo
+        route: quoteSummary
+        params: { symbol: "{symbols}", modules: [calendarEvents] }
+        note: next date and estimate only; session null.
+      - connector: finnhub
+        route: calendar/earnings
+        params: { from: "{from}", to: "{to}", symbol: "{symbols|first}" }
+
+  # ------------------------------------------------------------------------------------------------- company
+  - name: profile
+    title: "{symbols} profile"
+    summary: "Who the company is: name, exchange, sector, industry, market cap, employees, beta, description."
+    params:
+      type: object
+      properties:
+        symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
+      required: [symbols]
+    view: { preset: facts }
+    size: md
+    ttl: 86400000
+    routes:
+      - connector: openbb
+        route: equity/profile
+        provider: yfinance
+        params: { symbol: "{symbols}" }
+      - connector: yahoo
+        route: quoteSummary
+        params: { symbol: "{symbols}", modules: [assetProfile, price, summaryDetail, defaultKeyStatistics] }
+
+  - name: metrics
+    title: "{symbols} metrics"
+    summary: "Valuation and quality snapshot per symbol: multiples, margins, growth, returns, leverage, yield."
+    params:
+      type: object
+      properties:
+        symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
+      required: [symbols]
+    view: { preset: table, extremes: true }
+    size: md
+    ttl: 3600000
+    routes:
+      - connector: openbb
+        route: equity/fundamental/metrics
+        provider: yfinance
+        params: { symbol: "{symbols}" }
+        note: debt_to_equity is percent-form on yfinance (78.4); v1 divided by 100. Margins, growth and ROE are fractions (annotated).
+      - connector: yahoo
+        route: quoteSummary
+        params: { symbol: "{symbols}", modules: [summaryDetail, defaultKeyStatistics, financialData, price] }
+
+  - name: financials
+    title: "{symbols} financials ({period})"
+    summary: "Statement lines per fiscal period, newest first: income, cash flow and balance sheet joined on period_ending."
+    params:
+      type: object
+      properties:
+        symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
+        period: { type: string, enum: [annual, quarter], default: quarter }
+        limit: { type: integer, minimum: 1, maximum: 5, default: 4 }
+      required: [symbols]
+    view: { preset: table }
+    size: md
+    ttl: 86400000
+    data:
+      income:
+        routes:
+          - connector: openbb
+            route: equity/fundamental/income
+            provider: yfinance
+            params: { symbol: "{symbols|first}", period: "{period}", limit: "{limit}" }
+            note: one symbol per call (a comma list answers []).
+      cash:
+        routes:
+          - connector: openbb
+            route: equity/fundamental/cash
+            provider: yfinance
+            params: { symbol: "{symbols|first}", period: "{period}", limit: "{limit}" }
+      balance:
+        routes:
+          - connector: openbb
+            route: equity/fundamental/balance
+            provider: yfinance
+            params: { symbol: "{symbols|first}", period: "{period}", limit: "{limit}" }
+      main:
+        inputs: [income, cash, balance]
+        code: |
+          # The v1 financials frame: one row per period with the lines a trader reads first.
+          i = income.rename(columns={"total_revenue": "revenue", "diluted_earnings_per_share": "eps"})
+          c = cash.copy()
+          c["capex"] = c.get("capital_expenditure_reported", c.get("capital_expenditure")).abs()
+          c["free_cash_flow"] = c["operating_cash_flow"] - c["capex"]
+          b = balance.rename(columns={"cash_and_cash_equivalents": "cash", "total_debt": "debt", "ordinary_shares_number": "shares"})
+          m = i.merge(c, on="period_ending", how="outer").merge(b, on="period_ending", how="outer")
+          keep = [k for k in ["period_ending", "revenue", "gross_profit", "operating_income", "net_income", "eps", "operating_cash_flow", "capex", "free_cash_flow", "cash", "debt", "shares"] if k in m.columns]
+          result = m[keep].sort_values("period_ending", ascending=False)
+        columns:
+          capex: { unit: usd, label: Capex }
+          free_cash_flow: { unit: usd, label: FCF }
+
+  - name: estimates
+    title: "{symbols} estimates"
+    summary: "Analyst consensus per symbol: recommendation, analyst count, price targets with upside, EPS estimates."
+    params:
+      type: object
+      properties:
+        symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
+      required: [symbols]
+    view: { preset: table }
+    size: md
+    ttl: 3600000
+    routes:
+      - connector: openbb
+        route: equity/estimates/consensus
+        provider: yfinance
+        params: { symbol: "{symbols}" }
+        note: v1 added EPS estimates from yfinance/estimates/earnings (periods 0q and 0y) and computed upside_pct from target_consensus / current_price.
+      - connector: yahoo
+        route: quoteSummary
+        params: { symbol: "{symbols}", modules: [financialData, earningsTrend] }
+
+  - name: eps_history
+    title: "{symbols} EPS history"
+    summary: "Past earnings per symbol, newest first: reported EPS against the estimate and the surprise."
+    params:
+      type: object
+      properties:
+        symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
+        limit: { type: integer, minimum: 1, maximum: 20, default: 8 }
+      required: [symbols]
+    view: { preset: table, columns: [symbol, date, eps_actual, eps_estimated, surprise_percent] }
+    size: sm
+    ttl: 86400000
+    routes:
+      - connector: openbb
+        route: equity/fundamental/historical_eps
+        provider: yfinance
+        params: { symbol: "{symbols}", limit: "{limit}" }
+        note: the next report (estimate only) sits on top; surprise_percent is already percent.
+      - connector: yahoo
+        route: quoteSummary
+        params: { symbol: "{symbols}", modules: [earningsHistory] }
+
+  - name: dividends
+    title: "{symbols} dividends"
+    summary: "Dividend history per symbol, newest first: ex-dividend date and cash amount per share."
+    params:
+      type: object
+      properties:
+        symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
+        limit: { type: integer, minimum: 1, maximum: 60, default: 12 }
+      required: [symbols]
+    view: { preset: table, columns: [ex_dividend_date, amount] }
+    size: sm
+    ttl: 86400000
+    routes:
+      - connector: openbb
+        route: equity/fundamental/dividends
+        provider: yfinance
+        params: { symbol: "{symbols|first}" }
+        note: one symbol per call, oldest first, no symbol field.
+      - connector: yahoo
+        route: chart
+        params: { symbol: "{symbols}", period1: "{limit|days_ago:10957}", interval: 1mo, events: div, includePrePost: false }
+
+  # ------------------------------------------------------------------------------------------------- ownership
+  - name: insiders
+    title: "{symbols} insiders"
+    summary: Insider transactions per symbol, newest first.
+    params:
+      type: object
+      properties:
+        symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
+        limit: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      required: [symbols]
+    view: { preset: table, columns: [transaction_date, owner_name, owner_title, acquisition_or_disposition, securities_transacted, transaction_price] }
+    size: md
+    ttl: 3600000
+    routes:
+      - connector: openbb
+        route: equity/ownership/insider_trading
+        provider: sec
+        params: { symbol: "{symbols}", limit: "{limit}" }
+        note: Form 4 rows; v1 mapped acquisition_or_disposition and the transaction type to buy/sell/grant/other.
+      - connector: yahoo
+        route: quoteSummary
+        params: { symbol: "{symbols}", modules: [insiderTransactions] }
+
+  - name: institutions
+    title: "{symbols} holders"
+    summary: Largest institutional holders per symbol from the latest filings.
+    params:
+      type: object
+      properties:
+        symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
+        limit: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      required: [symbols]
+    view: { preset: table }
+    size: md
+    ttl: 86400000
+    routes:
+      - connector: openbb
+        route: equity/ownership/institutional
+        provider: nasdaq
+        params: { symbol: "{symbols|first}", limit: "{limit}" }
+        note: one symbol per call; market_value is in thousands of dollars (v1 multiplied by 1000).
+      - connector: yahoo
+        route: quoteSummary
+        params: { symbol: "{symbols}", modules: [institutionOwnership] }
+
+  - name: short_interest
+    title: "{symbols} short interest"
+    summary: "Twice-monthly short interest per symbol, newest first: shares short, change, average volume, days to cover."
+    params:
+      type: object
+      properties:
+        symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
+        limit: { type: integer, minimum: 1, maximum: 60, default: 12 }
+      required: [symbols]
+    view: { preset: table, columns: [settlement_date, short_interest, change_pct, avg_daily_volume, days_to_cover] }
+    size: sm
+    ttl: 86400000
+    routes:
+      - connector: openbb
+        route: equity/shorts/short_interest
+        provider: finra
+        params: { symbol: "{symbols}" }
+        note: the full history oldest first; v1 kept the newest `limit` rows per symbol.
+      - connector: yahoo
+        route: quoteSummary
+        params: { symbol: "{symbols}", modules: [defaultKeyStatistics] }
+
+  # ------------------------------------------------------------------------------------------------- options
+  - name: options
+    title: "{symbol} options {expiration}"
+    summary: Option chain for one symbol. The connector keeps one expiration and a strike window around the underlying.
+    params:
+      type: object
+      properties:
+        symbol: { type: string, description: Ticker symbol, minLength: 1 }
+        expiration: { type: string, format: date, description: Snaps to the first listed expiration on or after this date; omitted means the nearest at least 7 days out }
+        strikes: { type: integer, minimum: 1, maximum: 30, default: 10, description: Strikes each side of the underlying price }
+        type: { type: string, enum: [call, put, both], default: both }
+      required: [symbol]
+    view: { preset: chain }
+    size: lg
+    ttl: 60000
+    routes:
+      - connector: openbb
+        route: derivatives/options/chains
+        provider: cboe
+        params: { symbol: "{symbol}" }
+        note: the whole chain (MU is 11,000 rows); v1 picked the expiration and the strike window. implied_volatility is a fraction (annotated).
+      - connector: yahoo
+        route: options
+        params: { symbol: "{symbol}", date: "{expiration}" }
+
+  - name: volatility
+    title: "{symbols} volatility"
+    summary: "Implied and realized volatility snapshot per symbol: 30-day IV with its one-year range, the hv30 range, the 52-week price range."
+    params:
+      type: object
+      properties:
+        symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
+      required: [symbols]
+    view: { preset: stat, column: iv30 }
+    size: sm
+    ttl: 600000
+    routes:
+      - connector: openbb
+        route: equity/price/quote
+        provider: cboe
+        params: { symbol: "{symbols}" }
+        note: cboe's quote carries iv30, iv30_annual_high/low, hv30_annual_high/low (fractions, annotated); v1 added iv_rank from the range.
+
+  # ------------------------------------------------------------------------------------------------- market-wide
+  - name: calendar
+    title: "Economic calendar {from} to {to}"
+    summary: Economic calendar inside a date window for one country.
+    params:
+      type: object
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        country: { type: string, default: United States }
+      required: [from, to]
+    view: { preset: table, columns: [date, event, actual, consensus, previous] }
+    size: md
+    ttl: 3600000
+    routes:
+      - connector: openbb
+        route: economy/calendar
+        provider: nasdaq
+        params: { start_date: "{from}", end_date: "{to}", country: "{country|country}" }
+        note: nasdaq stamps are zone-less New York wall time; "-" cells mean nothing.
+
+  - name: ipos
+    title: "IPOs {from} to {to}"
+    summary: IPOs priced or expected inside a date window.
+    params:
+      type: object
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+      required: [from, to]
+    view: { preset: table }
+    size: md
+    ttl: 3600000
+    routes:
+      - connector: openbb
+        route: equity/calendar/ipo
+        provider: nasdaq
+        params: { start_date: "{from}", end_date: "{to}" }
+        note: nasdaq serves one status per call (v1 fetched priced and upcoming) and whole months (v1 cut to the window).
+
+  - name: movers
+    title: "Top {list}"
+    summary: "Today's top gainers, losers or most active US stocks."
+    params:
+      type: object
+      properties:
+        list: { type: string, enum: [gainers, losers, active], default: gainers }
+        limit: { type: integer, minimum: 1, maximum: 50, default: 20 }
+        min_price: { type: number, minimum: 0, default: 5, description: Drop rows priced below this (dollars) }
+    view: { preset: table, columns: [symbol, name, price, percent_change, volume], sort: { column: percent_change, dir: desc } }
+    size: md
+    ttl: 60000
+    routes:
+      - connector: openbb
+        route: equity/screener
+        provider: yfinance
+        params: { preset: "{list|map:gainers=day_gainers,losers=day_losers,active=most_actives}", limit: "{limit}", price_min: "{min_price}" }
+      - connector: openbb
+        route: nasdaq/markets/movers
+        params: { category: "{list|map:gainers=most_advanced,losers=most_declined,active=most_active_share_volume}", limit: "{limit|times:5}" }
+        note: the whole tape, warrants and sub-dollar names first; v1 dropped rows under min_price.
+
+  - name: holdings
+    title: "{symbol} holdings"
+    summary: "Top holdings of one ETF: constituent symbol, name and weight."
+    params:
+      type: object
+      properties:
+        symbol: { type: string, description: "ETF ticker, e.g. SMH", minLength: 1 }
+      required: [symbol]
+    view: { preset: table, columns: [symbol, name, weight], sort: { column: weight, dir: desc } }
+    size: sm
+    ttl: 86400000
+    routes:
+      - connector: openbb
+        route: etf/holdings
+        provider: nasdaq
+        params: { symbol: "{symbol}" }
+        note: the top 10 only; weight is a fraction (annotated).
+      - connector: yahoo
+        route: quoteSummary
+        params: { symbol: "{symbol}", modules: [topHoldings] }
+
+  - name: macro
+    title: "{series} {range}"
+    summary: "One macro series over a range: treasury yields, the 10y-2y spread, fed funds, SOFR, CPI YoY, unemployment, M2. One series per dataset; compare several as datasets of one widget."
+    params:
+      type: object
+      properties:
+        series: { type: string, enum: [treasury_3m, treasury_2y, treasury_10y, treasury_30y, spread_10y_2y, fed_funds, sofr, cpi_yoy, unemployment, m2] }
+        range: { type: string, enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y], default: 1y }
+      required: [series]
+    view: { preset: compare, normalize: false }
+    size: md
+    ttl: 3600000
+    routes:
+      - connector: openbb
+        route: fixedincome/government/treasury_rates
+        provider: federal_reserve
+        params: { start_date: "{range|start_date}" }
+        when: { series: [treasury_3m, treasury_2y, treasury_10y, treasury_30y, spread_10y_2y] }
+        note: one call carries every maturity (month_3 … year_30, fractions); the series picks its column, the spread is year_10 - year_2.
+      - connector: openbb
+        route: fixedincome/rate/effr
+        provider: federal_reserve
+        params: { start_date: "{range|start_date}" }
+        when: { series: fed_funds }
+      - connector: openbb
+        route: fixedincome/rate/sofr
+        provider: federal_reserve
+        params: { start_date: "{range|start_date}" }
+        when: { series: sofr }
+      - connector: openbb
+        route: economy/money_measures
+        provider: federal_reserve
+        params: { start_date: "{range|start_date}" }
+        when: { series: m2 }
+      - connector: openbb
+        route: economy/cpi
+        provider: oecd
+        params: { country: united_states, transform: yoy, frequency: monthly, start_date: "{range|start_date}" }
+        when: { series: cpi_yoy }
+      - connector: openbb
+        route: economy/unemployment
+        provider: oecd
+        params: { country: united_states, frequency: monthly, start_date: "{range|start_date}" }
+        when: { series: unemployment }
+
+  - name: yield_curve
+    title: "Yield curve {date}"
+    summary: "US Treasury yield curve on one date (the latest when omitted): maturity, years and rate, shortest first."
+    params:
+      type: object
+      properties:
+        date: { type: string, format: date }
+    view: { preset: curve, x: maturity_years, y: rate }
+    size: md
+    ttl: 3600000
+    routes:
+      - connector: openbb
+        route: fixedincome/government/yield_curve
+        provider: federal_reserve
+        params: { date: "{date}" }
+        note: eleven maturities month_1 … year_30 with maturity_years; rate is a fraction (annotated).
+
+  # ------------------------------------------------------------------------------------------------- v2 additions
+  - name: index
+    title: "{symbol} {range}"
+    summary: "An index's price history (^GSPC for the S&P 500, ^NDX, ^VIX); SPY, QQQ are the tradables."
+    params:
+      type: object
+      properties:
+        symbol: { type: string, default: "^GSPC", minLength: 1 }
+        interval: { type: string, enum: [1m, 5m, 15m, 1h, 1d, 1w], default: 1d }
+        range: { type: string, enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y], default: 3mo }
+    view: { preset: price }
+    size: lg
+    tags: [index]
+    routes:
+      - connector: openbb
+        route: index/price/historical
+        provider: yfinance
+        params: { symbol: "{symbol}", start_date: "{range|start_date}", interval: "{interval|openbb_interval}" }
+      - connector: yahoo
+        route: chart
+        params: { symbol: "{symbol}", period1: "{range|start_date}", interval: "{interval|yahoo_interval}", includePrePost: false }
+
+  - name: screener
+    title: "Screener: {preset}"
+    summary: "Yahoo's stock screener presets (day_gainers, most_actives, undervalued_large_caps, growth_technology_stocks, …) with a price floor; filter further with a transform."
+    params:
+      type: object
+      properties:
+        preset: { type: string, default: most_actives, description: A yfinance screener preset }
+        limit: { type: integer, minimum: 1, maximum: 250, default: 50 }
+        price_min: { type: number, minimum: 0, default: 5 }
+    view: { preset: table }
+    size: lg
+    ttl: 60000
+    tags: [screener]
+    routes:
+      - connector: openbb
+        route: equity/screener
+        provider: yfinance
+        params: { preset: "{preset}", limit: "{limit}", price_min: "{price_min}" }
