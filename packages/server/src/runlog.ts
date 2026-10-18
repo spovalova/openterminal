@@ -21,6 +21,12 @@ export const RunLogRowSchema = z.object({
   /** USD, when the model's prices are known. */
   cost: z.number().optional(),
   verification: VerificationSchema.optional(),
+  /** One entry per model turn: why it stopped, how much text it wrote, how many tools it called. For "why did it do that". */
+  turns: z
+    .array(z.object({ finishReason: z.string(), textChars: z.number().int().nonnegative(), toolCalls: z.number().int().nonnegative(), outputTokens: z.number().optional(), reasoningTokens: z.number().optional(), warnings: z.array(z.string()).optional() }))
+    .optional(),
+  /** True when the model ended its turns without any reply text and the runner asked once more, without tools, for the reply. */
+  continued: z.boolean().optional(),
   /** Set when the run failed or was cancelled; the reply is then empty. */
   error: z.string().optional(),
 })

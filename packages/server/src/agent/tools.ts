@@ -392,7 +392,10 @@ export function createTools(deps: ToolDeps) {
       } catch (err) {
         const error = errorMessage(err)
         deps.onStep({ tool: 'query', args: q, summary: querySummary(q, undefined, true), ms: now() - t0, error })
-        const hint = isRouteQuery(q) && /has no route/.test(error) ? ' Use find_route to find the right route.' : ''
+        const hint =
+          isRouteQuery(q) && /has no route/.test(error) ? ' Use find_route to find the right route.'
+          : isRecipeQuery(q) && /has no route/.test(error) && (deps.answerable as string[]).includes(q.recipe) ? ` The kind of the same name still answers: query({ kind: "${q.recipe}", params }) (until the connectors serve these routes).`
+          : ''
         return { ok: false, error: `${describeQuery(q)} failed: ${error}${hint}` }
       }
     },

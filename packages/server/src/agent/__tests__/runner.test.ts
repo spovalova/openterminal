@@ -198,6 +198,43 @@ describe('reply verification', () => {
   })
 })
 
+describe('empty reply backstop', () => {
+  it('asks once more without tools when the model ends with no text, and records the turns and the continuation', async () => {
+    const runLog = new MemoryRunLog()
+    const turns: TurnScript[] = [
+      { toolCalls: [rq('quote', { symbols: ['MU'] })] },
+      { text: '' }, // the model's turn after the tool result carries nothing (seen live once the budget was spent)
+      (options): Turn => {
+        // The continuation offers no tools and ends with the nudge as a user message.
+        expect(options.tools ?? []).toHaveLength(0)
+        const last = options.prompt.at(-1)!
+        expect(last.role).toBe('user')
+        expect(JSON.stringify(last.content)).toContain('Write the reply now')
+        return { text: 'MU is at $100.00, down 1.5% today.' }
+      },
+    ]
+    const { promise, model, messages } = run(turns, { runLog })
+    const message = await promise
+    expect(message.text).toBe('MU is at $100.00, down 1.5% today.')
+    expect(messages.filter((m) => m.t === 'delta').map((m) => (m as Extract<ServerMsg, { t: 'delta' }>).text).join('')).toBe(message.text)
+    expect(message.verification).toMatchObject({ ok: true, checked: 2, matched: 2 })
+    expect(model.doStreamCalls).toHaveLength(3)
+    expect(runLog.rows[0]).toMatchObject({ continued: true })
+    expect(runLog.rows[0]!.turns!.map((t) => [t.finishReason, t.textChars, t.toolCalls])).toEqual([
+      ['tool-calls', 0, 1],
+      ['stop', 0, 0],
+      ['stop', 34, 0],
+    ])
+  })
+
+  it('does not continue when the model wrote a reply, nor when it never used a tool', async () => {
+    const { promise, model } = run([{ text: '' }])
+    const message = await promise
+    expect(message.text).toBe('')
+    expect(model.doStreamCalls).toHaveLength(1)
+  })
+})
+
 describe('emission order', () => {
   it('emits step per tool call, then step + widgets for set_workspace, then deltas', async () => {
     const { promise, messages } = run(useCaseA())
@@ -365,6 +402,20 @@ describe('query tool', () => {
     expect(fed.ok).toBe(false)
     expect(fed.error).toContain('recipe news symbols=MU limit=5 failed')
     expect(message.text).toBe('No news available.')
+  })
+
+  it('points a recipe whose routes are not served at the kind of the same name (until phase 3)', async () => {
+    const registry = new ConnectorRegistry({
+      recipes: [{ name: 'quote', title: 'quote', params: { type: 'object', properties: { symbols: { type: 'array', items: { type: 'string' } } }, required: ['symbols'] }, view: { preset: 'stat' }, routes: [{ connector: 'openbb', route: 'equity/price/quote', params: { symbol: '{symbols}' } }] }],
+    })
+    registry.register(defineConnector({ name: 'openbb', config: z.object({}), queries: { quote: async (p) => toFrame('quote', p.symbols.map((s) => ({ symbol: s, price: 1 }))) } }), {})
+    const turns: Turn[] = [{ toolCalls: [rq('quote', { symbols: ['MU'] })] }, { toolCalls: [kq('quote', { symbols: ['MU'] })] }, { text: 'MU is at 1. [[widget:w1]]' }]
+    const { promise, model } = run(turns, { registry })
+    const message = await promise
+    expect(message.steps!.map((s) => s.summary)).toEqual(['recipe quote symbols=MU · failed', 'quote MU · 1 row'])
+    const fed = toolResultsSentOn(model, 1)[0] as { ok: false; error: string }
+    expect(fed.error).toContain('has no route "equity/price/quote"')
+    expect(fed.error).toContain('The kind of the same name still answers: query({ kind: "quote", params })')
   })
 
   it('runs a route query against a connector route and points at find_route for an unknown route', async () => {

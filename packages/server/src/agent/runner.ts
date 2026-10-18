@@ -1,4 +1,4 @@
-import { streamText, stepCountIs, type LanguageModel } from 'ai'
+import { streamText, stepCountIs, type LanguageModel, type ModelMessage, type TextStreamPart } from 'ai'
 import { nanoid } from 'nanoid'
 import { TOOL_NAMES, type AgentRunner, type Catalog, type Message, type Registry, type ServerMsg, type Step, type Verification, type WidgetV2 } from '@terminal/core'
 import { runCost, type ModelPricing, type RunLog, type RunLogRow } from '../runlog.js'
@@ -23,6 +23,12 @@ export type RunnerDeps = {
  * the real cap is MAX_TOOL_CALLS, enforced in the tools and by disabling tools once it is spent.
  */
 export const MAX_STEPS = MAX_TOOL_CALLS + 2
+
+/**
+ * Sent as one more user turn, without tools, when the model ends its turns with no reply text (seen live once the
+ * tool budget was spent: the model's last turn carried nothing but reasoning). The reply must never be empty.
+ */
+export const REPLY_NUDGE = 'Write the reply now, in two to four plain sentences, from the previews you received: the first sentence states the finding with its number; end with [[widget:<id>]] chips for the widgets set_workspace applied, or none if it was not called. No tool calls.'
 
 /** Thrown (rejected) by run() when the signal aborts. `name` is 'AbortError' like fetch. */
 export class AgentAbortError extends Error {
@@ -61,6 +67,8 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
       const budget = { used: 0, max: MAX_TOOL_CALLS }
       const handled = new Set<string>()
       const memory = new PreviewMemory()
+      const turns: NonNullable<RunLogRow['turns']> = []
+      let continued = false
 
       const answerable = deps.registry.kinds()
       const recipes = deps.registry.recipes?.() ?? []
@@ -99,6 +107,16 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
         now: () => nowDate().getTime(),
       })
 
+      const onStepFinish = (step: { finishReason: string; text: string; toolCalls: readonly unknown[]; usage: { outputTokens?: number; outputTokenDetails?: { reasoningTokens?: number } }; warnings?: readonly { type: string; message?: string }[] }) => {
+        const warnings = (step.warnings ?? []).map((w) => w.message ?? w.type)
+        const turn: NonNullable<RunLogRow['turns']>[number] = { finishReason: step.finishReason, textChars: step.text.length, toolCalls: step.toolCalls.length }
+        if (typeof step.usage.outputTokens === 'number') turn.outputTokens = step.usage.outputTokens
+        if (typeof step.usage.outputTokenDetails?.reasoningTokens === 'number') turn.reasoningTokens = step.usage.outputTokenDetails.reasoningTokens
+        if (warnings.length) turn.warnings = warnings
+        turns.push(turn)
+        log(`[agent] turn ${turns.length}: ${turn.finishReason}, ${turn.textChars} chars, ${turn.toolCalls} tool calls${turn.reasoningTokens ? `, ${turn.reasoningTokens} reasoning tokens` : ''}${warnings.length ? `, warnings: ${warnings.join('; ')}` : ''}`)
+      }
+
       const result = streamText({
         model: deps.model,
         system,
@@ -109,6 +127,7 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
         // Once the budget is spent the model gets no tools, so its next turn is the reply.
         prepareStep: () => (budget.used >= budget.max ? { activeTools: [], toolChoice: 'none' } : undefined),
         onError: ({ error }) => log(`[agent] model error: ${errorMessage(error)}`),
+        onStepFinish,
         onToolExecutionStart: ({ toolCall }) => {
           handled.add(toolCall.toolCallId)
         },
@@ -125,7 +144,18 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
       const record = async (extra: Partial<RunLogRow>) => {
         if (!deps.runLog) return
         const finishedAt = nowDate().getTime()
-        const row: RunLogRow = { id: nanoid(), workspaceId: workspace.id, startedAt: startedAt.getTime(), ms: Math.max(0, finishedAt - startedAt.getTime()), model: modelId, prompt, steps: [...steps], ...extra }
+        const row: RunLogRow = {
+          id: nanoid(),
+          workspaceId: workspace.id,
+          startedAt: startedAt.getTime(),
+          ms: Math.max(0, finishedAt - startedAt.getTime()),
+          model: modelId,
+          prompt,
+          steps: [...steps],
+          ...(turns.length ? { turns: [...turns] } : {}),
+          ...(continued ? { continued } : {}),
+          ...extra,
+        }
         try {
           await deps.runLog.append(row)
         } catch (err) {
@@ -133,8 +163,9 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
         }
       }
 
-      try {
-        for await (const part of result.fullStream) {
+      /** Drain a stream into the reply: text as deltas, SDK-rejected tool calls as steps, abort and error flags. */
+      const consume = async (stream: AsyncIterable<TextStreamPart<any>>) => {
+        for await (const part of stream) {
           switch (part.type) {
             case 'text-start':
               // Separate text blocks from different turns so the streamed text reads as paragraphs.
@@ -169,6 +200,25 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
             default:
               break
           }
+        }
+      }
+
+      try {
+        await consume(result.fullStream)
+        if (!aborted && !signal.aborted && failure === undefined && text.trim() === '' && steps.length > 0) {
+          // The model used tools and then said nothing (live finding, 2026-10-18). Ask once more, without tools.
+          continued = true
+          log('[agent] model ended with no reply text; asking once more without tools')
+          const history = (await result.finalStep).response.messages as ModelMessage[]
+          const more = streamText({
+            model: deps.model,
+            system,
+            messages: [{ role: 'user', content: prompt }, ...history, { role: 'user', content: REPLY_NUDGE }],
+            abortSignal: signal,
+            onError: ({ error }) => log(`[agent] model error: ${errorMessage(error)}`),
+            onStepFinish,
+          })
+          await consume(more.fullStream)
         }
       } catch (err) {
         if (signal.aborted) aborted = true
