@@ -48,6 +48,7 @@ export function buildSystemPrompt(input: PromptInput): string {
       '- size: lg (hero, 2x2), md (2x1), sm (1x1). The first widget is the hero and should be lg.',
       '- view: `{ type: "series", candle?: boolean, normalize?: boolean }` for ohlcv and macro; `{ type: "chain" }` for options; `{ type: "stat", column?: string }` for quote, metrics, volatility, estimates, profile and short_interest; `{ type: "table" }` for any kind.',
       '- series draws one line per symbol (ohlcv) or per series (macro). candle: exactly one symbol. normalize: rebases every symbol to 100, use it for baskets. Never both, and neither on macro.',
+      '- series `labels` (optional): `{ "<symbol or series>": "<short name>" }` renames legend entries, e.g. `{ "SPY": "S&P 500" }`. Only when the user names a line or asks for names instead of tickers; keys must be the query\'s own symbols (or macro series).',
       '- chain lays out calls, strikes and puts around the underlying price. Use it for every options widget; a table on options only when the user asks for one side as rows.',
       '- stat shows one big number per symbol with its change under it: the price (quote), P/E (metrics), IV30 (volatility), consensus target (estimates), market cap (profile) or days to cover (short_interest); `column` picks another numeric column of the kind.',
       '  Use it, at sm size with one or a few symbols, when the question is about that headline number ("where is NVDA trading", "what is MU\'s P/E"); a table when the user needs the other columns.',

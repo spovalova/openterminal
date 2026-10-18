@@ -4,6 +4,12 @@ import { KINDS, QuerySchema, SERIES_KINDS, type Kind } from './kinds.js'
 export const SizeSchema = z.enum(['lg', 'md', 'sm'])
 export type Size = z.infer<typeof SizeSchema>
 
+/** A legend label override: short, one line. */
+export const LEGEND_LABEL_MAX = 32
+export const LegendLabelsSchema = z
+  .record(z.string().min(1), z.string().trim().min(1).max(LEGEND_LABEL_MAX))
+  .describe('Legend label per line, keyed by symbol (ohlcv) or series (macro), e.g. { "NVDA": "Nvidia" }. Omit to show the symbol.')
+
 /**
  * Kinds whose frame has one row per symbol (the latest row per symbol for short_interest) and the
  * numeric column a trader asks about first: what the `stat` view shows as its one big number.
@@ -30,14 +36,15 @@ export function numericColumns(kind: Kind): string[] {
 /**
  * series: lightweight-charts over a frame with a time column (`ohlcv`, `macro`). `candle` and `normalize`
  * are mutually exclusive and only for `ohlcv`; candle requires exactly one symbol; normalize rebases every
- * line to 100 at the first bar.
+ * line to 100 at the first bar. `labels` renames legend entries; every key must be one of the query's
+ * symbols (or macro series).
  * table: any kind.
  * chain: the option chain layout (calls, strike, puts), only for `options`.
  * stat: one big number per symbol (the kind's key column, or `column` to pick another numeric one) with
  * the symbol as its label and a change line under it; only for the kinds in STAT_KEY_COLUMN.
  */
 export const ViewSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('series'), candle: z.boolean().optional(), normalize: z.boolean().optional() }),
+  z.object({ type: z.literal('series'), candle: z.boolean().optional(), normalize: z.boolean().optional(), labels: LegendLabelsSchema.optional() }),
   z.object({ type: z.literal('table') }),
   z.object({ type: z.literal('chain') }),
   z.object({ type: z.literal('stat'), column: z.string().min(1).optional().describe('A numeric column of the kind to show instead of its key column') }),
@@ -78,6 +85,14 @@ export const WidgetSchema = z
     if (!SERIES_KINDS.has(w.query.kind)) {
       ctx.addIssue({ code: 'custom', path: ['view'], message: `series view requires an ohlcv or macro query` })
       return
+    }
+    if (w.view.labels) {
+      const groups: readonly string[] = w.query.kind === 'ohlcv' ? w.query.params.symbols : w.query.kind === 'macro' ? w.query.params.series : []
+      for (const key of Object.keys(w.view.labels)) {
+        if (!groups.includes(key)) {
+          ctx.addIssue({ code: 'custom', path: ['view', 'labels', key], message: `labels: "${key}" is not one of the query's ${w.query.kind === 'macro' ? 'series' : 'symbols'}` })
+        }
+      }
     }
     if (w.query.kind !== 'ohlcv') {
       if (w.view.candle || w.view.normalize) ctx.addIssue({ code: 'custom', path: ['view'], message: 'candle and normalize are only for ohlcv' })

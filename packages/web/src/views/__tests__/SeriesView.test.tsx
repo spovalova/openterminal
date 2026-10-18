@@ -19,7 +19,7 @@ import { SeriesView, legendText } from '../SeriesView'
 import { viewFor } from '../view-for'
 import { fixture } from '../fixtures'
 import { formatPercent, formatPrice } from '../format'
-import { toCandleData, toLineData, groupBars, legendRows, seriesColumns } from '../series-data'
+import { legendLabel, toCandleData, toLineData, groupBars, legendRows, seriesColumns } from '../series-data'
 
 function mock() {
   return charts.current!
@@ -50,6 +50,19 @@ describe('SeriesView legend', () => {
       expect(close.first).toBe(closes[0])
       expect(close.last).toBe(closes[closes.length - 1])
     }
+  })
+
+  it('shows the widget\'s legend labels in place of the symbol, keeping the symbol on the row (A1)', () => {
+    const { widget, frame } = fixture('A1')
+    const labelled = { ...widget, view: { type: 'series' as const, normalize: true, labels: { MU: 'Micron', STX: 'Seagate' } } }
+    render(<SeriesView widget={labelled} frame={frame} />)
+    const items = within(screen.getByRole('list', { name: 'Series legend' })).getAllByRole('listitem')
+    expect(items.map((el) => el.getAttribute('data-symbol'))).toEqual(['MU', 'SNDK', 'WDC', 'STX'])
+    expect(items.map((el) => el.querySelector('span:nth-child(2)')!.textContent)).toEqual(['Micron', 'SNDK', 'WDC', 'Seagate'])
+    expect(items.map((el) => el.getAttribute('title'))).toEqual(['MU', null, null, 'STX'])
+    expect(legendLabel('fed_funds', 'macro')).toBe('Fed funds')
+    expect(legendLabel('fed_funds', 'macro', { fed_funds: 'Policy rate' })).toBe('Policy rate')
+    expect(legendLabel('MU', 'ohlcv', { MU: '  ' })).toBe('MU')
   })
 
   it('colours the change by direction', () => {

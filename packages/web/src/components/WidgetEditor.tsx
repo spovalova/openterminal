@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { Button, Dialog } from '@terminal/ui'
 import { KINDS, KIND_NAMES, SERIES_KINDS, STAT_KEY_COLUMN, SizeSchema, isStatKind, numericColumns, parseWidget, type Kind, type Size, type StatKind, type Widget, type WidgetInput } from '@terminal/core'
 import { useActions } from '../actions'
+import { legendGroups, legendLabel } from '../views/series-data'
 
 type ViewType = Widget['view']['type']
 
@@ -85,6 +86,8 @@ type Draft = {
   viewType: ViewType
   candle: boolean
   normalize: boolean
+  /** Legend label per symbol (or macro series); blank means the default. */
+  labels: Record<string, string>
   /** stat view: the column to show; '' is the kind's key column. */
   statColumn: string
 }
@@ -159,7 +162,7 @@ export function paramsFrom(kind: Kind, draft: ParamDraft): Record<string, unknow
 }
 
 function emptyDraft(): Draft {
-  return { title: '', size: 'md', kind: 'quote', params: paramDraft('quote'), viewType: 'table', candle: false, normalize: false, statColumn: '' }
+  return { title: '', size: 'md', kind: 'quote', params: paramDraft('quote'), viewType: 'table', candle: false, normalize: false, statColumn: '', labels: {} }
 }
 
 function fromWidget(w: Widget): Draft {
@@ -171,15 +174,32 @@ function fromWidget(w: Widget): Draft {
     viewType: w.view.type,
     candle: w.view.type === 'series' ? !!w.view.candle : false,
     normalize: w.view.type === 'series' ? !!w.view.normalize : false,
+    labels: w.view.type === 'series' && w.view.labels ? { ...w.view.labels } : {},
     statColumn: w.view.type === 'stat' ? (w.view.column ?? '') : '',
   }
 }
 
+/** The legend labels to save: trimmed, non-blank, and only for lines the query still draws. */
+export function labelsFor(groups: string[], labels: Record<string, string>): Record<string, string> | undefined {
+  const out: Record<string, string> = {}
+  for (const g of groups) {
+    const v = labels[g]?.trim()
+    if (v) out[g] = v
+  }
+  return Object.keys(out).length ? out : undefined
+}
+
 export function toWidgetInput(d: Draft, id: string): WidgetInput {
   const params = paramsFrom(d.kind, d.params)
+  const labels = d.viewType === 'series' ? labelsFor(legendGroups(d.kind, params), d.labels) : undefined
   const view =
     d.viewType === 'series'
-      ? { type: 'series' as const, ...(d.kind === 'ohlcv' && d.candle ? { candle: true } : {}), ...(d.kind === 'ohlcv' && d.normalize ? { normalize: true } : {}) }
+      ? {
+          type: 'series' as const,
+          ...(d.kind === 'ohlcv' && d.candle ? { candle: true } : {}),
+          ...(d.kind === 'ohlcv' && d.normalize ? { normalize: true } : {}),
+          ...(labels ? { labels } : {}),
+        }
       : d.viewType === 'chain'
         ? { type: 'chain' as const }
         : d.viewType === 'stat'
@@ -213,8 +233,11 @@ export function WidgetEditor({ open, onClose, workspaceId, widget }: { open: boo
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }))
   const setParam = (name: string, value: string | string[]) => setDraft((d) => ({ ...d, params: { ...d.params, [name]: value } }))
+  const setLabel = (group: string, value: string) => setDraft((d) => ({ ...d, labels: { ...d.labels, [group]: value } }))
   const fields = useMemo(() => fieldsFor(draft.kind), [draft.kind])
   const viewTypes = viewTypesFor(draft.kind)
+  // the lines the series view will draw, from the params as typed so far: one legend label input each
+  const groups = useMemo(() => (draft.viewType === 'series' ? legendGroups(draft.kind, paramsFrom(draft.kind, draft.params)) : []), [draft.viewType, draft.kind, draft.params])
 
   /** A new kind resets the params to its defaults and picks its natural view (series, chain, or table). */
   const changeKind = (kind: Kind) => {
@@ -310,6 +333,32 @@ export function WidgetEditor({ open, onClose, workspaceId, widget }: { open: boo
             </div>
           )}
         </div>
+        {groups.length > 0 && (
+          <fieldset data-field="labels" className="flex flex-col gap-1">
+            <legend className="text-[11px] tracking-wide text-fg-2 uppercase">Legend labels (optional)</legend>
+            <div className="grid grid-cols-3 gap-x-3 gap-y-1">
+              {groups.map((g) => {
+                const fallback = legendLabel(g, draft.kind)
+                return (
+                  <label key={g} className="flex items-center gap-2 text-fg-2">
+                    <span className="w-16 shrink-0 truncate text-xs" title={g}>
+                      {fallback}
+                    </span>
+                    <input
+                      className={inputCls}
+                      name={`label:${g}`}
+                      aria-label={`Legend label for ${g}`}
+                      value={draft.labels[g] ?? ''}
+                      placeholder={fallback}
+                      maxLength={32}
+                      onChange={(e) => setLabel(g, e.target.value)}
+                    />
+                  </label>
+                )
+              })}
+            </div>
+          </fieldset>
+        )}
 
         {errors.length > 0 && (
           <ul role="alert" className="rounded border border-down/40 bg-down/10 px-3 py-2 text-down">

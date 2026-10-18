@@ -227,6 +227,7 @@ export function createTools(deps: ToolDeps) {
     description: [
       'Replace the workspace widgets with a complete set: four to six by default, not a floor; when the user asks for one or two widgets, send one or two. The first widget is the hero and should be lg.',
       'Every widget is validated: series views only on ohlcv or macro; candle and normalize only on ohlcv; candle needs exactly one symbol; candle and normalize are exclusive; chain views only on options; stat views only on quote, metrics, volatility, estimates, profile or short_interest (optional `column` names one of the kind\'s numeric columns); table on any kind; kinds must be answerable.',
+      'A series view may carry `labels` ({ symbol or series: short legend name }); every key must be one of that query\'s symbols or series.',
       'On errors nothing changes: fix the listed widgets and call again. On success it returns the widget ids to use in [[widget:<id>]] chips.',
     ].join(' '),
     inputSchema: SetWorkspaceInput,
