@@ -19,6 +19,8 @@ Observations from the verifiers worth a follow-up, none blocking: the agent neve
 
 **Prompt bench (2026-10-18).** Nine show-off prompts plus one ad-hoc run against production, written up in `docs/notes/prompt-bench-2026-10-18.md`, rerunnable with `pnpm bench` (`scripts/prompts.json`, `scripts/prompt-bench.mjs`). Seven pass or partial, three fail, all numbers in the replies verified against the frames. Open defects from it, in priority order: the model sometimes streams a one-line plan before the reply; "four to six widgets" is read as a floor even when the user asks for two (both are prompt edits in `packages/server/src/agent/prompt.ts`); no `2y` range in the ohlcv catalog; an empty search frame from the first connector is final and never falls through; multi-symbol news lets one name take most of the rows.
 
+**Data gaps and vendors (2026-10-18).** `docs/notes/data-gaps-2026-10-18.md` maps about sixty prompt types against the five kinds and the keyless OpenBB routes installed here, ranks the gaps, and prices the vendors for the paid ones. Headline: the top five gaps (fundamentals and estimates, options chain and IV, economic calendar and macro, ownership and short interest, movers and screeners) are all keyless routes OpenBB already serves, so they are new kinds under section 7.1, not new vendors. Paid gaps: deep intraday history, options flow and GEX, per-ticker IV history, transcripts, consolidated real-time. Cheapest keys per gap: Massive $29, ThetaData $40, Alpaca $99, FMP $19 to $29, Unusual Whales API $150, ORATS $199. Social sentiment is effectively unavailable at retail prices.
+
 **If you are taking over**, read this file once top to bottom, then:
 
 1. Start at Phase 0 in section 11. Do not fan out to parallel work before Phase 0 is green.
