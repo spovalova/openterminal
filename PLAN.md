@@ -541,32 +541,50 @@ A new connector is therefore either: an OpenAPI URL plus auth plus an envelope r
 
 ### Transforms: deriving frames from frames
 
-The user wants the agent to manipulate, merge and modify what it fetched, with "P/E over time" as the example: daily closes joined to trailing-twelve-month EPS, which no provider route returns. A **transform** is a SQL statement over one or more frames that produces a frame. It is the fourth kind of thing a widget can hold, and the result goes through the same inference, annotations, preview and view path as a route's frame, so product rule 4 is untouched: every number in a reply still comes from a preview.
+The user wants the agent to manipulate, merge and modify what it fetched, with "P/E over time" as the example: daily closes joined to trailing-twelve-month EPS, which no provider route returns. A **transform** is a Python script over one or more frames that returns one DataFrame. It is the fourth kind of thing a widget can hold, and the result goes through the same inference, annotations, preview and view path as a route's frame, so product rule 4 is untouched: every number in a reply still comes from a preview.
 
-- **Engine:** DuckDB in-process (`@duckdb/node-api`), read-only, `enable_external_access=false`, no extensions, a memory cap and a 5 s timeout per statement. Input frames are registered as in-memory tables named by the agent (`price`, `eps`). DuckDB has window functions and `ASOF JOIN`, which is exactly what time-series derivations need, and the model writes SQL far more reliably than ad-hoc code over unknown shapes. A JavaScript escape hatch is deliberately not in v2.
-- **Vocabulary (section 3):** a **transform** is `{ inputs: Record<name, Query>, sql: string, columns?: Record<name, Annotation> }`. A widget's query may be a route, a recipe, or a transform. The `columns` block lets the agent declare the unit and label of columns it created (`pe: { unit: ratio, label: "P/E (TTM)" }`); columns that keep an input's name keep its annotation.
-- **Agent tool:** `transform(inputs, sql, columns?)`. Inputs are queries the agent already ran (cache hits) or new ones (run first, in parallel). The tool returns the preview of the result and the error text from DuckDB on failure, so the agent can fix its SQL in the next step. The prompt gets one rule and one worked example:
+**Why pandas, and why in WebAssembly.** The prompts that need derivation split in two. Joins, windows and aggregates (P/E over time, rebasing, spreads, drawdown, rolling volatility, earnings reactions, put/call ratios) are fine in SQL. The other quarter is not: every technical indicator is recursive (EMA, RSI, MACD), implied volatility and yield to maturity need a solver, pairs trades need cointegration, expected moves need distributions, backtests need state, and a correlation matrix is one line of pandas and a self-join mess in SQL. Those are the prompts that make the product feel like a real tool, so the engine must cover them, and that means Python. Running the agent's Python as a native process on the user's machine is not acceptable for a local-first product (arbitrary code with the user's privileges, sandboxing that differs per OS, a Python install to manage). Pyodide runs CPython, pandas, numpy and scipy in WebAssembly inside the Node process: no filesystem or network unless handed in, nothing to install, about 30 MB vendored in the npm package, 2 to 4 s of warm-up once per server start, then tens of milliseconds per run on widget-sized data. One engine; DuckDB was considered and dropped to keep one prompt rule, one lineage format and one worker to maintain. It can return behind the same contract if the refresh loop ever needs it.
 
-  ```sql
-  -- P/E over time: price / TTM EPS as of each trading day
-  WITH ttm AS (
-    SELECT symbol, date AS time,
-           SUM(eps_actual) OVER (PARTITION BY symbol ORDER BY date ROWS 3 PRECEDING) AS eps_ttm,
-           COUNT(*)        OVER (PARTITION BY symbol ORDER BY date ROWS 3 PRECEDING) AS n
-    FROM eps)
-  SELECT p.symbol, p.time, p.close, t.eps_ttm, p.close / t.eps_ttm AS pe
-  FROM price p ASOF JOIN ttm t ON p.symbol = t.symbol AND p.time >= t.time
-  WHERE t.n = 4 AND t.eps_ttm > 0
-  ORDER BY p.symbol, p.time
+- **Contract:** `{ inputs: Record<name, Query>, code: string, columns?: Record<name, Annotation> }`. Each input is bound as a DataFrame of that name (time columns as tz-aware datetimes, ET); the script must assign `result`, a DataFrame. The `columns` block lets the agent declare the unit and label of columns it created (`pe: { unit: ratio, label: "P/E (TTM)" }`); columns that keep an input's name keep its annotation. A widget's query may be a route, a recipe, or a transform.
+- **Agent tool:** `transform(inputs, code, columns?)`. Inputs are queries the agent already ran (cache hits) or new ones (run first, in parallel). The tool returns the preview of the result, or the Python traceback on failure so the agent can fix it in the next step. The prompt gets one rule and one worked example:
+
+  ```python
+  # P/E over time: close / trailing-twelve-month EPS as of each trading day
+  e = eps.sort_values("date")
+  e["eps_ttm"] = e.groupby("symbol")["eps_actual"].transform(lambda s: s.rolling(4).sum())
+  e = e.dropna(subset=["eps_ttm"]).rename(columns={"date": "time"})
+  p = price.sort_values("time")
+  m = pd.merge_asof(p, e[["symbol", "time", "eps_ttm"]], on="time", by="symbol")
+  m = m[m.eps_ttm > 0]
+  m["pe"] = m.close / m.eps_ttm
+  result = m[["symbol", "time", "close", "eps_ttm", "pe"]]
   ```
 
   with inputs `price = ohlcv NVDA 1d 2y` and `eps = eps_history NVDA limit 12`. The result has a time column and a numeric `pe`, so the series view renders it as a line, and the stat view shows the latest value.
-- **Widgets refresh their derivations.** A transform widget re-runs its inputs on their TTLs (cache hits when nothing changed) and the SQL after, so a derived chart stays live. The editor shows the inputs and the SQL and lets the user edit both; the subtitle reads "derived from 2 queries".
-- **Lineage in previews.** The preview of a transform carries the SQL and the input queries, so a reply can say "P/E (TTM) is 42.1, derived from closes and reported EPS" and the chip opens a widget that shows exactly that derivation.
-- **Guardrails.** Row cap on inputs (250k) and outputs (50k); `SELECT` only, parsed and rejected otherwise; no `COPY`, `ATTACH`, `INSTALL`; the bench grades derivations by recomputing one value by hand, as it did for trailing P/E in v2.
-- **Scope:** joins, window functions, aggregation, resampling (daily to weekly), rebasing, spreads between series, ratios between frames, filters. Not in v2: user-defined functions, Python, charts of more than one derived frame per widget.
+- **Widgets refresh their derivations.** A transform widget re-runs its inputs on their TTLs (cache hits when nothing changed) and the script after, so a derived chart stays live. The editor shows the inputs and the code and lets the user edit both; the subtitle reads "derived from 2 queries".
+- **Lineage in previews.** The preview of a transform carries the code and the input queries, so a reply can say "P/E (TTM) is 42.1, derived from closes and reported EPS" and the chip opens a widget that shows exactly that derivation.
+- **Guardrails.** One warm Pyodide worker per server, restarted on any breach; imports limited to pandas, numpy, scipy, math, datetime and a small `ot` helper module (trading calendar, rebase, returns); 10 s CPU and 512 MB per run; input rows capped at 250k and output at 50k; no `fetch`, no filesystem mounted. The bench grades derivations by recomputing one value by hand, as it did for trailing P/E in v2.
+- **Helpers (`ot` module):** `ot.trading_days(start, end)`, `ot.last_week()`, `ot.prev_close(df)`, `ot.rebase(df, by="symbol")`, `ot.returns(df)`, `ot.ema/rsi/macd/bollinger`, `ot.bs_iv(price, S, K, t, r, kind)`. Thin, tested, documented in the prompt; the agent may ignore them and write pandas directly.
+- **Scope:** joins, windows, aggregation, resampling, rebasing, spreads, ratios, filters, indicators, solvers, statistics, simple backtests. Not in v2: user-defined packages, plotting from Python (views render), network from Python.
 
-Transforms are workstream (f) in phase 1 and get their own bench prompts in phase 2: P/E over time, 10y minus 2y from two macro series, a basket's equal-weighted index, and net debt from the balance sheet.
+Transforms are workstream (f) in phase 1 and get their own bench prompts in phase 2: P/E over time, 10y minus 2y from two macro series, an equal-weighted basket index, net debt from the balance sheet, RSI and MACD on a daily chart, implied volatility from a quoted option price, a 20-name correlation matrix, and an SMA-crossover backtest with the equity curve.
+
+### Views and features for v2
+
+Bench v2's fails were as much about what the user could not *see* as about data. Ranked, with the fail each one clears:
+
+1. **Markers on charts.** A series view takes an optional `events` input: any frame with a time column, a label and a kind, rendered as markers on the price line (lightweight-charts series markers) with a tooltip and a legend entry. Recipes supply the common ones: earnings dates with the reaction, dividends, insider trades, splits, macro releases, the news cluster the reply names. The agent can also place its own: `events: [{ time, label }]` typed by hand ("the drop"), for the reply to point at. Also horizontal levels (strikes, 52-week high and low, a target price) and shaded ranges (the earnings window, last week). Clears: TSLA earnings reactions ("the chart marks the reactions" becomes true), CRWV "what moved it".
+2. **Panes and axes.** A series view can stack panes (price above, volume or RSI below), put a second series on a right axis (price against a yield), and use a numeric x-axis instead of time (a yield curve by maturity, the IV term structure, open interest by strike). The transform engine produces these frames; the view must be able to draw them. Clears: rates week (curve view), options (term structure), any indicator prompt.
+3. **Table control by the agent.** `view.columns` (which, in what order), `view.sort`, a highlighted row, and conditional colour on percent columns. A compare prompt renders metrics × symbols as a pivot with best and worst marked. Clears: neoclouds (debt and FCF were fetched but hidden), cheap-tech (40-row dump).
+4. **Previews the agent can steer.** Default stays 25 rows plus stats; the agent can ask for a slice (`tail`, a time range, top-N by a column) through a transform, and previews of a frame with a time column always include the first and last timestamps and the row dates that fall on recipe-known events. Clears: S&P last week (PPI and retail sales were past row 25), rates week (Friday's rows).
+5. **Time semantics in one place.** `ot.last_week()`, `prev_close`, ET session awareness, weekday labels in calendar frames, baseline from the close before the period (bench v1's TSMC finding). Used by recipes, transforms and the prompt. Clears: wrong weekdays, 1mo change from the first bar, "last week" meaning the last 30 days.
+6. **Index and sector recipes.** "The S&P" resolves to `^GSPC` with SPY as the tradable; sector performance derived from the eleven sector ETFs; constituents from holdings; leaders and laggards from movers filtered to an index. Clears: S&P last week.
+7. **Screener recipe.** The yfinance screener route with the agent's filters, then a transform for anything the route cannot filter. Clears: cheap-tech.
+8. **Frames keyed by workspace.** Widget ids repeat across workspaces; the web state keys frames by workspace and widget, and the `frameMatches` guard stays as belt and braces. A defect, not a feature; first in phase 1(d).
+9. **Heatmap view.** A matrix frame (correlations, sector × week returns, holdings by weight) as a coloured grid. Small, and the transform engine makes the frames trivial to produce.
+10. **Promote to recipe.** A transform or query the user likes can be saved as a recipe from the widget menu, with a name and a title template, into `~/.terminal/recipes.yml`; the agent sees user recipes beside the built-in ones. This is how the catalog grows from use.
+
+Deferred past v2, each with a reason: histogram and distribution views (one prompt in the bench set, pandas can tabulate for now), text or note widgets (the reply is the narrative), alerts and conditions (section 9), user drawing on charts (markers are data-driven first), streaming (polling on TTL holds).
 
 ### Caching and TTL
 
@@ -574,7 +592,7 @@ Cache key is `connector + route + canonical params`. TTL by route pattern in a s
 
 ### Agent
 
-Tools: `find_route(query: string)` returns up to five catalog entries; `query(connector, route, params)` validates against the descriptor and returns a preview as today; `transform(inputs, sql, columns?)` as above; `set_workspace` unchanged except widgets hold `{ connector, route, params }`, a `recipe` name with params, or a transform. Prompt: the recipe list with one example query each (about 25 lines, replacing the kind guidance), the rule "use a recipe when one fits; search the catalog when none does; never write a figure that is not in a preview", the unit rule above, and the worked examples rewritten with routes. Expected cost: one extra tool call on prompts that leave the recipes, about two seconds.
+Tools: `find_route(query: string)` returns up to five catalog entries; `query(connector, route, params)` validates against the descriptor and returns a preview as today; `transform(inputs, code, columns?)` as above; `set_workspace` unchanged except widgets hold `{ connector, route, params }`, a `recipe` name with params, or a transform. Prompt: the recipe list with one example query each (about 25 lines, replacing the kind guidance), the rule "use a recipe when one fits; search the catalog when none does; never write a figure that is not in a preview", the unit rule above, and the worked examples rewritten with routes. Expected cost: one extra tool call on prompts that leave the recipes, about two seconds.
 
 ### Migration
 
@@ -589,7 +607,7 @@ Tools: `find_route(query: string)` returns up to five catalog entries; `query(co
 ### Phases
 
 0. **Trunk** (one agent, sequential): descriptor type, catalog with search, shape detection, annotations loader, unit conversion, the runner, and tests with a recorded `openapi.json` fixture. Nothing user-visible changes.
-1. **Parallel**: (a) OpenBB descriptor generator, caller, probe script and liveness; (b) yahoo and finnhub descriptor files and callers; (c) agent tools and prompt with recipes; (d) web: views by shape, editor from descriptors, Connectors page catalog, subtitles from routes; (e) store migration, `pnpm query`, docs (`writing-a-connector.md` rewritten around descriptors, the README kinds table replaced by "any route, plus these recipes"); (f) transforms: DuckDB runner, the tool, the widget type, editor and subtitle.
+1. **Parallel**: (a) OpenBB descriptor generator, caller, probe script and liveness; (b) yahoo and finnhub descriptor files and callers; (c) agent tools and prompt with recipes; (d) web: views by shape, editor from descriptors, Connectors page catalog, subtitles from routes; (e) store migration, `pnpm query`, docs (`writing-a-connector.md` rewritten around descriptors, the README kinds table replaced by "any route, plus these recipes"); (f) transforms: the Pyodide worker, the `ot` helpers, the tool, the widget type, editor and subtitle; (g) views: markers, panes and axes, table control, heatmap.
 2. **Integrate and accept**: bench v2 rerun; the target is the three user prompts passing and no regression on bench v1; new annotations added for every unit mistake found.
 3. **Remove**: delete the kind code once the bench passes; PLAN.md sections 7.1, 14 marked superseded.
 
@@ -604,4 +622,4 @@ Tools: `find_route(query: string)` returns up to five catalog entries; `query(co
 
 ### Out of scope
 
-Write routes (orders), authentication flows beyond API keys and basic auth, embeddings for search, streaming routes, user-defined functions or JavaScript in transforms.
+Write routes (orders), authentication flows beyond API keys and basic auth, embeddings for search, streaming routes, user-installed Python packages, plotting or network from transforms.
