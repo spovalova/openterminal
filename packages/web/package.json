@@ -11,10 +11,14 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.38.1",
     "@terminal/core": "workspace:*",
     "@terminal/ui": "workspace:*",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "codemirror": "^6.0.2",
     "lightweight-charts": "^5.2.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

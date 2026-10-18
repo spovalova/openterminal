@@ -6,25 +6,26 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import { createNodeWebSocket } from '@hono/node-ws'
 import { z } from 'zod'
 import {
+  AnyWidgetSchema,
   ClientMsgSchema,
   MessageSchema,
   ServerMsgSchema,
-  WidgetSchema,
   type AgentRunner,
+  type AnyWidget,
   type Message,
-  type Registry,
+  type Recipe,
   type ServerMsg,
   type Step,
-  type Widget,
 } from '@terminal/core'
 import { saveConnectorConfig } from './config.js'
 import { builtinConnector, connectorNeedsKey, describeConnectors, type ConnectorInfo } from './connectors.js'
-import { Executor, Poller, errorMessage } from './executor.js'
-import type { WorkspaceStore } from './store.js'
+import { Executor, PROVIDER_OVERRIDES_KEY, Poller, errorMessage, type ProviderOverrides } from './executor.js'
+import { createDataRoutes, type DataRouteDeps, type ProbeFn } from './routes-data.js'
+import type { Store } from './store/index.js'
 
 export type AppDeps = {
-  registry: Registry
-  store: WorkspaceStore
+  registry: DataRouteDeps['registry']
+  store: Store
   agent: AgentRunner
   /** TERMINAL_HOME, for writing connector config back to config.yml. */
   home: string
@@ -34,12 +35,18 @@ export type AppDeps = {
   now?: () => number
   /** Built web app to serve in production (static files, SPA fallback). Ignored when the directory does not exist. */
   webDist?: string
+  /** The built-in recipes (from `@terminal/core/node`); the data routes list them beside the user's. */
+  builtinRecipes?: () => Recipe[]
+  /** (a)'s catalog probe, when wired in; `POST /api/catalog/probe` answers 501 without it. */
+  probe?: ProbeFn
+  /** Extra fields for `GET /api/store` (the store kind, the migration report). */
+  storeInfo?: () => Record<string, unknown>
 }
 
 const NameSchema = z.string().trim().min(1).max(60)
 const WorkspaceBodySchema = z.object({
   name: NameSchema.optional(),
-  widgets: z.array(WidgetSchema).optional(),
+  widgets: z.array(AnyWidgetSchema).optional(),
   messages: z.array(MessageSchema).optional(),
 })
 
@@ -49,7 +56,7 @@ export function createApp(deps: AppDeps) {
   const log = deps.log ?? (() => {})
   const now = deps.now ?? Date.now
   const { registry, store, agent } = deps
-  const executor = new Executor(registry, { log })
+  const executor = new Executor(registry, { log, overrides: () => store.getSetting<ProviderOverrides>(PROVIDER_OVERRIDES_KEY) })
   /** One in-flight prompt per workspace, across every client. */
   const inflight = new Map<string, InflightRun>()
 
@@ -98,8 +105,9 @@ export function createApp(deps: AppDeps) {
     const found = await store.findWidget(c.req.param('id'))
     if (!found) return c.json({ error: 'widget not found' }, 404)
     const bypassCache = c.req.query('refresh') === '1'
+    const dataset = c.req.query('dataset') || undefined
     try {
-      return c.json(await executor.frameFor(found.widget, { bypassCache }))
+      return c.json(await executor.frameFor(found.widget, { bypassCache, ...(dataset ? { dataset } : {}) }))
     } catch (err) {
       return c.json({ error: errorMessage(err) }, 502)
     }
@@ -127,6 +135,21 @@ export function createApp(deps: AppDeps) {
     log(`connector ${name}: config saved · ${info.status}`)
     return c.json(out)
   })
+
+  // ---- data: catalog, recipes, export and import, ad-hoc queries, settings, run log ----
+  app.route(
+    '/',
+    createDataRoutes({
+      registry,
+      store,
+      home: deps.home,
+      builtinRecipes: deps.builtinRecipes ?? (() => registry.recipes?.() ?? []),
+      log,
+      now,
+      ...(deps.probe ? { probe: deps.probe } : {}),
+      ...(deps.storeInfo ? { storeInfo: deps.storeInfo } : {}),
+    }),
+  )
 
   app.all('/api/*', (c) => c.json({ error: 'not found' }, 404))
 
@@ -224,7 +247,7 @@ export function createApp(deps: AppDeps) {
         this.send({ t: 'frameError', widgetId, error: 'widget not found' })
         return
       }
-      await executor.run(widget, this.send, { bypassCache: true })
+      await executor.run(widget, this.send, { bypassCache: true, ...(workspaceId ? { workspaceId } : {}) })
     }
 
     /** started → step… → widgets (persist, execute, frame…) → done; failed replaces anything after started. */
@@ -276,13 +299,13 @@ export function createApp(deps: AppDeps) {
     }
 
     /** Persist the new widget set, then execute it: through the poller when this client has the workspace focused. */
-    private async applyWidgets(workspaceId: string, widgets: Widget[], name?: string) {
+    private async applyWidgets(workspaceId: string, widgets: AnyWidget[], name?: string) {
       const patch = name ? { widgets, name: name.trim().slice(0, 60) || undefined } : { widgets }
       const saved = await store.patch(workspaceId, patch)
       if (!saved) throw new Error('workspace not found')
       const polled = this.poller.replaceWidgets(workspaceId, widgets)
       if (polled) await polled
-      else await executor.runAll(widgets, this.send)
+      else await executor.runAll(widgets, this.send, { workspaceId })
     }
   }
 

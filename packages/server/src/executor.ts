@@ -1,42 +1,133 @@
-// Widget execution: run each widget's query through the registry and emit frame / frameError.
-// TTL polling: only the focused workspace re-executes widgets when their frame's TTL expires.
-import type { Frame, Registry, ServerMsg, Widget, Workspace } from '@terminal/core'
+// Widget execution: run each widget's datasets through the registry and emit frame / frameError per dataset.
+// TTL polling: only the focused workspace re-executes widgets when their frames' TTLs expire.
+//
+// A widget is v1 (one `query`, dataset `main`) or v2 (a data graph, PLAN.md section 17). A migrated v2 widget keeps
+// its v1 `query`; during the coexistence, when one of its recipe datasets fails (the route it names is not served
+// yet), the v1 query answers `main` so the workspace renders as it did before the migration.
+import {
+  DEFAULT_DATASET,
+  describeQuery,
+  isLegacyQuery,
+  isRouteQuery,
+  isTransformQuery,
+  isWidgetV2,
+  widgetQueries,
+  type AnyQuery,
+  type AnyWidget,
+  type Frame,
+  type Registry,
+  type ServerMsg,
+  type Workspace,
+} from '@terminal/core'
 
 export type Emit = (m: ServerMsg) => void
 
-export type RunOptions = { bypassCache?: boolean; signal?: AbortSignal }
+export type RunOptions = { bypassCache?: boolean; signal?: AbortSignal; workspaceId?: string }
+
+export type Frames = Record<string, Frame>
+export type DatasetResult = { frames: Frames; errors: Record<string, string>; /** Set when the v1 query answered `main` for a migrated widget. */ legacy?: boolean }
 
 export function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
 }
 
+/** Setting key for the per-route provider overrides: `{ "openbb:equity/price/quote": "yfinance" }`. */
+export const PROVIDER_OVERRIDES_KEY = 'providers'
+export type ProviderOverrides = Record<string, string>
+
+/** A route query with the overriding provider applied when it names none; transforms get it on their inputs. */
+export function withProviderOverrides(q: AnyQuery, overrides: ProviderOverrides | undefined): AnyQuery {
+  if (!overrides || Object.keys(overrides).length === 0) return q
+  if (isTransformQuery(q)) {
+    const inputs: Record<string, AnyQuery> = {}
+    for (const [name, sub] of Object.entries(q.inputs)) inputs[name] = withProviderOverrides(sub, overrides)
+    return { ...q, inputs }
+  }
+  if (isRouteQuery(q)) {
+    const provider = overrides[`${q.connector}:${q.route}`]
+    if (provider && (q.params.provider === undefined || q.params.provider === null || q.params.provider === '')) return { ...q, params: { ...q.params, provider } }
+  }
+  return q
+}
+
+export type ExecutorOptions = { log?: (msg: string) => void; /** Provider overrides, read per run so the Data page's changes apply live. */ overrides?: () => ProviderOverrides | undefined }
+
 export class Executor {
   constructor(
     private readonly registry: Registry,
-    private readonly opts: { log?: (msg: string) => void } = {},
+    private readonly opts: ExecutorOptions = {},
   ) {}
 
-  /** The frame for a widget: served from cache when fresh, else fetched. Throws on failure. */
-  frameFor(widget: Widget, opts: RunOptions = {}): Promise<Frame> {
-    return this.registry.run(widget.query, opts)
+  private runQuery(q: AnyQuery, opts: RunOptions): Promise<Frame> {
+    return this.registry.run(withProviderOverrides(q, this.opts.overrides?.()), { ...(opts.bypassCache ? { bypassCache: true } : {}), ...(opts.signal ? { signal: opts.signal } : {}) })
   }
 
-  /** Run one widget and emit `frame` or `frameError`. Resolves with the frame, or undefined on error. */
-  async run(widget: Widget, emit: Emit, opts: RunOptions = {}): Promise<Frame | undefined> {
-    try {
-      const frame = await this.frameFor(widget, opts)
-      emit({ t: 'frame', widgetId: widget.id, frame })
-      return frame
-    } catch (err) {
-      const error = errorMessage(err)
-      this.opts.log?.(`widget ${widget.id} (${widget.query.kind}): ${error}`)
-      emit({ t: 'frameError', widgetId: widget.id, error })
-      return undefined
+  /** Every dataset's frame (or error), in parallel. Never throws. */
+  async datasets(widget: AnyWidget, opts: RunOptions = {}): Promise<DatasetResult> {
+    const queries = widgetQueries(widget)
+    const frames: Frames = {}
+    const errors: Record<string, string> = {}
+    await Promise.all(
+      Object.entries(queries).map(async ([name, q]) => {
+        try {
+          frames[name] = await this.runQuery(q, opts)
+        } catch (err) {
+          errors[name] = errorMessage(err)
+        }
+      }),
+    )
+    const legacy = isWidgetV2(widget) && widget.query && isLegacyQuery(widget.query) ? widget.query : undefined
+    if (legacy && Object.keys(errors).length > 0) {
+      try {
+        const main = await this.runQuery(legacy, opts)
+        this.opts.log?.(`widget ${widget.id}: ${Object.entries(errors).map(([n, e]) => `${n}: ${e}`).join(' | ')}; the v1 query answered main`)
+        return { frames: { [DEFAULT_DATASET]: main }, errors: {}, legacy: true }
+      } catch (err) {
+        errors[DEFAULT_DATASET] = errorMessage(err)
+      }
     }
+    return { frames, errors }
+  }
+
+  /** Every dataset's frame; throws when any dataset fails. */
+  async framesFor(widget: AnyWidget, opts: RunOptions = {}): Promise<Frames> {
+    const r = await this.datasets(widget, opts)
+    const failed = Object.entries(r.errors)
+    if (failed.length > 0) throw new Error(failed.map(([n, e]) => (n === DEFAULT_DATASET && !isWidgetV2(widget) ? e : `${n}: ${e}`)).join(' | '))
+    return r.frames
+  }
+
+  /** One frame: the named dataset, else `main`, else the first. Throws on failure. */
+  async frameFor(widget: AnyWidget, opts: RunOptions & { dataset?: string } = {}): Promise<Frame> {
+    const queries = widgetQueries(widget)
+    const name = opts.dataset ?? (queries[DEFAULT_DATASET] ? DEFAULT_DATASET : Object.keys(queries)[0])
+    if (!name || !queries[name]) throw new Error(`widget ${widget.id} has no dataset "${opts.dataset ?? DEFAULT_DATASET}"`)
+    if (isWidgetV2(widget) && widget.query) {
+      // a migrated widget: same fallback as `datasets`
+      const r = await this.datasets(widget, opts)
+      const f = r.frames[name] ?? (r.legacy ? r.frames[DEFAULT_DATASET] : undefined)
+      if (f) return f
+      throw new Error(r.errors[name] ?? Object.values(r.errors)[0] ?? 'no frame')
+    }
+    return this.runQuery(queries[name], opts)
+  }
+
+  /** Run one widget and emit `frame` or `frameError` per dataset. Resolves with the frames, or undefined when none landed. */
+  async run(widget: AnyWidget, emit: Emit, opts: RunOptions = {}): Promise<Frames | undefined> {
+    const r = await this.datasets(widget, opts)
+    const scope = opts.workspaceId ? { workspaceId: opts.workspaceId } : {}
+    for (const [dataset, frame] of Object.entries(r.frames)) {
+      emit({ t: 'frame', widgetId: widget.id, frame, ...scope, ...(dataset === DEFAULT_DATASET ? {} : { dataset }) })
+    }
+    for (const [dataset, error] of Object.entries(r.errors)) {
+      this.opts.log?.(`widget ${widget.id} (${describeQuery(widgetQueries(widget)[dataset]!)}): ${error}`)
+      emit({ t: 'frameError', widgetId: widget.id, error, ...scope, ...(dataset === DEFAULT_DATASET ? {} : { dataset }) })
+    }
+    return Object.keys(r.frames).length > 0 ? r.frames : undefined
   }
 
   /** Run every widget in parallel. Resolves once every frame or frameError has been emitted. */
-  async runAll(widgets: Widget[], emit: Emit, opts: RunOptions = {}): Promise<(Frame | undefined)[]> {
+  async runAll(widgets: AnyWidget[], emit: Emit, opts: RunOptions = {}): Promise<(Frames | undefined)[]> {
     return Promise.all(widgets.map((w) => this.run(w, emit, opts)))
   }
 }
@@ -50,13 +141,18 @@ export type PollerOptions = {
   log?: (msg: string) => void
 }
 
+/** The soonest expiry among a widget's frames. */
+export function nextExpiry(frames: Frames): number {
+  return Math.min(...Object.values(frames).map((f) => f.meta.fetchedAt + f.meta.ttl))
+}
+
 /**
  * One per client socket. Tracks the client's focused workspace: runs its widgets, then re-runs
- * each one when its frame's TTL expires. Stops when focus moves or the socket closes.
+ * each one when its frames' TTL expires. Stops when focus moves or the socket closes.
  */
 export class Poller {
   private workspaceId: string | undefined
-  private widgets = new Map<string, Widget>()
+  private widgets = new Map<string, AnyWidget>()
   private timers = new Map<string, NodeJS.Timeout>()
   private generation = 0
   private controller = new AbortController()
@@ -86,7 +182,7 @@ export class Poller {
   }
 
   /** Replace the focused workspace's widgets (after a prompt). No-op for an unfocused workspace. */
-  replaceWidgets(workspaceId: string, widgets: Widget[]): Promise<void> | undefined {
+  replaceWidgets(workspaceId: string, widgets: AnyWidget[]): Promise<void> | undefined {
     if (workspaceId !== this.workspaceId) return undefined
     this.clearTimers()
     this.generation++
@@ -94,7 +190,7 @@ export class Poller {
   }
 
   /** The focused workspace's widget with this id, if any. */
-  widget(widgetId: string): Widget | undefined {
+  widget(widgetId: string): AnyWidget | undefined {
     return this.widgets.get(widgetId)
   }
 
@@ -117,17 +213,17 @@ export class Poller {
     this.widgets.clear()
   }
 
-  private track(widgets: Widget[]): Promise<void> {
+  private track(widgets: AnyWidget[]): Promise<void> {
     this.widgets = new Map(widgets.map((w) => [w.id, w]))
     const gen = this.generation
     return Promise.all(widgets.map((w) => this.cycle(w, gen, false))).then(() => undefined)
   }
 
-  private async cycle(widget: Widget, gen: number, bypassCache: boolean): Promise<void> {
+  private async cycle(widget: AnyWidget, gen: number, bypassCache: boolean): Promise<void> {
     const signal = this.controller.signal
-    const frame = await this.executor.run(widget, this.emit, { bypassCache, signal })
+    const frames = await this.executor.run(widget, this.emit, { bypassCache, signal, ...(this.workspaceId ? { workspaceId: this.workspaceId } : {}) })
     if (gen !== this.generation || this.widgets.get(widget.id) !== widget) return
-    const delay = frame ? Math.max(this.minDelayMs, frame.meta.fetchedAt + frame.meta.ttl - this.now()) : this.errorRetryMs
+    const delay = frames ? Math.max(this.minDelayMs, nextExpiry(frames) - this.now()) : this.errorRetryMs
     this.clearTimer(widget.id)
     const timer = setTimeout(() => {
       this.timers.delete(widget.id)

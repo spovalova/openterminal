@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ConnectorRegistry, MemoryCache } from '@terminal/core'
 import { createApp } from '../src/app.js'
 import { loadConfig, workspacesDir } from '../src/config.js'
-import { WorkspaceStore } from '../src/store.js'
+import { WorkspaceStore } from '../src/store/index.js'
 import { createStubAgentRunner, stubWidgets } from '../src/stub-agent.js'
 import { fakeConnector } from './fake-connector.js'
 

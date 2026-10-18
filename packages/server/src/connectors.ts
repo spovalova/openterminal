@@ -1,5 +1,5 @@
 // Built-in connector map and registry wiring. Config order is routing priority.
-import { ConnectorRegistry, MemoryCache, type Cache, type Connector, type Kind, type RegisteredConnector, type Registry } from '@terminal/core'
+import { ConnectorRegistry, MemoryCache, type AnnotationRule, type Cache, type Connector, type Kind, type Recipe, type RegisteredConnector, type Registry, type TransformEngine } from '@terminal/core'
 import openbb from '@terminal/connector-openbb'
 import yahoo from '@terminal/connector-yahoo'
 import finnhub from '@terminal/connector-finnhub'
@@ -17,12 +17,27 @@ export function connectorNeedsKey(c: Connector): boolean {
   return !c.config.safeParse({}).success
 }
 
-export type BuildRegistryOptions = { cache?: Cache; log?: (msg: string) => void }
+export type BuildRegistryOptions = {
+  cache?: Cache
+  log?: (msg: string) => void
+  /** v2: the recipes (built-in plus user) the registry resolves `{ recipe, params }` with. */
+  recipes?: readonly Recipe[]
+  /** v2: annotation rules applied to every route frame. */
+  annotations?: readonly AnnotationRule[]
+  /** v2: the transform engine (workstream (b)); transforms fail with a clear error without one. */
+  transform?: TransformEngine
+}
 
 /** Register every configured connector, in config order. Unknown names are logged and skipped. */
 export function buildRegistry(config: Config, opts: BuildRegistryOptions = {}): ConnectorRegistry {
   const log = opts.log ?? (() => {})
-  const registry = new ConnectorRegistry({ cache: opts.cache ?? new MemoryCache(), log })
+  const registry = new ConnectorRegistry({
+    cache: opts.cache ?? new MemoryCache(),
+    log,
+    ...(opts.recipes ? { recipes: opts.recipes } : {}),
+    ...(opts.annotations ? { annotations: opts.annotations } : {}),
+    ...(opts.transform ? { transform: opts.transform } : {}),
+  })
   for (const entry of config.connectors) {
     const connector = builtinConnector(entry.name)
     if (!connector) {
