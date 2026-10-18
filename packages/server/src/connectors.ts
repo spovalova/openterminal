@@ -1,5 +1,6 @@
 // Built-in connector map and registry wiring. Config order is routing priority.
 import { ConnectorRegistry, MemoryCache, type Cache, type Connector, type Kind, type RegisteredConnector, type Registry } from '@terminal/core'
+import { builtinAnnotations, builtinRecipes } from '@terminal/core/node'
 import openbb from '@terminal/connector-openbb'
 import yahoo from '@terminal/connector-yahoo'
 import finnhub from '@terminal/connector-finnhub'
@@ -19,10 +20,13 @@ export function connectorNeedsKey(c: Connector): boolean {
 
 export type BuildRegistryOptions = { cache?: Cache; log?: (msg: string) => void }
 
-/** Register every configured connector, in config order. Unknown names are logged and skipped. */
+/**
+ * Register every configured connector, in config order. Unknown names are logged and skipped. The registry resolves
+ * the built-in recipes and applies the built-in annotations (v2); user recipes are (e)'s store, layered on later.
+ */
 export function buildRegistry(config: Config, opts: BuildRegistryOptions = {}): ConnectorRegistry {
   const log = opts.log ?? (() => {})
-  const registry = new ConnectorRegistry({ cache: opts.cache ?? new MemoryCache(), log })
+  const registry = new ConnectorRegistry({ cache: opts.cache ?? new MemoryCache(), log, recipes: builtinRecipes(), annotations: builtinAnnotations() })
   for (const entry of config.connectors) {
     const connector = builtinConnector(entry.name)
     if (!connector) {

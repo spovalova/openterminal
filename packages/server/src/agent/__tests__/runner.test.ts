@@ -1,23 +1,28 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import { ConnectorRegistry, WIDGET_CHIP_RE, WidgetSchema, defineConnector, toFrame, type ServerMsg, type Widget } from '@terminal/core'
+import { ConnectorRegistry, WIDGET_CHIP_RE, WidgetV2Schema, defineConnector, toFrame, type ServerMsg, type WidgetV2 } from '@terminal/core'
+import { MemoryRunLog } from '../../runlog.js'
 import { createRunner, AgentAbortError } from '../runner.js'
 import { MAX_TOOL_CALLS } from '../tools.js'
 import { collectEmit, createFakeRegistry, scriptedModel, systemPromptSentOn, toolResultsSentOn, workspace, type Turn, type TurnScript } from './helpers.js'
 
 const MEMORY = ['MU', 'SNDK', 'WDC', 'STX']
-const q = (kind: string, params: Record<string, unknown>) => ({ name: 'query', input: { kind, params } })
+/** A v2 recipe query. */
+const rq = (recipe: string, params: Record<string, unknown>) => ({ name: 'query', input: { recipe, params } })
+/** A v1 kind query (accepted until phase 3). */
+const kq = (kind: string, params: Record<string, unknown>) => ({ name: 'query', input: { kind, params } })
+const r = (recipe: string, params: Record<string, unknown>) => ({ recipe, params })
 
 function useCaseA(): Turn[] {
   return [
-    { toolCalls: [q('search', { q: ['memory', 'MU', 'SNDK', 'WDC', 'STX'] })] },
+    { toolCalls: [rq('search', { q: ['memory', 'MU', 'SNDK', 'WDC', 'STX'] })] },
     {
       toolCalls: [
-        q('ohlcv', { symbols: MEMORY, interval: '1d', range: '3mo' }),
-        q('ohlcv', { symbols: ['MU'], interval: '1d', range: '6mo' }),
-        q('quote', { symbols: MEMORY }),
-        q('news', { symbols: MEMORY, limit: 20 }),
-        q('earnings', { symbols: MEMORY, from: '2026-10-16', to: '2026-12-15' }),
+        rq('ohlcv', { symbols: MEMORY, interval: '1d', range: '3mo' }),
+        rq('ohlcv', { symbols: ['MU'], interval: '1d', range: '6mo' }),
+        rq('quote', { symbols: MEMORY }),
+        rq('news', { symbols: MEMORY, limit: 20 }),
+        rq('earnings', { symbols: MEMORY, from: '2026-10-16', to: '2026-12-15' }),
       ],
     },
     {
@@ -27,30 +32,30 @@ function useCaseA(): Turn[] {
           input: {
             name: 'Memory',
             widgets: [
-              { title: 'Memory names, 3 months', size: 'lg', query: { kind: 'ohlcv', params: { symbols: MEMORY, interval: '1d', range: '3mo' } }, view: { type: 'series', normalize: true } },
-              { title: 'MU daily', size: 'md', query: { kind: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '6mo' } }, view: { type: 'series', candle: true } },
-              { title: 'Basket snapshot', size: 'md', query: { kind: 'quote', params: { symbols: MEMORY } }, view: { type: 'table' } },
-              { title: 'Upcoming earnings', size: 'sm', query: { kind: 'earnings', params: { symbols: MEMORY, from: '2026-10-16', to: '2026-12-15' } }, view: { type: 'table' } },
-              { title: 'Memory news', size: 'md', query: { kind: 'news', params: { symbols: MEMORY, limit: 20 } }, view: { type: 'table' } },
+              { title: 'Memory names, 3 months', size: 'lg', data: { main: r('ohlcv', { symbols: MEMORY, interval: '1d', range: '3mo' }) }, view: { preset: 'compare', normalize: true } },
+              { title: 'MU daily', size: 'md', data: { main: r('ohlcv', { symbols: ['MU'], interval: '1d', range: '6mo' }), events: r('earnings', { symbols: MEMORY, from: '2026-10-16', to: '2026-12-15' }) }, view: { preset: 'price', candle: true, events: 'events' } },
+              { title: 'Basket snapshot', size: 'md', data: { main: r('quote', { symbols: MEMORY }) }, view: { preset: 'stat' } },
+              { title: 'Upcoming earnings', size: 'sm', data: { main: r('earnings', { symbols: MEMORY, from: '2026-10-16', to: '2026-12-15' }) }, view: { preset: 'table' } },
+              { title: 'Memory news', size: 'md', data: { main: r('news', { symbols: MEMORY, limit: 20 }) }, view: { preset: 'table' } },
             ],
           },
         },
       ],
     },
-    { text: 'Over three months MU is up 31%, SNDK 31%, WDC 31%, STX 31%. MU reports on 2026-12-01. [[widget:w1]] [[widget:w5]]' },
+    { text: 'Over three months MU is up 31%, SNDK 28.2%, WDC 25.8%, STX 23.9%. MU reports on 2026-12-01. [[widget:w1]] [[widget:w5]]' },
   ]
 }
 
 const SEMIS = ['NVDA', 'AMD', 'AVGO', 'TSM', 'SMH', 'SPY']
 function useCaseB(): Turn[] {
   return [
-    { toolCalls: [q('search', { q: SEMIS })] },
+    { toolCalls: [kq('search', { q: SEMIS })] },
     {
       toolCalls: [
-        q('ohlcv', { symbols: ['NVDA', 'SPY', 'SMH'], interval: '5m', range: '1d' }),
-        q('ohlcv', { symbols: ['NVDA'], interval: '5m', range: '1d' }),
-        q('quote', { symbols: SEMIS }),
-        q('news', { symbols: ['NVDA'], limit: 20 }),
+        kq('ohlcv', { symbols: ['NVDA', 'SPY', 'SMH'], interval: '5m', range: '1d' }),
+        kq('ohlcv', { symbols: ['NVDA'], interval: '5m', range: '1d' }),
+        kq('quote', { symbols: SEMIS }),
+        kq('news', { symbols: ['NVDA'], limit: 20 }),
       ],
     },
     {
@@ -72,99 +77,124 @@ function useCaseB(): Turn[] {
   ]
 }
 
-function run(turns: TurnScript[], opts: { registry?: ReturnType<typeof createFakeRegistry>['registry']; signal?: AbortSignal; ws?: ReturnType<typeof workspace> } = {}) {
+function run(turns: TurnScript[], opts: { registry?: ReturnType<typeof createFakeRegistry>['registry']; signal?: AbortSignal; ws?: ReturnType<typeof workspace>; runLog?: MemoryRunLog } = {}) {
   const fake = createFakeRegistry()
   const registry = opts.registry ?? fake.registry
   const model = scriptedModel(turns)
   const { messages, emit } = collectEmit()
-  const runner = createRunner({ registry, model, now: () => new Date('2026-10-16T14:00:00Z') })
+  const runner = createRunner({ registry, model, now: () => new Date('2026-10-16T14:00:00Z'), runLog: opts.runLog })
   const promise = runner.run({ workspace: opts.ws ?? workspace(), prompt: 'prompt', signal: opts.signal ?? new AbortController().signal, emit })
   return { promise, model, messages, fake }
 }
 
-const widgetsOf = (messages: ServerMsg[]): Widget[][] => messages.filter((m) => m.t === 'widgets').map((m) => (m as Extract<ServerMsg, { t: 'widgets' }>).widgets)
+const widgetsOf = (messages: ServerMsg[]): WidgetV2[][] => messages.filter((m) => m.t === 'widgets').map((m) => (m as unknown as { widgets: WidgetV2[] }).widgets)
 
-describe('use case A: theme research', () => {
-  it('produces a valid five-widget set, steps, deltas and a chip-bearing reply', async () => {
-    const { promise, model, messages, fake } = run(useCaseA())
+describe('use case A: theme research (v2 recipes and presets)', () => {
+  it('produces a valid five-widget set, steps, deltas, a verified reply and a run log row', async () => {
+    const runLog = new MemoryRunLog()
+    const { promise, model, messages, fake } = run(useCaseA(), { runLog })
     const message = await promise
 
-    // Every emitted widget validates against core, ids assigned w1..w5, hero first.
+    // Every emitted widget is a v2 widget, ids assigned w1..w5, hero first.
     const sets = widgetsOf(messages)
     expect(sets).toHaveLength(1)
     const widgets = sets[0]!
     expect(widgets).toHaveLength(5)
-    for (const w of widgets) expect(WidgetSchema.safeParse(w).success).toBe(true)
+    for (const w of widgets) expect(WidgetV2Schema.safeParse(w).success).toBe(true)
     expect(widgets.map((w) => w.id)).toEqual(['w1', 'w2', 'w3', 'w4', 'w5'])
-    expect(widgets[0]).toMatchObject({ size: 'lg', query: { kind: 'ohlcv' }, view: { type: 'series', normalize: true } })
-    expect(widgets[1]).toMatchObject({ view: { type: 'series', candle: true }, query: { params: { symbols: ['MU'] } } })
-    expect(widgets.map((w) => w.query.kind)).toEqual(['ohlcv', 'ohlcv', 'quote', 'earnings', 'news'])
+    expect(widgets[0]).toMatchObject({ size: 'lg', data: { main: { recipe: 'ohlcv' } }, view: { preset: 'compare', normalize: true } })
+    expect(widgets[1]).toMatchObject({ view: { preset: 'price', candle: true, events: 'events' }, data: { main: { params: { symbols: ['MU'] } }, events: { recipe: 'earnings' } } })
+    expect(widgets.map((w) => (w.data.main as { recipe: string }).recipe)).toEqual(['ohlcv', 'ohlcv', 'quote', 'earnings', 'news'])
     const wmsg = messages.find((m) => m.t === 'widgets') as Extract<ServerMsg, { t: 'widgets' }>
     expect(wmsg.name).toBe('Memory')
     expect(wmsg.workspaceId).toBe('ws1')
 
-    // Steps: 1 search + 5 queries + 1 set_workspace, each with the documented summary format.
+    // Steps: 1 search + 5 queries + 1 set_workspace, each with the v2 summary format.
     expect(message.role).toBe('agent')
     expect(message.steps).toHaveLength(7)
     const summaries = message.steps!.map((s) => s.summary)
-    expect(summaries[0]).toBe('search memory, MU, SNDK, WDC, STX · 5 rows')
-    expect(summaries).toContain('ohlcv MU, SNDK, WDC, STX 1d 3mo · 252 rows')
-    expect(summaries).toContain('ohlcv MU 1d 6mo · 126 rows')
-    expect(summaries).toContain('quote MU, SNDK, WDC, STX · 4 rows')
-    expect(summaries).toContain('news MU, SNDK, WDC, STX · 20 rows')
-    expect(summaries).toContain('earnings MU, SNDK, WDC, STX 2026-10-16→2026-12-15 · 4 rows')
+    expect(summaries[0]).toBe('recipe search q=memory,MU,SNDK,WDC,STX · 5 rows')
+    expect(summaries).toContain('recipe ohlcv symbols=MU,SNDK,WDC,STX interval=1d range=3mo · 252 rows')
+    expect(summaries).toContain('recipe ohlcv symbols=MU interval=1d range=6mo · 126 rows')
+    expect(summaries).toContain('recipe quote symbols=MU,SNDK,WDC,STX · 4 rows')
+    expect(summaries).toContain('recipe news symbols=MU,SNDK,WDC,STX limit=20 · 20 rows')
+    expect(summaries).toContain('recipe earnings symbols=MU,SNDK,WDC,STX from=2026-10-16 to=2026-12-15 · 4 rows')
     expect(summaries[6]).toBe('set_workspace · 5 widgets')
     for (const s of message.steps!) {
       expect(s.error).toBeUndefined()
       expect(s.ms).toBeGreaterThanOrEqual(0)
     }
-    // Every step was also emitted.
     expect(messages.filter((m) => m.t === 'step')).toHaveLength(7)
 
-    // The connector answered every query once (the registry has no cache here).
+    // The connector answered every recipe through its kind route once (the registry has no cache here).
     expect(fake.calls.map((c) => c.kind).sort()).toEqual(['earnings', 'news', 'ohlcv', 'ohlcv', 'quote', 'search'])
 
-    // Reply text streamed as deltas and returned, with chips.
+    // Reply text streamed as deltas and returned, with chips, and every figure matched a preview.
     const deltas = messages.filter((m) => m.t === 'delta').map((m) => (m as Extract<ServerMsg, { t: 'delta' }>).text)
     expect(deltas.join('')).toBe(message.text)
     expect([...message.text.matchAll(WIDGET_CHIP_RE)].map((m) => m[1])).toEqual(['w1', 'w5'])
+    expect(message.verification).toEqual({ ok: true, checked: 4, matched: 4, unmatched: [] })
 
-    // The model saw previews with stats on turn 3 (search plus the five parallel queries), and the result of set_workspace on turn 4.
-    const previews = toolResultsSentOn(model, 2) as { ok: boolean; kind: string; connector: string; preview: { stats: Record<string, Record<string, { changePct: number | null }>> } }[]
+    // The model saw previews with stats, units and lineage on turn 3, and the result of set_workspace on turn 4.
+    const previews = toolResultsSentOn(model, 2) as { ok: boolean; query: { recipe: string }; connector: string; columns: string; units: Record<string, string>; lineage?: { recipe?: string }; preview: { stats: Record<string, Record<string, { changePct: number | null }>> } }[]
     expect(previews).toHaveLength(6)
     expect(previews.every((p) => p.ok)).toBe(true)
-    const basket = previews.find((p) => p.kind === 'ohlcv' && 'SNDK' in p.preview.stats)!
+    const basket = previews.find((p) => p.query.recipe === 'ohlcv' && 'SNDK' in p.preview.stats)!
     expect(basket.connector).toBe('fake')
+    expect(basket.lineage).toMatchObject({ recipe: 'ohlcv', connector: 'fake', route: 'ohlcv' })
+    expect(basket.columns).toContain('close:number')
     expect(basket.preview.stats.MU!.close!.changePct).toBe(31)
-    const applied = toolResultsSentOn(model, 3).at(-1) as { ok: boolean; widgetIds: string[]; name: string }
+    const applied = toolResultsSentOn(model, 3).at(-1) as { ok: boolean; widgetIds: string[]; name: string; note: string }
     expect(applied).toMatchObject({ ok: true, widgetIds: ['w1', 'w2', 'w3', 'w4', 'w5'], name: 'Memory' })
+    expect(applied.note).toContain('Sized by content: w2 (price, md) is 2 rows tall')
 
-    // The model was offered exactly the two tools, with schemas derived from core.
+    // The model was offered the four tools, with schemas derived from core.
     const tools = (model.doStreamCalls[0]!.tools ?? []) as { name: string; inputSchema: { properties?: Record<string, unknown> } }[]
-    expect(tools.map((t) => t.name).sort()).toEqual(['query', 'set_workspace'])
+    expect(tools.map((t) => t.name).sort()).toEqual(['find_route', 'query', 'set_workspace', 'transform'])
     const sw = tools.find((t) => t.name === 'set_workspace')!
     expect(Object.keys(sw.inputSchema.properties ?? {})).toEqual(['name', 'widgets'])
-    expect(JSON.stringify(sw.inputSchema)).toContain('"normalize"')
+    expect(JSON.stringify(sw.inputSchema)).toContain('"preset"')
     const qt = tools.find((t) => t.name === 'query')!
-    expect(JSON.stringify(qt.inputSchema)).toContain('"ohlcv"') // the kind enum; params are an open object validated by parseQuery
-    expect(systemPromptSentOn(model, 0)).toContain('Answerable now: search, quote, ohlcv, news, earnings, options, macro.')
+    expect(Object.keys(qt.inputSchema.properties ?? {})).toEqual(['recipe', 'connector', 'route', 'kind', 'params'])
+    const system = systemPromptSentOn(model, 0)
+    expect(system).toContain('Connectors, in routing order: fake (7 routes in the catalog).')
+    expect(system).toContain('- quote(symbols[]) ·')
+
+    // The run log row carries the steps, the verification and the mock's token counts.
+    expect(runLog.rows).toHaveLength(1)
+    expect(runLog.rows[0]).toMatchObject({ workspaceId: 'ws1', model: 'mock-model-id', prompt: 'prompt', verification: { ok: true, checked: 4 } })
+    expect(runLog.rows[0]!.steps).toHaveLength(7)
+    expect(runLog.rows[0]!.tokens).toEqual({ input: 40, output: 40 })
+    expect(runLog.rows[0]!.ms).toBeGreaterThanOrEqual(0)
   })
 })
 
-describe('use case B: event diagnosis', () => {
-  it('produces a valid four-widget set and resolves colliding ids', async () => {
+describe('use case B: event diagnosis (v1 kinds and widgets, accepted until phase 3)', () => {
+  it('runs kind queries, migrates v1 widgets to v2 and resolves colliding ids', async () => {
     const { promise, messages } = run(useCaseB())
     const message = await promise
     const widgets = widgetsOf(messages)[0]!
     expect(widgets).toHaveLength(4)
-    for (const w of widgets) expect(WidgetSchema.safeParse(w).success).toBe(true)
+    for (const w of widgets) expect(WidgetV2Schema.safeParse(w).success).toBe(true)
     // Given id kept; the duplicate and the missing ids are generated in order.
     expect(widgets.map((w) => w.id)).toEqual(['hero', 'w1', 'w2', 'w3'])
-    expect(widgets[0]).toMatchObject({ size: 'lg', view: { type: 'series', normalize: true }, query: { params: { symbols: ['NVDA', 'SPY', 'SMH'], interval: '5m', range: '1d' } } })
-    expect(widgets[1]).toMatchObject({ view: { type: 'series', candle: true } })
-    expect(widgets[3]!.query.params).toEqual({ symbols: ['NVDA'], limit: 20 }) // default applied by core
+    expect(widgets[0]).toMatchObject({ size: 'lg', view: { preset: 'compare', normalize: true }, data: { main: { recipe: 'ohlcv', params: { symbols: ['NVDA', 'SPY', 'SMH'], interval: '5m', range: '1d' } } }, query: { kind: 'ohlcv' } })
+    expect(widgets[1]).toMatchObject({ view: { preset: 'price', candle: true } })
+    expect(widgets[3]!.data.main).toEqual({ recipe: 'news', params: { symbols: ['NVDA'], limit: 20 } }) // default applied by core
     expect(message.steps!.map((s) => s.summary)).toContain('ohlcv NVDA, SPY, SMH 5m 1d · 234 rows')
     expect(message.text).toContain('[[widget:hero]]')
+    expect(message.verification).toEqual({ ok: true, checked: 3, matched: 3, unmatched: [] })
+  })
+})
+
+describe('reply verification', () => {
+  it('flags a figure that is in no preview and carries the result on the message and the run log', async () => {
+    const runLog = new MemoryRunLog()
+    const turns: Turn[] = [{ toolCalls: [rq('quote', { symbols: ['MU'] })] }, { text: 'MU is at $100.00, down 1.5% today; its bonds yield 13.63%. [[widget:w1]]' }]
+    const { promise } = run(turns, { runLog })
+    const message = await promise
+    expect(message.verification).toEqual({ ok: false, checked: 3, matched: 2, unmatched: [{ text: '13.63%', value: 13.63, unit: 'percent' }] })
+    expect(runLog.rows[0]!.verification).toEqual(message.verification)
   })
 })
 
@@ -190,14 +220,14 @@ describe('tool call cap', () => {
     // A greedy model: four quote calls per turn while tools are offered; a reply once they are not.
     const greedy: TurnScript = (options): Turn =>
       (options.tools?.length ?? 0) > 0
-        ? { toolCalls: Array.from({ length: 4 }, (_, i) => q('quote', { symbols: [`S${i}`] })) }
+        ? { toolCalls: Array.from({ length: 4 }, (_, i) => rq('quote', { symbols: [`S${i}`] })) }
         : { text: 'Out of budget, here is what I have.' }
     const { promise, model, messages, fake } = run(Array.from({ length: 6 }, () => greedy))
     const message = await promise
     expect(fake.calls).toHaveLength(MAX_TOOL_CALLS)
     // 12 calls were attempted: 10 ran, 2 were refused with an error step.
     expect(message.steps).toHaveLength(12)
-    expect(message.steps!.filter((s) => s.error).map((s) => s.summary)).toEqual(['quote S2 · over budget', 'quote S3 · over budget'])
+    expect(message.steps!.filter((s) => s.error).map((s) => s.summary)).toEqual(['recipe quote symbols=S2 · over budget', 'recipe quote symbols=S3 · over budget'])
     // Turns: 3 with tools (4+4+4), then one without tools that produced the reply.
     expect(model.doStreamCalls).toHaveLength(4)
     expect(model.doStreamCalls[3]!.tools ?? []).toHaveLength(0)
@@ -207,7 +237,7 @@ describe('tool call cap', () => {
 })
 
 describe('set_workspace validation', () => {
-  it('returns errors to the model, applies nothing, and accepts the retry', async () => {
+  it('returns errors to the model, applies nothing, and accepts the retry (v1 refinements still apply to v1 widgets)', async () => {
     const bad = {
       name: 'set_workspace',
       input: {
@@ -223,8 +253,8 @@ describe('set_workspace validation', () => {
       name: 'set_workspace',
       input: {
         widgets: [
-          { title: 'MU, 3 months', size: 'lg', query: { kind: 'ohlcv', params: { symbols: ['MU', 'WDC'], interval: '1d', range: '3mo' } }, view: { type: 'series', normalize: true } },
-          { title: 'MU quote', size: 'sm', query: { kind: 'quote', params: { symbols: ['MU'] } }, view: { type: 'table' } },
+          { title: 'MU, 3 months', size: 'lg', data: { main: r('ohlcv', { symbols: ['MU', 'WDC'], interval: '1d', range: '3mo' }) }, view: { preset: 'compare', normalize: true } },
+          { title: 'MU quote', size: 'sm', data: { main: r('quote', { symbols: ['MU'] }) }, view: { preset: 'stat' } },
         ],
       },
     }
@@ -250,15 +280,14 @@ describe('set_workspace validation', () => {
     expect(fed.errors[0]).toMatch(/^widgets\[0\] view\.candle:/)
   })
 
-  it('accepts a chain view on options and a series view on macro, and rejects a chain view on quote (v1.2 views)', async () => {
+  it('refuses a table over a one-row preview (rule 8) and a chart over a frame without time, and accepts the fix', async () => {
     const bad = {
       name: 'set_workspace',
       input: {
         widgets: [
-          { title: 'NVDA chain', size: 'lg', query: { kind: 'options', params: { symbol: 'NVDA', strikes: 5 } }, view: { type: 'chain' } },
-          { title: 'Chain on quote', size: 'md', query: { kind: 'quote', params: { symbols: ['NVDA'] } }, view: { type: 'chain' } },
-          { title: 'Rates', size: 'md', query: { kind: 'macro', params: { series: ['treasury_10y', 'treasury_2y'] } }, view: { type: 'series' } },
-          { title: 'Rates as candles', size: 'md', query: { kind: 'macro', params: { series: ['treasury_10y'] } }, view: { type: 'series', candle: true } },
+          { title: 'NVDA quote', size: 'sm', data: { main: r('quote', { symbols: ['NVDA'] }) }, view: { preset: 'table' } },
+          { title: 'Quote as chart', size: 'lg', data: { main: r('quote', { symbols: ['NVDA'] }) }, view: { preset: 'price' } },
+          { title: 'Rates', size: 'md', data: { ten: r('macro', { series: ['treasury_10y'] }), two: r('macro', { series: ['treasury_2y'] }) }, view: { preset: 'compare', normalize: false } },
         ],
       },
     }
@@ -266,84 +295,34 @@ describe('set_workspace validation', () => {
       name: 'set_workspace',
       input: {
         widgets: [
-          { title: 'NVDA chain', size: 'lg', query: { kind: 'options', params: { symbol: 'NVDA', strikes: 5 } }, view: { type: 'chain' } },
-          { title: 'Rates', size: 'md', query: { kind: 'macro', params: { series: ['treasury_10y', 'treasury_2y'] } }, view: { type: 'series' } },
+          { title: 'NVDA', size: 'sm', data: { main: r('quote', { symbols: ['NVDA'] }) }, view: { preset: 'stat' } },
+          { title: 'Rates', size: 'md', data: { ten: r('macro', { series: ['treasury_10y'] }), two: r('macro', { series: ['treasury_2y'] }) }, view: { preset: 'compare', normalize: false } },
         ],
       },
     }
     const turns: Turn[] = [
-      { toolCalls: [q('options', { symbol: 'NVDA', strikes: 5 }), q('macro', { series: ['treasury_10y', 'treasury_2y'] })] },
+      { toolCalls: [rq('quote', { symbols: ['NVDA'] }), rq('macro', { series: ['treasury_10y'] }), rq('macro', { series: ['treasury_2y'] })] },
       { toolCalls: [bad] },
       { toolCalls: [good] },
       { text: 'The 10-year is at 4.11%. [[widget:w1]] [[widget:w2]]' },
     ]
-    const { promise, model, messages, fake } = run(turns)
-    const message = await promise
-
-    // The two v1.2 queries ran with defaults applied by core and the documented summaries.
-    const summaries = message.steps!.map((s) => s.summary)
-    expect(summaries).toContain('options NVDA nearest both · 20 rows')
-    expect(summaries).toContain('macro treasury_10y, treasury_2y 1y · 24 rows')
-    expect(fake.calls.find((c) => c.kind === 'options')!.params).toMatchObject({ symbol: 'NVDA', strikes: 5, type: 'both' })
-    // The macro preview is keyed by `series`, not `symbol`.
-    const previews = toolResultsSentOn(model, 1) as { kind: string; preview: { stats: Record<string, Record<string, { last: number }>> } }[]
-    const macro = previews.find((p) => p.kind === 'macro')!
-    expect(Object.keys(macro.preview.stats)).toEqual(['treasury_10y', 'treasury_2y'])
-    expect(macro.preview.stats.treasury_10y!.value!.last).toBe(4.11)
-
-    // The bad set: chain on quote and candle on macro are refused; the two good widgets alone are not applied either.
-    const [, , badStep, goodStep] = message.steps!
-    expect(badStep!.summary).toBe('set_workspace · 2 invalid widgets')
-    expect(badStep!.error).toContain('widgets[1] view: chain view requires an options query')
-    expect(badStep!.error).toContain('widgets[3] view: candle and normalize are only for ohlcv')
-    expect(badStep!.error).not.toContain('widgets[0]')
-    expect(badStep!.error).not.toContain('widgets[2]')
-    expect(goodStep!.summary).toBe('set_workspace · 2 widgets')
-
-    const sets = widgetsOf(messages)
-    expect(sets).toHaveLength(1)
-    for (const w of sets[0]!) expect(WidgetSchema.safeParse(w).success).toBe(true)
-    expect(sets[0]![0]).toMatchObject({ id: 'w1', size: 'lg', query: { kind: 'options', params: { symbol: 'NVDA', strikes: 5, type: 'both' } }, view: { type: 'chain' } })
-    expect(sets[0]![1]).toMatchObject({ id: 'w2', query: { kind: 'macro', params: { series: ['treasury_10y', 'treasury_2y'], range: '1y' } }, view: { type: 'series' } })
-  })
-
-  it('accepts a stat view on quote (with a column override) and rejects one on news or with a non-numeric column', async () => {
-    const bad = {
-      name: 'set_workspace',
-      input: {
-        widgets: [
-          { title: 'NVDA', size: 'sm', query: { kind: 'quote', params: { symbols: ['NVDA'] } }, view: { type: 'stat' } },
-          { title: 'Stat on news', size: 'sm', query: { kind: 'news', params: { symbols: ['NVDA'] } }, view: { type: 'stat' } },
-          { title: 'Stat on a text column', size: 'sm', query: { kind: 'quote', params: { symbols: ['NVDA'] } }, view: { type: 'stat', column: 'market_state' } },
-        ],
-      },
-    }
-    const good = {
-      name: 'set_workspace',
-      input: {
-        widgets: [
-          { title: 'NVDA', size: 'sm', query: { kind: 'quote', params: { symbols: ['NVDA'] } }, view: { type: 'stat' } },
-          { title: 'NVDA volume', size: 'sm', query: { kind: 'quote', params: { symbols: ['NVDA'] } }, view: { type: 'stat', column: 'volume' } },
-        ],
-      },
-    }
-    const turns: Turn[] = [{ toolCalls: [q('quote', { symbols: ['NVDA'] })] }, { toolCalls: [bad] }, { toolCalls: [good] }, { text: 'NVDA is at 177.80. [[widget:w1]]' }]
     const { promise, messages } = run(turns)
     const message = await promise
-    const [, badStep, goodStep] = message.steps!
+    const [, , , badStep, goodStep] = message.steps!
     expect(badStep!.summary).toBe('set_workspace · 2 invalid widgets')
-    expect(badStep!.error).toContain('widgets[1] view: stat view requires a quote, metrics, volatility, estimates, profile, short_interest query')
-    expect(badStep!.error).toContain('widgets[2] view.column: quote has no numeric column "market_state"')
-    expect(badStep!.error).not.toContain('widgets[0]')
+    expect(badStep!.error).toContain('widgets[0] view: a table over one row compares nothing (product rule 8)')
+    expect(badStep!.error).toContain('widgets[1] view: preset "price" cannot draw "recipe quote symbols=NVDA"')
+    expect(badStep!.error).not.toContain('widgets[2]')
     expect(goodStep!.summary).toBe('set_workspace · 2 widgets')
     const sets = widgetsOf(messages)
     expect(sets).toHaveLength(1)
-    expect(sets[0]![0]).toMatchObject({ id: 'w1', size: 'sm', view: { type: 'stat' } })
-    expect(sets[0]![1]).toMatchObject({ id: 'w2', view: { type: 'stat', column: 'volume' } })
+    expect(sets[0]![0]).toMatchObject({ id: 'w1', view: { preset: 'stat' } })
+    expect(sets[0]![1]).toMatchObject({ id: 'w2', data: { ten: { recipe: 'macro' }, two: { recipe: 'macro' } } })
+    expect(message.verification).toMatchObject({ ok: true, checked: 1 })
   })
 
-  it('rejects widgets on kinds no connector answers', async () => {
-    // A registry whose only connector answers nothing but quote.
+  it('rejects widgets whose queries no connector answers: an unknown recipe, and a v1 kind without a connector', async () => {
+    // A registry whose only connector answers nothing but quote, and has no recipes at all.
     const registry = new ConnectorRegistry()
     registry.register(
       defineConnector({ name: 'quoteonly', config: z.object({}), queries: { quote: async (p) => toFrame('quote', p.symbols.map((s) => ({ symbol: s, price: 1 }))) } }),
@@ -354,7 +333,12 @@ describe('set_workspace validation', () => {
         toolCalls: [
           {
             name: 'set_workspace',
-            input: { widgets: [{ title: 'News', size: 'lg', query: { kind: 'news', params: { symbols: ['MU'] } }, view: { type: 'table' } }] },
+            input: {
+              widgets: [
+                { title: 'News', size: 'lg', data: { main: r('news', { symbols: ['MU'] }) }, view: { preset: 'table' } },
+                { title: 'News v1', size: 'md', data: { main: { kind: 'news', params: { symbols: ['MU'] } } }, view: { preset: 'table' } },
+              ],
+            },
           },
         ],
       },
@@ -362,29 +346,46 @@ describe('set_workspace validation', () => {
     ]
     const { promise, model, messages } = run(turns, { registry })
     const message = await promise
-    expect(message.steps![0]!.error).toContain('"news" is not answerable now (answerable: quote)')
+    expect(message.steps![0]!.error).toContain('widgets[0] data.main: unknown recipe "news"')
+    expect(message.steps![0]!.error).toContain('widgets[1] data.main: kind "news" is not answerable now (answerable: quote)')
     expect(widgetsOf(messages)).toHaveLength(0)
-    expect(systemPromptSentOn(model, 0)).toContain('Not answerable now (no connector): search, ohlcv, news, earnings, profile,')
+    expect(systemPromptSentOn(model, 0)).toContain('(no recipes are loaded; use find_route and routes)')
   })
 })
 
 describe('query tool', () => {
   it('returns connector failures to the model as { ok: false } and records an error step', async () => {
     const fake = createFakeRegistry({ failing: ['news'] })
-    const turns: Turn[] = [{ toolCalls: [q('news', { symbols: ['MU'], limit: 5 })] }, { text: 'No news available.' }]
+    const turns: Turn[] = [{ toolCalls: [rq('news', { symbols: ['MU'], limit: 5 })] }, { text: 'No news available.' }]
     const { promise, model } = run(turns, { registry: fake.registry })
     const message = await promise
-    expect(message.steps![0]).toMatchObject({ tool: 'query', summary: 'news MU · failed' })
+    expect(message.steps![0]).toMatchObject({ tool: 'query', summary: 'recipe news symbols=MU limit=5 · failed' })
     expect(message.steps![0]!.error).toContain('news is down')
     const fed = toolResultsSentOn(model, 1)[0] as { ok: boolean; error: string }
     expect(fed.ok).toBe(false)
-    expect(fed.error).toContain('news failed')
+    expect(fed.error).toContain('recipe news symbols=MU limit=5 failed')
     expect(message.text).toBe('No news available.')
+  })
+
+  it('runs a route query against a connector route and points at find_route for an unknown route', async () => {
+    const turns: Turn[] = [
+      { toolCalls: [{ name: 'query', input: { connector: 'fake', route: 'quote', params: { symbols: ['MU'] } } }, { name: 'query', input: { connector: 'fake', route: 'equity/price/quote', params: { symbol: ['MU'] } } }] },
+      { text: 'MU is at 100. [[widget:w1]]' },
+    ]
+    const { promise, model } = run(turns)
+    const message = await promise
+    expect(message.steps!.map((s) => s.summary).sort()).toEqual(['fake equity/price/quote symbol=MU · failed', 'fake quote symbols=MU · 1 row'])
+    const results = toolResultsSentOn(model, 1) as ({ ok: true; units: Record<string, string>; lineage: { route: string } } | { ok: false; error: string })[]
+    const ok = results.find((x) => x.ok) as { ok: true; lineage: { route: string } }
+    const bad = results.find((x) => !x.ok) as { ok: false; error: string }
+    expect(ok.lineage).toMatchObject({ connector: 'fake', route: 'quote' })
+    expect(bad.error).toContain('has no route "equity/price/quote"')
+    expect(bad.error).toContain('Use find_route')
   })
 
   it('records a rejected step when the model sends input the schema refuses', async () => {
     // An unknown kind fails the enum, so the SDK refuses the input before execute.
-    const turns: Turn[] = [{ toolCalls: [q('peers' as never, { symbols: ['MU'] })] }, { text: 'Retrying is left to the model.' }]
+    const turns: Turn[] = [{ toolCalls: [kq('peers' as never, { symbols: ['MU'] })] }, { text: 'Retrying is left to the model.' }]
     const { promise, model, fake } = run(turns)
     const message = await promise
     expect(fake.calls).toHaveLength(0)
@@ -395,7 +396,7 @@ describe('query tool', () => {
   })
 
   it('records a failed step when params do not fit the kind (params are an open object at the schema level)', async () => {
-    const turns: Turn[] = [{ toolCalls: [q('ohlcv', { symbols: 'MU', interval: '1d', range: '3mo' } as never)] }, { text: 'Retrying is left to the model.' }]
+    const turns: Turn[] = [{ toolCalls: [kq('ohlcv', { symbols: 'MU', interval: '1d', range: '3mo' } as never)] }, { text: 'Retrying is left to the model.' }]
     const { promise, model, fake } = run(turns)
     const message = await promise
     expect(fake.calls).toHaveLength(0)
@@ -406,19 +407,43 @@ describe('query tool', () => {
     expect(fed.ok).toBe(false)
     expect(fed.error).toContain('invalid query')
   })
+
+  it('records a failed step when a recipe gets params its schema refuses', async () => {
+    const turns: Turn[] = [{ toolCalls: [rq('ohlcv', { symbols: 'MU' })] }, { text: 'Retrying is left to the model.' }]
+    const { promise, fake } = run(turns)
+    const message = await promise
+    expect(fake.calls).toHaveLength(0)
+    expect(message.steps![0]!.summary).toBe('recipe ohlcv symbols=MU · failed')
+  })
+})
+
+describe('find_route tool', () => {
+  it('returns catalog hits with a describe line and records a step', async () => {
+    const turns: Turn[] = [{ toolCalls: [{ name: 'find_route', input: { query: 'earnings dates calendar' } }] }, { text: 'Found it.' }]
+    const { promise, model } = run(turns)
+    const message = await promise
+    expect(message.steps![0]).toMatchObject({ tool: 'find_route' })
+    expect(message.steps![0]!.summary).toMatch(/^find_route "earnings dates calendar" · \d hits?$/)
+    const res = toolResultsSentOn(model, 1)[0] as { ok: true; routes: { connector: string; route: string; describe: string }[] }
+    expect(res.routes[0]).toMatchObject({ connector: 'fake', route: 'earnings' })
+    expect(res.routes[0]!.describe).toMatch(/^fake earnings · /)
+  })
 })
 
 describe('abort', () => {
   it('stops the loop and rejects with AbortError when the signal fires mid-run', async () => {
     const ac = new AbortController()
     const fake = createFakeRegistry({ onCall: () => ac.abort() })
-    const turns: Turn[] = [{ toolCalls: [q('quote', { symbols: ['MU'] })] }, { toolCalls: [q('quote', { symbols: ['WDC'] })] }, { text: 'never' }]
-    const { promise, model, messages } = run(turns, { registry: fake.registry, signal: ac.signal })
+    const runLog = new MemoryRunLog()
+    const turns: Turn[] = [{ toolCalls: [rq('quote', { symbols: ['MU'] })] }, { toolCalls: [rq('quote', { symbols: ['WDC'] })] }, { text: 'never' }]
+    const { promise, model, messages } = run(turns, { registry: fake.registry, signal: ac.signal, runLog })
     await expect(promise).rejects.toBeInstanceOf(AgentAbortError)
     await expect(promise).rejects.toMatchObject({ name: 'AbortError' })
     expect(model.doStreamCalls.length).toBeLessThanOrEqual(1)
     expect(fake.calls).toHaveLength(1)
     expect(messages.filter((m) => m.t === 'delta')).toHaveLength(0)
+    expect(runLog.rows).toHaveLength(1)
+    expect(runLog.rows[0]).toMatchObject({ error: 'cancelled' })
   })
 
   it('rejects immediately when the signal is already aborted', async () => {
@@ -441,6 +466,7 @@ describe('reply without set_workspace', () => {
     expect(widgetsOf(messages)).toHaveLength(0)
     expect(message.text).toBe('Hello.')
     expect(message.steps).toEqual([])
+    expect(message.verification).toEqual({ ok: true, checked: 0, matched: 0, unmatched: [] })
     expect(model.doStreamCalls).toHaveLength(1) // a text-only turn ends the loop
     expect(systemPromptSentOn(model, 0)).toContain('"title":"MU"')
   })

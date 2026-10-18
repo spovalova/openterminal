@@ -1,6 +1,6 @@
 // Wires config → registry → store → agent → HTTP + WebSocket, and serves. Entry point for `pnpm start`.
 import { existsSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { serve, type ServerType } from '@hono/node-server'
 import type { AgentRunner, Registry } from '@terminal/core'
@@ -8,6 +8,7 @@ import { createAgentRunner } from './agent/index.js'
 import { createApp, type App } from './app.js'
 import { loadConfig, resolvedLlm, terminalHome, workspacesDir, type Config } from './config.js'
 import { buildRegistry } from './connectors.js'
+import { JsonFileRunLog } from './runlog.js'
 import { WorkspaceStore } from './store.js'
 import { createStubAgentRunner } from './stub-agent.js'
 
@@ -66,7 +67,8 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
     agent = opts.agent
     log('agent: injected')
   } else if (llm) {
-    agent = createAgentRunner({ registry, llm, log })
+    // Run rows go to <home>/runs.jsonl until the SQLite store (phase 1 (e)) backs the same RunLog interface.
+    agent = createAgentRunner({ registry, llm, log, runLog: new JsonFileRunLog(join(home, 'runs.jsonl'), { log }) })
     real = true
     log(`agent: ${llm.provider} ${llm.model}`)
   } else {
