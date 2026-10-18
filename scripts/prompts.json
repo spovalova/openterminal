@@ -1,21 +1,29 @@
 [
-  { "name": "semis", "prompt": "Semis vs the market: NVDA, AMD, AVGO, TSM and MU against SOXX and SPY, normalized over 6 months. Who is carrying the group?" },
-  { "name": "earnings-setup", "prompt": "Which of MU, SNDK, WDC, STX, NVDA, AAPL, MSFT report earnings in the next 3 weeks? For each one, show how the stock has traded into the report over the last month." },
-  { "name": "aapl-today", "prompt": "AAPL today: 5 minute candles, the headlines that moved it, and how it did against QQQ." },
-  { "name": "storage", "prompt": "Find the storage names for me: Sandisk, Western Digital, Seagate, Pure Storage. Quotes plus a one year comparison." },
-  { "name": "mag7", "prompt": "Mag 7 dashboard: quotes, today's intraday chart for each, and the headlines." },
-  { "name": "gold", "prompt": "Is the gold trade over? GLD vs SLV vs GDX vs the dollar (UUP) over 2 years on a weekly chart, plus GLD news." },
-  { "name": "nvda-week", "prompt": "What happened to NVDA last week? Daily candles, the news by day, and tell me whether it was semis-wide (SOXX) or NVDA specific." },
-  { "name": "followups", "prompts": [
+  { "name": "semis", "group": "v1", "prompt": "Semis vs the market: NVDA, AMD, AVGO, TSM and MU against SOXX and SPY, normalized over 6 months. Who is carrying the group?" },
+  { "name": "earnings-setup", "group": "v1", "prompt": "Which of MU, SNDK, WDC, STX, NVDA, AAPL, MSFT report earnings in the next 3 weeks? For each one, show how the stock has traded into the report over the last month." },
+  { "name": "aapl-today", "group": "v1", "prompt": "AAPL today: 5 minute candles, the headlines that moved it, and how it did against QQQ." },
+  { "name": "storage", "group": "v1", "prompt": "Find the storage names for me: Sandisk, Western Digital, Seagate, Pure Storage. Quotes plus a one year comparison." },
+  { "name": "mag7", "group": "v1", "prompt": "Mag 7 dashboard: quotes, today's intraday chart for each, and the headlines." },
+  { "name": "gold", "group": "v1", "prompt": "Is the gold trade over? GLD vs SLV vs GDX vs the dollar (UUP) over 2 years on a weekly chart, plus GLD news." },
+  { "name": "nvda-week", "group": "v1", "prompt": "What happened to NVDA last week? Daily candles, the news by day, and tell me whether it was semis-wide (SOXX) or NVDA specific." },
+  { "name": "followups", "group": "v1", "prompts": [
     "Watchlist: MU, SNDK, WDC, STX. Quotes and 3 month lines.",
     "Add NVDA and TSM, switch the chart to one year normalized, and put the earnings calendar for all six next to it.",
     "Drop the quotes, I only want the chart and the calendar."
   ] },
-  { "name": "vague", "prompt": "I think memory is about to roll over. Am I right?" },
-  { "name": "options-nvda", "prompt": "What do options say about NVDA into earnings?" },
-  { "name": "expensive-mu", "prompt": "Is MU expensive here?" },
-  { "name": "macro-week", "prompt": "What's the macro backdrop this week?" },
-  { "name": "insiders-mu", "prompt": "Who has been selling MU? Insiders, institutions, short interest." },
-  { "name": "movers", "prompt": "What's moving today and why?" },
-  { "name": "etf-smh", "prompt": "What's inside SMH and how are the top holdings doing?" }
+  { "name": "vague", "group": "v1", "prompt": "I think memory is about to roll over. Am I right?" },
+  { "name": "options-nvda", "group": "v1", "prompt": "What do options say about NVDA into earnings?" },
+  { "name": "expensive-mu", "group": "v1", "prompt": "Is MU expensive here?" },
+  { "name": "macro-week", "group": "v1", "prompt": "What's the macro backdrop this week?" },
+  { "name": "insiders-mu", "group": "v1", "prompt": "Who has been selling MU? Insiders, institutions, short interest." },
+  { "name": "movers", "group": "v1", "prompt": "What's moving today and why?" },
+  { "name": "etf-smh", "group": "v1", "prompt": "What's inside SMH and how are the top holdings doing?" },
+
+  { "name": "crwv-why-down", "group": "v2", "prompt": "Why is CRWV down?" },
+  { "name": "neoclouds", "group": "v2", "prompt": "Compare the neoclouds" },
+  { "name": "spx-last-week", "group": "v2", "prompt": "What's happening to the S&P last week?" },
+  { "name": "rates-week", "group": "v2", "prompt": "Where are treasury yields heading and what's on the macro calendar this week?" },
+  { "name": "tsla-puts", "group": "v2", "prompt": "TSLA puts for next Friday, what's IV like and where is the open interest?" },
+  { "name": "tsla-earnings", "group": "v2", "prompt": "TSLA reports soon. How did it react to the last few reports and what's expected this time?" },
+  { "name": "cheap-tech", "group": "v2", "prompt": "Screen for large cap tech trading under 20x earnings." }
 ]
