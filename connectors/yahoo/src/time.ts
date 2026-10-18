@@ -100,6 +100,8 @@ export function rangeToPeriod(range: Range, now: Date): { period1: Date; period2
       return { period1: minusMonths(now, 6), period2 }
     case '1y':
       return { period1: minusMonths(now, 12), period2 }
+    case '2y':
+      return { period1: minusMonths(now, 24), period2 }
     case '5y':
       return { period1: minusMonths(now, 60), period2 }
   }

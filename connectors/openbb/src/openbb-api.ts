@@ -2,7 +2,7 @@
 // config, URL building, the result envelope, a circuit breaker for when it is not running, and the
 // time and provider maps. Handlers live in index.ts; nothing here knows about frames.
 // Probed against OpenBB 5.0.0 on 2026-10-17; see docs/notes/openbb-probe.md.
-import { HttpError, type Ctx, type Interval, type Kind, type Range } from '@terminal/core'
+import { HttpError, KindNameSchema, type Ctx, type Interval, type Kind, type Range } from '@terminal/core'
 import { z } from 'zod'
 
 export const DEFAULT_BASE_URL = 'http://127.0.0.1:6900'
@@ -15,7 +15,7 @@ export const ConfigSchema = z.object({
   /** Where openbb-api listens. */
   baseUrl: z.url().default(DEFAULT_BASE_URL),
   /** OpenBB provider per kind; unset kinds use DEFAULT_PROVIDERS. Any provider installed on the OpenBB side works, keyed ones need their key in ~/.openbb_platform/user_settings.json. */
-  providers: z.object({ search: z.string().min(1), quote: z.string().min(1), ohlcv: z.string().min(1), news: z.string().min(1), earnings: z.string().min(1) }).partial().default({}),
+  providers: z.partialRecord(KindNameSchema, z.string().min(1)).default({}),
   /** Basic auth, only when openbb-api runs with --login. */
   username: z.string().optional(),
   password: z.string().optional(),
@@ -26,10 +26,10 @@ export type Config = z.infer<typeof ConfigSchema>
  * Keyless providers that answered each kind best in the probe. yfinance has no equity search and its company news
  * returns 204; nasdaq search carries the listing exchange, nasdaq news and earnings carry publisher and session.
  */
-export const DEFAULT_PROVIDERS: Record<Kind, string> = { search: 'nasdaq', quote: 'yfinance', ohlcv: 'yfinance', news: 'nasdaq', earnings: 'nasdaq' }
+export const DEFAULT_PROVIDERS: Partial<Record<Kind, string>> = { search: 'nasdaq', quote: 'yfinance', ohlcv: 'yfinance', news: 'nasdaq', earnings: 'nasdaq' }
 
 export function providerFor(config: Config, kind: Kind): string {
-  return config.providers[kind] ?? DEFAULT_PROVIDERS[kind]
+  return config.providers[kind] ?? DEFAULT_PROVIDERS[kind] ?? 'yfinance'
 }
 
 /** Providers whose unified routes take `symbol=A,B`. Others are called once per symbol. */
@@ -236,6 +236,8 @@ export function rangeStartDate(range: Range, now: Date): string {
       return nyDate(minusMonths(now, 6))
     case '1y':
       return nyDate(minusMonths(now, 12))
+    case '2y':
+      return nyDate(minusMonths(now, 24))
     case '5y':
       return nyDate(minusMonths(now, 60))
   }

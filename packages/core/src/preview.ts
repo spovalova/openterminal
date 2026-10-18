@@ -8,7 +8,7 @@ export type Preview = {
   rowCount: number
   /** Every row when rowCount <= maxRows, otherwise the first maxRows. */
   rows: unknown[][]
-  /** symbol → numeric column → stats. Key is '*' when the frame has no symbol column. */
+  /** symbol (or `series`) → numeric column → stats. Key is '*' when the frame has neither column. */
   stats: Record<string, Record<string, Stats>>
 }
 
@@ -16,7 +16,9 @@ export const PREVIEW_MAX_ROWS = 25
 
 export function preview(frame: Frame, opts: { maxRows?: number } = {}): Preview {
   const maxRows = opts.maxRows ?? PREVIEW_MAX_ROWS
-  const symIdx = columnIndex(frame, 'symbol')
+  // Group by `symbol`, or by `series` for frames without one (macro). Key is '*' when neither exists.
+  const symIdxRaw = columnIndex(frame, 'symbol')
+  const symIdx = symIdxRaw >= 0 ? symIdxRaw : columnIndex(frame, 'series')
   const timeIdx = columnIndex(frame, 'time')
   const numeric = frame.columns
     .map((c, i) => ({ c, i }))

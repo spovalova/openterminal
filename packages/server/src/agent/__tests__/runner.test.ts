@@ -146,7 +146,7 @@ describe('use case A: theme research', () => {
     expect(Object.keys(sw.inputSchema.properties ?? {})).toEqual(['name', 'widgets'])
     expect(JSON.stringify(sw.inputSchema)).toContain('"normalize"')
     const qt = tools.find((t) => t.name === 'query')!
-    expect(JSON.stringify(qt.inputSchema)).toContain('"1mo"')
+    expect(JSON.stringify(qt.inputSchema)).toContain('"ohlcv"') // the kind enum; params are an open object validated by parseQuery
     expect(systemPromptSentOn(model, 0)).toContain('Answerable now: search, quote, ohlcv, news, earnings.')
   })
 })
@@ -235,7 +235,7 @@ describe('set_workspace validation', () => {
     const [first, second] = message.steps!
     expect(first!.summary).toBe('set_workspace · 3 invalid widgets')
     expect(first!.error).toContain('candle requires exactly one symbol')
-    expect(first!.error).toContain('series view requires an ohlcv query')
+    expect(first!.error).toContain('series view requires an ohlcv or macro query')
     expect(first!.error).toContain('candle and normalize are mutually exclusive')
     expect(second!.error).toBeUndefined()
     expect(second!.summary).toBe('set_workspace · 2 widgets')
@@ -272,7 +272,7 @@ describe('set_workspace validation', () => {
     const message = await promise
     expect(message.steps![0]!.error).toContain('"news" is not answerable now (answerable: quote)')
     expect(widgetsOf(messages)).toHaveLength(0)
-    expect(systemPromptSentOn(model, 0)).toContain('Not answerable now (no connector): search, ohlcv, news, earnings.')
+    expect(systemPromptSentOn(model, 0)).toContain('Not answerable now (no connector): search, ohlcv, news, earnings, profile,')
   })
 })
 
@@ -291,8 +291,8 @@ describe('query tool', () => {
   })
 
   it('records a rejected step when the model sends input the schema refuses', async () => {
-    // symbols as a string matches no params shape, so the SDK refuses the input before execute.
-    const turns: Turn[] = [{ toolCalls: [q('ohlcv', { symbols: 'MU', interval: '1d', range: '3mo' } as never)] }, { text: 'Retrying is left to the model.' }]
+    // An unknown kind fails the enum, so the SDK refuses the input before execute.
+    const turns: Turn[] = [{ toolCalls: [q('peers' as never, { symbols: ['MU'] })] }, { text: 'Retrying is left to the model.' }]
     const { promise, model, fake } = run(turns)
     const message = await promise
     expect(fake.calls).toHaveLength(0)
@@ -300,6 +300,19 @@ describe('query tool', () => {
     expect(message.steps![0]!.summary).toBe('query · rejected')
     expect(message.steps![0]!.error).toBeTruthy()
     expect(model.doStreamCalls).toHaveLength(2)
+  })
+
+  it('records a failed step when params do not fit the kind (params are an open object at the schema level)', async () => {
+    const turns: Turn[] = [{ toolCalls: [q('ohlcv', { symbols: 'MU', interval: '1d', range: '3mo' } as never)] }, { text: 'Retrying is left to the model.' }]
+    const { promise, model, fake } = run(turns)
+    const message = await promise
+    expect(fake.calls).toHaveLength(0)
+    expect(message.steps).toHaveLength(1)
+    expect(message.steps![0]!.summary).toBe('ohlcv MU 1d 3mo · failed')
+    expect(message.steps![0]!.error).toContain('invalid query')
+    const fed = toolResultsSentOn(model, 1)[0] as { ok: boolean; error: string }
+    expect(fed.ok).toBe(false)
+    expect(fed.error).toContain('invalid query')
   })
 })
 

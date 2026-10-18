@@ -9,10 +9,11 @@ describe('buildSystemPrompt', () => {
   it('lists answerable and unavailable kinds with params and columns generated from core', () => {
     const p = buildSystemPrompt({ kinds: ['search', 'quote', 'ohlcv'], workspace: workspace(), now, marketState: 'regular' })
     expect(p).toContain('Answerable now: search, quote, ohlcv.')
-    expect(p).toContain('Not answerable now (no connector): news, earnings.')
+    expect(p).toContain('Not answerable now (no connector): news, earnings, profile,')
     expect(p).toContain('- news [unavailable]:')
     expect(p).toContain('- ohlcv: ' + KINDS.ohlcv.description)
-    expect(p).toContain('params { symbols: string[] (1-50), interval: 1m|5m|15m|1h|1d|1w, range: 1d|5d|1mo|3mo|6mo|1y|5y }')
+    expect(p).toContain('params { symbols: string[] (1-50), interval: 1m|5m|15m|1h|1d|1w, range: 1d|5d|1mo|3mo|6mo|1y|2y|5y }')
+    expect(p).toContain('params { symbol: string, expiration?: YYYY-MM-DD, strikes?: integer 1-30 = 10, type?: call|put|both = "both" }')
     expect(p).toContain('columns symbol:string, time:time, open:number, high:number, low:number, close:number, volume:number')
     expect(p).toContain('params { symbols: string[] (1-50), limit?: integer 1-100 = 20 }')
     expect(p).toContain('params { symbols: string[] (1-50), from: YYYY-MM-DD, to: YYYY-MM-DD }')

@@ -21,6 +21,8 @@ Observations from the verifiers worth a follow-up, none blocking: the agent neve
 
 **Data gaps and vendors (2026-10-18).** `docs/notes/data-gaps-2026-10-18.md` maps about sixty prompt types against the five kinds and the keyless OpenBB routes installed here, ranks the gaps, and prices the vendors for the paid ones. Headline: the top five gaps (fundamentals and estimates, options chain and IV, economic calendar and macro, ownership and short interest, movers and screeners) are all keyless routes OpenBB already serves, so they are new kinds under section 7.1, not new vendors. Paid gaps: deep intraday history, options flow and GEX, per-ticker IV history, transcripts, consolidated real-time. Cheapest keys per gap: Massive $29, ThetaData $40, Alpaca $99, FMP $19 to $29, Unusual Whales API $150, ORATS $199. Social sentiment is effectively unavailable at retail prices.
 
+**v1.2 catalog (2026-10-18, in progress): section 14.** The user asked for every kind the keyless OpenBB routes can feed, with new views where needed. Trunk landed first: 17 new kinds in `packages/core/src/kinds.ts` (22 total), a `2y` range, a `chain` view type, `querySymbols` for symbol-less and single-symbol kinds, previews grouped by `series` for macro, the agent's `query` tool taking open params validated by `parseQuery`, table formats and empty states for every kind. Then four parallel workstreams: openbb handlers, yahoo fallbacks, web views (chain, series over macro, a generic widget editor), agent prompt and docs. Status is recorded at the end of section 14.
+
 **If you are taking over**, read this file once top to bottom, then:
 
 1. Start at Phase 0 in section 11. Do not fan out to parallel work before Phase 0 is green.
@@ -213,19 +215,38 @@ Three states. The design system (tokens, components, chart theme) lives in `pack
 
 ### 7.1 Kinds
 
-| Kind | Params | Frame columns |
-|---|---|---|
-| `search` | q[] | query, symbol, name, exchange |
-| `quote` | symbols[] | symbol, price, change_pct, volume, market_state, extended_price, extended_change_pct |
-| `ohlcv` | symbols[], interval (1m 5m 15m 1h 1d 1w), range (1d 5d 1mo 3mo 6mo 1y 5y) | symbol, time, open, high, low, close, volume |
-| `news` | symbols[], limit | time, headline, source, url, symbol |
-| `earnings` | symbols[], from, to | symbol, date, session (bmo, amc, or null), eps_estimate |
+v1 shipped the first five. v1.2 (section 14) added the rest over routes the keyless OpenBB providers already serve. Every kind is still "a param schema plus exact columns"; the source of truth is `packages/core/src/kinds.ts`.
 
-Long format throughout: multi-symbol results carry a `symbol` column. `symbols` is required on every kind because no free source offers a market-wide calendar or news feed.
+| Kind | Params | Frame columns | Since |
+|---|---|---|---|
+| `search` | q[] | query, symbol, name, exchange | v1 |
+| `quote` | symbols[] | symbol, price, change_pct, volume, market_state, extended_price, extended_change_pct | v1 |
+| `ohlcv` | symbols[], interval (1m 5m 15m 1h 1d 1w), range (1d 5d 1mo 3mo 6mo 1y 2y 5y) | symbol, time, open, high, low, close, volume | v1 (`2y` v1.2) |
+| `news` | symbols[], limit | time, headline, source, url, symbol | v1 |
+| `earnings` | symbols[], from, to | symbol, date, session (bmo, amc, or null), eps_estimate | v1 |
+| `profile` | symbols[] | symbol, name, exchange, sector, industry, market_cap, employees, beta, description | v1.2 |
+| `metrics` | symbols[] | symbol, market_cap, pe, forward_pe, peg, ev_ebitda, ps, pb, gross_margin, operating_margin, profit_margin, revenue_growth, earnings_growth, roe, debt_to_equity, dividend_yield (percents scaled ×100) | v1.2 |
+| `financials` | symbols[], period (annual, quarter), limit ≤5 | symbol, period_ending, revenue, gross_profit, operating_income, net_income, eps, operating_cash_flow, capex, free_cash_flow, cash, debt, shares | v1.2 |
+| `estimates` | symbols[] | symbol, recommendation, analysts, target_low, target_consensus, target_high, upside_pct, eps_estimate_q, eps_estimate_y, eps_growth_y | v1.2 |
+| `eps_history` | symbols[], limit | symbol, date, eps_actual, eps_estimate, surprise_pct | v1.2 |
+| `dividends` | symbols[], limit | symbol, ex_date, amount | v1.2 |
+| `insiders` | symbols[], limit | symbol, date, name, title, action (buy, sell, grant, other), shares, price, value, url | v1.2 |
+| `institutions` | symbols[], limit | symbol, date, holder, shares, change_pct, value | v1.2 |
+| `short_interest` | symbols[], limit | symbol, date, short_interest, change_pct, avg_volume, days_to_cover | v1.2 |
+| `options` | symbol, expiration?, strikes (each side, default 10), type (call, put, both) | symbol, expiration, type, strike, bid, ask, last, volume, open_interest, iv, delta, gamma, theta, vega, underlying_price, dte | v1.2 |
+| `volatility` | symbols[] | symbol, iv30, iv30_high, iv30_low, iv_rank, hv30, hv30_high, hv30_low, year_high, year_low | v1.2 |
+| `calendar` | from, to, country (default United States) | time, country, event, actual, consensus, previous | v1.2 |
+| `ipos` | from, to | symbol, date, name, exchange, price, offer_amount, status | v1.2 |
+| `movers` | list (gainers, losers, active), limit | symbol, name, price, change_pct, volume | v1.2 |
+| `holdings` | symbol (an ETF) | etf, symbol, name, weight | v1.2 |
+| `macro` | series[] (treasury_3m, treasury_2y, treasury_10y, treasury_30y, spread_10y_2y, fed_funds, sofr, cpi_yoy, unemployment, m2), range | series, time, value | v1.2 |
+| `yield_curve` | date? | date, maturity, years, rate | v1.2 |
+
+Long format throughout: multi-symbol results carry a `symbol` column; `macro` carries `series` instead and the preview groups by it. `search`, `calendar`, `ipos`, `movers`, `macro` and `yield_curve` have no symbols; `options` and `holdings` take exactly one. Percent columns are percent (5.63, not 0.0563); connectors scale.
 
 ### 7.2 Views
 
-`series` and `table`. Nothing else in v1.
+`series` (ohlcv and macro; `candle` and `normalize` only for ohlcv), `table` (any kind), `chain` (options only: calls on the left, strikes in the middle, puts on the right, the underlying price marked). Nothing else.
 
 ### 7.3 Connectors
 
@@ -397,3 +418,28 @@ Theme pass, recordings of the three use cases for the README, fresh-clone `npx t
 
 **Verification.** `pnpm test` offline; `pnpm --filter @terminal/connector-openbb smoke` live; use cases A, B, C with the API running, every widget frame `meta.connector: openbb`; the same prompt with the API stopped answered by yahoo; Connectors page screenshots in both states.
 
+## 14. v1.2: the catalog grows to 22 kinds
+
+**Why.** The 2026-10-18 data-gaps note (`docs/notes/data-gaps-2026-10-18.md`) found that the five most-asked-for gaps (fundamentals and estimates, option chains and IV, the economic calendar and macro series, ownership and short interest, movers) are all served by keyless providers in the OpenBB install the terminal already routes through. The data was one URL away; the catalog was the limit. The user asked for all of them, with new views where a table would not do.
+
+**Decisions.**
+- Kinds stay "a param schema plus exact columns". No generic "run this OpenBB route" kind: the agent must not see numbers the views cannot render (product rule 2), and exact columns are what make previews and table formats work.
+- 17 new kinds, listed in 7.1. Grouping: company (`profile`, `metrics`, `financials`, `estimates`, `eps_history`, `dividends`), ownership (`insiders`, `institutions`, `short_interest`), options (`options`, `volatility`), market-wide (`calendar`, `ipos`, `movers`, `holdings`, `macro`, `yield_curve`).
+- `options` is one symbol at one expiration with a strike window, never the whole chain (MU has 11,000 contracts). `expiration` snaps forward to a listed date; omitted means the nearest expiration at least a week out, which is what a retail question usually means.
+- `macro` is a curated enum of keyless series, not free-text FRED ids: FRED needs a key, and an enum keeps the agent honest about what exists. Sources: federal_reserve treasury rates, EFFR, SOFR and M2; OECD CPI and unemployment.
+- One new view, `chain`, because a flat table of calls and puts is unreadable. Macro reuses `series` (lines keyed by `series` instead of `symbol`). Everything else is a table with per-kind formats.
+- The agent's `query` tool takes `params` as an open object validated by `parseQuery`; a 22-member union would be fragile and the system prompt already renders every kind's params from the catalog.
+- Bench findings folded in because the prompt was being edited anyway: `2y` range; "four to six widgets" is a default, not a floor; replies start with the answer; period changes are measured from the close before the period.
+- Yahoo gets fallbacks only where yahoo-finance2 has the data (profile, metrics, estimates, eps history, insiders, institutions, options, dividends, holdings). finnhub is unchanged.
+
+**Out of scope.** Screeners with arbitrary conditions, sector performance (do it with sector ETFs through `ohlcv`), technical indicators and realized vol (views over bars, a separate plan), transcripts, options flow, per-ticker IV history (section 12 of the data-gaps note), anything keyed.
+
+**Workstreams** (after the trunk commit, in parallel, no shared files):
+1. openbb: a handler per new kind, provider defaults, fixtures recorded from the live API, tests, README and probe note.
+2. yahoo: fallbacks listed above, same test style as the existing handlers.
+3. web: `chain` view; `series` over macro frames; table polish for the new kinds; a widget editor that works for every kind; gallery fixtures; headless screenshots.
+4. agent and docs: prompt rules and examples for the new kinds, the bench fixes, `scripts/query.ts` for every kind, bench prompts, vocabulary and connector docs, README.
+
+**Verification.** typecheck, lint, tests green; `pnpm query` for every new kind against the production OpenBB; a bench run of prompts that need the new kinds (options, fundamentals, macro, calendar, insiders) with every number traced to a preview; screenshots of the chain and macro views; production redeployed.
+
+**Status.** Trunk committed 2026-10-18. Workstreams: see the handoff in section 0.

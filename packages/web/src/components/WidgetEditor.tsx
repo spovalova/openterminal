@@ -27,7 +27,7 @@ type Draft = {
   limit: string
   from: string
   to: string
-  viewType: 'series' | 'table'
+  viewType: 'series' | 'table' | 'chain'
   candle: boolean
   normalize: boolean
 }
@@ -92,7 +92,12 @@ function toWidgetInput(d: Draft, id: string): WidgetInput {
           : d.kind === 'news'
             ? { symbols, limit: Number(d.limit) }
             : { symbols, from: d.from, to: d.to }
-  const view = d.viewType === 'series' ? { type: 'series' as const, candle: d.candle || undefined, normalize: d.normalize || undefined } : { type: 'table' as const }
+  const view =
+    d.viewType === 'series'
+      ? { type: 'series' as const, candle: d.candle || undefined, normalize: d.normalize || undefined }
+      : d.viewType === 'chain'
+        ? { type: 'chain' as const }
+        : { type: 'table' as const }
   return { id, title: d.title.trim(), size: d.size, query: { kind: d.kind, params } as WidgetInput['query'], view }
 }
 

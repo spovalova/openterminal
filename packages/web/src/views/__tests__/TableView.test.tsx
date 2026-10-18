@@ -25,19 +25,19 @@ function renderedRows(): unknown[][] {
 }
 
 describe('TableView formats', () => {
-  const expected: Record<Kind, Record<string, string>> = {
+  const expected: Partial<Record<Kind, Record<string, string>>> = {
     quote: { symbol: 'text', price: 'price', change_pct: 'percent', volume: 'integer', market_state: 'text', extended_price: 'price', extended_change_pct: 'percent' },
     news: { time: 'time', headline: 'text', source: 'text', url: 'link', symbol: 'text' },
     earnings: { symbol: 'text', date: 'date', session: 'text', eps_estimate: 'price' },
     search: { query: 'text', symbol: 'text', name: 'text', exchange: 'text' },
     ohlcv: { symbol: 'text', time: 'time', open: 'price', high: 'price', low: 'price', close: 'price', volume: 'integer' },
   }
-  const sample: Record<Kind, string> = { quote: 'A3', news: 'A5', earnings: 'A4', search: 'search', ohlcv: 'C4' }
+  const sample: Partial<Record<Kind, string>> = { quote: 'A3', news: 'A5', earnings: 'A4', search: 'search', ohlcv: 'C4' }
 
   for (const kind of Object.keys(expected) as Kind[]) {
     it(`maps every ${kind} column to a CellFormat`, () => {
       expect(formatsFor(kind, KINDS[kind].columns)).toEqual(expected[kind])
-      const { widget, frame } = fixture(sample[kind])
+      const { widget, frame } = fixture(sample[kind]!)
       render(<TableView widget={widget} frame={frame} />)
       expect(renderedFormats()).toEqual(expected[kind])
       expect(Object.keys(renderedFormats())).toEqual(frame.columns.map((c) => c.name)) // hides nothing

@@ -46,19 +46,13 @@ export type ToolDeps = {
  */
 export const QueryToolInput = z.object({
   kind: z.enum(KIND_NAMES).describe('Which kind to run.'),
-  // Most specific first: a union member strips keys it does not know, so `news` before `earnings`
-  // would drop from/to. parseQuery validates the real (kind, params) pair in execute.
-  params: z
-    .union([
-      KINDS.search.params.describe('search: { q: string[] }'),
-      KINDS.earnings.params.describe('earnings: { symbols, from, to }'),
-      KINDS.ohlcv.params.describe('ohlcv: { symbols, interval, range }'),
-      KINDS.news.params.describe('news: { symbols, limit? }'),
-      KINDS.quote.params.describe('quote: { symbols }'),
-    ])
-    .describe('Params for the kind, exactly as the catalog lists them.'),
+  // Params are an open object here (22 kinds would make an unwieldy union, and a union member strips
+  // keys it does not know). parseQuery validates the real (kind, params) pair in execute and the
+  // system prompt lists every kind's params from the catalog.
+  params: z.record(z.string(), z.unknown()).describe('Params for the kind, exactly as the catalog lists them.'),
 })
 void QuerySchema
+void KINDS
 
 const widgetShape = WidgetSchema.shape
 /** A Widget whose id is optional; ids are assigned (w1..wN) when missing or colliding. */
@@ -103,8 +97,21 @@ function queryHead(input: unknown): string {
       return `earnings ${list(p.symbols)} ${p.from ?? ''}→${p.to ?? ''}`.replace(/\s+/g, ' ').trim()
     case 'quote':
       return `quote ${list(p.symbols)}`.trim()
+    case 'options':
+      return `options ${list(p.symbol)} ${p.expiration ?? 'nearest'} ${p.type ?? 'both'}`.replace(/\s+/g, ' ').trim()
+    case 'macro':
+      return `macro ${list(p.series)} ${p.range ?? ''}`.replace(/\s+/g, ' ').trim()
+    case 'calendar':
+    case 'ipos':
+      return `${kind} ${p.from ?? ''}→${p.to ?? ''}`.trim()
+    case 'movers':
+      return `movers ${p.list ?? 'gainers'}`
+    case 'holdings':
+      return `holdings ${list(p.symbol)}`.trim()
+    case 'yield_curve':
+      return `yield_curve ${p.date ?? 'latest'}`
     default:
-      return `${kind} ${list(p.symbols)}`.trim()
+      return `${kind} ${list(p.symbols ?? p.symbol)}`.trim()
   }
 }
 
@@ -203,8 +210,8 @@ export function createTools(deps: ToolDeps) {
 
   const set_workspace = tool({
     description: [
-      'Replace the workspace widgets with a complete set (four to six). The first widget is the hero and should be lg.',
-      'Every widget is validated: series views only on ohlcv; candle needs exactly one symbol; candle and normalize are exclusive; kinds must be answerable.',
+      'Replace the workspace widgets with a complete set (typically four to six; fewer when the user asks for fewer). The first widget is the hero and should be lg.',
+      'Every widget is validated: series views only on ohlcv or macro; candle and normalize only on ohlcv; candle needs exactly one symbol; candle and normalize are exclusive; chain views only on options; kinds must be answerable.',
       'On errors nothing changes: fix the listed widgets and call again. On success it returns the widget ids to use in [[widget:<id>]] chips.',
     ].join(' '),
     inputSchema: SetWorkspaceInput,
