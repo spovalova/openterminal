@@ -1,6 +1,6 @@
-# terminal — v1 plan and handoff
+# Open Terminal — v1 plan and handoff
 
-Repository: https://github.com/williammtan/terminal. Until code exists, this file is the single source of truth. "terminal" is a working name; the real name is undecided.
+Repository: https://github.com/williammtan/terminal. Until code exists, this file is the single source of truth. The product is called **Open Terminal** (decided 2026-10-18). `terminal` remains the package scope, CLI bin and config directory until the rename commit; `open-terminal` on npm is held by an unrelated 2022 package, so the published name is `openterminal` unless the user prefers a scoped `@open-terminal/cli`.
 
 ## 0. Handoff
 
@@ -46,7 +46,7 @@ Observations from the verifiers worth a follow-up, none blocking: the agent neve
 
 **Open, in priority order.**
 
-- **Ask** Product name (unchanged). The user's shortlist: Aerotyne, Sideways, Blotter, Candle. "Wally" is a candidate name for the agent persona. Keep `terminal` as the placeholder and keep it in one place (package scope and CLI bin) so renaming is one change.
+- ~~**Ask** Product name.~~ Decided 2026-10-18: **Open Terminal**. Positioning: the open-source, AI-native terminal for traders, "Cursor for trading". README rewritten around it. Still to do in one commit: rename the `@terminal/*` scope, the CLI bin, the `~/.terminal` config dir and the systemd units, and publish `openterminal` on npm. "Wally" remains a candidate name for the agent persona.
 - Default model: `claude-opus-5-5` for anthropic (the user's choice on 2026-10-17; Sonnet 5.5 was the default through Phase 3 and is what the recordings used) and `gpt-6-luna` for openai, read from the installed provider packages' model id unions, defined once in `DEFAULT_MODEL` in `packages/server/src/agent/index.ts` and re-exported by `config.ts` (the two copies had drifted: config.ts said `gpt-5`).
 - ~~yahoo-finance2 coverage.~~ Verified in Phase 0: search, quote with pre and post-market fields, chart at 5m and 1wk, and quoteSummary calendarEvents all work on 4.0.4. Chart takes period1/period2 only (no `range`), and intraday includes pre/post bars unless `includePrePost: false`. Details in `docs/notes/yahoo-probe.md`.
 
