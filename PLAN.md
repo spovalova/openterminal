@@ -1,6 +1,6 @@
 # Open Terminal — v1 plan and handoff
 
-Repository: https://github.com/williammtan/terminal. Until code exists, this file is the single source of truth. The product is called **Open Terminal** (decided 2026-10-18). `terminal` remains the package scope, CLI bin and config directory until the rename commit; `open-terminal` on npm is held by an unrelated 2022 package, so the published name is `openterminal` unless the user prefers a scoped `@open-terminal/cli`.
+Repository: https://github.com/spovalova/openterminal (moved from williammtan/terminal on 2026-10-18). Until code exists, this file is the single source of truth. The product is called **Open Terminal** (decided 2026-10-18). `terminal` remains the package scope, CLI bin and config directory until the rename commit; `open-terminal` on npm is held by an unrelated 2022 package, so the published name is `openterminal` unless the user prefers a scoped `@open-terminal/cli`.
 
 ## 0. Handoff
 
@@ -22,6 +22,8 @@ Observations from the verifiers worth a follow-up, none blocking: the agent neve
 **Data gaps and vendors (2026-10-18).** `docs/notes/data-gaps-2026-10-18.md` maps about sixty prompt types against the five kinds and the keyless OpenBB routes installed here, ranks the gaps, and prices the vendors for the paid ones. Headline: the top five gaps (fundamentals and estimates, options chain and IV, economic calendar and macro, ownership and short interest, movers and screeners) are all keyless routes OpenBB already serves, so they are new kinds under section 7.1, not new vendors. Paid gaps: deep intraday history, options flow and GEX, per-ticker IV history, transcripts, consolidated real-time. Cheapest keys per gap: Massive $29, ThetaData $40, Alpaca $99, FMP $19 to $29, Unusual Whales API $150, ORATS $199. Social sentiment is effectively unavailable at retail prices.
 
 **v1.2 catalog (2026-10-18): section 14, done.** The user asked for every kind the keyless OpenBB routes can feed, with new views where needed. Trunk landed first: 17 new kinds in `packages/core/src/kinds.ts` (22 total), a `2y` range, a `chain` view type, `querySymbols` for symbol-less and single-symbol kinds, previews grouped by `series` for macro, the agent's `query` tool taking open params validated by `parseQuery`, table formats and empty states for every kind. Then four parallel workstreams (openbb handlers, yahoo fallbacks, web views, agent prompt and docs), integrated and committed the same evening with production redeployed. Status and known limits are at the end of section 14.
+
+**Shipping (2026-10-18).** The repo lives at https://github.com/spovalova/openterminal with one commit author (set in the repo git config). Every change is a PR from its own branch and worktree, opened with `scripts/pr.sh "<title>" <body.md>`, which pushes and creates the PR with the token from the gitignored `.env`. Agents run in parallel and open their own PRs; briefs say what to build and point at `docs/shipping.md`, nothing about identity or credentials. Before/after screenshots are committed on the branch under `docs/screenshots/` and embedded through `{{RAW}}`.
 
 **If you are taking over**, read this file once top to bottom, then:
 
