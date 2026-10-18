@@ -15,7 +15,8 @@ export const chartTheme: DeepPartial<ChartOptions> = {
     background: { type: ColorType.Solid, color: tokens.color.surface },
     textColor: tokens.color.fg2,
     fontSize: tokens.fontSize.xs,
-    fontFamily: tokens.font.sans,
+    // Axis ticks and value labels are numbers, so the mono stack; the canvas is repainted once the font has loaded (SeriesView).
+    fontFamily: tokens.font.mono,
     panes: { separatorColor: tokens.color.border, separatorHoverColor: tokens.color.borderStrong },
   },
   grid: {

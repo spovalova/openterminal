@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import { z } from 'zod'
 import { Button, Dialog } from '@terminal/ui'
-import { KINDS, KIND_NAMES, SERIES_KINDS, SizeSchema, parseWidget, type Kind, type Size, type Widget, type WidgetInput } from '@terminal/core'
+import { KINDS, KIND_NAMES, SERIES_KINDS, STAT_KEY_COLUMN, SizeSchema, isStatKind, numericColumns, parseWidget, type Kind, type Size, type StatKind, type Widget, type WidgetInput } from '@terminal/core'
 import { useActions } from '../actions'
 import { legendGroups, legendLabel } from '../views/series-data'
 
@@ -72,6 +72,7 @@ export function fieldsFor(kind: Kind): FieldSpec[] {
 export function viewTypesFor(kind: Kind): ViewType[] {
   if (kind === 'options') return ['chain', 'table']
   if (SERIES_KINDS.has(kind)) return ['series', 'table']
+  if (isStatKind(kind)) return ['table', 'stat']
   return ['table']
 }
 
@@ -87,6 +88,8 @@ type Draft = {
   normalize: boolean
   /** Legend label per symbol (or macro series); blank means the default. */
   labels: Record<string, string>
+  /** stat view: the column to show; '' is the kind's key column. */
+  statColumn: string
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
@@ -159,7 +162,7 @@ export function paramsFrom(kind: Kind, draft: ParamDraft): Record<string, unknow
 }
 
 function emptyDraft(): Draft {
-  return { title: '', size: 'md', kind: 'quote', params: paramDraft('quote'), viewType: 'table', candle: false, normalize: false, labels: {} }
+  return { title: '', size: 'md', kind: 'quote', params: paramDraft('quote'), viewType: 'table', candle: false, normalize: false, statColumn: '', labels: {} }
 }
 
 function fromWidget(w: Widget): Draft {
@@ -172,6 +175,7 @@ function fromWidget(w: Widget): Draft {
     candle: w.view.type === 'series' ? !!w.view.candle : false,
     normalize: w.view.type === 'series' ? !!w.view.normalize : false,
     labels: w.view.type === 'series' && w.view.labels ? { ...w.view.labels } : {},
+    statColumn: w.view.type === 'stat' ? (w.view.column ?? '') : '',
   }
 }
 
@@ -198,7 +202,9 @@ export function toWidgetInput(d: Draft, id: string): WidgetInput {
         }
       : d.viewType === 'chain'
         ? { type: 'chain' as const }
-        : { type: 'table' as const }
+        : d.viewType === 'stat'
+          ? { type: 'stat' as const, ...(d.statColumn ? { column: d.statColumn } : {}) }
+          : { type: 'table' as const }
   return { id, title: d.title.trim(), size: d.size, query: { kind: d.kind, params } as WidgetInput['query'], view }
 }
 
@@ -235,7 +241,7 @@ export function WidgetEditor({ open, onClose, workspaceId, widget }: { open: boo
 
   /** A new kind resets the params to its defaults and picks its natural view (series, chain, or table). */
   const changeKind = (kind: Kind) => {
-    setDraft((d) => ({ ...d, kind, params: paramDraft(kind), viewType: viewTypesFor(kind)[0]! }))
+    setDraft((d) => ({ ...d, kind, params: paramDraft(kind), viewType: viewTypesFor(kind)[0]!, statColumn: '' }))
   }
 
   const submit = async (e: React.FormEvent) => {
@@ -302,6 +308,20 @@ export function WidgetEditor({ open, onClose, workspaceId, widget }: { open: boo
               ))}
             </select>
           </Field>
+          {draft.viewType === 'stat' && isStatKind(draft.kind) && (
+            <Field id={fid('column')} label="Column" hint="The number the stat shows; the default is the kind's key column.">
+              <select id={fid('column')} className={inputCls} value={draft.statColumn} onChange={(e) => set('statColumn', e.target.value)}>
+                <option value="">{STAT_KEY_COLUMN[draft.kind as StatKind]} (default)</option>
+                {numericColumns(draft.kind)
+                  .filter((c) => c !== STAT_KEY_COLUMN[draft.kind as StatKind])
+                  .map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+          )}
           {draft.viewType === 'series' && draft.kind === 'ohlcv' && (
             <div className="flex flex-col justify-end gap-1">
               <label className="flex items-center gap-2 text-fg">

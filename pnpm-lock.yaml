@@ -218,6 +218,9 @@ importers:
 
   packages/ui:
     dependencies:
+      '@fontsource-variable/geist':
+        specifier: 5.3.0
+        version: 5.3.0
       '@terminal/core':
         specifier: workspace:*
         version: link:../core
@@ -283,10 +286,10 @@ importers:
         specifier: ^19.3.1
         version: 19.3.1(react@19.3.1)
       react-markdown:
-        specifier: 10.1.0
+        specifier: ^10.1.0
         version: 10.1.0(@types/react@19.3.0)(react@19.3.1)
       remark-gfm:
-        specifier: 4.0.1
+        specifier: ^4.0.1
         version: 4.0.1
       zod:
         specifier: ^4.6.7
@@ -602,6 +605,9 @@ packages:
   '@eslint/plugin-kit@0.7.3':
     resolution: {integrity: sha512-IkO+/KEUvwbVpiURZg+P7zF74z5Jxe0UgJxVni+RtoHQ6IZieXaO02kmadomap/q+l6bc/jdPGGqTjhuZnuz1Q==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
+
+  '@fontsource-variable/geist@5.3.0':
+    resolution: {integrity: sha512-j0m+vLQuG5XAYoHtGCVu0spvlGreR3EzpECUVzkFmI1mTVnAO38l/NEPDCFgZ177JxzYJCLSmTQibIiYPilGrA==}
 
   '@hono/node-server@2.1.5':
     resolution: {integrity: sha512-MgP/I06GdvsilDspMk/qmRzpk8LOUStP6jFAbSRi40W09DhoyUn+Mj7eyKICPqeYKybOjVFLVIAQzvu1bfIa7Q==}
@@ -2975,6 +2981,8 @@ snapshots:
     dependencies:
       '@eslint/core': 1.2.1
       levn: 0.4.1
+
+  '@fontsource-variable/geist@5.3.0': {}
 
   '@hono/node-server@2.1.5(hono@4.13.13)':
     dependencies:

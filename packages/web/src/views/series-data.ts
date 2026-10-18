@@ -1,6 +1,8 @@
 import type { Frame, Interval, Kind, View } from '@terminal/core'
 import { columnIndex, isIntraday, preview } from '@terminal/core'
 import type { BusinessDay, CandlestickData, HistogramData, LineData, Time, UTCTimestamp } from 'lightweight-charts'
+// Short labels for the macro series, shared with the widget sub-header; a symbol is its own label.
+import { MACRO_LABELS } from '../subtitle'
 
 /** Which lightweight-charts shape a series widget renders. */
 export type SeriesMode = 'line' | 'candle' | 'normalize'
@@ -119,20 +121,6 @@ export function legendRows(frame: Frame, groups: string[], colorFor: (i: number)
     const st = stats[group]?.[value]
     return { group, first: st?.first ?? null, last: st?.last ?? null, changePct: st?.changePct ?? null, color: colorFor(i) }
   })
-}
-
-/** Short default legend labels for the macro series; everything else (a symbol) is its own label. */
-export const MACRO_LABELS: Record<string, string> = {
-  treasury_3m: '3M',
-  treasury_2y: '2Y',
-  treasury_10y: '10Y',
-  treasury_30y: '30Y',
-  spread_10y_2y: '10Y-2Y',
-  fed_funds: 'Fed funds',
-  sofr: 'SOFR',
-  cpi_yoy: 'CPI YoY',
-  unemployment: 'Unemployment',
-  m2: 'M2',
 }
 
 /** The legend label for one line: the widget's `view.labels` override, else the macro short name, else the group itself. */

@@ -43,12 +43,6 @@ function colorFor(i: number): string | undefined {
   return seriesPalette.length ? seriesPalette[i % seriesPalette.length] : undefined
 }
 
-function themeBackground(theme: DeepPartial<ChartOptions>): string | undefined {
-  const bg = theme.layout?.background
-  if (bg && typeof bg === 'object' && 'color' in bg && typeof bg.color === 'string') return bg.color
-  return undefined
-}
-
 /**
  * `series` view: an ohlcv or macro frame on lightweight-charts.
  * - default: one line per group (a symbol, or a macro series), palette order
@@ -100,6 +94,14 @@ export const SeriesView: FC<ViewProps> = ({ widget, frame }) => {
     })
     chartRef.current = chart
 
+    // The axis font is a web font (font-display: swap): repaint once it has loaded so the ticks do not keep the fallback face.
+    let fontsCancelled = false
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      void document.fonts.ready.then(() => {
+        if (!fontsCancelled && chartRef.current === chart) chart.applyOptions({ layout: { fontFamily: theme.layout?.fontFamily } })
+      })
+    }
+
     let observer: ResizeObserver | undefined
     if (typeof ResizeObserver !== 'undefined') {
       observer = new ResizeObserver((entries) => {
@@ -113,6 +115,7 @@ export const SeriesView: FC<ViewProps> = ({ widget, frame }) => {
       observer.observe(el)
     }
     return () => {
+      fontsCancelled = true
       observer?.disconnect()
       seriesRef.current = []
       chartRef.current = null
@@ -179,47 +182,41 @@ export const SeriesView: FC<ViewProps> = ({ widget, frame }) => {
 
   return (
     <div data-view="series" data-mode={mode} data-kind={kind} style={rootStyle}>
-      <div ref={hostRef} style={hostStyle} />
-      <Legend rows={legend} kind={kind} labels={labels} background={themeBackground(theme)} />
+      <Legend rows={legend} kind={kind} labels={labels} />
+      <div style={plotStyle}>
+        <div ref={hostRef} style={hostStyle} />
+      </div>
     </div>
   )
 }
 
-const rootStyle: CSSProperties = { position: 'relative', width: '100%', height: '100%', minHeight: 160 }
+const rootStyle: CSSProperties = { display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minHeight: 160 }
+const plotStyle: CSSProperties = { position: 'relative', flex: '1 1 0', minHeight: 0 }
 const hostStyle: CSSProperties = { position: 'absolute', inset: 0 }
 
-const Legend: FC<{ rows: LegendRow[]; kind: Kind; labels: Record<string, string> | undefined; background: string | undefined }> = ({ rows, kind, labels, background }) => (
+/**
+ * The legend is a strip between the widget header and the plot, never over it: one entry per line
+ * with its colour, label (the widget's `labels` override, else the symbol; the symbol stays as the row's
+ * title), last value and change over the range (exactly the preview's numbers).
+ */
+const Legend: FC<{ rows: LegendRow[]; kind: Kind; labels: Record<string, string> | undefined }> = ({ rows, kind, labels }) => (
   <div
     data-legend=""
     role="list"
     aria-label="Series legend"
-    style={{
-      position: 'absolute',
-      top: 8,
-      left: 8,
-      zIndex: 2,
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '2px 12px',
-      padding: '4px 8px',
-      borderRadius: 4,
-      fontSize: 11,
-      lineHeight: '16px',
-      fontVariantNumeric: 'tabular-nums',
-      background: background ? withAlpha(background, 0.72) : 'rgba(0, 0, 0, 0.5)',
-      pointerEvents: 'none',
-      maxWidth: 'calc(100% - 72px)',
-    }}
+    className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-0.5 overflow-hidden border-b border-border px-3 py-1.5 text-xs leading-4"
   >
     {rows.map((row) => {
       const text = legendText(row, kind, labels)
       const dir = direction(text.changeValue)
       return (
-        <div key={row.group} role="listitem" data-symbol={row.group} title={text.label === row.group ? undefined : row.group} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span aria-hidden="true" style={{ display: 'inline-block', width: 10, height: 2, borderRadius: 1, background: row.color ?? 'currentColor' }} />
-          <span style={{ fontWeight: 600 }}>{text.label}</span>
-          <span data-field="last">{text.last}</span>
-          <span data-field="change" style={{ color: dir === 'up' ? UP_COLOR : dir === 'down' ? DOWN_COLOR : undefined, opacity: dir === 'flat' ? 0.7 : 1 }}>
+        <div key={row.group} role="listitem" data-symbol={row.group} title={text.label === row.group ? undefined : row.group} className="flex items-center gap-1.5 whitespace-nowrap">
+          <span aria-hidden="true" className="inline-block h-0.5 w-2.5 rounded-xs" style={{ background: row.color ?? 'currentColor' }} />
+          <span className="num font-semibold text-fg">{text.label}</span>
+          <span data-field="last" className="num text-fg-2">
+            {text.last}
+          </span>
+          <span data-field="change" className="num" style={{ color: dir === 'up' ? UP_COLOR : dir === 'down' ? DOWN_COLOR : undefined, opacity: dir === 'flat' ? 0.7 : 1 }}>
             {text.change}
           </span>
         </div>

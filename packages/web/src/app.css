@@ -29,6 +29,28 @@ body,
   gap: 8px;
 }
 
+/*
+ * The stat view. The hero number scales with the widget body (a `widget` container, so cqw is its
+ * width): about 40px in a one-column cell, capped at 64px in a hero. Cards wrap to the width and keep
+ * their number a step smaller.
+ */
+.stat-hero {
+  font-size: clamp(28px, 13cqw, 56px);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+}
+.stat-card-value {
+  font-size: clamp(18px, 4.5cqw, 28px);
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+  gap: 8px;
+  align-content: start;
+}
+
 /* Sidebar overlays the grid below 1100px. */
 .sidebar {
   width: 380px;

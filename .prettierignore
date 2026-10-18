@@ -1,0 +1,5 @@
+# Vendored font files and their license text are not ours to format.
+packages/ui/src/fonts/
+node_modules/
+dist/
+pnpm-lock.yaml

@@ -307,6 +307,41 @@ describe('set_workspace validation', () => {
     expect(sets[0]![1]).toMatchObject({ id: 'w2', query: { kind: 'macro', params: { series: ['treasury_10y', 'treasury_2y'], range: '1y' } }, view: { type: 'series' } })
   })
 
+  it('accepts a stat view on quote (with a column override) and rejects one on news or with a non-numeric column', async () => {
+    const bad = {
+      name: 'set_workspace',
+      input: {
+        widgets: [
+          { title: 'NVDA', size: 'sm', query: { kind: 'quote', params: { symbols: ['NVDA'] } }, view: { type: 'stat' } },
+          { title: 'Stat on news', size: 'sm', query: { kind: 'news', params: { symbols: ['NVDA'] } }, view: { type: 'stat' } },
+          { title: 'Stat on a text column', size: 'sm', query: { kind: 'quote', params: { symbols: ['NVDA'] } }, view: { type: 'stat', column: 'market_state' } },
+        ],
+      },
+    }
+    const good = {
+      name: 'set_workspace',
+      input: {
+        widgets: [
+          { title: 'NVDA', size: 'sm', query: { kind: 'quote', params: { symbols: ['NVDA'] } }, view: { type: 'stat' } },
+          { title: 'NVDA volume', size: 'sm', query: { kind: 'quote', params: { symbols: ['NVDA'] } }, view: { type: 'stat', column: 'volume' } },
+        ],
+      },
+    }
+    const turns: Turn[] = [{ toolCalls: [q('quote', { symbols: ['NVDA'] })] }, { toolCalls: [bad] }, { toolCalls: [good] }, { text: 'NVDA is at 177.80. [[widget:w1]]' }]
+    const { promise, messages } = run(turns)
+    const message = await promise
+    const [, badStep, goodStep] = message.steps!
+    expect(badStep!.summary).toBe('set_workspace · 2 invalid widgets')
+    expect(badStep!.error).toContain('widgets[1] view: stat view requires a quote, metrics, volatility, estimates, profile, short_interest query')
+    expect(badStep!.error).toContain('widgets[2] view.column: quote has no numeric column "market_state"')
+    expect(badStep!.error).not.toContain('widgets[0]')
+    expect(goodStep!.summary).toBe('set_workspace · 2 widgets')
+    const sets = widgetsOf(messages)
+    expect(sets).toHaveLength(1)
+    expect(sets[0]![0]).toMatchObject({ id: 'w1', size: 'sm', view: { type: 'stat' } })
+    expect(sets[0]![1]).toMatchObject({ id: 'w2', view: { type: 'stat', column: 'volume' } })
+  })
+
   it('rejects widgets on kinds no connector answers', async () => {
     // A registry whose only connector answers nothing but quote.
     const registry = new ConnectorRegistry()

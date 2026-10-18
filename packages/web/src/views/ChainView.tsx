@@ -185,23 +185,28 @@ export const ChainView: FC<ViewProps> = ({ widget, frame }) => {
 
   // border-separate (not collapse) so the sticky header's cell backgrounds cover the rows scrolling under it.
   const pad = narrow ? 'px-1.5' : 'px-2'
-  const cellCls = `h-6 ${pad} text-right whitespace-nowrap border-b border-border/60`
+  const cellCls = `num h-6 ${pad} text-right whitespace-nowrap border-b border-border/60`
   const headCls = `h-6 ${pad} text-right whitespace-nowrap border-b border-border bg-surface text-[11px] font-medium text-fg-3`
 
   return (
     <div ref={rootRef} data-view="chain" data-size={widget.size} data-columns={columns.length} className="flex h-full w-full flex-col overflow-hidden">
+      {/* The chain's own header line: the same facts as the widget sub-header, kept for the expand dialog and the gallery. */}
       <div data-chain-header="" className="flex h-7 shrink-0 items-center gap-3 overflow-hidden border-b border-border px-3 text-xs whitespace-nowrap text-fg-2">
-        {chain.symbol && <span className="font-medium text-fg">{chain.symbol}</span>}
+        {chain.symbol && <span className="num font-semibold text-fg">{chain.symbol}</span>}
         {chain.expiration && <span data-field="expiration">{formatExpiration(chain.expiration)}</span>}
-        {chain.dte != null && <span data-field="dte">{chain.dte} DTE</span>}
+        {chain.dte != null && (
+          <span data-field="dte" className="num">
+            {chain.dte} DTE
+          </span>
+        )}
         {chain.underlying != null && (
           <span data-field="underlying" className="ml-auto">
-            Underlying <span className="font-medium text-fg tabular-nums">{formatCell(chain.underlying, 'price')}</span>
+            Underlying <span className="num font-medium text-fg">{formatCell(chain.underlying, 'price')}</span>
           </span>
         )}
       </div>
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
-        <table className="w-full table-fixed border-separate border-spacing-0 text-xs tabular-nums">
+        <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
           <thead className="sticky top-0 z-10">
             <tr>
               {showCalls && (
