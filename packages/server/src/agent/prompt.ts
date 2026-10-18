@@ -48,6 +48,7 @@ export function buildSystemPrompt(input: PromptInput): string {
       '- size: lg (hero, 2x2), md (2x1), sm (1x1). The first widget is the hero and should be lg.',
       '- view: `{ type: "series", candle?: boolean, normalize?: boolean }` for ohlcv and macro; `{ type: "chain" }` for options; `{ type: "table" }` for any kind.',
       '- series draws one line per symbol (ohlcv) or per series (macro). candle: exactly one symbol. normalize: rebases every symbol to 100, use it for baskets. Never both, and neither on macro.',
+      '- series `labels` (optional): `{ "<symbol or series>": "<short name>" }` renames legend entries, e.g. `{ "SPY": "S&P 500" }`. Only when the user names a line or asks for names instead of tickers; keys must be the query\'s own symbols (or macro series).',
       '- chain lays out calls, strikes and puts around the underlying price. Use it for every options widget; a table on options only when the user asks for one side as rows.',
       '- Symbols: most kinds take `symbols[]`. options and holdings take one `symbol`. search, calendar, ipos, movers, macro and yield_curve take no symbols.',
       '- Titles are short (two to five words). ids are optional; omit them and w1..wN are assigned in order.',

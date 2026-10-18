@@ -1,4 +1,4 @@
-import type { Frame, Interval, View } from '@terminal/core'
+import type { Frame, Interval, Kind, View } from '@terminal/core'
 import { columnIndex, isIntraday, preview } from '@terminal/core'
 import type { BusinessDay, CandlestickData, HistogramData, LineData, Time, UTCTimestamp } from 'lightweight-charts'
 
@@ -119,6 +119,33 @@ export function legendRows(frame: Frame, groups: string[], colorFor: (i: number)
     const st = stats[group]?.[value]
     return { group, first: st?.first ?? null, last: st?.last ?? null, changePct: st?.changePct ?? null, color: colorFor(i) }
   })
+}
+
+/** Short default legend labels for the macro series; everything else (a symbol) is its own label. */
+export const MACRO_LABELS: Record<string, string> = {
+  treasury_3m: '3M',
+  treasury_2y: '2Y',
+  treasury_10y: '10Y',
+  treasury_30y: '30Y',
+  spread_10y_2y: '10Y-2Y',
+  fed_funds: 'Fed funds',
+  sofr: 'SOFR',
+  cpi_yoy: 'CPI YoY',
+  unemployment: 'Unemployment',
+  m2: 'M2',
+}
+
+/** The legend label for one line: the widget's `view.labels` override, else the macro short name, else the group itself. */
+export function legendLabel(group: string, kind: Kind, labels?: Record<string, string>): string {
+  const override = labels?.[group]?.trim()
+  if (override) return override
+  return kind === 'macro' ? (MACRO_LABELS[group] ?? group) : group
+}
+
+/** The lines a series widget draws, from its query params: the ohlcv symbols or the macro series. */
+export function legendGroups(kind: Kind, params: Record<string, unknown>): string[] {
+  const list = kind === 'ohlcv' ? params.symbols : kind === 'macro' ? params.series : undefined
+  return Array.isArray(list) ? list.map(String) : []
 }
 
 export function intervalIsIntraday(interval: Interval | undefined): boolean {

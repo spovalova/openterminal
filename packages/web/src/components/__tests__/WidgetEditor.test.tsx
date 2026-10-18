@@ -9,7 +9,7 @@ const actions = vi.hoisted(() => ({
 }))
 vi.mock('../../actions', () => ({ useActions: () => actions }))
 
-import { WidgetEditor, fieldsFor, paramDraft, paramsFrom, viewTypesFor } from '../WidgetEditor'
+import { WidgetEditor, fieldsFor, labelsFor, paramDraft, paramsFrom, viewTypesFor } from '../WidgetEditor'
 
 beforeAll(() => {
   // jsdom has no <dialog> implementation
@@ -165,6 +165,44 @@ describe('WidgetEditor', () => {
     expect(w.query).toEqual({ kind: 'ohlcv', params: { symbols: ['MU', 'SNDK'], interval: '1d', range: '2y' } })
     expect(w.view).toEqual({ type: 'series', normalize: true })
     expect(screen.getByRole('button', { name: 'Remove' })).toBeTruthy()
+  })
+
+  it('labelsFor keeps trimmed, non-blank labels for the lines the query still draws', () => {
+    expect(labelsFor(['MU', 'SNDK'], { MU: ' Micron ', SNDK: '  ', WDC: 'gone' })).toEqual({ MU: 'Micron' })
+    expect(labelsFor(['MU'], {})).toBeUndefined()
+  })
+
+  it('offers one legend label per symbol on the series view, saves the filled ones, and drops them with the symbol', async () => {
+    const widget = parseWidget({
+      id: 'w1',
+      title: 'Mag 7',
+      size: 'lg',
+      query: { kind: 'ohlcv', params: { symbols: ['NVDA', 'AAPL'], interval: '1w', range: '2y' } },
+      view: { type: 'series', normalize: true, labels: { AAPL: 'Apple' } },
+    })
+    render(<WidgetEditor open onClose={() => {}} workspaceId="ws1" widget={widget} />)
+    expect((input('Legend label for NVDA') as HTMLInputElement).value).toBe('')
+    expect((input('Legend label for NVDA') as HTMLInputElement).placeholder).toBe('NVDA')
+    expect((input('Legend label for AAPL') as HTMLInputElement).value).toBe('Apple')
+    // a symbol typed into the query gets its own label input; a removed one loses it
+    fireEvent.change(input(/^symbols/), { target: { value: 'nvda, tsla' } })
+    expect(screen.queryByLabelText('Legend label for AAPL')).toBeNull()
+    fireEvent.change(input('Legend label for TSLA'), { target: { value: ' Tesla ' } })
+    fireEvent.change(input('Legend label for NVDA'), { target: { value: 'Nvidia' } })
+    submit()
+    const w = await saved()
+    expect(w.query.params).toEqual({ symbols: ['NVDA', 'TSLA'], interval: '1w', range: '2y' })
+    expect(w.view).toEqual({ type: 'series', normalize: true, labels: { NVDA: 'Nvidia', TSLA: 'Tesla' } })
+  })
+
+  it('macro label inputs show the short series name and the table view has none', () => {
+    render(<WidgetEditor open onClose={() => {}} workspaceId="ws1" />)
+    fireEvent.change(input('Kind'), { target: { value: 'macro' } })
+    expect(screen.queryByLabelText(/^Legend label/)).toBeNull() // no series picked yet
+    fireEvent.click(screen.getByLabelText('treasury_10y'))
+    expect((input('Legend label for treasury_10y') as HTMLInputElement).placeholder).toBe('10Y')
+    fireEvent.change(input('View'), { target: { value: 'table' } })
+    expect(screen.queryByLabelText(/^Legend label/)).toBeNull()
   })
 
   it('switching kind picks its natural view and offers only the views it supports', () => {

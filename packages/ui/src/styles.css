@@ -123,6 +123,117 @@
   }
 }
 
+/*
+ * Markdown in the conversation (the agent's reply). Compact: one unit between blocks, lists and code
+ * at body size, headings barely larger than text, tables as hairline rows with tabular numbers.
+ */
+@layer components {
+  /* preflight zeroes every margin; the only vertical rhythm is one unit between sibling blocks */
+  .markdown > * + * {
+    margin-top: var(--spacing-unit);
+  }
+  .markdown strong {
+    font-weight: 600;
+    color: var(--color-fg);
+  }
+  .markdown h1,
+  .markdown h2,
+  .markdown h3,
+  .markdown h4 {
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    font-weight: 600;
+    color: var(--color-fg);
+  }
+  .markdown h1,
+  .markdown h2 {
+    font-size: var(--text-lg);
+    line-height: var(--text-lg--line-height);
+  }
+  .markdown ul,
+  .markdown ol {
+    padding-inline-start: 18px;
+  }
+  .markdown ul {
+    list-style: disc;
+  }
+  .markdown ol {
+    list-style: decimal;
+  }
+  .markdown li + li {
+    margin-top: 2px;
+  }
+  .markdown li::marker {
+    color: var(--color-fg-3);
+  }
+  .markdown li > p {
+    margin: 0;
+  }
+  .markdown code {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    padding: 0 4px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    color: var(--color-fg);
+  }
+  .markdown pre {
+    padding: var(--spacing-unit);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    overflow-x: auto;
+  }
+  .markdown pre code {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  .markdown a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .markdown blockquote {
+    padding-inline-start: var(--spacing-unit);
+    border-inline-start: 2px solid var(--color-border-strong);
+    color: var(--color-fg-2);
+  }
+  .markdown hr {
+    border: 0;
+    border-top: 1px solid var(--color-border);
+  }
+  .markdown table {
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    font-variant-numeric: tabular-nums;
+    max-width: 100%;
+  }
+  .markdown th,
+  .markdown td {
+    padding: 2px 10px 2px 0;
+    border-bottom: 1px solid var(--color-border);
+    text-align: start;
+    vertical-align: top;
+  }
+  .markdown th {
+    font-weight: 500;
+    color: var(--color-fg-2);
+  }
+  .markdown tr:last-child td {
+    border-bottom: 0;
+  }
+  /* a chip inside a sentence sits on the baseline like a word */
+  .markdown p > button,
+  .markdown li > button {
+    vertical-align: text-bottom;
+  }
+}
+
 /* Marker used by the view transition when the PromptBox moves from center to sidebar. */
 ::view-transition-old(prompt-box),
 ::view-transition-new(prompt-box) {

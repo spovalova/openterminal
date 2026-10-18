@@ -16,33 +16,20 @@ import { DOWN_COLOR, EmptyState, UP_COLOR, chartTheme, formatCompact, seriesPale
 import type { Kind } from '@terminal/core'
 import type { ViewProps } from './types'
 import { direction, formatPercent, formatPrice, withAlpha } from './format'
-import { groupBars, intervalIsIntraday, legendRows, seriesMode, toCandleData, toLineData, toVolumeData, type LegendRow } from './series-data'
-
-/** Short legend labels for the macro series; everything else (a symbol) is its own label. */
-const MACRO_LABELS: Record<string, string> = {
-  treasury_3m: '3M',
-  treasury_2y: '2Y',
-  treasury_10y: '10Y',
-  treasury_30y: '30Y',
-  spread_10y_2y: '10Y-2Y',
-  fed_funds: 'Fed funds',
-  sofr: 'SOFR',
-  cpi_yoy: 'CPI YoY',
-  unemployment: 'Unemployment',
-  m2: 'M2',
-}
+import { groupBars, intervalIsIntraday, legendLabel, legendRows, seriesMode, toCandleData, toLineData, toVolumeData, type LegendRow } from './series-data'
 
 /** Macro series that are dollar amounts rather than percents (compact numbers, relative change). */
 const MACRO_AMOUNTS: ReadonlySet<string> = new Set(['m2'])
 
 /**
- * Legend text for one row. ohlcv: last close and change over the range. macro: the last value as a
+ * Legend text for one row. The label is the widget's `labels` override when it has one (else the symbol,
+ * or the macro short name). ohlcv: last close and change over the range. macro: the last value as a
  * percent (every series but m2 is a rate) with the move in basis points, `last - first` from the same
  * preview stats; m2 shows a compact dollar amount and the relative change.
  */
-export function legendText(row: LegendRow, kind: Kind): { label: string; last: string; change: string; changeValue: number | null } {
-  if (kind !== 'macro') return { label: row.group, last: formatPrice(row.last), change: formatPercent(row.changePct), changeValue: row.changePct }
-  const label = MACRO_LABELS[row.group] ?? row.group
+export function legendText(row: LegendRow, kind: Kind, labels?: Record<string, string>): { label: string; last: string; change: string; changeValue: number | null } {
+  const label = legendLabel(row.group, kind, labels)
+  if (kind !== 'macro') return { label, last: formatPrice(row.last), change: formatPercent(row.changePct), changeValue: row.changePct }
   if (MACRO_AMOUNTS.has(row.group)) {
     return { label, last: row.last == null ? '–' : formatCompact(row.last), change: formatPercent(row.changePct), changeValue: row.changePct }
   }
@@ -73,6 +60,7 @@ function themeBackground(theme: DeepPartial<ChartOptions>): string | undefined {
 export const SeriesView: FC<ViewProps> = ({ widget, frame }) => {
   const kind = widget.query.kind
   const mode = seriesMode(widget.view)
+  const labels = widget.view.type === 'series' ? widget.view.labels : undefined
   const intraday = widget.query.kind === 'ohlcv' ? intervalIsIntraday(widget.query.params.interval) : false
   const series = useMemo(() => {
     const all = groupBars(frame, intraday)
@@ -192,7 +180,7 @@ export const SeriesView: FC<ViewProps> = ({ widget, frame }) => {
   return (
     <div data-view="series" data-mode={mode} data-kind={kind} style={rootStyle}>
       <div ref={hostRef} style={hostStyle} />
-      <Legend rows={legend} kind={kind} background={themeBackground(theme)} />
+      <Legend rows={legend} kind={kind} labels={labels} background={themeBackground(theme)} />
     </div>
   )
 }
@@ -200,7 +188,7 @@ export const SeriesView: FC<ViewProps> = ({ widget, frame }) => {
 const rootStyle: CSSProperties = { position: 'relative', width: '100%', height: '100%', minHeight: 160 }
 const hostStyle: CSSProperties = { position: 'absolute', inset: 0 }
 
-const Legend: FC<{ rows: LegendRow[]; kind: Kind; background: string | undefined }> = ({ rows, kind, background }) => (
+const Legend: FC<{ rows: LegendRow[]; kind: Kind; labels: Record<string, string> | undefined; background: string | undefined }> = ({ rows, kind, labels, background }) => (
   <div
     data-legend=""
     role="list"
@@ -224,10 +212,10 @@ const Legend: FC<{ rows: LegendRow[]; kind: Kind; background: string | undefined
     }}
   >
     {rows.map((row) => {
-      const text = legendText(row, kind)
+      const text = legendText(row, kind, labels)
       const dir = direction(text.changeValue)
       return (
-        <div key={row.group} role="listitem" data-symbol={row.group} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div key={row.group} role="listitem" data-symbol={row.group} title={text.label === row.group ? undefined : row.group} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span aria-hidden="true" style={{ display: 'inline-block', width: 10, height: 2, borderRadius: 1, background: row.color ?? 'currentColor' }} />
           <span style={{ fontWeight: 600 }}>{text.label}</span>
           <span data-field="last">{text.last}</span>

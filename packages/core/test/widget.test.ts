@@ -30,6 +30,23 @@ describe('widget schema', () => {
       expect(() => parseWidget({ id: 'w', title: 'x', size: 'sm', query, view: { type: 'table' } })).not.toThrow()
     }
   })
+  it('accepts legend labels keyed by the query symbols and trims them', () => {
+    const w = parseWidget({ id: 'w', title: 'x', size: 'lg', query: ohlcv(['MU', 'SNDK']), view: { type: 'series', normalize: true, labels: { MU: ' Micron ', SNDK: 'SanDisk' } } })
+    expect(w.view).toEqual({ type: 'series', normalize: true, labels: { MU: 'Micron', SNDK: 'SanDisk' } })
+    const macro = { kind: 'macro', params: { series: ['treasury_10y', 'fed_funds'], range: '1y' } }
+    expect(parseWidget({ id: 'w', title: 'x', size: 'lg', query: macro, view: { type: 'series', labels: { fed_funds: 'Policy rate' } } }).view).toEqual({
+      type: 'series',
+      labels: { fed_funds: 'Policy rate' },
+    })
+  })
+  it('rejects legend labels for symbols the query does not have, and blank or long labels', () => {
+    expect(() => parseWidget({ id: 'w', title: 'x', size: 'lg', query: ohlcv(['MU']), view: { type: 'series', labels: { WDC: 'Western Digital' } } })).toThrow(/WDC.* is not one of the query's symbols/)
+    expect(() => parseWidget({ id: 'w', title: 'x', size: 'lg', query: ohlcv(['MU']), view: { type: 'series', labels: { MU: '  ' } } })).toThrow()
+    expect(() => parseWidget({ id: 'w', title: 'x', size: 'lg', query: ohlcv(['MU']), view: { type: 'series', labels: { MU: 'x'.repeat(33) } } })).toThrow()
+  })
+  it('drops labels from a table view', () => {
+    expect(parseWidget({ id: 'w', title: 'x', size: 'sm', query: ohlcv(['MU']), view: { type: 'table', labels: { MU: 'Micron' } } }).view).toEqual({ type: 'table' })
+  })
   it('rejects unknown sizes and views', () => {
     expect(() => parseWidget({ id: 'w', title: 'x', size: 'xl', query: ohlcv(['MU']), view: { type: 'table' } })).toThrow()
     expect(() => parseWidget({ id: 'w', title: 'x', size: 'sm', query: ohlcv(['MU']), view: { type: 'stat' } })).toThrow()
