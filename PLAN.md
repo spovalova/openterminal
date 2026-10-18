@@ -618,6 +618,39 @@ Tools: `find_route(query: string)` returns up to five catalog entries; `query(co
 
 `packages/core/src/kinds.ts` and its 22 schemas; per-kind handlers in all three connectors (OpenBB's 600-line `index.ts` becomes the descriptor generator plus a 60-line caller); `formatsFor`, `KIND_PRIORITY`, `subtitleFor` per kind (replaced by shape and annotations: subtitle is route summary plus the params that matter); `STAT_KEY_COLUMN` (replaced by annotation `key: true` or the first numeric). Section 7.1's table becomes the recipe list in `recipes.yml`.
 
+### UI changes from the Instinct reference (ss.png, 2026-10-18)
+
+The user's screenshot of Instinct's "CL market summary" workspace sets the bar. What it does and what v2 takes from it:
+
+- **Three columns beside the open panel.** Its grid is about 1,470 CSS px wide with a 380 px panel, six widgets in two rows of three, each about 480 px wide and 450 px tall, filling the viewport with no vertical scroll. Our packer gives three columns from 1,100 px of grid width; v2 lowers that to 960 px (widgets about 320 px wide), so a 1,440 px laptop with the panel open gets three columns. Charts, stat cards and facts cards work at 320; tables shed columns by priority as they do now.
+- **Size by content, not by the agent's guess.** Instinct's widgets are uniform; ours vary by an agent-chosen size that does not know the data. v2 keeps lg, md and sm as hints but lets the packer demote: a table with six rows or fewer, a stat, a facts card and a one-symbol quote are one row tall; charts are two rows tall unless there are more than six widgets. The rule lives in `packLayout` beside the no-holes rule and is what removes the blank space inside tables.
+- **Charts before tables.** Every one of Instinct's six widgets is a chart. The prompt's widget guidance flips its default: a chart or a stat for anything with a time column or a headline number; a table only for comparison across rows (more than one row, more than two columns). The bench's widgets criterion grades it.
+- **Presets the screenshot uses that we lack**: signed bars (funding rate: positive green, negative red, zero line), a diverging colour scale with a legend (monthly returns), a horizontal volume profile beside the price, event markers on the line with icons by kind, last-value badges on the price axis in the series colour, legend chips inside the plot's top-left. All are marks or options in the layer model; the first three are new marks (`bar` with signed colour, `cell` with a diverging scale, `profile`).
+- **Shell**: a ticker strip under the tabs with four to six live quotes the user chooses (SPX, NDX, 10y, VIX, oil, gold by default) and a market strip in the status bar; the conversation panel header shows "Worked for 16 s · 4 steps" with the steps expandable, which our run log provides. Not taken: drag handles (rule 3 stands), a Feed or Home page (rule 2), alerts (section 9).
+
+### Visual acceptance: test cases and the iteration loop
+
+Every phase 1 workstream that touches what the user sees ships with screenshots, and phase 2 does not end until the cases below look right. "Look right" is a checklist a headless browser can score, plus a human look at the final set.
+
+Checklist per workspace, measured in headless Chromium at 1440x900 and 1920x1080 with the panel open: no element with `scrollWidth > clientWidth`; no empty grid cell; no widget whose content box fills less than 60% of its height (tables and cards) or 80% (charts); no table with one row; three columns at 1440 with the panel open; every widget has a title and a sub-header; every chart has a legend and a last-value label; no text clipped mid-word; the reply has no unverified number (reply verification) and at least one chip per cited widget. Plus a human pass on the set for taste: alignment, density, colour, that it reads like a terminal.
+
+Cases (prompt, then what the workspace must contain):
+
+1. "Why is CRWV down?" — price with the drop marked and news markers; bond yields line (FINRA) with the 2030 notes; peers compare; a stat for today's move; the reply names the catalyst.
+2. "Compare the neoclouds" — rebased performance chart; a compare table (metrics by symbol, best and worst marked) with growth, margins, debt, FCF, valuation; estimates; no table under seven rows.
+3. "What's happening to the S&P last week?" — `^GSPC` for exactly last week with macro-release markers; sector performance bars for the week; leaders and laggards; the calendar rows for that week in the reply.
+4. "TSLA puts for next Friday" — the chain with the underlying from the quote; IV term structure on a numeric axis; a stat for IV rank; the implied move in the reply.
+5. "TSLA earnings reactions" — candle chart with every report marked and its reaction; a table of reports with the reaction column; the reply gives all seven.
+6. "Large-cap tech under 20x" — the screener as a table sorted by P/E, virtualised; a stat for the count; a heatmap of P/E by sector.
+7. "P/E over time for NVDA" — the derived line with the EPS dates marked; the current value as a stat; the transform visible in the editor.
+8. "RSI and MACD on AMD" — price pane, RSI pane with 30/70 levels, MACD pane with histogram, one widget.
+9. "10y minus 2y and the curve today" — the spread line from two macro series with recession-style shading when negative; the yield curve on a numeric axis.
+10. "Morning check on my watchlist" — a ticker strip, a quote stat row, reporting-today markers, overnight news; three columns, two rows, no scroll.
+11. "Correlation of the Mag 7 over 6 months" — a heatmap with a diverging scale and the pairs named in the reply.
+12. "Backtest a 50/200 SMA cross on SPY since 2020" — equity curve against buy-and-hold, trade markers, a facts card with the summary statistics.
+
+The loop: a bot builds the workspace through the agent on its own server, screenshots it, runs the checklist, fixes what fails (preset, prompt rule, packer rule, annotation), and repeats until the checklist passes; then a second bot, briefed only with the screenshot and the case, grades taste and lists what it would change; the first bot addresses that once more. The PR carries the final screenshots in a before/after table against production, and the bench note records the checklist results. No case is marked done on a bot's say-so; the user looks at the final set.
+
 ### Also in v2
 
 Changes outside the data and view model that v2 should carry, because the schema migration makes them cheapest now or because the model makes them nearly free.
@@ -645,7 +678,7 @@ Deferred with a reason: Arrow for frames over the socket and into Pyodide (until
 
 0. **Trunk** (one agent, sequential): descriptor type, catalog with search, shape detection, annotations loader, unit conversion, the runner, and tests with a recorded `openapi.json` fixture. Nothing user-visible changes.
 1. **Parallel**: (a) OpenBB descriptor generator, caller, probe script and liveness; (b) yahoo and finnhub descriptor files and callers; (c) agent tools and prompt with recipes; (d) web: views by shape, editor from descriptors, Connectors page catalog, subtitles from routes; (e) SQLite store and migration, persistent cache, run log, `pnpm query`, docs (`writing-a-connector.md` rewritten around descriptors, the README kinds table replaced by "any route, plus these recipes"); (f) transforms: the Pyodide worker, the `ot` helpers, the tool, the widget type, editor and subtitle; (h) shell: the three-tab editor, the Data page, virtualised tables, export and import, widget-scoped prompts, the rename; (i) reply verification; (g) views: the field config pipeline, presets, the pane-and-layer chart renderer (markers, levels, bands, histogram, numeric x), table control, facts card and the one-row rule, heatmap.
-2. **Integrate and accept**: bench v2 rerun; the target is the three user prompts passing and no regression on bench v1; new annotations added for every unit mistake found.
+2. **Integrate and accept**: bench v2 rerun and the twelve visual cases above through the iteration loop; the target is the three user prompts passing, the checklist green on all twelve at both viewports, and no regression on bench v1; new annotations added for every unit mistake found.
 3. **Remove**: delete the kind code once the bench passes; PLAN.md sections 7.1, 14 marked superseded.
 
 ### Risks and answers
