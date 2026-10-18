@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "query": "tsx scripts/query.ts"
+    "query": "tsx scripts/query.ts",
+    "bench": "node scripts/prompt-bench.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

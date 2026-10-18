@@ -1,0 +1,275 @@
+================ semis
+PROMPT: Semis vs the market: NVDA, AMD, AVGO, TSM and MU against SOXX and SPY, normalized over 6 months. Who is carrying the group?
+    10ms started
+  5111ms step ohlcv NVDA, AMD, AVGO, TSM, MU, SOXX, SPY 1d 6mo · 889 rows (1145ms)
+  5510ms step earnings NVDA, AMD, AVGO, TSM, MU 2026-10-17→2026-12-16 · 3 rows (1541ms)
+  7725ms step quote NVDA, AMD, AVGO, TSM, MU, SOXX, SPY · 7 rows (3758ms)
+  8490ms step news NVDA, AMD, AVGO, TSM, MU · 20 rows (4522ms)
+ 12549ms step set_workspace · 5 widgets (0ms)
+ 12549ms widgets name=Semis vs market w1:ohlcv/series+norm/lg w2:quote/table/md w3:ohlcv/series+candle/md w4:earnings/table/sm w5:news/table/md
+ 12554ms frame w1 889 rows (openbb)
+ 12556ms frame w2 7 rows (yahoo)
+ 12556ms frame w4 3 rows (openbb)
+ 12556ms frame w5 20 rows (openbb)
+ 12728ms frame w3 127 rows (openbb)
+ 16856ms done
+
+REPLY (16856ms total):
+Tickers are known; skip search.
+
+AMD and MU are carrying the group. Over six months AMD is up 89.9% and MU is up 93.1%, while SOXX is up 18.7% and SPY is up 7.5%. TSM (+11.4%) and NVDA (+6.2%) are only roughly keeping pace with the market, and AVGO is down 19.1%, which drags the group down.
+
+The leaders have also pulled back the most. MU closed at 878.84, well below its six-month closing high of 1213.56, and AMD closed at 528.75, down from 649.42. Friday was a heavy selloff: AMD fell 5.95%, MU 5.63% and SOXX 4.14%, compared with 1.11% for SPY, and the headlines point to money rotating out of chipmakers. The next catalysts are AMD earnings on Nov 3 after the close and NVDA on Nov 18; TSM and MU have no report dates in the next 60 days.
+
+[[widget:w1]] [[widget:w2]] [[widget:w4]] [[widget:w5]]
+
+streamed text equals message.text: true
+EXIT 0
+================ earnings-setup
+PROMPT: Which of MU, SNDK, WDC, STX, NVDA, AAPL, MSFT report earnings in the next 3 weeks? For each one, show how the stock has traded into the report over the last month.
+     9ms started
+  4351ms step ohlcv MU, SNDK, WDC, STX, NVDA, AAPL, MSFT 1d 1mo · 154 rows (875ms)
+  4527ms step earnings MU, SNDK, WDC, STX, NVDA, AAPL, MSFT 2026-10-17→2026-11-07 · 5 rows (1052ms)
+  6377ms step quote MU, SNDK, WDC, STX, NVDA, AAPL, MSFT · 7 rows (2901ms)
+ 13692ms step set_workspace · 5 widgets (1ms)
+ 13692ms widgets name=Earnings Run-Up Check w1:ohlcv/series+norm/lg w2:earnings/table/sm w3:quote/table/md w4:ohlcv/series+candle/md w5:news/table/md
+ 13706ms frame w2 5 rows (openbb)
+ 14885ms frame w1 110 rows (openbb)
+ 15016ms frame w4 22 rows (openbb)
+ 15026ms frame w3 7 rows (openbb)
+ 15644ms frame w5 20 rows (openbb)
+ 16968ms done
+
+REPLY (16968ms total):
+Five of the seven report in the next three weeks, all after the close: WDC on Oct 22, STX on Oct 27, MSFT on Oct 28, SNDK on Oct 29 and AAPL on Nov 2. MU and NVDA have no report dates before Nov 7. Over the last month, the storage names have sold off hard heading into their reports: WDC is down 21.67%, STX 20.44% and SNDK 19.52%. On Friday alone, STX fell 7.50%, WDC 6.86% and SNDK 6.85%. MSFT went the other way, up 6.29% for the month despite slipping 1.93% Friday, and AAPL is up 1.92% for the month and rose 0.43% Friday.
+
+[[widget:w1]] [[widget:w2]] [[widget:w3]]
+
+streamed text equals message.text: true
+EXIT 0
+================ aapl-today
+PROMPT: AAPL today: 5 minute candles, the headlines that moved it, and how it did against QQQ.
+     8ms started
+  4682ms step ohlcv AAPL, QQQ 5m 1d · 156 rows (471ms)
+  4875ms step ohlcv AAPL 5m 1d · 78 rows (665ms)
+  5078ms step news AAPL · 20 rows (867ms)
+  5233ms step earnings AAPL 2026-10-17→2026-12-16 · 1 row (1020ms)
+  6013ms step quote AAPL, QQQ · 2 rows (1801ms)
+ 15129ms step set_workspace · 5 widgets (0ms)
+ 15130ms widgets name=AAPL Today vs QQQ w1:ohlcv/series+candle/lg w2:ohlcv/series+norm/md w3:quote/table/sm w4:news/table/md w5:earnings/table/sm
+ 15141ms frame w1 78 rows (openbb)
+ 15142ms frame w2 156 rows (openbb)
+ 15142ms frame w3 2 rows (yahoo)
+ 15142ms frame w4 20 rows (openbb)
+ 15142ms frame w5 1 rows (openbb)
+ 16438ms frame w3 2 rows (yahoo)
+ 19478ms done
+
+REPLY (19479ms total):
+In Friday's session (the market is closed for the weekend), AAPL closed at $343.46, up 0.43%, while QQQ fell 2.5%. That's roughly a 3-point outperformance on a day when tech sold off hard.
+
+Most of AAPL's gain came at the open. After the first 5-minute bar it drifted down 0.5% for the rest of the day, while QQQ fell 1.98% over the same stretch. After hours AAPL slipped another 0.24% to $342.62.
+
+Two headlines explain the day. Apple-specific: "Apple Edges Higher on iPhone Duo Preorder Surge." Market-wide: "Stock Indexes Finish Sharply Lower as Tech Stocks Plunge." Most of the other AAPL-tagged stories are general investing pieces that probably didn't move the stock.
+
+AAPL reports next on November 2 after the close, with an EPS estimate of $1.99.
+
+[[widget:w1]] [[widget:w2]] [[widget:w3]] [[widget:w4]] [[widget:w5]]
+
+streamed text equals message.text: true
+EXIT 0
+================ storage
+PROMPT: Find the storage names for me: Sandisk, Western Digital, Seagate, Pure Storage. Quotes plus a one year comparison.
+     7ms started
+  1805ms step search Sandisk, Western Digital, Seagate, Pure Storage · 3 rows (254ms)
+  7297ms step ohlcv SNDK, WDC, STX, PSTG 1d 1y · 753 rows (1706ms)
+  7656ms step earnings SNDK, WDC, STX, PSTG 2026-10-17→2026-12-16 · 3 rows (2064ms)
+  8330ms step quote SNDK, WDC, STX, PSTG · 3 rows (2740ms)
+ 10302ms step news SNDK, WDC, STX, PSTG · 20 rows (4711ms)
+ 14527ms step set_workspace · 5 widgets (0ms)
+ 14527ms widgets name=Storage names w1:ohlcv/series+norm/lg w2:quote/table/md w3:earnings/table/sm w4:search/table/sm w5:news/table/md
+ 14541ms frame w4 3 rows (openbb)
+ 14936ms frame w1 753 rows (openbb)
+ 15127ms frame w5 20 rows (openbb)
+ 15270ms frame w3 3 rows (openbb)
+ 16187ms frame w2 3 rows (openbb)
+ 17995ms done
+
+REPLY (17995ms total):
+Over the past year Sandisk (SNDK) is up 827%, Seagate (STX) 184% and Western Digital (WDC) 163%. All three fell sharply on Friday: STX dropped 7.5% to $639.01, WDC 6.9% to $332 and SNDK 6.8% to $1,299.30, and each slipped about another 1% after hours. Earnings are coming soon: WDC reports Oct 22, STX Oct 27 and SNDK Oct 29, all after the close. I left Pure Storage out because the search didn't find it, and its likely ticker, PSTG, returned no quote, price or earnings data. Also, the news feed only returned SNDK headlines, and most of them are general market stories, not about storage.
+
+[[widget:w1]] [[widget:w2]] [[widget:w3]] [[widget:w4]]
+
+streamed text equals message.text: true
+EXIT 0
+================ mag7
+PROMPT: Mag 7 dashboard: quotes, today's intraday chart for each, and the headlines.
+     7ms started
+  6579ms step ohlcv AAPL, MSFT, GOOGL, AMZN, META, NVDA, TSLA 5m 1d · 546 rows (1209ms)
+  6834ms step earnings AAPL, MSFT, GOOGL, AMZN, META, NVDA, TSLA 2026-10-17→2026-11-16 · 6 rows (1464ms)
+  7892ms step quote AAPL, MSFT, GOOGL, AMZN, META, NVDA, TSLA · 7 rows (2523ms)
+  8542ms step news AAPL, MSFT, GOOGL, AMZN, META, NVDA, TSLA · 30 rows (3173ms)
+ 14163ms step set_workspace · 6 widgets (1ms)
+ 14164ms widgets name=Mag 7 Dashboard w1:ohlcv/series+norm/lg w2:quote/table/md w3:news/table/md w4:ohlcv/series+candle/sm w5:ohlcv/series+candle/sm w6:earnings/table/md
+ 14167ms frame w1 546 rows (openbb)
+ 14167ms frame w2 7 rows (openbb)
+ 14167ms frame w3 30 rows (openbb)
+ 14168ms frame w6 6 rows (openbb)
+ 14380ms frame w4 78 rows (openbb)
+ 14561ms frame w5 78 rows (openbb)
+ 18756ms done
+
+REPLY (18756ms total):
+Friday was a down day for tech, and AAPL was the only Mag 7 name that rose (+0.43%). META fell the most at -3.72%, followed by GOOGL -2.47%, TSLA -2.13%, MSFT -1.93%, AMZN -1.87% and NVDA -1.43%. The top headline was "Stock Indexes Finish Sharply Lower as Tech Stocks Plunge."
+
+The market is closed today, so the intraday charts show Friday's session. A workspace holds at most six widgets, so instead of seven separate charts, the main chart puts all seven on one rebased scale. Only META and TSLA get their own candle charts, because they fell hard and both report earnings after the close on Oct 21. GOOGL and MSFT report Oct 28, AMZN Oct 29 and AAPL Nov 2. NVDA doesn't report in the next 30 days.
+
+[[widget:w1]] [[widget:w2]] [[widget:w3]] [[widget:w6]]
+
+streamed text equals message.text: true
+EXIT 0
+================ gold
+PROMPT: Is the gold trade over? GLD vs SLV vs GDX vs the dollar (UUP) over 2 years on a weekly chart, plus GLD news.
+     7ms started
+  5727ms step ohlcv GLD, SLV, GDX, UUP 1w 5y · 1044 rows (677ms)
+  5816ms step ohlcv GLD 1d 3mo · 65 rows (765ms)
+  6859ms step ohlcv GLD, SLV, GDX, UUP 1w 1y · 208 rows (1809ms)
+  6915ms step quote GLD, SLV, GDX, UUP · 4 rows (1864ms)
+ 13287ms step news GLD · 20 rows (8236ms)
+ 20539ms step set_workspace · 5 widgets (0ms)
+ 20539ms widgets name=Gold trade check w1:ohlcv/series+norm/lg w2:ohlcv/series+norm/md w3:ohlcv/series+candle/md w4:quote/table/sm w5:news/table/md
+ 20553ms frame w1 1044 rows (openbb)
+ 20555ms frame w2 208 rows (openbb)
+ 20555ms frame w3 65 rows (openbb)
+ 20555ms frame w5 20 rows (openbb)
+ 20779ms frame w4 4 rows (yahoo)
+ 24943ms done
+
+REPLY (24943ms total):
+The data doesn't show the trade reversing, but its momentum has clearly stalled. There's no 2-year range available, so the main chart shows 5 years of weekly bars, with a 1-year view beside it. Over the past year GLD is up only 1.19% and closes at 382.01, well below its weekly high of 483.75, while SLV (51.51, peak 92.91) and GDX (87.71, peak 115.84) have also fallen hard from their highs, though they're still up 17.09% and 20.48% on the year. Meanwhile the dollar (UUP) is up 3.62% over the year and closed at 28.92, its highest weekly close of the past 12 months, which is a headwind for gold. GLD headlines are mixed: some recent reports of money flowing into the fund, an earlier report of money flowing out, and commentary about rising rates and the new Fed chair, Kevin Warsh.
+
+[[widget:w1]] [[widget:w2]] [[widget:w3]] [[widget:w5]]
+
+streamed text equals message.text: true
+EXIT 0
+================ nvda-week
+PROMPT: What happened to NVDA last week? Daily candles, the news by day, and tell me whether it was semis-wide (SOXX) or NVDA specific.
+     7ms started
+  4476ms step ohlcv NVDA, SOXX 1d 5d · 10 rows (262ms)
+  4607ms step ohlcv NVDA 1d 1mo · 22 rows (394ms)
+  5098ms step quote NVDA, SOXX, AMD, AVGO, TSM, SPY · 6 rows (884ms)
+  5500ms step news NVDA · 40 rows (1285ms)
+ 13110ms step set_workspace · 4 widgets (0ms)
+ 13110ms widgets name=NVDA week review w1:ohlcv/series+candle/lg w2:ohlcv/series+norm/md w3:quote/table/md w4:news/table/md
+ 13122ms frame w1 22 rows (openbb)
+ 13122ms frame w2 10 rows (openbb)
+ 13122ms frame w3 6 rows (yahoo)
+ 13123ms frame w4 40 rows (openbb)
+ 15312ms frame w3 6 rows (yahoo)
+ 16728ms done
+
+REPLY (16728ms total):
+NVDA's drop last week was across semis, not specific to NVDA, and NVDA held up better than the group. From Monday's close to Friday's close NVDA fell 5.39% (226.32 to 214.13), while SOXX fell 9.44%. The heaviest selling hit Wednesday and Thursday, when NVDA closed at 221.30 and then 217.23 on its highest volume of the week. On Friday NVDA lost 1.43%, against SOXX down 4.14%, AMD down 5.95%, AVGO down 4.52% and SPY down 1.11%. The news, which you can sort by date, was about worry over AI spending rather than anything about Nvidia itself: a report that OpenAI's annual revenue pace came in $18 billion below expectations, headlines about a "chip stock rout," and concern about how much CoreWeave has borrowed.
+
+[[widget:w1]] [[widget:w2]] [[widget:w3]] [[widget:w4]]
+
+streamed text equals message.text: true
+EXIT 0
+================ followups
+PROMPT: Watchlist: MU, SNDK, WDC, STX. Quotes and 3 month lines. || Add NVDA and TSM, switch the chart to one year normalized, and put the earnings calendar for all six next to it. || Drop the quotes, I only want the chart and the calendar.
+     7ms started
+  4878ms step ohlcv MU, SNDK, WDC, STX 1d 3mo · 260 rows (1539ms)
+  4992ms step quote MU, SNDK, WDC, STX · 4 rows (1654ms)
+  5057ms step news MU, SNDK, WDC, STX · 20 rows (1717ms)
+  5191ms step earnings MU, SNDK, WDC, STX 2026-10-17→2026-12-16 · 3 rows (1852ms)
+  9534ms step set_workspace · 4 widgets (1ms)
+  9534ms widgets name=Memory watchlist w1:ohlcv/series+norm/lg w2:quote/table/md w3:earnings/table/sm w4:news/table/md
+  9537ms frame w1 260 rows (openbb)
+  9537ms frame w2 4 rows (openbb)
+  9537ms frame w3 3 rows (openbb)
+  9537ms frame w4 20 rows (openbb)
+ 13920ms done
+
+REPLY 1 (13920ms):
+All four fell hard in Friday's session: STX was down 7.50% at $639.01, WDC down 6.86% at $332, SNDK down 6.85% at $1,299.30 and MU down 5.63% at $878.84. Over three months only MU is up, by 3.52%. SNDK is down 4.10%, STX 18.87% and WDC 30.43%.
+
+Three of them report soon, all after the close: WDC on Oct 22, STX on Oct 27 and SNDK on Oct 29. MU has no report date in the next 60 days. I added the earnings and news tables too. The headlines are mostly about a sell-off in chip and tech stocks.
+
+[[widget:w1]] [[widget:w2]] [[widget:w3]]
+
+>>> follow-up: Add NVDA and TSM, switch the chart to one year normalized, and put the earnings calendar for all six next to it.
+ 13921ms started
+ 15123ms frame w2 4 rows (openbb)
+ 17930ms step ohlcv MU, SNDK, WDC, STX, NVDA, TSM 1d 1y · 1506 rows (651ms)
+ 18232ms step earnings MU, SNDK, WDC, STX, NVDA, TSM 2026-10-17→2026-12-16 · 4 rows (953ms)
+ 19832ms step quote MU, SNDK, WDC, STX, NVDA, TSM · 6 rows (2553ms)
+ 24046ms step set_workspace · 4 widgets (1ms)
+ 24047ms widgets name=Memory watchlist w1:ohlcv/series+norm/lg w3:earnings/table/md w2:quote/table/md w4:news/table/md
+ 24060ms frame w1 1506 rows (openbb)
+ 24060ms frame w3 4 rows (openbb)
+ 24060ms frame w2 6 rows (openbb)
+ 24099ms frame w4 20 rows (openbb)
+ 27795ms done
+
+REPLY 2 (27795ms):
+I added NVDA and TSM and switched the chart to one year, normalized. The memory names are far ahead over that year: SNDK is up 827.01%, MU 334.25%, STX 183.50% and WDC 163.07%, against 39.83% for TSM and 16.87% for NVDA. The two new names held up better on Friday too, with NVDA down 1.43% and TSM down 2.28%, while the memory names fell between 5.6% and 7.5%.
+
+The earnings calendar for all six is now next to the chart. WDC reports Oct 22, STX Oct 27 and SNDK Oct 29, all after the close. NVDA reports Nov 18 with a $2.48 EPS estimate, and neither MU nor TSM has a date in the next 60 days.
+
+[[widget:w1]] [[widget:w3]] [[widget:w2]]
+
+>>> follow-up: Drop the quotes, I only want the chart and the calendar.
+ 27796ms started
+ 29988ms frame w2 6 rows (openbb)
+ 37650ms step ohlcv MU, SNDK, WDC, STX, NVDA, TSM 1d 1y · 1506 rows (4ms)
+ 37650ms step earnings MU, SNDK, WDC, STX, NVDA, TSM 2026-10-17→2026-12-16 · 4 rows (4ms)
+ 38221ms step ohlcv MU, SNDK, WDC, STX, NVDA, TSM 1d 3mo · 390 rows (575ms)
+ 38332ms step ohlcv WDC 1d 6mo · 127 rows (685ms)
+ 41024ms frame w2 6 rows (openbb)
+ 42422ms step set_workspace · 4 widgets (0ms)
+ 42423ms widgets name=Memory watchlist w1:ohlcv/series+norm/lg w3:earnings/table/md w5:ohlcv/series+norm/md w6:ohlcv/series+candle/md
+ 42434ms frame w1 1506 rows (openbb)
+ 42435ms frame w3 4 rows (openbb)
+ 42435ms frame w5 390 rows (openbb)
+ 42435ms frame w6 127 rows (openbb)
+ 46168ms done
+
+REPLY (46169ms total):
+I removed the quotes and the news table. The one-year chart and the earnings calendar are the main widgets now. A workspace needs at least four widgets, so I added two more charts: a three-month view of the same six names and a WDC daily candle chart.
+
+WDC reports first, on Oct 22 after the close, with an EPS estimate of 3.97. STX follows on Oct 27 and SNDK on Oct 29, both after the close, and NVDA reports on Nov 18. MU and TSM don't have a report date in the next 60 days.
+
+The three-month chart shows how much the memory names have cooled off lately: WDC is down 30.43%, STX 18.87% and SNDK 4.10%, while MU is up 3.52%. Over six months WDC is down 10.88%.
+
+[[widget:w1]] [[widget:w3]] [[widget:w5]] [[widget:w6]]
+
+streamed text equals message.text: true
+EXIT 0
+================ vague
+PROMPT: I think memory is about to roll over. Am I right?
+     8ms started
+  2210ms step search memory, MU, SNDK, WDC, STX · 15 rows (332ms)
+  7501ms step news MU, SNDK, WDC, STX · 20 rows (1ms)
+  7501ms step earnings MU, SNDK, WDC, STX 2026-10-17→2026-12-16 · 3 rows (1ms)
+  8046ms step ohlcv MU, SNDK, WDC, STX, SMH 1d 6mo · 635 rows (546ms)
+  8466ms step ohlcv MU, SNDK, WDC, STX, SMH 1d 1mo · 110 rows (966ms)
+  9485ms step quote MU, SNDK, WDC, STX, SMH · 5 rows (1984ms)
+ 16094ms step set_workspace · 6 widgets (0ms)
+ 16095ms widgets name=Memory rollover check w1:ohlcv/series+norm/lg w2:ohlcv/series+norm/md w3:ohlcv/series+candle/md w4:quote/table/md w5:earnings/table/sm w6:news/table/md
+ 16096ms frame w1 110 rows (openbb)
+ 16097ms frame w2 635 rows (openbb)
+ 16097ms frame w3 127 rows (openbb)
+ 16097ms frame w4 5 rows (yahoo)
+ 16097ms frame w5 3 rows (openbb)
+ 16097ms frame w6 20 rows (openbb)
+ 19678ms frame w4 5 rows (yahoo)
+ 20211ms done
+
+REPLY (20211ms total):
+The price action backs you up, though it can't tell you whether this keeps going. Over the past month WDC is down 21.7%, STX 20.4%, SNDK 19.5% and MU 10.1%, while SMH fell only 3.7%. So memory is clearly weaker than the rest of semis, and Friday added another 5.6–7.5% drop across all four names. MU closed at 878.84, against a 6‑month closing high of 1,213.56, and it's still up 93% over six months, so this is a pullback after a huge run rather than a long-term breakdown so far. The next test is earnings: WDC reports Oct 22, STX Oct 27 and SNDK Oct 29, all after the close, and the headlines are mostly about the sector selling off and whether the memory cycle is turning.
+
+[[widget:w1]] [[widget:w3]] [[widget:w4]] [[widget:w5]]
+
+streamed text equals message.text: true
+EXIT 0
+ALLDONE

@@ -1,0 +1,15 @@
+[
+  { "name": "semis", "prompt": "Semis vs the market: NVDA, AMD, AVGO, TSM and MU against SOXX and SPY, normalized over 6 months. Who is carrying the group?" },
+  { "name": "earnings-setup", "prompt": "Which of MU, SNDK, WDC, STX, NVDA, AAPL, MSFT report earnings in the next 3 weeks? For each one, show how the stock has traded into the report over the last month." },
+  { "name": "aapl-today", "prompt": "AAPL today: 5 minute candles, the headlines that moved it, and how it did against QQQ." },
+  { "name": "storage", "prompt": "Find the storage names for me: Sandisk, Western Digital, Seagate, Pure Storage. Quotes plus a one year comparison." },
+  { "name": "mag7", "prompt": "Mag 7 dashboard: quotes, today's intraday chart for each, and the headlines." },
+  { "name": "gold", "prompt": "Is the gold trade over? GLD vs SLV vs GDX vs the dollar (UUP) over 2 years on a weekly chart, plus GLD news." },
+  { "name": "nvda-week", "prompt": "What happened to NVDA last week? Daily candles, the news by day, and tell me whether it was semis-wide (SOXX) or NVDA specific." },
+  { "name": "followups", "prompts": [
+    "Watchlist: MU, SNDK, WDC, STX. Quotes and 3 month lines.",
+    "Add NVDA and TSM, switch the chart to one year normalized, and put the earnings calendar for all six next to it.",
+    "Drop the quotes, I only want the chart and the calendar."
+  ] },
+  { "name": "vague", "prompt": "I think memory is about to roll over. Am I right?" }
+]

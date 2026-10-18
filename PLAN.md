@@ -17,6 +17,8 @@ Observations from the verifiers worth a follow-up, none blocking: the agent neve
 
 **Production instance (2026-10-18).** The user asked for one always running on 4242. `deploy/systemd/` holds two systemd user units, `terminal.service` (loopback 4242, keys from `~/terminal/.env`, restart on crash and boot via linger) and `openbb-api.service` (6900), linked into `~/.config/systemd/user/` on this machine; `deploy/redeploy.sh` rebuilds the web app and restarts after a pull. The production `~/.terminal/config.yml` lists openbb, yahoo, finnhub. Not part of the shipped product: `npx terminal` stays the one-command story; this is how this VM is run.
 
+**Prompt bench (2026-10-18).** Nine show-off prompts plus one ad-hoc run against production, written up in `docs/notes/prompt-bench-2026-10-18.md`, rerunnable with `pnpm bench` (`scripts/prompts.json`, `scripts/prompt-bench.mjs`). Seven pass or partial, three fail, all numbers in the replies verified against the frames. Open defects from it, in priority order: the model sometimes streams a one-line plan before the reply; "four to six widgets" is read as a floor even when the user asks for two (both are prompt edits in `packages/server/src/agent/prompt.ts`); no `2y` range in the ohlcv catalog; an empty search frame from the first connector is final and never falls through; multi-symbol news lets one name take most of the rows.
+
 **If you are taking over**, read this file once top to bottom, then:
 
 1. Start at Phase 0 in section 11. Do not fan out to parallel work before Phase 0 is green.
