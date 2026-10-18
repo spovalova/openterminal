@@ -1,0 +1,28 @@
+{
+ "results": [
+  {
+   "symbol": "MU",
+   "target_high": 3000.0,
+   "target_low": 361.0,
+   "target_consensus": 1560.5652,
+   "target_median": 1550.0,
+   "recommendation": "strong_buy",
+   "recommendation_mean": 1.36735,
+   "number_of_analysts": 46,
+   "current_price": 878.84,
+   "currency": "USD"
+  },
+  {
+   "symbol": "AAPL",
+   "target_high": 405.0,
+   "target_low": 215.0,
+   "target_consensus": 329.3759,
+   "target_median": 340.0,
+   "recommendation": "buy",
+   "recommendation_mean": 2.20455,
+   "number_of_analysts": 39,
+   "current_price": 343.46,
+   "currency": "USD"
+  }
+ ]
+}

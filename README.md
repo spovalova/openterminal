@@ -2,7 +2,7 @@
 
 > "terminal" is a working name. The real name is undecided; the placeholder lives in one place (package scope and CLI bin) so renaming is one change.
 
-An open-source, local-first, AI-native terminal for retail traders. You type a question. An agent turns it into a **workspace**: four to six **widgets**, each a live query against a **connector** rendered as a chart or table, plus a short reply that links to the widgets it is drawing on. Ask a follow-up and the workspace is rewritten. Everything runs on your machine with your own API keys. Connectors are plugins anyone can write in about 50 lines.
+An open-source, local-first, AI-native terminal for retail traders. You type a question. An agent turns it into a **workspace**: a set of **widgets** (four to six by default, or the one or two you asked for), each a live query against a **connector** rendered by a **view** (a chart, a table, or an option chain), plus a short reply that begins with the answer and links to the widgets it is drawing on. Ask a follow-up and the workspace is rewritten. Everything runs on your machine with your own API keys. Connectors are plugins anyone can write in about 50 lines.
 
 ## What it looks like
 
@@ -71,7 +71,7 @@ For news, add a free Finnhub key on the connectors page in the app (it is saved 
 
 ### More data with OpenBB
 
-The `openbb` connector answers all five kinds through a locally running [OpenBB Platform](https://docs.openbb.co/platform) API, which is the on-ramp to its providers: yfinance, nasdaq, cboe and sec with no key; FMP, Polygon, Intrinio, Tiingo and others with keys you keep on the OpenBB side. It is listed first in the default config, so when the API is running every query goes to it and yahoo and finnhub become fallbacks; when it is not, the miss costs nothing. Two commands:
+The `openbb` connector answers every kind in the catalog through a locally running [OpenBB Platform](https://docs.openbb.co/platform) API, which is the on-ramp to its providers: yfinance, nasdaq, cboe and sec with no key; FMP, Polygon, Intrinio, Tiingo and others with keys you keep on the OpenBB side. It is listed first in the default config, so when the API is running every query goes to it and yahoo and finnhub become fallbacks; when it is not, the miss costs nothing. Two commands:
 
 ```sh
 pip install "openbb[routers]" openbb-yfinance
@@ -92,11 +92,47 @@ pnpm dev          # server on :4242, web on :5173, UI preview on :5174
 pnpm typecheck
 pnpm test         # Vitest; connectors run against recorded fixtures, never the network
 pnpm query ohlcv AAPL 1d 3mo    # print a frame from the registry without the app
+pnpm query options symbol=NVDA strikes=5
+pnpm query macro series=treasury_10y,treasury_2y range=2y
+pnpm bench                      # run scripts/prompts.json against a running server
 ```
 
-`pnpm query` takes `search <terms…>`, `quote <symbols…>`, `ohlcv <symbols…> <interval> <range>`, `news <symbols…> [limit]`, or `earnings <symbols…> <from> <to>`.
+`pnpm query <kind> key=value …` works for every kind (comma lists become arrays, numbers become numbers; `pnpm query --help` lists the params of each kind). The five v1 kinds also keep their positional forms: `search <terms…>`, `quote <symbols…>`, `ohlcv <symbols…> <interval> <range>`, `news <symbols…> [limit]`, `earnings <symbols…> <from> <to>`.
 
 Repo layout: `packages/core` (the contract: frame, kinds, widgets, registry, protocol), `packages/server` (loader, HTTP and WebSocket API, store, agent), `packages/ui` (design system), `packages/web` (React app and views), `packages/cli` (`npx terminal`), `connectors/openbb`, `connectors/yahoo` and `connectors/finnhub`. The full tour is in [docs/architecture.md](docs/architecture.md); the plan and the decisions behind it are in [PLAN.md](PLAN.md).
+
+## Kinds and views
+
+A **query** is `{ kind, params }`. A kind is one contract from the catalog in `packages/core/src/kinds.ts`: a param schema plus the exact columns of the resulting **frame**. 22 kinds, grouped as in PLAN.md section 14:
+
+| Group | Kind | Params | Frame columns |
+|---|---|---|---|
+| v1 | `search` | q[] | query, symbol, name, exchange |
+| | `quote` | symbols[] | symbol, price, change_pct, volume, market_state, extended_price, extended_change_pct |
+| | `ohlcv` | symbols[], interval (1m 5m 15m 1h 1d 1w), range (1d 5d 1mo 3mo 6mo 1y 2y 5y) | symbol, time, open, high, low, close, volume |
+| | `news` | symbols[], limit | time, headline, source, url, symbol |
+| | `earnings` | symbols[], from, to | symbol, date, session, eps_estimate |
+| company | `profile` | symbols[] | symbol, name, exchange, sector, industry, market_cap, employees, beta, description |
+| | `metrics` | symbols[] | symbol, market_cap, pe, forward_pe, peg, ev_ebitda, ps, pb, gross_margin, operating_margin, profit_margin, revenue_growth, earnings_growth, roe, debt_to_equity, dividend_yield |
+| | `financials` | symbols[], period (annual, quarter), limit | symbol, period_ending, revenue, gross_profit, operating_income, net_income, eps, operating_cash_flow, capex, free_cash_flow, cash, debt, shares |
+| | `estimates` | symbols[] | symbol, recommendation, analysts, target_low, target_consensus, target_high, upside_pct, eps_estimate_q, eps_estimate_y, eps_growth_y |
+| | `eps_history` | symbols[], limit | symbol, date, eps_actual, eps_estimate, surprise_pct |
+| | `dividends` | symbols[], limit | symbol, ex_date, amount |
+| ownership | `insiders` | symbols[], limit | symbol, date, name, title, action, shares, price, value, url |
+| | `institutions` | symbols[], limit | symbol, date, holder, shares, change_pct, value |
+| | `short_interest` | symbols[], limit | symbol, date, short_interest, change_pct, avg_volume, days_to_cover |
+| options | `options` | symbol, expiration?, strikes, type (call, put, both) | symbol, expiration, type, strike, bid, ask, last, volume, open_interest, iv, delta, gamma, theta, vega, underlying_price, dte |
+| | `volatility` | symbols[] | symbol, iv30, iv30_high, iv30_low, iv_rank, hv30, hv30_high, hv30_low, year_high, year_low |
+| market-wide | `calendar` | from, to, country | time, country, event, actual, consensus, previous |
+| | `ipos` | from, to | symbol, date, name, exchange, price, offer_amount, status |
+| | `movers` | list (gainers, losers, active), limit, min_price (default 5) | symbol, name, price, change_pct, volume |
+| | `holdings` | symbol (an ETF) | etf, symbol, name, weight |
+| | `macro` | series[] (treasury_3m, treasury_2y, treasury_10y, treasury_30y, spread_10y_2y, fed_funds, sofr, cpi_yoy, unemployment, m2), range | series, time, value |
+| | `yield_curve` | date? | date, maturity, years, rate |
+
+Frames are long format: multi-symbol results carry a `symbol` column; `macro` carries `series` instead. `search`, `calendar`, `ipos`, `movers`, `macro` and `yield_curve` take no symbols; `options` and `holdings` take exactly one. Percent columns are percent (5.63, not 0.0563).
+
+Three **views**: `series` (for `ohlcv` and `macro`; `candle` and `normalize` only for `ohlcv`), `table` (any kind), `chain` (only `options`: calls on the left, strikes in the middle, puts on the right, the underlying price marked).
 
 ## How it compares
 
@@ -112,7 +148,7 @@ Deliberately cut, each checked against the three use cases above. Add nothing ba
 - Diff or accept/reject of agent edits: a prompt overwrites the workspace instead
 - Home and Feed pages, a Save button, a watchlist feature: everything is a workspace
 - Dragging and resizing widgets: a CSS grid auto-packs them by size
-- More views (`stat`, `heatmap`, `text`, `list`, area series) and more kinds (`peers`, fundamentals, options flow, filings, economic calendar)
+- More views (`stat`, `heatmap`, `text`, `list`, area series) and kinds beyond the catalog below (`peers`, options flow, filings, transcripts, screeners with arbitrary conditions, technical indicators)
 - Multi-query widgets
 - Real-time streaming: widgets poll on a per-kind TTL
 - Plugin spine (cordis), views and agents as plugins: the loader is swappable later, `defineConnector` does not change
@@ -126,7 +162,7 @@ Deliberately cut, each checked against the three use cases above. Add nothing ba
 
 The easiest contribution is a connector: one file, about 50 lines, tested against recorded fixtures. Start with [docs/writing-a-connector.md](docs/writing-a-connector.md). Use the words in [docs/vocabulary.md](docs/vocabulary.md) exactly, in code, docs, and commit messages. [docs/architecture.md](docs/architecture.md) is the tour for everything else.
 
-Kinds are fixed in v1. To propose a new one, open an issue with a use case the current five cannot serve, the param schema, and the columns.
+Kinds are fixed per release. To propose a new one, open an issue with a use case the current 22 cannot serve, the param schema, and the columns.
 
 ## License
 

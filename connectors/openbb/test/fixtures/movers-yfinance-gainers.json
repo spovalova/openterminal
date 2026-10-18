@@ -1,0 +1,44 @@
+{
+ "results": [
+  {
+   "symbol": "CRGY",
+   "name": "Crescent Energy Company",
+   "price": 13.77,
+   "change": 1.26,
+   "percent_change": 0.10071899999999999,
+   "volume": 22337914
+  },
+  {
+   "symbol": "PAYP",
+   "name": "PayPay Corporation - American D",
+   "price": 15.68,
+   "change": 1.025,
+   "percent_change": 0.069942,
+   "volume": 1172790
+  },
+  {
+   "symbol": "MTDR",
+   "name": "Matador Resources Company",
+   "price": 57.52,
+   "change": 3.75,
+   "percent_change": 0.0697415,
+   "volume": 1939641
+  },
+  {
+   "symbol": "AR",
+   "name": "Antero Resources Corporation",
+   "price": 38.65,
+   "change": 2.21,
+   "percent_change": 0.0606477,
+   "volume": 5205352
+  },
+  {
+   "symbol": "NOG",
+   "name": "Northern Oil and Gas, Inc.",
+   "price": 27.16,
+   "change": 1.41,
+   "percent_change": 0.0547573,
+   "volume": 1691832
+  }
+ ]
+}

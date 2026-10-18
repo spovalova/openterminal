@@ -40,3 +40,39 @@ Mapping: `date` = earningsDate[0] formatted YYYY-MM-DD in America/New_York, `ses
 ## Not probed
 
 `news`: yahoo-finance2 has no news module beyond `search().news` (5–10 recent stories per term, with `providerPublishTime`, `publisher`, `link`, `relatedTickers`). Finnhub is the v1 news connector; a yahoo `news` via search is a possible fallback later.
+
+# v1.2 catalog probe (2026-10-18)
+
+Same package (`yahoo-finance2@4.0.4`). Probed AAPL, MU, NVDA, VZ, SMH and SPY for the kinds in PLAN.md section 14 that Yahoo can fall back for. Fixtures recorded by `connectors/yahoo/scripts/record-catalog.ts` on Saturday 2026-10-17 evening ET.
+
+## quoteSummary modules and fields used
+
+| Kind | Modules | Fields |
+|---|---|---|
+| `profile` | `assetProfile`, `price`, `summaryDetail`, `defaultKeyStatistics` | `sector`, `industry`, `fullTimeEmployees`, `longBusinessSummary`; `longName`/`shortName`, `exchangeName`, `marketCap`; `beta`; `beta3Year` (funds) |
+| `metrics` | `summaryDetail`, `defaultKeyStatistics`, `financialData`, `price` | `marketCap`, `trailingPE`, `forwardPE`, `priceToSalesTrailing12Months`, `dividendYield`, `dividendRate`, `trailingAnnualDividendYield`, `yield`; `pegRatio`, `enterpriseToEbitda`, `priceToBook`, `profitMargins`; `grossMargins`, `operatingMargins`, `revenueGrowth`, `earningsGrowth`, `returnOnEquity`, `debtToEquity`; `regularMarketPrice` |
+| `estimates` | `financialData`, `earningsTrend` | `recommendationKey`, `numberOfAnalystOpinions`, `targetLowPrice`, `targetMeanPrice`, `targetHighPrice`, `currentPrice`; `trend[].period` (`0q`, `+1q`, `0y`, `+1y`), `earningsEstimate.avg`, `earningsEstimate.growth` |
+| `eps_history` | `earningsHistory` | `history[].quarter`, `epsActual`, `epsEstimate`, `surprisePercent` (four quarters) |
+| `insiders` | `insiderTransactions` | `transactions[].startDate`, `filerName`, `filerRelation`, `transactionText`, `shares`, `value`, `filerUrl` (81 to 150 rows per large cap) |
+| `institutions` | `institutionOwnership` | `ownershipList[].reportDate`, `organization`, `position`, `pctChange`, `value` (ten rows) |
+| `short_interest` | `defaultKeyStatistics` | `sharesShort`, `sharesShortPriorMonth`, `dateShortInterest`, `shortRatio` |
+| `holdings` | `topHoldings` | `holdings[].symbol`, `holdingName`, `holdingPercent` (ten rows) |
+
+Plus `options(symbol, { date? })` for `options` (`expirationDates[]`, `quote.regularMarketPrice`, `options[0].calls/puts[].strike bid ask lastPrice volume openInterest impliedVolatility`) and `chart(symbol, { events: 'div' })` for `dividends` (`events.dividends[].date amount`).
+
+## Units, as seen live
+
+- Fractions everywhere the catalog wants percent: margins (0.48653), growth (0.164; MU's `earningsGrowth` is 10.595, a real 1059%), `returnOnEquity` (1.4875), `pctChange` (0.016), `holdingPercent` (0.1931), `surprisePercent` (0.0452), `impliedVolatility` (0.57; 2.83 on a deep-ITM one-day contract). All × 100.
+- `debtToEquity` is already percent-form: AAPL 78.445, VZ 184.081, MU 3.743. The connector divides by 100 so the column is a ratio like `pe` and `pb`; check the OpenBB side agrees.
+- `dividendYield` was a fraction on every symbol probed (AAPL 0.0031, VZ 0.0632, NVDA 0.0047) and equals `dividendRate / price` (a forward yield), not `trailingAnnualDividendYield` (NVDA 0.0013). Because yfinance users have seen Yahoo switch this field to percent-form, the connector picks whichever scale agrees with `dividendRate / price`.
+- Dates: `startDate`, `reportDate`, `quarter`, `dateShortInterest` and option `expirationDates` are 00:00Z stamps, so the UTC date is the calendar date (`nyDate` would be a day early). Dividend events are stamped at the session open (13:30Z or 14:30Z), so either works.
+
+## Surprises
+
+- `defaultKeyStatistics.sharesShortPriorMonth` is typed `Date` in yahoo-finance2 and the validator coerces the share count into a seconds-epoch Date (AAPL: 1974-06-06T11:11:37Z = 139,897,897 shares). The connector converts it back and also accepts a plain number in case the schema is fixed.
+- `options()` without `date` returns the full `expirationDates` list but only the nearest chain; MU now lists daily expirations (10-19, 10-21, 10-23, 10-26 …), so "at least 7 days out" matters. Expirations are 00:00Z stamps; Yahoo's `quote` in the response is the regular-session quote even after hours.
+- Chain strikes differ by type: the MU 2026-10-26 chain had puts at every 5 dollars but calls only at 830, 850, 900 and up. The strike window is computed on the union, so a side can be empty inside the window.
+- `topHoldings` and `institutionOwnership` are capped at ten. `earningsHistory` is capped at four quarters. `insiderTransactions.filerUrl` is always empty.
+- ETFs (SMH, SPY) have `assetProfile` with only `longBusinessSummary`, no `marketCap` in `price` or `summaryDetail` (net assets are in `totalAssets`, not used), and a `yield` instead of `dividendYield`.
+- `chart` dividend events come back whatever the interval, so one monthly-bar call over 30 years is a small payload (MU: 241 bars, 21 events).
+- `financialData.recommendationKey` values seen: `strong_buy`, `buy`; Yahoo also uses `hold`, `underperform`, `sell`, `none`.

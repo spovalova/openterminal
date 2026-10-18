@@ -1,0 +1,54 @@
+{
+ "results": [
+  {
+   "symbol": "NVDA",
+   "name": "NVIDIA Corporation Common Stock",
+   "weight": 0.1959
+  },
+  {
+   "symbol": "TSM",
+   "name": "Taiwan Semiconductor Manufacturing Company Ltd.",
+   "weight": 0.0931
+  },
+  {
+   "symbol": "AMD",
+   "name": "Advanced Micro Devices, Inc. Common Stock",
+   "weight": 0.0572
+  },
+  {
+   "symbol": "AVGO",
+   "name": "Broadcom Inc. Common Stock",
+   "weight": 0.0542
+  },
+  {
+   "symbol": "MU",
+   "name": "Micron Technology, Inc. Common Stock",
+   "weight": 0.048799999999999996
+  },
+  {
+   "symbol": "MRVL",
+   "name": "Marvell Technology, Inc. Common Stock",
+   "weight": 0.046900000000000004
+  },
+  {
+   "symbol": "AMAT",
+   "name": "Applied Materials, Inc. Common Stock",
+   "weight": 0.046
+  },
+  {
+   "symbol": "TXN",
+   "name": "Texas Instruments Incorporated Common Stock",
+   "weight": 0.0458
+  },
+  {
+   "symbol": "KLAC",
+   "name": "KLA Corporation Common Stock",
+   "weight": 0.0446
+  },
+  {
+   "symbol": "INTC",
+   "name": "Intel Corporation Common Stock",
+   "weight": 0.0441
+  }
+ ]
+}

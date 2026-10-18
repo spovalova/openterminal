@@ -1,0 +1,44 @@
+{
+ "results": [
+  {
+   "symbol": "HODO",
+   "name": "House of Doge Inc. Common Stock",
+   "price": 0.0928,
+   "change": 0.0253,
+   "change_percent": 0.3748148148148149,
+   "volume": 561137454.657995
+  },
+  {
+   "symbol": "NWGL",
+   "name": "Nature Wood Group Limited",
+   "price": 0.234,
+   "change": 0.013,
+   "change_percent": 0.058823529411764705,
+   "volume": 325038361.496217
+  },
+  {
+   "symbol": "SXTC",
+   "name": "China SXT Pharmaceuticals, Inc.",
+   "price": 0.065,
+   "change": -0.0038,
+   "change_percent": -0.055232558139534885,
+   "volume": 259597883.834623
+  },
+  {
+   "symbol": "ZTG",
+   "name": "Zenta Group Company Limited Class A Ordinary Shares",
+   "price": 0.705,
+   "change": 0.082,
+   "change_percent": 0.13162118780096307,
+   "volume": 169003733.345732
+  },
+  {
+   "symbol": "XLAB",
+   "name": "Exascale Labs Holdings Inc. Class A Common Stock",
+   "price": 2.35,
+   "change": 0.99,
+   "change_percent": 0.7279411764705882,
+   "volume": 166992212.448145
+  }
+ ]
+}

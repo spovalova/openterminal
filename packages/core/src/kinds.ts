@@ -123,7 +123,7 @@ export const KINDS = {
     ttl: MS.day,
   }),
   metrics: def({
-    description: 'Valuation and quality snapshot per symbol: multiples, margins, growth, returns, leverage, yield. Margins, growth, returns and yield are percent.',
+    description: 'Valuation and quality snapshot per symbol: multiples, margins, growth, returns, leverage, yield. Margins, growth, returns and yield are percent; pe, forward_pe, peg, ev_ebitda, ps, pb and debt_to_equity are ratios. ps is price to sales where the source has it, else EV to revenue.',
     params: z.object({ symbols: SymbolsSchema }),
     columns: [
       S('symbol'),
@@ -207,7 +207,7 @@ export const KINDS = {
   // ---------------------------------------------------------------- v1.2: options and volatility
   options: def({
     description:
-      'Option chain for one symbol at one expiration: the `strikes` nearest strikes on each side of the underlying price. `expiration` snaps to the first listed expiration on or after that date; omitted means the nearest expiration at least 7 days out. iv is percent; greeks per contract.',
+      'Option chain for one symbol at one expiration: the `strikes` nearest strikes on each side of the underlying price. `expiration` snaps to the first listed expiration on or after that date; omitted means the nearest expiration at least 7 days out. iv is percent; greeks per contract; dte is calendar days.',
     params: z.object({
       symbol: SymbolSchema,
       expiration: IsoDate.optional(),
@@ -218,7 +218,7 @@ export const KINDS = {
     ttl: MS.minute,
   }),
   volatility: def({
-    description: 'Implied and realized volatility snapshot per symbol, all percent: 30-day IV with its one-year high and low, IV rank (0-100 inside that range), 30-day realized vol with its range, and the 52-week price range.',
+    description: 'Implied and realized volatility snapshot per symbol: 30-day IV with its one-year high and low, 30-day realized vol range (all percent; hv30 itself is null from the keyless source), iv_rank as a 0-100 position inside the IV range (not a percent), and the 52-week price range in dollars.',
     params: z.object({ symbols: SymbolsSchema }),
     columns: [S('symbol'), N('iv30'), N('iv30_high'), N('iv30_low'), N('iv_rank'), N('hv30'), N('hv30_high'), N('hv30_low'), N('year_high'), N('year_low')],
     ttl: 10 * MS.minute,
@@ -238,8 +238,8 @@ export const KINDS = {
     ttl: MS.hour,
   }),
   movers: def({
-    description: "Today's top gainers, losers, or most active US stocks: symbol, name, price, day change (percent), volume.",
-    params: z.object({ list: z.enum(MOVER_LISTS).default('gainers'), limit: z.number().int().min(1).max(50).default(20) }),
+    description: "Today's top gainers, losers, or most active US stocks: symbol, name, price, day change (percent), volume. min_price drops warrants and sub-dollar names; set it to 0 for the raw list.",
+    params: z.object({ list: z.enum(MOVER_LISTS).default('gainers'), limit: z.number().int().min(1).max(50).default(20), min_price: z.number().min(0).default(5).describe('Drop rows priced below this (dollars)') }),
     columns: [S('symbol'), S('name'), N('price'), N('change_pct'), N('volume')],
     ttl: MS.minute,
   }),
@@ -250,8 +250,10 @@ export const KINDS = {
     ttl: MS.day,
   }),
   macro: def({
-    description: `Daily or monthly macro series over a range, one row per (series, time): ${MACRO_SERIES.join(', ')}. Rates, yields, CPI and unemployment are percent; m2 is dollars. Render with a series view.`,
-    params: z.object({ series: z.array(MacroSeriesSchema).min(1).max(6), range: RangeSchema.default('1y') }),
+    description: `Macro series over a range, one row per (series, time): ${MACRO_SERIES.join(', ')}. Treasury yields, fed_funds and sofr are daily; cpi_yoy, unemployment and m2 are monthly, so give them 1y or more. Rates, yields, CPI and unemployment are percent (quote moves in points, from stats.change, not changePct); m2 is dollars and must be requested alone. Render with a series view.`,
+    params: z
+      .object({ series: z.array(MacroSeriesSchema).min(1).max(6), range: RangeSchema.default('1y') })
+      .refine((p) => !p.series.includes('m2') || p.series.length === 1, { message: 'm2 is in dollars; chart it alone, not beside percent series', path: ['series'] }),
     columns: [S('series'), T('time'), N('value')],
     ttl: MS.hour,
   }),

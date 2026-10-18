@@ -1,0 +1,60 @@
+{
+ "results": [
+  {
+   "symbol": "AAPL",
+   "period": "0q",
+   "mean": 1.97842,
+   "growth": 0.0694,
+   "number_of_analysts": 27
+  },
+  {
+   "symbol": "AAPL",
+   "period": "+1q",
+   "mean": 2.90188,
+   "growth": 0.0218,
+   "number_of_analysts": 22
+  },
+  {
+   "symbol": "AAPL",
+   "period": "0y",
+   "mean": 8.82006,
+   "growth": 0.1823,
+   "number_of_analysts": 39
+  },
+  {
+   "symbol": "AAPL",
+   "period": "+1y",
+   "mean": 9.5706,
+   "growth": 0.0851,
+   "number_of_analysts": 40
+  },
+  {
+   "symbol": "MU",
+   "period": "0q",
+   "mean": 38.27861,
+   "growth": 7.0081,
+   "number_of_analysts": 30
+  },
+  {
+   "symbol": "MU",
+   "period": "+1q",
+   "mean": 42.24048,
+   "growth": 2.4623,
+   "number_of_analysts": 29
+  },
+  {
+   "symbol": "MU",
+   "period": "0y",
+   "mean": 176.54659,
+   "growth": 1.3377,
+   "number_of_analysts": 35
+  },
+  {
+   "symbol": "MU",
+   "period": "+1y",
+   "mean": 206.89381,
+   "growth": 0.1719,
+   "number_of_analysts": 36
+  }
+ ]
+}

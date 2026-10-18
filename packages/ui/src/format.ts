@@ -1,6 +1,12 @@
 import type { Column } from '@terminal/core'
 
-export type CellFormat = 'text' | 'price' | 'percent' | 'integer' | 'time' | 'date' | 'link'
+/**
+ * How a cell renders.
+ * - percent: a level that happens to be a percent (margin, yield, IV, weight): "36.90%", unsigned, uncoloured.
+ * - change: a signed move (change_pct, upside_pct, surprise_pct, growth): "+1.23%", coloured up/down.
+ * - compact: a large amount (market cap, revenue, shares, M2): "1.23B", "456.7M", "12.3K".
+ */
+export type CellFormat = 'text' | 'price' | 'percent' | 'change' | 'integer' | 'compact' | 'time' | 'date' | 'link'
 
 /** Rendered for null, undefined, NaN, and empty strings. */
 export const EMPTY_CELL = '—'
@@ -42,10 +48,35 @@ export function linkLabel(url: string): string {
   }
 }
 
-/** Signed percent with two decimals: "+1.23%", "-0.45%", "0.00%". */
+/** Signed percent with two decimals: "+1.23%", "-0.45%", "0.00%". The `change` format. */
 export function formatPercent(n: number): string {
   const fixed = price.format(n)
   return n > 0 ? `+${fixed}%` : `${fixed}%`
+}
+
+const COMPACT_UNITS: [number, string][] = [
+  [1e12, 'T'],
+  [1e9, 'B'],
+  [1e6, 'M'],
+  [1e3, 'K'],
+]
+
+/**
+ * Large amounts in three or four figures: 1.23B, 45.6B, 456.7M, 12.3K. Two decimals when the
+ * mantissa is below 10, one otherwise; below a thousand the plain number with up to two decimals.
+ * Negative amounts keep a leading minus.
+ */
+export function formatCompact(n: number): string {
+  if (!Number.isFinite(n)) return EMPTY_CELL
+  const abs = Math.abs(n)
+  const sign = n < 0 ? '-' : ''
+  for (const [unit, suffix] of COMPACT_UNITS) {
+    if (abs >= unit) {
+      const m = abs / unit
+      return `${sign}${m < 10 ? m.toFixed(2) : m.toFixed(1)}${suffix}`
+    }
+  }
+  return `${sign}${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(abs)}`
 }
 
 /**
@@ -61,11 +92,19 @@ export function formatCell(value: unknown, format: CellFormat = 'text', now: num
     }
     case 'percent': {
       const n = asNumber(value)
+      return n === null ? EMPTY_CELL : `${price.format(n)}%`
+    }
+    case 'change': {
+      const n = asNumber(value)
       return n === null ? EMPTY_CELL : formatPercent(n)
     }
     case 'integer': {
       const n = asNumber(value)
       return n === null ? EMPTY_CELL : integer.format(Math.round(n))
+    }
+    case 'compact': {
+      const n = asNumber(value)
+      return n === null ? EMPTY_CELL : formatCompact(n)
     }
     case 'time': {
       const n = asNumber(value)
@@ -83,7 +122,7 @@ export function formatCell(value: unknown, format: CellFormat = 'text', now: num
   }
 }
 
-/** 'up' | 'down' | null for a signed value (percent cells are colored by this). */
+/** 'up' | 'down' | null for a signed value (`change` cells are colored by this). */
 export function direction(value: unknown): 'up' | 'down' | null {
   const n = asNumber(value)
   if (n === null || n === 0) return null
@@ -92,20 +131,20 @@ export function direction(value: unknown): 'up' | 'down' | null {
 
 /** Formats that right-align (numeric). */
 export function isNumericFormat(format: CellFormat): boolean {
-  return format === 'price' || format === 'percent' || format === 'integer'
+  return format === 'price' || format === 'percent' || format === 'change' || format === 'integer' || format === 'compact'
 }
 
 const PRICE_COLUMNS = new Set(['price', 'open', 'high', 'low', 'close', 'extended_price', 'eps_estimate'])
 
 /**
- * Default formats for a frame's columns by name and type, matching the v1 kind
- * catalog: *_pct → percent, time → time, volume → integer, url → link, date → date.
+ * Default formats for a frame's columns by name and type, matching the kind
+ * catalog: *_pct → change, time → time, volume → integer, url → link, date → date.
  */
 export function inferFormats(columns: Column[]): Record<string, CellFormat> {
   const out: Record<string, CellFormat> = {}
   for (const c of columns) {
     if (c.type === 'time') out[c.name] = 'time'
-    else if (c.name.endsWith('_pct')) out[c.name] = 'percent'
+    else if (c.name.endsWith('_pct')) out[c.name] = 'change'
     else if (c.name === 'url') out[c.name] = 'link'
     else if (c.name === 'date') out[c.name] = 'date'
     else if (c.name === 'volume') out[c.name] = 'integer'

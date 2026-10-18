@@ -1,0 +1,52 @@
+{
+ "results": [
+  {
+   "date": "2026-10-21T08:15:00",
+   "country": "United States",
+   "event": "ADP Employment Change Weekly",
+   "consensus": " ",
+   "previous": "24.80K",
+   "actual": "-"
+  },
+  {
+   "date": "2026-10-21T08:30:00",
+   "country": "United States",
+   "event": "Building Permits",
+   "consensus": "1.390M",
+   "previous": "1.403M",
+   "actual": "-"
+  },
+  {
+   "date": "2026-10-21T08:30:00",
+   "country": "United States",
+   "event": "Building Permits",
+   "consensus": " ",
+   "previous": "-2.1%",
+   "actual": "-"
+  },
+  {
+   "date": "2026-10-21T08:30:00",
+   "country": "United States",
+   "event": "Housing Starts",
+   "consensus": "1.300M",
+   "previous": "1.275M",
+   "actual": "-"
+  },
+  {
+   "date": "2026-10-21T08:30:00",
+   "country": "United States",
+   "event": "Housing Starts",
+   "consensus": " ",
+   "previous": "-2.6%",
+   "actual": "-"
+  },
+  {
+   "date": "2026-10-21T08:55:00",
+   "country": "United States",
+   "event": "Redbook",
+   "consensus": " ",
+   "previous": "10.4%",
+   "actual": "-"
+  }
+ ]
+}

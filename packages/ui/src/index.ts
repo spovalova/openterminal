@@ -18,6 +18,7 @@ export * as Icons from './components/icons.js'
 export {
   formatCell,
   formatPercent,
+  formatCompact,
   formatTime,
   formatDuration,
   inferFormats,

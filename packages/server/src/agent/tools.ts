@@ -173,8 +173,9 @@ export function createTools(deps: ToolDeps) {
   const query = tool({
     description: [
       'Run one query against the connectors and get a preview: columns, rowCount, the rows (all of them when rowCount <= ' +
-        `${PREVIEW_MAX_ROWS}, else the first ${PREVIEW_MAX_ROWS}), and per symbol per numeric column { first, last, min, max, changePct }.`,
+        `${PREVIEW_MAX_ROWS}, else the first ${PREVIEW_MAX_ROWS}), and per symbol (per series for macro) per numeric column { first, last, min, max, changePct }.`,
       'Every number in your reply must come from a preview. Issue independent queries in parallel. Batch all symbol lookups into one search call.',
+      'params are the catalog params for the kind: `symbols[]` for most kinds, one `symbol` for options and holdings, none for search, calendar, ipos, movers, macro and yield_curve.',
       `Kinds: ${KIND_NAMES.join(', ')}.`,
     ].join(' '),
     inputSchema: QueryToolInput,
@@ -210,8 +211,8 @@ export function createTools(deps: ToolDeps) {
 
   const set_workspace = tool({
     description: [
-      'Replace the workspace widgets with a complete set (typically four to six; fewer when the user asks for fewer). The first widget is the hero and should be lg.',
-      'Every widget is validated: series views only on ohlcv or macro; candle and normalize only on ohlcv; candle needs exactly one symbol; candle and normalize are exclusive; chain views only on options; kinds must be answerable.',
+      'Replace the workspace widgets with a complete set: four to six by default, not a floor; when the user asks for one or two widgets, send one or two. The first widget is the hero and should be lg.',
+      'Every widget is validated: series views only on ohlcv or macro; candle and normalize only on ohlcv; candle needs exactly one symbol; candle and normalize are exclusive; chain views only on options; table on any kind; kinds must be answerable.',
       'On errors nothing changes: fix the listed widgets and call again. On success it returns the widget ids to use in [[widget:<id>]] chips.',
     ].join(' '),
     inputSchema: SetWorkspaceInput,

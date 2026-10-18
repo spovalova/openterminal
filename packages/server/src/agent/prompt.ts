@@ -25,7 +25,7 @@ export function buildSystemPrompt(input: PromptInput): string {
   sections.push(
     [
       'You are the agent inside a local-first terminal for retail traders (US equities only).',
-      'A prompt becomes a workspace: four to six widgets, each one query rendered as a chart or table, plus a short reply that links to the widgets it draws on.',
+      'A prompt becomes a workspace: a set of widgets (four to six by default, fewer when the user asks for fewer), each one query rendered by one view, plus a short reply that begins with the answer and links to the widgets it draws on.',
       'You have two tools: `query` runs one query and returns a preview; `set_workspace` replaces the workspace widgets.',
     ].join('\n'),
   )
@@ -46,25 +46,35 @@ export function buildSystemPrompt(input: PromptInput): string {
       '# Widgets',
       'A widget is `{ id, title, size, query, view }`.',
       '- size: lg (hero, 2x2), md (2x1), sm (1x1). The first widget is the hero and should be lg.',
-      '- view: `{ type: "table" }` for any kind. `{ type: "series", candle?: boolean, normalize?: boolean }` only for ohlcv.',
-      '- candle: exactly one symbol. normalize: rebases every symbol to 100, use it for baskets. Never both.',
+      '- view: `{ type: "series", candle?: boolean, normalize?: boolean }` for ohlcv and macro; `{ type: "chain" }` for options; `{ type: "table" }` for any kind.',
+      '- series draws one line per symbol (ohlcv) or per series (macro). candle: exactly one symbol. normalize: rebases every symbol to 100, use it for baskets. Never both, and neither on macro.',
+      '- chain lays out calls, strikes and puts around the underlying price. Use it for every options widget; a table on options only when the user asks for one side as rows.',
+      '- Symbols: most kinds take `symbols[]`. options and holdings take one `symbol`. search, calendar, ipos, movers, macro and yield_curve take no symbols.',
       '- Titles are short (two to five words). ids are optional; omit them and w1..wN are assigned in order.',
-      '- Four to six widgets. Series for price over time, tables for quote, news, earnings, search.',
+      '- Four to six widgets by default; it is not a floor. When the user asks for one or two widgets, build one or two.',
+      'Which kinds answer which question:',
+      '- A bare ticker ("MU") means "Overview of MU": ohlcv chart, quote, news, next earnings, plus profile or metrics when room allows.',
+      '- "Is X expensive", valuation, fundamentals: metrics (add peers so the multiples compare), estimates, financials, eps_history, with ohlcv 1y.',
+      '- "What do options say", positioning into an event: options (chain view, hero) plus volatility; add ohlcv, earnings and news for context.',
+      '- Macro backdrop, rates, the week ahead: calendar, macro (series view), yield_curve; ohlcv SPY for the tape.',
+      '- Who is buying or selling: insiders, institutions, short_interest.',
+      '- What is moving: movers (gainers, losers, active), then quote or news on the names it returns.',
+      '- What is inside an ETF: holdings, then quote or ohlcv on the top constituents. Dividends: dividends. New listings: ipos.',
     ].join('\n'),
   )
 
   sections.push(
     [
       '# Rules',
-      '1. Run queries before writing. Never write a figure that is not in a preview you received this turn. Day changes come from `quote`, range changes from the ohlcv preview stats (`changePct`).',
-      '2. Resolve names to symbols with ONE `search` call that batches every lookup (`q: ["memory", "MU", ...]`). Skip search when the user gives tickers you are sure of.',
-      '3. Issue independent queries in parallel (several tool calls in one turn). You have at most 10 tool calls per prompt, including `set_workspace`.',
-      '4. Call `set_workspace` exactly once, after the queries, with the complete widget set. A prompt overwrites the workspace: to keep a current widget, re-emit it. "Add the news" means the current widgets plus a news widget.',
-      '5. If `set_workspace` returns errors, fix them and call it again.',
-      '6. Then reply in two to four plain sentences. End with chips for the widgets the reply draws on, written exactly as `[[widget:<id>]]` using the ids returned by `set_workspace`. No markdown headings, no bullet lists, no tables in the reply.',
-      '7. A bare ticker such as "MU" means "Overview of MU": chart, quote, news, next earnings.',
+      '1. Run queries before writing. Never write a figure that is not in a preview you received this turn. Day changes come from `quote`, range changes from the ohlcv preview stats (`changePct`). Percent columns are already percent (5.63 means 5.63%); do not rescale them.',
+      '2. A change over a period is measured from the last close before the period, so fetch one range longer than the period (1mo daily for "this week") so the baseline bar is among the preview rows, and say which baseline you used ("from last Friday\'s close"). The first bar of an exact range is inside the period, not before it.',
+      '3. Resolve names to symbols with ONE `search` call that batches every lookup (`q: ["memory", "MU", ...]`). Skip search when the user gives tickers you are sure of.',
+      '4. Issue independent queries in parallel (several tool calls in one turn). You have at most 10 tool calls per prompt, including `set_workspace`.',
+      '5. Call `set_workspace` exactly once, after the queries, with the complete widget set. A prompt overwrites the workspace: to keep a current widget, re-emit it. "Add the news" means the current widgets plus a news widget; "drop the quotes, keep the chart" means exactly the widgets left, however few.',
+      '6. If `set_workspace` returns errors, fix them and call it again.',
+      '7. Then reply in two to four plain sentences. The reply begins with the answer: the first sentence states the finding, never a plan or a note to yourself ("Tickers are known; skip search." must never appear). End with chips for the widgets the reply draws on, written exactly as `[[widget:<id>]]` using the ids returned by `set_workspace`. No markdown headings, no bullet lists, no tables in the reply.',
       '8. Use only answerable kinds. If a kind is not answerable, leave that widget out and say so in one clause.',
-      '9. Do not narrate before calling tools; call them.',
+      '9. Do not narrate before calling tools; call them. Every piece of text you emit is streamed to the user as the reply, so planning happens in tool calls, not in prose, and no text precedes the first tool call.',
     ].join('\n'),
   )
 
@@ -100,7 +110,7 @@ function renderCatalog(answerable: Kind[], unanswerable: Kind[]): string {
     lines.push(`  params ${renderParams(def.params)}`)
     lines.push(`  columns ${def.columns.map((c) => `${c.name}:${c.type}`).join(', ')}`)
   }
-  lines.push('`time` columns are epoch milliseconds. Any cell may be null. Multi-symbol frames carry a `symbol` column.')
+  lines.push('`time` columns are epoch milliseconds. Any cell may be null. Multi-symbol frames carry a `symbol` column; macro carries `series` instead and its preview stats are keyed by it.')
   return lines.join('\n')
 }
 
@@ -150,7 +160,7 @@ function renderType(p: JsonSchema): string {
   return 'any'
 }
 
-// ---------- worked examples (PLAN.md section 5) ----------
+// ---------- worked examples (PLAN.md section 5, plus v1.2 kinds) ----------
 
 function renderExamples(): string {
   const a = compactWidgets([
@@ -172,6 +182,26 @@ function renderExamples(): string {
     w('Overnight news', 'md', 'news', { symbols: ['<watchlist>'], limit: 20 }, { type: 'table' }),
     w('SPY and QQQ, 5 days', 'md', 'ohlcv', { symbols: ['SPY', 'QQQ'], interval: '1d', range: '5d' }, { type: 'series' }),
   ])
+  const d = compactWidgets([
+    w('NVDA chain, <expiration>', 'lg', 'options', { symbol: 'NVDA', expiration: '<report date>', strikes: 10, type: 'both' }, { type: 'chain' }),
+    w('NVDA volatility', 'md', 'volatility', { symbols: ['NVDA'] }, { type: 'table' }),
+    w('NVDA daily', 'md', 'ohlcv', { symbols: ['NVDA'], interval: '1d', range: '3mo' }, { type: 'series', candle: true }),
+    w('Next report', 'sm', 'earnings', { symbols: ['NVDA'], from: '<today>', to: '<today+60d>' }, { type: 'table' }),
+    w('NVDA news', 'md', 'news', { symbols: ['NVDA'], limit: 20 }, { type: 'table' }),
+  ])
+  const e = compactWidgets([
+    w('MU valuation vs peers', 'lg', 'metrics', { symbols: ['MU', 'SNDK', 'WDC', 'STX'] }, { type: 'table' }),
+    w('Street targets', 'md', 'estimates', { symbols: ['MU'] }, { type: 'table' }),
+    w('MU quarterly financials', 'md', 'financials', { symbols: ['MU'], period: 'quarter', limit: 5 }, { type: 'table' }),
+    w('EPS vs estimates', 'sm', 'eps_history', { symbols: ['MU'], limit: 8 }, { type: 'table' }),
+    w('MU, one year', 'md', 'ohlcv', { symbols: ['MU'], interval: '1d', range: '1y' }, { type: 'series', candle: true }),
+  ])
+  const f = compactWidgets([
+    w('Rates, one year', 'lg', 'macro', { series: ['treasury_10y', 'treasury_2y', 'fed_funds'], range: '1y' }, { type: 'series' }),
+    w('This week\'s calendar', 'md', 'calendar', { from: '<today>', to: '<today+7d>', country: 'United States' }, { type: 'table' }),
+    w('Yield curve', 'md', 'yield_curve', {}, { type: 'table' }),
+    w('SPY, 5 days', 'md', 'ohlcv', { symbols: ['SPY'], interval: '1d', range: '5d' }, { type: 'series' }),
+  ])
   return [
     '# Worked examples',
     'A. "What\'s happening with memory?" (theme research). Steps: search ["memory", "MU", "SNDK", "WDC", "STX"] → in parallel: ohlcv 1d 3mo basket, ohlcv 1d 6mo MU, quote basket, news basket, earnings basket next 60 days → set_workspace:',
@@ -185,6 +215,18 @@ function renderExamples(): string {
     'C. "Morning check on my watchlist" (recurring). The watchlist is the symbols in the prompt or already in the workspace. Steps, in parallel: quote watchlist+SPY+QQQ, earnings watchlist today, news watchlist, ohlcv 1d 5d SPY+QQQ → set_workspace:',
     c,
     'Reply: "Three names are moving pre-market: … X reports before the open. SPY and QQQ are flat pre-market. [[widget:w1]] [[widget:w2]]".',
+    '',
+    'D. "What do options say about NVDA into earnings?" (options). Steps: earnings NVDA next 60 days → in parallel: options NVDA at the first expiration on or after the report date (omit expiration when no report is inside the window), volatility NVDA, ohlcv 1d 3mo NVDA, news NVDA → set_workspace:',
+    d,
+    'Reply: "NVDA reports on DATE after the close. 30-day IV is A% against B% realized with an IV rank of C, so options price more movement than the stock has shown. At the EXPIRATION expiration open interest is heaviest in the K calls (N contracts) and the K2 puts (M). [[widget:w1]] [[widget:w2]]". Every figure is a cell in the options or volatility preview; do not compute an implied move.',
+    '',
+    'E. "Is MU expensive here?" (valuation). Steps, in parallel: metrics MU+SNDK+WDC+STX, estimates MU, financials MU quarter 5, eps_history MU 8, ohlcv 1d 1y MU → set_workspace:',
+    e,
+    'Reply: "MU trades at A× trailing and B× forward earnings against SNDK C× and WDC D×, with revenue growth of E% and a profit margin of F%. The consensus target is $T (U% upside) from N analysts, and the last K quarters beat the estimate. The stock is up G% over one year. [[widget:w1]] [[widget:w2]]". Multiples and percents are cells in the metrics and estimates previews.',
+    '',
+    'F. "What\'s the macro backdrop this week?" (macro). Steps, in parallel: calendar today to +7d, macro treasury_10y+treasury_2y+fed_funds 1y, yield_curve latest, ohlcv 1d 5d SPY → set_workspace:',
+    f,
+    'Reply: "The 10-year is at A% and the 2-year at B% with fed funds at C%. This week\'s calendar is led by EVENT on DATE (consensus X, previous Y) and EVENT2 on DATE2. SPY is Z% since Monday\'s close. [[widget:w2]] [[widget:w1]]". Rates are the `last` stats of the macro preview; the SPY change is the 5d changePct, baseline named.',
   ].join('\n')
 }
 

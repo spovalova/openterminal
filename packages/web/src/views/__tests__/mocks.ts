@@ -45,6 +45,10 @@ export function makeChartsMock() {
     CandlestickSeries: { type: 'Candlestick' },
     HistogramSeries: { type: 'Histogram' },
     PriceScaleMode: { Normal: 0, Logarithmic: 1, Percentage: 2, IndexedTo100: 3 },
+    // enums the real @terminal/ui chart theme reads at import time
+    ColorType: { Solid: 'solid', VerticalGradient: 'gradient' },
+    CrosshairMode: { Normal: 0, Magnet: 1, Hidden: 2 },
+    LineStyle: { Solid: 0, Dotted: 1, Dashed: 2, LargeDashed: 3, SparseDotted: 4 },
   }
   return { module, charts, createChart, fitContent }
 }
@@ -53,8 +57,13 @@ export const PALETTE = ['#4c8dff', '#ff9f43', '#2ecc71', '#e056a0', '#9b7bff', '
 export const UP = '#22c55e'
 export const DOWN = '#ef4444'
 
-/** A `@terminal/ui` stand-in that renders enough DOM to assert on props. */
-export function makeUiMock() {
+/**
+ * A `@terminal/ui` stand-in that renders enough DOM to assert on props. The real module is spread
+ * underneath so pure helpers (formatCell, formatCompact, EMPTY_CELL) keep working; the stubs override
+ * the components, palette and theme the tests assert on.
+ */
+export async function makeUiMock() {
+  const actual = await vi.importActual<typeof import('@terminal/ui')>('@terminal/ui')
   const DataTable: FC<{
     columns: { name: string; type: string }[]
     rows: unknown[][]
@@ -85,6 +94,7 @@ export function makeUiMock() {
   const WidgetFrame: FC<{ title: string; children?: unknown }> = ({ title, children }) =>
     createElement('section', { 'data-testid': 'widget-frame', 'data-title': title }, children as never)
   return {
+    ...actual,
     DataTable,
     EmptyState,
     WidgetFrame,

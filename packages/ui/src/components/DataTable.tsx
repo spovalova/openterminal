@@ -21,6 +21,9 @@ export type DataTableProps = {
   now?: number
 }
 
+/** Strings longer than this are capped at 64ch with an ellipsis and a title tooltip. */
+const LONG_TEXT = 80
+
 function label(name: string, labels?: Record<string, string>): string {
   return labels?.[name] ?? name.replace(/_/g, ' ')
 }
@@ -91,9 +94,17 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                 const f = fmts[c.name] ?? 'text'
                 const v = row[ci]
                 const text = formatCell(v, f, nowMs)
-                const dir = f === 'percent' ? direction(v) : null
+                const dir = f === 'change' ? direction(v) : null
                 const numeric = isNumericFormat(f)
                 let content: React.ReactNode = text
+                if (f === 'text' && typeof v === 'string' && v.length > LONG_TEXT) {
+                  // max-width is ignored on table cells, so a paragraph (profile.description, a calendar event) is capped inside a block
+                  content = (
+                    <span className="block max-w-[64ch] truncate" title={v}>
+                      {text}
+                    </span>
+                  )
+                }
                 if (f === 'link' && typeof v === 'string' && v !== '') {
                   content = (
                     <a
@@ -118,7 +129,7 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                       text === '—' && 'text-fg-3',
                       c.name === 'symbol' && 'font-medium text-fg',
                     )}
-                    title={typeof v === 'string' && v.length > 32 ? v : undefined}
+                    title={typeof v === 'string' && v.length > 24 ? v : undefined}
                   >
                     {content}
                   </td>

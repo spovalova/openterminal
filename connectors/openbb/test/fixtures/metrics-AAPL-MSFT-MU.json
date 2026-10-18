@@ -1,0 +1,58 @@
+{
+ "results": [
+  {
+   "symbol": "AAPL",
+   "market_cap": 5012516765696,
+   "pe_ratio": 39.38761,
+   "forward_pe": 35.85982,
+   "peg_ratio": 2.75,
+   "enterprise_to_ebitda": 29.974,
+   "enterprise_to_revenue": 10.785,
+   "price_to_book": 46.66576,
+   "gross_margin": 0.48653,
+   "operating_margin": 0.32623002,
+   "profit_margin": 0.27618998,
+   "revenue_growth": 0.164,
+   "earnings_growth": 0.287,
+   "return_on_equity": 1.4875101,
+   "debt_to_equity": 78.445,
+   "dividend_yield": 0.31
+  },
+  {
+   "symbol": "MSFT",
+   "market_cap": 3928485003264,
+   "pe_ratio": 29.473536,
+   "forward_pe": 22.302853,
+   "peg_ratio": 1.72,
+   "enterprise_to_ebitda": 20.493,
+   "enterprise_to_revenue": 11.995,
+   "price_to_book": 8.881894,
+   "gross_margin": 0.67944,
+   "operating_margin": 0.45111,
+   "profit_margin": 0.40305,
+   "revenue_growth": 0.177,
+   "earnings_growth": 0.317,
+   "return_on_equity": 0.34039003,
+   "debt_to_equity": 29.118,
+   "dividend_yield": 0.74
+  },
+  {
+   "symbol": "MU",
+   "market_cap": 994340044800,
+   "pe_ratio": 11.82349,
+   "forward_pe": 4.247783,
+   "peg_ratio": 0.16,
+   "enterprise_to_ebitda": 8.784,
+   "enterprise_to_revenue": 7.178,
+   "price_to_book": 7.183,
+   "gross_margin": 0.80716,
+   "operating_margin": 0.80678004,
+   "profit_margin": 0.63796,
+   "revenue_growth": 3.793,
+   "earnings_growth": 10.595,
+   "return_on_equity": 0.8826,
+   "debt_to_equity": 3.743,
+   "dividend_yield": 0.07
+  }
+ ]
+}

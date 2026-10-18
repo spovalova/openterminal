@@ -113,3 +113,12 @@ export type YahooInterval = '1m' | '5m' | '15m' | '1h' | '1d' | '1wk'
 export function toYahooInterval(interval: Interval): YahooInterval {
   return interval === '1w' ? '1wk' : interval
 }
+
+/**
+ * Calendar date of a midnight-UTC stamp, as YYYY-MM-DD. Yahoo stamps filing dates, fiscal quarters,
+ * short-interest settlement dates and option expirations at 00:00Z, which in New York is still the
+ * evening before, so these must not go through `nyDate`.
+ */
+export function utcDate(at: Date): string {
+  return at.toISOString().slice(0, 10)
+}

@@ -84,6 +84,27 @@ export function createFakeRegistry(opts: FakeConnectorOptions = {}) {
           { connector: 'fake' },
         )
       },
+      // v1.2 kinds with the two non-table views: options (chain) and macro (series keyed by `series`).
+      options: async (p) => {
+        await hook('options', p)
+        const expiration = p.expiration ?? '2026-11-20'
+        const rows: Record<string, unknown>[] = []
+        for (const type of p.type === 'both' ? ['call', 'put'] : [p.type]) {
+          for (let i = -p.strikes; i < p.strikes; i++) {
+            const strike = 100 + i * 5
+            rows.push({ symbol: p.symbol, expiration, type, strike, bid: 1, ask: 1.2, last: 1.1, volume: 10, open_interest: 100, iv: 45, delta: 0.5, gamma: 0.01, theta: -0.1, vega: 0.2, underlying_price: 101, dte: 33 })
+          }
+        }
+        return toFrame('options', rows, { connector: 'fake' })
+      },
+      macro: async (p) => {
+        await hook('macro', p)
+        const rows: Record<string, unknown>[] = []
+        p.series.forEach((series, si) => {
+          for (let i = 0; i < 12; i++) rows.push({ series, time: Date.UTC(2025, 10 + i, 1), value: 4 - si * 0.5 + i * 0.01 })
+        })
+        return toFrame('macro', rows, { connector: 'fake' })
+      },
     },
   })
   const registry = new ConnectorRegistry()

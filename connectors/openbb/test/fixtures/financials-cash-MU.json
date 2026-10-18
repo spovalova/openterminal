@@ -1,0 +1,22 @@
+{
+ "results": [
+  {
+   "period_ending": "2026-05-31",
+   "operating_cash_flow": 25388000000.0,
+   "capital_expenditure_reported": -7826000000.0,
+   "free_cash_flow": 17562000000.0
+  },
+  {
+   "period_ending": "2026-02-28",
+   "operating_cash_flow": 11903000000.0,
+   "capital_expenditure_reported": -6387000000.0,
+   "free_cash_flow": 5516000000.0
+  },
+  {
+   "period_ending": "2025-11-30",
+   "operating_cash_flow": 8411000000.0,
+   "capital_expenditure_reported": -5389000000.0,
+   "free_cash_flow": 3022000000.0
+  }
+ ]
+}

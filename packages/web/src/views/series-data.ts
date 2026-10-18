@@ -13,7 +13,20 @@ export function seriesMode(view: View): SeriesMode {
 }
 
 export type Bar = { time: Time; open: number; high: number; low: number; close: number; volume: number | null }
-export type SymbolSeries = { symbol: string; bars: Bar[] }
+/** One line: the group key (a `symbol`, or a `series` name for macro frames) and its bars. */
+export type SymbolSeries = { group: string; bars: Bar[] }
+
+/**
+ * Which columns a frame draws from: ohlcv frames group by `symbol` and plot `close`; macro frames
+ * group by `series` and plot `value`. Null when the frame has no time or value column.
+ */
+export function seriesColumns(frame: Pick<Frame, 'columns'>): { group: 'symbol' | 'series' | null; value: 'close' | 'value' } | null {
+  if (columnIndex(frame, 'time') < 0) return null
+  const value = columnIndex(frame, 'close') >= 0 ? 'close' : columnIndex(frame, 'value') >= 0 ? 'value' : null
+  if (!value) return null
+  const group = columnIndex(frame, 'symbol') >= 0 ? 'symbol' : columnIndex(frame, 'series') >= 0 ? 'series' : null
+  return { group, value }
+}
 
 /**
  * Epoch ms → lightweight-charts time.
@@ -39,19 +52,21 @@ function num(v: unknown): number | null {
 }
 
 /**
- * Group an ohlcv frame into per-symbol bar arrays in the order symbols first appear.
- * Rows with a null or non-finite close are dropped; duplicate times keep the last row;
+ * Group a frame into per-group bar arrays in the order groups first appear: by `symbol` with `close`
+ * for ohlcv, by `series` with `value` for macro (open, high and low collapse onto the value).
+ * Rows with a null or non-finite value are dropped; duplicate times keep the last row;
  * bars are sorted ascending by time as lightweight-charts requires.
  */
 export function groupBars(frame: Frame, intraday: boolean): SymbolSeries[] {
-  const iSym = columnIndex(frame, 'symbol')
+  const cols = seriesColumns(frame)
+  if (!cols) return []
+  const iSym = cols.group ? columnIndex(frame, cols.group) : -1
   const iTime = columnIndex(frame, 'time')
   const iOpen = columnIndex(frame, 'open')
   const iHigh = columnIndex(frame, 'high')
   const iLow = columnIndex(frame, 'low')
-  const iClose = columnIndex(frame, 'close')
+  const iClose = columnIndex(frame, cols.value)
   const iVol = columnIndex(frame, 'volume')
-  if (iTime < 0 || iClose < 0) return []
 
   const groups = new Map<string, Map<number, Bar>>()
   for (const row of frame.rows) {
@@ -70,9 +85,9 @@ export function groupBars(frame: Frame, intraday: boolean): SymbolSeries[] {
   }
 
   const out: SymbolSeries[] = []
-  for (const [symbol, byTime] of groups) {
+  for (const [group, byTime] of groups) {
     const bars = [...byTime.entries()].sort((a, b) => a[0] - b[0]).map(([, bar]) => bar)
-    if (bars.length > 0) out.push({ symbol, bars })
+    if (bars.length > 0) out.push({ group, bars })
   }
   return out
 }
@@ -91,14 +106,18 @@ export function toVolumeData(bars: Bar[], upColor: string, downColor: string): H
     .map((b) => ({ time: b.time, value: b.volume as number, color: b.close >= b.open ? upColor : downColor }))
 }
 
-/** One legend row per symbol: the numbers are exactly `preview(frame).stats[symbol].close`. */
-export type LegendRow = { symbol: string; last: number | null; changePct: number | null; color: string | undefined }
+/**
+ * One legend row per group. Every number is exactly what `preview(frame).stats[group][value]` reports:
+ * `first` and `last` over the range and `changePct` between them (`close` for ohlcv, `value` for macro).
+ */
+export type LegendRow = { group: string; first: number | null; last: number | null; changePct: number | null; color: string | undefined }
 
-export function legendRows(frame: Frame, symbols: string[], colorFor: (i: number) => string | undefined): LegendRow[] {
+export function legendRows(frame: Frame, groups: string[], colorFor: (i: number) => string | undefined): LegendRow[] {
   const stats = preview(frame).stats
-  return symbols.map((symbol, i) => {
-    const close = stats[symbol]?.close
-    return { symbol, last: close?.last ?? null, changePct: close?.changePct ?? null, color: colorFor(i) }
+  const value = seriesColumns(frame)?.value ?? 'close'
+  return groups.map((group, i) => {
+    const st = stats[group]?.[value]
+    return { group, first: st?.first ?? null, last: st?.last ?? null, changePct: st?.changePct ?? null, color: colorFor(i) }
   })
 }
 

@@ -11,5 +11,11 @@
     "Add NVDA and TSM, switch the chart to one year normalized, and put the earnings calendar for all six next to it.",
     "Drop the quotes, I only want the chart and the calendar."
   ] },
-  { "name": "vague", "prompt": "I think memory is about to roll over. Am I right?" }
+  { "name": "vague", "prompt": "I think memory is about to roll over. Am I right?" },
+  { "name": "options-nvda", "prompt": "What do options say about NVDA into earnings?" },
+  { "name": "expensive-mu", "prompt": "Is MU expensive here?" },
+  { "name": "macro-week", "prompt": "What's the macro backdrop this week?" },
+  { "name": "insiders-mu", "prompt": "Who has been selling MU? Insiders, institutions, short interest." },
+  { "name": "movers", "prompt": "What's moving today and why?" },
+  { "name": "etf-smh", "prompt": "What's inside SMH and how are the top holdings doing?" }
 ]

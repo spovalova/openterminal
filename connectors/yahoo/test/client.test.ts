@@ -43,7 +43,7 @@ describe('429 retry', () => {
   })
 
   it('wrapClient applies the retry to every method', async () => {
-    const seen = { search: 0, quote: 0, chart: 0, quoteSummary: 0 }
+    const seen = { search: 0, quote: 0, chart: 0, quoteSummary: 0, options: 0 }
     const once = <T>(name: keyof typeof seen, value: T) => async () => {
       seen[name] += 1
       if (seen[name] === 1) throw http429()
@@ -54,12 +54,14 @@ describe('429 retry', () => {
       quote: once('quote', []),
       chart: once('chart', { meta: {}, quotes: [] }),
       quoteSummary: once('quoteSummary', {}),
+      options: once('options', { expirationDates: [], options: [] }),
     } as unknown as YahooClient
     const client = wrapClient(raw, { sleep: async () => {} })
     await client.search('x', {})
     await client.quote(['X'])
     await client.chart('X', { period1: 0 })
     await client.quoteSummary('X', { modules: ['calendarEvents'] })
-    expect(seen).toEqual({ search: 2, quote: 2, chart: 2, quoteSummary: 2 })
+    await client.options('X', {})
+    expect(seen).toEqual({ search: 2, quote: 2, chart: 2, quoteSummary: 2, options: 2 })
   })
 })

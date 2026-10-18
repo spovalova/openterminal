@@ -1,0 +1,88 @@
+{
+ "results": [
+  {
+   "symbol": "MU",
+   "filing_date": "2026-10-15",
+   "transaction_date": "2026-10-14",
+   "owner_name": "RAY MICHAEL CHARLES",
+   "owner_title": "SVP, Chief Legal Officer",
+   "transaction_type": "Open market or private sale of non-derivative or derivative security",
+   "acquisition_or_disposition": "Disposition",
+   "securities_transacted": 40.0,
+   "transaction_price": 947.29,
+   "filing_url": "https://www.sec.gov/Archives/edgar/data/723125/000159319926000005/primarydocument.xml"
+  },
+  {
+   "symbol": "MU",
+   "filing_date": "2026-10-15",
+   "transaction_date": "2026-10-13",
+   "owner_name": "MEHROTRA SANJAY",
+   "owner_title": "President and CEO",
+   "transaction_type": "Grant, award or other acquisition pursuant to Rule 16b-3(d)",
+   "acquisition_or_disposition": "Acquisition",
+   "securities_transacted": 21233.0,
+   "transaction_price": 0.0,
+   "filing_url": "https://www.sec.gov/Archives/edgar/data/723125/000124265426000016/primarydocument.xml"
+  },
+  {
+   "symbol": "MU",
+   "filing_date": "2026-10-15",
+   "transaction_date": "2026-10-13",
+   "owner_name": "MEHROTRA SANJAY",
+   "owner_title": "President and CEO",
+   "transaction_type": "Payment of exercise price or tax liability by delivering or withholding securities incident to the receipt, exercise or vesting of a security issued in accordance with Rule 16b-3",
+   "acquisition_or_disposition": "Disposition",
+   "securities_transacted": 20213.0,
+   "transaction_price": 989.04,
+   "filing_url": "https://www.sec.gov/Archives/edgar/data/723125/000124265426000016/primarydocument.xml"
+  },
+  {
+   "symbol": "MU",
+   "filing_date": "2026-10-15",
+   "transaction_date": "2026-10-13",
+   "owner_name": "MEHROTRA SANJAY",
+   "owner_title": "President and CEO",
+   "transaction_type": "Exercise or conversion of derivative security exempted pursuant to Rule 16b-3",
+   "acquisition_or_disposition": "Acquisition",
+   "securities_transacted": 82721.0,
+   "transaction_price": 0.0,
+   "filing_url": "https://www.sec.gov/Archives/edgar/data/723125/000124265426000016/primarydocument.xml"
+  },
+  {
+   "symbol": "MU",
+   "filing_date": "2026-10-15",
+   "transaction_date": "2026-10-13",
+   "owner_name": "MEHROTRA SANJAY",
+   "owner_title": "President and CEO",
+   "transaction_type": "Exercise or conversion of derivative security exempted pursuant to Rule 16b-3",
+   "acquisition_or_disposition": "Disposition",
+   "securities_transacted": 82721.0,
+   "transaction_price": 0.0,
+   "filing_url": "https://www.sec.gov/Archives/edgar/data/723125/000124265426000016/primarydocument.xml"
+  },
+  {
+   "symbol": "MU",
+   "filing_date": "2026-10-15",
+   "transaction_date": "2026-10-13",
+   "owner_name": "ARNZEN APRIL S",
+   "owner_title": "EVP and Chief People Officer",
+   "transaction_type": "Bona fide gift",
+   "acquisition_or_disposition": "Disposition",
+   "securities_transacted": 1013.0,
+   "transaction_price": 0.0,
+   "filing_url": "https://www.sec.gov/Archives/edgar/data/723125/000163206326000005/primarydocument.xml"
+  },
+  {
+   "symbol": "MU",
+   "filing_date": "2026-10-15",
+   "transaction_date": null,
+   "owner_name": "Dugle Lynn A",
+   "owner_title": null,
+   "transaction_type": null,
+   "acquisition_or_disposition": null,
+   "securities_transacted": null,
+   "transaction_price": null,
+   "filing_url": "https://www.sec.gov/Archives/edgar/data/723125/000145336826000002/primarydocument.xml"
+  }
+ ]
+}

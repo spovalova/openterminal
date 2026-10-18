@@ -26,13 +26,31 @@ function renderedRows(): unknown[][] {
 
 describe('TableView formats', () => {
   const expected: Partial<Record<Kind, Record<string, string>>> = {
-    quote: { symbol: 'text', price: 'price', change_pct: 'percent', volume: 'integer', market_state: 'text', extended_price: 'price', extended_change_pct: 'percent' },
+    quote: { symbol: 'text', price: 'price', change_pct: 'change', volume: 'integer', market_state: 'text', extended_price: 'price', extended_change_pct: 'change' },
     news: { time: 'time', headline: 'text', source: 'text', url: 'link', symbol: 'text' },
     earnings: { symbol: 'text', date: 'date', session: 'text', eps_estimate: 'price' },
     search: { query: 'text', symbol: 'text', name: 'text', exchange: 'text' },
     ohlcv: { symbol: 'text', time: 'time', open: 'price', high: 'price', low: 'price', close: 'price', volume: 'integer' },
+    financials: {
+      symbol: 'text',
+      period_ending: 'date',
+      revenue: 'compact',
+      gross_profit: 'compact',
+      operating_income: 'compact',
+      net_income: 'compact',
+      eps: 'price',
+      operating_cash_flow: 'compact',
+      capex: 'compact',
+      free_cash_flow: 'compact',
+      cash: 'compact',
+      debt: 'compact',
+      shares: 'compact',
+    },
+    movers: { symbol: 'text', name: 'text', price: 'price', change_pct: 'change', volume: 'integer' },
+    volatility: { symbol: 'text', iv30: 'percent', iv30_high: 'percent', iv30_low: 'percent', iv_rank: 'price', hv30: 'percent', hv30_high: 'percent', hv30_low: 'percent', year_high: 'price', year_low: 'price' },
+    insiders: { symbol: 'text', date: 'date', name: 'text', title: 'text', action: 'text', shares: 'compact', price: 'price', value: 'compact', url: 'link' },
   }
-  const sample: Partial<Record<Kind, string>> = { quote: 'A3', news: 'A5', earnings: 'A4', search: 'search', ohlcv: 'C4' }
+  const sample: Partial<Record<Kind, string>> = { quote: 'A3', news: 'A5', earnings: 'A4', search: 'search', ohlcv: 'C4', financials: 'financials', movers: 'movers', volatility: 'volatility', insiders: 'insiders' }
 
   for (const kind of Object.keys(expected) as Kind[]) {
     it(`maps every ${kind} column to a CellFormat`, () => {
@@ -43,6 +61,21 @@ describe('TableView formats', () => {
       expect(Object.keys(renderedFormats())).toEqual(frame.columns.map((c) => c.name)) // hides nothing
     })
   }
+})
+
+describe('TableView formats for every kind', () => {
+  it('uses change only for signed moves, percent for levels, compact for amounts, integer for volumes', () => {
+    for (const kind of Object.keys(KINDS) as Kind[]) {
+      const f = formatsFor(kind, KINDS[kind].columns)
+      for (const [name, fmt] of Object.entries(f)) {
+        if (/^(change_pct|extended_change_pct|upside_pct|surprise_pct|eps_growth_y|revenue_growth|earnings_growth)$/.test(name)) expect(fmt, `${kind}.${name}`).toBe('change')
+        else expect(fmt, `${kind}.${name}`).not.toBe('change')
+        if (/volume$/.test(name)) expect(fmt, `${kind}.${name}`).toBe('integer')
+        if (kind !== 'macro' && /^(market_cap|revenue|net_income|value|offer_amount|shares)$/.test(name)) expect(fmt, `${kind}.${name}`).toBe('compact')
+        if (/margin$|_yield$|^iv$|^weight$|^rate$/.test(name)) expect(fmt, `${kind}.${name}`).toBe('percent')
+      }
+    }
+  })
 })
 
 describe('TableView default sort', () => {

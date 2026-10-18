@@ -1,0 +1,52 @@
+{
+ "results": [
+  {
+   "settlement_date": "2026-08-31",
+   "symbol": "MU",
+   "current_short_position": 29705339.0,
+   "avg_daily_volume": 25645506.0,
+   "days_to_cover": 1.16,
+   "change_pct": -1.04
+  },
+  {
+   "settlement_date": "2026-09-15",
+   "symbol": "MU",
+   "current_short_position": 27633780.0,
+   "avg_daily_volume": 25064802.0,
+   "days_to_cover": 1.1,
+   "change_pct": -6.97
+  },
+  {
+   "settlement_date": "2026-09-30",
+   "symbol": "MU",
+   "current_short_position": 26023190.0,
+   "avg_daily_volume": 24483420.0,
+   "days_to_cover": 1.06,
+   "change_pct": -5.83
+  },
+  {
+   "settlement_date": "2026-08-31",
+   "symbol": "AAPL",
+   "current_short_position": 139749097.0,
+   "avg_daily_volume": 39537335.0,
+   "days_to_cover": 3.53,
+   "change_pct": 20.13
+  },
+  {
+   "settlement_date": "2026-09-15",
+   "symbol": "AAPL",
+   "current_short_position": 128753092.0,
+   "avg_daily_volume": 45135477.0,
+   "days_to_cover": 2.85,
+   "change_pct": -7.87
+  },
+  {
+   "settlement_date": "2026-09-30",
+   "symbol": "AAPL",
+   "current_short_position": 120763539.0,
+   "avg_daily_volume": 39858260.0,
+   "days_to_cover": 3.03,
+   "change_pct": -6.21
+  }
+ ]
+}

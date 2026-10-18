@@ -1,0 +1,793 @@
+{
+  "recordedAt": "2026-10-18T02:46:00.628Z",
+  "bySymbol": {
+    "MU": {
+      "assetProfile": {
+        "maxAge": 86400,
+        "sector": "Technology",
+        "industry": "Semiconductors",
+        "fullTimeEmployees": 61000,
+        "longBusinessSummary": "Micron Technology, Inc. engages in the provision of semiconductor memory and storage products in the United States, Taiwan, Mainland China, other Asia Pacific countries, Japan, Europe, and internationally. It operates through Cloud Memory Business Unit, Core Data Center Business Unit, Mobile and Client Business Unit, and Automotive and Embedded Business Unit segments. The company provides dynamic random access memory (DRAM) products, including High-Bandwidth Memory, doublie data rate, low-power DRAM, and graphics DRAM products; NAND products comprising solid state drives, managed NAND, and multi-chip packages; and NOR products. The company sells its products under the Micron brand name and private labels through its own direct sales force, sales or representative offices, as well as through distributors, retailers, and independent sales representatives. Micron Technology, Inc. was founded in 1978 and is headquartered in Boise, Idaho."
+      },
+      "price": {
+        "maxAge": 1,
+        "symbol": "MU",
+        "quoteType": "EQUITY",
+        "longName": "Micron Technology, Inc.",
+        "shortName": "Micron Technology, Inc.",
+        "exchange": "NMS",
+        "exchangeName": "NasdaqGS",
+        "marketCap": 994340044800,
+        "regularMarketPrice": 878.84
+      },
+      "summaryDetail": {
+        "maxAge": 1,
+        "marketCap": 994340044800,
+        "trailingPE": 11.82349,
+        "forwardPE": 4.247783,
+        "priceToSalesTrailing12Months": 7.4656878,
+        "dividendYield": 0.0007,
+        "dividendRate": 0.6,
+        "trailingAnnualDividendYield": 0.00060671795,
+        "beta": 2.226,
+        "averageVolume": 31224765
+      },
+      "defaultKeyStatistics": {
+        "maxAge": 1,
+        "forwardPE": 4.247783,
+        "pegRatio": 0.16,
+        "enterpriseToEbitda": 8.784,
+        "priceToBook": 7.183,
+        "profitMargins": 0.63796,
+        "beta": 2.226,
+        "sharesShort": 26023190,
+        "sharesShortPriorMonth": "1970-12-10T19:28:59.000Z",
+        "sharesShortPreviousMonthDate": "2026-08-31T00:00:00.000Z",
+        "dateShortInterest": "2026-09-30T00:00:00.000Z",
+        "shortRatio": 1.04,
+        "shortPercentOfFloat": 0.0231
+      },
+      "financialData": {
+        "maxAge": 86400,
+        "currentPrice": 878.84,
+        "targetHighPrice": 3000,
+        "targetLowPrice": 361,
+        "targetMeanPrice": 1560.5652,
+        "recommendationKey": "strong_buy",
+        "recommendationMean": 1.36735,
+        "numberOfAnalystOpinions": 46,
+        "debtToEquity": 3.743,
+        "returnOnEquity": 0.8826,
+        "earningsGrowth": 10.595,
+        "revenueGrowth": 3.793,
+        "grossMargins": 0.80716,
+        "operatingMargins": 0.80678004,
+        "profitMargins": 0.63796
+      },
+      "earningsTrend": {
+        "maxAge": 1,
+        "trend": [
+          {
+            "period": "0q",
+            "endDate": "2026-11-30T00:00:00.000Z",
+            "growth": 7.0081,
+            "earningsEstimate": {
+              "avg": 38.27861,
+              "low": 35.85,
+              "high": 40.47,
+              "yearAgoEps": 4.78,
+              "numberOfAnalysts": 30,
+              "growth": 7.0081,
+              "earningsCurrency": "USD"
+            }
+          },
+          {
+            "period": "+1q",
+            "endDate": "2027-02-28T00:00:00.000Z",
+            "growth": 2.4623,
+            "earningsEstimate": {
+              "avg": 42.24048,
+              "low": 39.71,
+              "high": 49.79,
+              "yearAgoEps": 12.2,
+              "numberOfAnalysts": 29,
+              "growth": 2.4623,
+              "earningsCurrency": "USD"
+            }
+          },
+          {
+            "period": "0y",
+            "endDate": "2027-08-31T00:00:00.000Z",
+            "growth": 1.3377,
+            "earningsEstimate": {
+              "avg": 176.54659,
+              "low": 161,
+              "high": 214.7,
+              "yearAgoEps": 75.52,
+              "numberOfAnalysts": 35,
+              "growth": 1.3377,
+              "earningsCurrency": "USD"
+            }
+          },
+          {
+            "period": "+1y",
+            "endDate": "2028-08-31T00:00:00.000Z",
+            "growth": 0.1719,
+            "earningsEstimate": {
+              "avg": 206.89381,
+              "low": 136,
+              "high": 335.5,
+              "yearAgoEps": 176.54659,
+              "numberOfAnalysts": 36,
+              "growth": 0.1719,
+              "earningsCurrency": "USD"
+            }
+          }
+        ]
+      },
+      "earningsHistory": {
+        "history": [
+          {
+            "maxAge": 1,
+            "epsActual": 4.78,
+            "epsEstimate": 3.96409,
+            "epsDifference": 0.82,
+            "surprisePercent": 0.2058,
+            "quarter": "2025-11-30T00:00:00.000Z",
+            "currency": "USD",
+            "period": "-4q"
+          },
+          {
+            "maxAge": 1,
+            "epsActual": 12.2,
+            "epsEstimate": 9.15866,
+            "epsDifference": 3.04,
+            "surprisePercent": 0.3321,
+            "quarter": "2026-02-28T00:00:00.000Z",
+            "currency": "USD",
+            "period": "-3q"
+          },
+          {
+            "maxAge": 1,
+            "epsActual": 25.11,
+            "epsEstimate": 20.68603,
+            "epsDifference": 4.42,
+            "surprisePercent": 0.2139,
+            "quarter": "2026-05-31T00:00:00.000Z",
+            "currency": "USD",
+            "period": "-2q"
+          },
+          {
+            "maxAge": 1,
+            "epsActual": 33.42,
+            "epsEstimate": 31.81801,
+            "epsDifference": 1.6,
+            "surprisePercent": 0.050300002,
+            "quarter": "2026-08-31T00:00:00.000Z",
+            "currency": "USD",
+            "period": "-1q"
+          }
+        ],
+        "defaultMethodology": "nongaap",
+        "maxAge": 86400
+      },
+      "insiderTransactions": {
+        "maxAge": 1,
+        "count": 102,
+        "transactions": [
+          {
+            "shares": 40000,
+            "value": 38756162,
+            "filerUrl": "",
+            "transactionText": "Sale at price 959.14 - 989.59 per share.",
+            "filerName": "MEHROTRA SANJAY",
+            "filerRelation": "Chief Executive Officer",
+            "startDate": "2026-08-21T00:00:00.000Z",
+            "ownership": "D"
+          },
+          {
+            "shares": 15000,
+            "value": 14014350,
+            "filerUrl": "",
+            "transactionText": "Sale at price 934.29 per share.",
+            "filerName": "SADANA SUMIT",
+            "filerRelation": "Officer",
+            "startDate": "2026-08-18T00:00:00.000Z",
+            "ownership": "D"
+          },
+          {
+            "shares": 31285,
+            "value": 28995816,
+            "filerUrl": "",
+            "transactionText": "Sale at price 906.48 - 941.60 per share.",
+            "filerName": "MEHROTRA SANJAY",
+            "filerRelation": "Chief Executive Officer",
+            "startDate": "2026-07-24T00:00:00.000Z",
+            "ownership": "D"
+          },
+          {
+            "shares": 8715,
+            "value": 8294275,
+            "filerUrl": "",
+            "transactionText": "Sale at price 942.87 - 965.85 per share.",
+            "filerName": "MEHROTRA SANJAY",
+            "filerRelation": "Chief Executive Officer",
+            "startDate": "2026-07-24T00:00:00.000Z",
+            "ownership": "D"
+          },
+          {
+            "shares": 879,
+            "value": 879000,
+            "filerUrl": "",
+            "transactionText": "Sale at price 1000.00 per share.",
+            "filerName": "ALLEN SCOTT R",
+            "filerRelation": "Officer",
+            "startDate": "2026-07-23T00:00:00.000Z",
+            "ownership": "D"
+          },
+          {
+            "shares": 40000,
+            "value": 43357473,
+            "filerUrl": "",
+            "transactionText": "Sale at price 1077.05 - 1095.88 per share.",
+            "filerName": "ARNZEN APRIL S",
+            "filerRelation": "Officer",
+            "startDate": "2026-07-01T00:00:00.000Z",
+            "ownership": "D"
+          },
+          {
+            "shares": 1300,
+            "value": 1495559,
+            "filerUrl": "",
+            "transactionText": "Sale at price 1150.43 per share.",
+            "filerName": "DUGLE LYNN A",
+            "filerRelation": "Director",
+            "startDate": "2026-06-30T00:00:00.000Z",
+            "ownership": "D"
+          },
+          {
+            "shares": 27,
+            "value": 0,
+            "filerUrl": "",
+            "transactionText": "Stock Award(Grant) at price 0.00 per share.",
+            "filerName": "LIU TEYIN MARK",
+            "filerRelation": "Director",
+            "startDate": "2026-06-30T00:00:00.000Z",
+            "ownership": "D"
+          }
+        ]
+      },
+      "institutionOwnership": {
+        "maxAge": 1,
+        "ownershipList": [
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "Blackrock Inc.",
+            "pctHeld": 0.092700005,
+            "position": 104827219,
+            "value": 92126355961,
+            "pctChange": 0.0163
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "Vanguard Capital Management LLC",
+            "pctHeld": 0.0651,
+            "position": 73659544,
+            "value": 64734955627,
+            "pctChange": 0.0070999996
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "State Street Corporation",
+            "pctHeld": 0.044299997,
+            "position": 50075870,
+            "value": 44008678935,
+            "pctChange": -0.0414
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "Invesco Ltd.",
+            "pctHeld": 0.0321,
+            "position": 36315240,
+            "value": 31915286496,
+            "pctChange": 0.0177
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "Capital World Investors",
+            "pctHeld": 0.025999999,
+            "position": 29469646,
+            "value": 25899104482,
+            "pctChange": -0.2992
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "Geode Capital Management, LLC",
+            "pctHeld": 0.024500001,
+            "position": 27705797,
+            "value": 24348963379,
+            "pctChange": 0.01
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "FMR, LLC",
+            "pctHeld": 0.023599999,
+            "position": 26718869,
+            "value": 23481611549,
+            "pctChange": -0.1665
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "JPMORGAN CHASE & CO",
+            "pctHeld": 0.0228,
+            "position": 25836011,
+            "value": 22705720601,
+            "pctChange": 0.6378
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "Vanguard Portfolio Management LLC",
+            "pctHeld": 0.0218,
+            "position": 24662080,
+            "value": 21674023049,
+            "pctChange": 0.071100004
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "Primecap Management Company",
+            "pctHeld": 0.017,
+            "position": 19217236,
+            "value": 16888876202,
+            "pctChange": -0.12149999
+          }
+        ]
+      }
+    },
+    "NVDA": {
+      "assetProfile": {
+        "maxAge": 86400,
+        "sector": "Technology",
+        "industry": "Semiconductors",
+        "fullTimeEmployees": 42000,
+        "longBusinessSummary": "NVIDIA Corporation operates as a data center scale AI infrastructure company in the United States, Taiwan, China, Hong Kong, Europe, and internationally. It operates through Compute & Networking, and Graphics segments. The Compute & Networking segment provides data center accelerated computing and networking platforms and artificial intelligence solutions and software, and automotive platforms and autonomous and electric vehicle solutions, including software. The Graphics segment offers GeForce GPUs for gaming and PCs; Quadro/NVIDIA RTX GPUs for enterprise workstation graphics. The company's products are used in gaming, professional visualization, data center, and automotive markets. It sells its products to original equipment manufacturers, original device manufacturers, system integrators and distributors, independent software vendors, cloud service providers, add-in board manufacturers, distributors, automotive manufacturers and tier-1 automotive suppliers, and other ecosystem participants. It has a collaboration with Cisco to develop Ultra-Dense Small Form Factor Pluggable (USFP), a high-density optical module pluggable transceiver. It has a collaboration with ChipAgents to develop Build-A-Chip-Bench, a benchmark for AI agents carrying chip design tasks. NVIDIA Corporation was incorporated in 1993 and is headquartered in Santa Clara, California."
+      },
+      "price": {
+        "maxAge": 1,
+        "symbol": "NVDA",
+        "quoteType": "EQUITY",
+        "longName": "NVIDIA Corporation",
+        "shortName": "NVIDIA Corporation",
+        "exchange": "NMS",
+        "exchangeName": "NasdaqGS",
+        "marketCap": 5170596937728,
+        "regularMarketPrice": 214.13
+      },
+      "summaryDetail": {
+        "maxAge": 1,
+        "marketCap": 5170596937728,
+        "trailingPE": 27.070797,
+        "forwardPE": 13.454941,
+        "priceToSalesTrailing12Months": 17.066366,
+        "dividendYield": 0.0047,
+        "dividendRate": 1,
+        "trailingAnnualDividendYield": 0.0012889564,
+        "beta": 2.216,
+        "averageVolume": 118505879
+      },
+      "defaultKeyStatistics": {
+        "maxAge": 1,
+        "forwardPE": 13.454941,
+        "pegRatio": 0.26,
+        "enterpriseToEbitda": 25.523,
+        "priceToBook": 22.580408,
+        "profitMargins": 0.63663,
+        "beta": 2.216,
+        "sharesShort": 311389688,
+        "sharesShortPriorMonth": "1979-06-15T13:33:39.000Z",
+        "sharesShortPreviousMonthDate": "2026-08-31T00:00:00.000Z",
+        "dateShortInterest": "2026-09-30T00:00:00.000Z",
+        "shortRatio": 2.75,
+        "shortPercentOfFloat": 0.0134000005
+      },
+      "financialData": {
+        "maxAge": 86400,
+        "currentPrice": 214.13,
+        "targetHighPrice": 515,
+        "targetLowPrice": 180,
+        "targetMeanPrice": 328.71695,
+        "recommendationKey": "strong_buy",
+        "recommendationMean": 1.29032,
+        "numberOfAnalystOpinions": 59,
+        "debtToEquity": 16.971,
+        "returnOnEquity": 1.17211,
+        "earningsGrowth": 1.278,
+        "revenueGrowth": 1.059,
+        "grossMargins": 0.74674004,
+        "operatingMargins": 0.66236997,
+        "profitMargins": 0.63663
+      },
+      "earningsTrend": {
+        "maxAge": 1,
+        "trend": [
+          {
+            "period": "0q",
+            "endDate": "2026-10-31T00:00:00.000Z",
+            "growth": 0.9025,
+            "earningsEstimate": {
+              "avg": 2.47325,
+              "low": 2.34,
+              "high": 2.7,
+              "yearAgoEps": 1.3,
+              "numberOfAnalysts": 44,
+              "growth": 0.9025,
+              "earningsCurrency": "USD"
+            }
+          },
+          {
+            "period": "+1q",
+            "endDate": "2027-01-31T00:00:00.000Z",
+            "growth": 0.69519997,
+            "earningsEstimate": {
+              "avg": 2.74622,
+              "low": 2.56,
+              "high": 3.117,
+              "yearAgoEps": 1.62,
+              "numberOfAnalysts": 42,
+              "growth": 0.69519997,
+              "earningsCurrency": "USD"
+            }
+          },
+          {
+            "period": "0y",
+            "endDate": "2027-01-31T00:00:00.000Z",
+            "growth": 0.9523,
+            "earningsEstimate": {
+              "avg": 9.31242,
+              "low": 9.01,
+              "high": 10.1,
+              "yearAgoEps": 4.77,
+              "numberOfAnalysts": 51,
+              "growth": 0.9523,
+              "earningsCurrency": "USD"
+            }
+          },
+          {
+            "period": "+1y",
+            "endDate": "2028-01-31T00:00:00.000Z",
+            "growth": 0.709,
+            "earningsEstimate": {
+              "avg": 15.9146,
+              "low": 12.84835,
+              "high": 18.746,
+              "yearAgoEps": 9.31242,
+              "numberOfAnalysts": 52,
+              "growth": 0.709,
+              "earningsCurrency": "USD"
+            }
+          }
+        ]
+      },
+      "earningsHistory": {
+        "history": [
+          {
+            "maxAge": 1,
+            "epsActual": 1.3,
+            "epsEstimate": 1.25647,
+            "epsDifference": 0.04,
+            "surprisePercent": 0.0346,
+            "quarter": "2025-10-31T00:00:00.000Z",
+            "currency": "USD",
+            "period": "-4q"
+          },
+          {
+            "maxAge": 1,
+            "epsActual": 1.62,
+            "epsEstimate": 1.53812,
+            "epsDifference": 0.08,
+            "surprisePercent": 0.053200003,
+            "quarter": "2026-01-31T00:00:00.000Z",
+            "currency": "USD",
+            "period": "-3q"
+          },
+          {
+            "maxAge": 1,
+            "epsActual": 1.87,
+            "epsEstimate": 1.77191,
+            "epsDifference": 0.1,
+            "surprisePercent": 0.0554,
+            "quarter": "2026-04-30T00:00:00.000Z",
+            "currency": "USD",
+            "period": "-2q"
+          },
+          {
+            "maxAge": 1,
+            "epsActual": 2.22,
+            "epsEstimate": 2.09113,
+            "epsDifference": 0.13,
+            "surprisePercent": 0.0616,
+            "quarter": "2026-07-31T00:00:00.000Z",
+            "currency": "USD",
+            "period": "-1q"
+          }
+        ],
+        "defaultMethodology": "nongaap",
+        "maxAge": 86400
+      },
+      "insiderTransactions": {
+        "maxAge": 1,
+        "count": 150,
+        "transactions": [
+          {
+            "shares": 30460,
+            "value": 6786533,
+            "filerUrl": "",
+            "transactionText": "Sale at price 222.19 - 223.75 per share.",
+            "filerName": "TETER TIMOTHY S",
+            "filerRelation": "General Counsel",
+            "startDate": "2026-09-21T00:00:00.000Z",
+            "ownership": "I"
+          },
+          {
+            "shares": 1366000,
+            "value": 300147095,
+            "filerUrl": "",
+            "transactionText": "Sale at price 219.72 - 220.42 per share.",
+            "filerName": "STEVENS MARK A",
+            "filerRelation": "Director",
+            "startDate": "2026-09-18T00:00:00.000Z",
+            "ownership": "I"
+          },
+          {
+            "shares": 172507,
+            "value": 0,
+            "filerUrl": "",
+            "transactionText": "Stock Award(Grant) at price 0.00 per share.",
+            "filerName": "PARKER NICHOLAS P",
+            "filerRelation": "Officer",
+            "startDate": "2026-09-09T00:00:00.000Z",
+            "ownership": "D"
+          },
+          {
+            "shares": 160418,
+            "value": 0,
+            "filerUrl": "",
+            "transactionText": "Stock Award(Grant) at price 0.00 per share.",
+            "filerName": "PARKER NICHOLAS P",
+            "filerRelation": "Officer",
+            "startDate": "2026-09-09T00:00:00.000Z",
+            "ownership": "D"
+          },
+          {
+            "shares": 1022239,
+            "value": 235636867,
+            "filerUrl": "",
+            "transactionText": "Sale at price 227.70 - 234.00 per share.",
+            "filerName": "STEVENS MARK A",
+            "filerRelation": "Director",
+            "startDate": "2026-09-04T00:00:00.000Z",
+            "ownership": "I"
+          },
+          {
+            "shares": 1848501,
+            "value": 410843671,
+            "filerUrl": "",
+            "transactionText": "Sale at price 220.06 - 226.27 per share.",
+            "filerName": "STEVENS MARK A",
+            "filerRelation": "Director",
+            "startDate": "2026-09-02T00:00:00.000Z",
+            "ownership": "I"
+          },
+          {
+            "shares": 500000,
+            "value": 0,
+            "filerUrl": "",
+            "transactionText": "Stock Gift at price 0.00 per share.",
+            "filerName": "COXE TENCH C",
+            "filerRelation": "Director",
+            "startDate": "2026-09-02T00:00:00.000Z",
+            "ownership": "I"
+          },
+          {
+            "shares": 30000,
+            "value": 6536515,
+            "filerUrl": "",
+            "transactionText": "Sale at price 216.84 - 218.53 per share.",
+            "filerName": "TETER TIMOTHY S",
+            "filerRelation": "General Counsel",
+            "startDate": "2026-08-31T00:00:00.000Z",
+            "ownership": "I"
+          }
+        ]
+      },
+      "institutionOwnership": {
+        "maxAge": 1,
+        "ownershipList": [
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "Blackrock Inc.",
+            "pctHeld": 0.0806,
+            "position": 1941918386,
+            "value": 415822993476,
+            "pctChange": 0.0085
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "Vanguard Capital Management LLC",
+            "pctHeld": 0.0639,
+            "position": 1540816358,
+            "value": 329935014262,
+            "pctChange": 0.0015
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "FMR, LLC",
+            "pctHeld": 0.042600002,
+            "position": 1026051548,
+            "value": 219708422983,
+            "pctChange": 0.0324
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "State Street Corporation",
+            "pctHeld": 0.0419,
+            "position": 1009783437,
+            "value": 216224932295,
+            "pctChange": 0.016
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "Geode Capital Management, LLC",
+            "pctHeld": 0.0252,
+            "position": 606216492,
+            "value": 129809140392,
+            "pctChange": 0.0081
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "Vanguard Portfolio Management LLC",
+            "pctHeld": 0.0215,
+            "position": 517816949,
+            "value": 110880145817,
+            "pctChange": 0.0150999995
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "JPMORGAN CHASE & CO",
+            "pctHeld": 0.0186,
+            "position": 449404578,
+            "value": 96231004481,
+            "pctChange": 0.0036000002
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "Price (T.Rowe) Associates Inc",
+            "pctHeld": 0.0153,
+            "position": 369829781,
+            "value": 79191652811,
+            "pctChange": -0.0007
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "Morgan Stanley",
+            "pctHeld": 0.0148,
+            "position": 356420089,
+            "value": 76320235397,
+            "pctChange": 0.039300002
+          },
+          {
+            "maxAge": 1,
+            "reportDate": "2026-06-30T00:00:00.000Z",
+            "organization": "Invesco Ltd.",
+            "pctHeld": 0.0137,
+            "position": 329593488,
+            "value": 70575855194,
+            "pctChange": 0.0064
+          }
+        ]
+      }
+    },
+    "SMH": {
+      "assetProfile": {
+        "maxAge": 86400,
+        "longBusinessSummary": "The fund normally invests at least 80% of its total assets in securities that comprise the fund's benchmark index. The index includes common stocks and depositary receipts of U.S. exchange-listed companies in the semiconductor industry. Such companies may include medium-capitalization companies and foreign companies that are listed on a U.S. exchange. The fund is non-diversified."
+      },
+      "price": {
+        "maxAge": 1,
+        "symbol": "SMH",
+        "quoteType": "ETF",
+        "longName": "VanEck Semiconductor ETF",
+        "shortName": "VanEck Semiconductor ETF",
+        "exchange": "NGM",
+        "exchangeName": "NasdaqGM",
+        "regularMarketPrice": 539.79
+      },
+      "summaryDetail": {
+        "maxAge": 1,
+        "trailingPE": 28.838007,
+        "trailingAnnualDividendYield": 0,
+        "averageVolume": 8378584,
+        "yield": 0.0018000001
+      },
+      "defaultKeyStatistics": {
+        "maxAge": 1,
+        "beta3Year": 2,
+        "yield": 0.0018000001
+      },
+      "topHoldings": {
+        "maxAge": 1,
+        "stockPosition": 0.9997,
+        "holdings": [
+          {
+            "symbol": "NVDA",
+            "holdingName": "NVIDIA Corp",
+            "holdingPercent": 0.1931036
+          },
+          {
+            "symbol": "TSM",
+            "holdingName": "Taiwan Semiconductor Manufacturing Co Ltd ADR",
+            "holdingPercent": 0.0927951
+          },
+          {
+            "symbol": "AMD",
+            "holdingName": "Advanced Micro Devices Inc",
+            "holdingPercent": 0.0554102
+          },
+          {
+            "symbol": "AVGO",
+            "holdingName": "Broadcom Inc",
+            "holdingPercent": 0.0526573
+          },
+          {
+            "symbol": "MU",
+            "holdingName": "Micron Technology Inc",
+            "holdingPercent": 0.0492491
+          },
+          {
+            "symbol": "AMAT",
+            "holdingName": "Applied Materials Inc",
+            "holdingPercent": 0.0466008
+          },
+          {
+            "symbol": "INTC",
+            "holdingName": "Intel Corp",
+            "holdingPercent": 0.046564598
+          },
+          {
+            "symbol": "TXN",
+            "holdingName": "Texas Instruments Inc",
+            "holdingPercent": 0.0459514
+          },
+          {
+            "symbol": "KLAC",
+            "holdingName": "KLA Corp",
+            "holdingPercent": 0.0458501
+          },
+          {
+            "symbol": "ASML",
+            "holdingName": "ASML Holding NV ADR",
+            "holdingPercent": 0.0453647
+          }
+        ]
+      }
+    }
+  }
+}

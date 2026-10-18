@@ -1,8 +1,8 @@
 # Writing a connector
 
-A connector is a plugin that answers one or more **kinds** (`search`, `quote`, `ohlcv`, `news`, `earnings`) from an external source and returns a **frame**. It runs inside the server process, holds its own config (usually an API key), and is about 50 lines. This page is everything you need; the only other file worth opening is `packages/core/src/kinds.ts`, which the catalog below is copied from.
+A connector is a plugin that answers one or more **kinds** (22 in the catalog, from `quote` to `yield_curve`) from an external source and returns a **frame**. It runs inside the server process, holds its own config (usually an API key), and is about 50 lines per kind. This page is everything you need; the only other file worth opening is `packages/core/src/kinds.ts`, which the catalog below is copied from.
 
-Contents: [the contract](#the-contract) · [the ctx](#the-ctx) · [frames and toFrame](#frames-and-toframe) · [kind catalog](#kind-catalog) · [errors and fallback](#errors-and-fallback) · [column validation](#how-the-registry-validates-a-frame) · [config](#config) · [testing with fixtures](#testing-with-recorded-fixtures) · [worked example](#worked-example-a-quote-connector) · [package layout and registration](#package-layout-and-registration) · [v1 limits](#v1-limits)
+Contents: [the contract](#the-contract) · [the ctx](#the-ctx) · [frames and toFrame](#frames-and-toframe) · [kind catalog](#kind-catalog) · [adding a handler for a new kind](#adding-a-handler-for-a-new-kind) · [errors and fallback](#errors-and-fallback) · [column validation](#how-the-registry-validates-a-frame) · [config](#config) · [testing with fixtures](#testing-with-recorded-fixtures) · [worked example](#worked-example-a-quote-connector) · [package layout and registration](#package-layout-and-registration) · [v1 limits](#v1-limits)
 
 ## The contract
 
@@ -32,7 +32,7 @@ What `defineConnector` does:
 
 - Checks the name against `/^[a-z][a-z0-9-]*$/` and throws otherwise.
 - Derives `kinds` (the list of kinds you answer, in catalog order) from the keys of `queries`. Answering no kinds is an error.
-- Types each handler: `queries.quote` receives `{ symbols: string[] }`, `queries.ohlcv` receives `{ symbols, interval, range }`, and so on, with defaults already applied (`news.limit` is always a number). `ctx.config` is typed by your config schema.
+- Types each handler: `queries.quote` receives `{ symbols: string[] }`, `queries.ohlcv` receives `{ symbols, interval, range }`, `queries.options` receives `{ symbol, expiration?, strikes, type }`, `queries.macro` receives `{ series, range }`, and so on, with defaults already applied (`news.limit` is always a number, `options.type` is always set). `ctx.config` is typed by your config schema.
 
 The exact types, from `packages/core/src/connector.ts`:
 
@@ -89,13 +89,17 @@ Conventions every frame must follow (`packages/core/src/frame.ts`):
 
 | Convention | Meaning |
 |---|---|
-| Long format | Multi-symbol results are one row per (symbol, …) with a `symbol` column. Never one column per symbol. |
-| `symbol` column | The symbol as the user asked for it, upper case (`MU`, `BRK-B` as given). Every kind except `search` is keyed on it. |
+| Long format | Multi-symbol results are one row per (symbol, …) with a `symbol` column. Never one column per symbol. `macro` is one row per (series, time) with a `series` column instead. |
+| `symbol` column | The symbol as the user asked for it, upper case (`MU`, `BRK-B` as given). Every `symbols[]` kind is keyed on it; `options` repeats its one `symbol` on every row; `holdings` puts the ETF in `etf` and each constituent in `symbol`. |
+| Percent columns | Percent is percent: `5.63` means 5.63%, never `0.0563`. This covers `change_pct`, `extended_change_pct`, `upside_pct`, `surprise_pct`, every margin, growth, `roe` and `dividend_yield` in `metrics`, `iv` and everything in `volatility`, `weight` in `holdings`, and the rates, CPI and unemployment series in `macro` and `yield_curve`. Scale in the connector; the views and the agent do not. |
 | `time` is epoch ms | Columns of type `time` hold a JavaScript number (`date.getTime()`), never a `Date`, an ISO string, or seconds. Convert at the edge; `toFrame` does not convert for you and the registry does not check cell types, so a `Date` will reach the view and break it. |
 | Null cells | Any cell may be `null` when the source has no value. The column type is the nominal type. Use `null`, not `undefined`, `NaN`, `0`, or `''`. |
 | `ohlcv` sorted | Rows sorted by symbol, then by time ascending. Drop bars with a null `close`. |
 | `news` newest first | Rows sorted by `time` descending across all symbols. Respect `limit` as a total, not per symbol. |
-| `earnings.date` | `YYYY-MM-DD` in America/New_York. `session` is `'bmo'`, `'amc'`, or `null`. |
+| `earnings.date` | `YYYY-MM-DD` in America/New_York. `session` is `'bmo'`, `'amc'`, or `null`. Other date-only columns (`period_ending`, `ex_date`, `expiration`, `eps_history.date`, `yield_curve.date`) are `YYYY-MM-DD` strings too. |
+| Newest first | `financials`, `eps_history`, `dividends`, `insiders`, `institutions`, `short_interest` are sorted newest first and cut to `limit` per symbol. |
+| `options` | One expiration, `strikes` strikes each side of `underlying_price`, sorted by `type` then `strike`. Snap `expiration` forward to the first listed date on or after it; when omitted, use the nearest expiration at least 7 days out. |
+| `macro` and `yield_curve` | `macro` rows sorted by series then time; `yield_curve` sorted by `years` ascending, with `maturity` the source's label (`1M`, `2Y`, `10Y`). |
 | `quote.market_state` | Use `PRE`, `REGULAR`, `POST`, `CLOSED`. `extended_price` and `extended_change_pct` are the pre- or post-market values when the source has them, else `null`. |
 | `search` | One row per input term with `query` set to the term as given, so the caller can match results back. US equities and ETFs only; first hit wins. |
 
@@ -103,21 +107,78 @@ Sort and filter in the connector. The registry and the views assume the conventi
 
 ## Kind catalog
 
-Copied from `packages/core/src/kinds.ts`. Each kind is a param schema plus the exact columns of its frame. `symbols` is required on every kind except `search` because no free source offers a market-wide calendar or feed.
+Copied from `packages/core/src/kinds.ts` (PLAN.md section 7.1). Each kind is a param schema plus the exact columns of its frame. Most kinds take `symbols[]` (1 to 50). `options` and `holdings` take exactly one `symbol`. `search` takes `q[]`; `calendar`, `ipos`, `movers`, `macro` and `yield_curve` take no symbols at all. `limit` is per symbol, newest first.
+
+**v1**
 
 | Kind | What it answers | Params (type, constraints, default) | Columns (name: type, in order) | Cache TTL |
 |---|---|---|---|---|
 | `search` | Resolve free-text names or tickers to symbols. One call per batch of terms. | `q: string[]` (1–50 terms, each trimmed and non-empty) | `query: string`, `symbol: string`, `name: string`, `exchange: string` | 1 day |
 | `quote` | Latest price, day change, volume, market state, extended-hours price per symbol. | `symbols: string[]` (1–50, each 1–16 chars) | `symbol: string`, `price: number`, `change_pct: number`, `volume: number`, `market_state: string`, `extended_price: number`, `extended_change_pct: number` | 10 s |
-| `ohlcv` | Price bars per symbol over a range at an interval. | `symbols: string[]`; `interval: '1m' \| '5m' \| '15m' \| '1h' \| '1d' \| '1w'`; `range: '1d' \| '5d' \| '1mo' \| '3mo' \| '6mo' \| '1y' \| '5y'` | `symbol: string`, `time: time`, `open: number`, `high: number`, `low: number`, `close: number`, `volume: number` | 60 s for `1m 5m 15m 1h`; 10 min for `1d 1w` |
+| `ohlcv` | Price bars per symbol over a range at an interval. | `symbols: string[]`; `interval: '1m' \| '5m' \| '15m' \| '1h' \| '1d' \| '1w'`; `range: '1d' \| '5d' \| '1mo' \| '3mo' \| '6mo' \| '1y' \| '2y' \| '5y'` | `symbol: string`, `time: time`, `open: number`, `high: number`, `low: number`, `close: number`, `volume: number` | 60 s for `1m 5m 15m 1h`; 10 min for `1d 1w` |
 | `news` | Recent headlines per symbol, newest first. | `symbols: string[]`; `limit: number` (integer 1–100, default 20) | `time: time`, `headline: string`, `source: string`, `url: string`, `symbol: string` | 2 min |
 | `earnings` | Earnings dates per symbol inside a date window. | `symbols: string[]`; `from: 'YYYY-MM-DD'`; `to: 'YYYY-MM-DD'` (inclusive) | `symbol: string`, `date: string`, `session: string`, `eps_estimate: number` | 1 hour |
 
-`change_pct` and `extended_change_pct` are percentages (`-1.3` means down 1.3%). `volume` is shares. Percent columns in a `quote` are the day change; the agent uses them for "down X% today" and uses `ohlcv` previews for changes over a range.
+**company**
+
+| Kind | What it answers | Params | Columns (name: type, in order) | Cache TTL |
+|---|---|---|---|---|
+| `profile` | Who the company is. | `symbols: string[]` | `symbol: string`, `name: string`, `exchange: string`, `sector: string`, `industry: string`, `market_cap: number`, `employees: number`, `beta: number`, `description: string` | 1 day |
+| `metrics` | Valuation and quality snapshot: multiples, margins, growth, returns, leverage, yield. | `symbols: string[]` | `symbol: string`, `market_cap: number`, `pe: number`, `forward_pe: number`, `peg: number`, `ev_ebitda: number`, `ps: number`, `pb: number`, `gross_margin: number`, `operating_margin: number`, `profit_margin: number`, `revenue_growth: number`, `earnings_growth: number`, `roe: number`, `debt_to_equity: number`, `dividend_yield: number` | 1 hour |
+| `financials` | Statement lines per fiscal period, newest first. Amounts in the reporting currency, not scaled. | `symbols: string[]`; `period: 'annual' \| 'quarter'` (default quarter); `limit: number` (1–5, default 4) | `symbol: string`, `period_ending: string`, `revenue: number`, `gross_profit: number`, `operating_income: number`, `net_income: number`, `eps: number`, `operating_cash_flow: number`, `capex: number`, `free_cash_flow: number`, `cash: number`, `debt: number`, `shares: number` | 1 day |
+| `estimates` | Analyst consensus: recommendation, count, price targets, EPS estimates. | `symbols: string[]` | `symbol: string`, `recommendation: string`, `analysts: number`, `target_low: number`, `target_consensus: number`, `target_high: number`, `upside_pct: number`, `eps_estimate_q: number`, `eps_estimate_y: number`, `eps_growth_y: number` | 1 hour |
+| `eps_history` | Past EPS against the estimate, newest first. Future dates carry the estimate only. | `symbols: string[]`; `limit: number` (1–20, default 8) | `symbol: string`, `date: string`, `eps_actual: number`, `eps_estimate: number`, `surprise_pct: number` | 1 day |
+| `dividends` | Dividend history, newest first. | `symbols: string[]`; `limit: number` (1–60, default 12) | `symbol: string`, `ex_date: string`, `amount: number` | 1 day |
+
+**ownership**
+
+| Kind | What it answers | Params | Columns (name: type, in order) | Cache TTL |
+|---|---|---|---|---|
+| `insiders` | Insider transactions, newest first. `action` is `buy`, `sell`, `grant`, or `other`; `value` is shares times price. | `symbols: string[]`; `limit: number` (1–100, default 20) | `symbol: string`, `date: string`, `name: string`, `title: string`, `action: string`, `shares: number`, `price: number`, `value: number`, `url: string` | 1 hour |
+| `institutions` | Largest institutional holders from the latest filings. | `symbols: string[]`; `limit: number` (1–50, default 20) | `symbol: string`, `date: string`, `holder: string`, `shares: number`, `change_pct: number`, `value: number` | 1 day |
+| `short_interest` | Twice-monthly short interest, newest first. | `symbols: string[]`; `limit: number` (1–60, default 12) | `symbol: string`, `date: string`, `short_interest: number`, `change_pct: number`, `avg_volume: number`, `days_to_cover: number` | 1 day |
+
+**options**
+
+| Kind | What it answers | Params | Columns (name: type, in order) | Cache TTL |
+|---|---|---|---|---|
+| `options` | Option chain for one symbol at one expiration, the `strikes` nearest strikes each side of the underlying. | `symbol: string`; `expiration?: 'YYYY-MM-DD'`; `strikes: number` (1–30, default 10); `type: 'call' \| 'put' \| 'both'` (default both) | `symbol: string`, `expiration: string`, `type: string`, `strike: number`, `bid: number`, `ask: number`, `last: number`, `volume: number`, `open_interest: number`, `iv: number`, `delta: number`, `gamma: number`, `theta: number`, `vega: number`, `underlying_price: number`, `dte: number` | 60 s |
+| `volatility` | Implied and realized volatility snapshot, all percent. | `symbols: string[]` | `symbol: string`, `iv30: number`, `iv30_high: number`, `iv30_low: number`, `iv_rank: number`, `hv30: number`, `hv30_high: number`, `hv30_low: number`, `year_high: number`, `year_low: number` | 10 min |
+
+**market-wide** (no `symbols[]`)
+
+| Kind | What it answers | Params | Columns (name: type, in order) | Cache TTL |
+|---|---|---|---|---|
+| `calendar` | Economic calendar inside a date window for one country. `actual`, `consensus`, `previous` as the source prints them. | `from`, `to: 'YYYY-MM-DD'`; `country: string` (default United States) | `time: time`, `country: string`, `event: string`, `actual: string`, `consensus: string`, `previous: string` | 1 hour |
+| `ipos` | IPOs priced or expected inside a date window. | `from`, `to: 'YYYY-MM-DD'` | `symbol: string`, `date: string`, `name: string`, `exchange: string`, `price: number`, `offer_amount: number`, `status: string` | 1 hour |
+| `movers` | Today's top gainers, losers, or most active US stocks. | `list: 'gainers' \| 'losers' \| 'active'` (default gainers); `limit: number` (1–50, default 20); `min_price: number` (default 5, 0 for the raw list) | `symbol: string`, `name: string`, `price: number`, `change_pct: number`, `volume: number` | 60 s |
+| `holdings` | Top holdings of one ETF. | `symbol: string` (the ETF) | `etf: string`, `symbol: string`, `name: string`, `weight: number` | 1 day |
+| `macro` | Daily or monthly macro series over a range, one row per (series, time). | `series: MacroSeries[]` (1–6 of `treasury_3m`, `treasury_2y`, `treasury_10y`, `treasury_30y`, `spread_10y_2y`, `fed_funds`, `sofr`, `cpi_yoy`, `unemployment`, `m2`); `range` (default 1y) | `series: string`, `time: time`, `value: number` | 1 hour |
+| `yield_curve` | US Treasury yield curve on one date (the latest when omitted), shortest first. | `date?: 'YYYY-MM-DD'` | `date: string`, `maturity: string`, `years: number`, `rate: number` | 1 hour |
+
+`change_pct` and `extended_change_pct` in a `quote` are the day change (`-1.3` means down 1.3%); the agent uses them for "down X% today" and uses `ohlcv` previews for changes over a range. `volume` is shares.
 
 Notes on `ohlcv` ranges: `1d` means the last trading session, not the last 24 hours (after the close, now minus 24 h spans two sessions). Return regular-session bars only unless your source cannot separate them. A live, partial last bar is fine.
 
 The TTLs are the registry's, not yours: the cache holds a frame for the kind's TTL and your handler is not called again until it expires or the user hits refresh.
+
+## Adding a handler for a new kind
+
+To make an existing connector answer one more kind, add one entry to `queries`. Nothing else changes: `kinds` is derived from the keys, the registry starts routing that kind to you in config order, and the agent's prompt lists it as answerable.
+
+1. Read the kind in `packages/core/src/kinds.ts`: its params (what you receive, defaults applied) and its columns (what you must return, in order). The catalog is the contract; do not add, rename, or reorder columns.
+2. Find the source route and record one real response into `test/fixtures/<kind>-<SYMBOL>.json` (or `<kind>.json` for a symbol-less kind).
+3. Write the handler. Map every column explicitly, `null` for what the source lacks. Scale percents (a source that prints `0.0563` becomes `5.63`). Convert times to epoch ms and dates to `YYYY-MM-DD`. Sort as the conventions table says and cut to `limit` per symbol.
+4. Write the fixture test through a `ConnectorRegistry` so column validation runs, plus one failure case.
+5. Run `pnpm query <kind> key=value …` against the live source (`pnpm query options symbol=NVDA strikes=5`, `pnpm query macro series=treasury_10y,treasury_2y`), then add the kind to the connector's row in PLAN.md section 7.3.
+
+Three rules that decide the shape of a handler:
+
+**Symbol-less and single-symbol kinds.** `calendar`, `ipos`, `movers`, `macro` and `yield_curve` have no `symbols[]`: one request, one frame, no fan-out. `options` and `holdings` take one `symbol`: one request each; repeat the symbol on every row (`options.symbol`, `holdings.etf`). `macro` takes `series[]` and fans out per series the way a `symbols[]` kind fans out per symbol; its rows carry `series` instead of `symbol`, and the preview and the `series` view group by it.
+
+**Throw vs partial.** For a `symbols[]` (or `series[]`) kind, a partial frame is a valid answer: fan out with `Promise.allSettled`, `ctx.log` each failure, return the rows you got, and throw only when every symbol failed. For a symbol-less or single-symbol kind there is nothing to be partial about: return the frame when the source answered (an empty frame is a correct "nothing in this window") and throw when it did not, so the registry can fall through to the next connector. Never turn a source error into an empty frame; it gets cached for the TTL and stops the fallback.
+
+**Percent convention.** Every percent column is percent, scaled in the connector. The agent reads previews literally and the table formats append `%`; a fraction would show as `0.06%` and be quoted that way.
 
 ## Health (optional)
 
@@ -312,7 +373,7 @@ Things to notice:
 - The handler destructures its validated params (`symbols` is a non-empty `string[]`) and the ctx.
 - The key comes from `config.apiKey`, typed by the schema. If the user has not set it, the registry marks the connector `missing_config` and this handler is never called. On the connectors page that shows as **missing key** with a field to paste one; saving it writes `config.yml` and the connector comes up `ok`.
 - Every cell is a number, a string, or `null`. `time` columns (not present in `quote`) would be `date.getTime()`.
-- The same pattern answers `ohlcv` (one chart call per symbol, concatenate, sort by symbol then time), `news` (one call per symbol, merge, sort newest first, slice to `limit`), and `earnings` (filter to the window, format the date). Finnhub's connector is a real example of all three: `connectors/finnhub/src/index.ts`.
+- The same pattern answers `ohlcv` (one chart call per symbol, concatenate, sort by symbol then time), `news` (one call per symbol, merge, sort newest first, slice to `limit`), `earnings` (filter to the window, format the date), and every `symbols[]` kind added in v1.2. Finnhub's connector is a real example of the first three: `connectors/finnhub/src/index.ts`; the openbb connector (`connectors/openbb/src/index.ts`) has a handler for every kind, including the symbol-less ones.
 
 ## Package layout and registration
 
@@ -370,14 +431,14 @@ Checklist before opening a pull request:
 
 1. `pnpm typecheck` and `pnpm test` are green from the repo root.
 2. Fixture tests cover every kind you answer, plus one failure case and the missing-key case.
-3. `pnpm query <kind> …` prints a frame from your connector with a real key (add it to `config.yml` first). For example `pnpm query quote MU SNDK`.
-4. Every `time` cell is epoch ms; every absent value is `null`; `ohlcv` is sorted; `news` is newest first.
+3. `pnpm query <kind> key=value …` prints a frame from your connector with a real key (add it to `config.yml` first). For example `pnpm query quote MU SNDK` or `pnpm query insiders symbols=MU limit=10`; `pnpm query --help` lists every kind.
+4. Every `time` cell is epoch ms; every absent value is `null`; every percent column is percent; `ohlcv` is sorted; `news` and the history kinds are newest first.
 5. The connector's row in the table in PLAN.md section 7.3 (key, kinds, notes) is filled in.
 
 ## v1 limits
 
 - **US equities and ETFs only.** Do not return non-US listings from `search`.
 - **No streaming.** Widgets poll on the kind's TTL. A connector answers one request and returns.
-- **Kinds are fixed in v1.** You cannot add a kind from a connector; the catalog in `packages/core/src/kinds.ts` is the contract between connectors, the agent, and the views. To propose a new kind (`fundamentals`, `options`, `filings`, …), open an issue with a use case that the five existing kinds cannot serve, the param schema, and the columns.
+- **Kinds are fixed per release.** You cannot add a kind from a connector; the catalog in `packages/core/src/kinds.ts` (22 kinds in v1.2) is the contract between connectors, the agent, and the views. To propose a new kind (`peers`, `filings`, options flow, …), open an issue with a use case that the existing kinds cannot serve, the param schema, and the columns.
 - **No execution.** Research and monitoring only; no broker connectors.
 - **Keys never leave the machine.** A connector may call only the source it is for, with the key the user gave it.

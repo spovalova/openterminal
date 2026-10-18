@@ -1,6 +1,7 @@
 export type { ViewProps } from './types'
 export { SeriesView } from './SeriesView'
 export { TableView } from './TableView'
+export { ChainView } from './ChainView'
 export { viewFor } from './view-for'
 export { ViewsGallery } from './preview'
 export { FIXTURES, type Fixture } from './fixtures'

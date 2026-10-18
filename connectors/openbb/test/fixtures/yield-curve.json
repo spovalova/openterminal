@@ -1,0 +1,70 @@
+{
+ "results": [
+  {
+   "date": "2026-10-15",
+   "maturity": "month_1",
+   "rate": 0.0417,
+   "maturity_years": 0.08333333333333333
+  },
+  {
+   "date": "2026-10-15",
+   "maturity": "month_3",
+   "rate": 0.042800000000000005,
+   "maturity_years": 0.25
+  },
+  {
+   "date": "2026-10-15",
+   "maturity": "month_6",
+   "rate": 0.0435,
+   "maturity_years": 0.5
+  },
+  {
+   "date": "2026-10-15",
+   "maturity": "year_1",
+   "rate": 0.0449,
+   "maturity_years": 1.0
+  },
+  {
+   "date": "2026-10-15",
+   "maturity": "year_2",
+   "rate": 0.04769999999999999,
+   "maturity_years": 2.0
+  },
+  {
+   "date": "2026-10-15",
+   "maturity": "year_3",
+   "rate": 0.048499999999999995,
+   "maturity_years": 3.0
+  },
+  {
+   "date": "2026-10-15",
+   "maturity": "year_5",
+   "rate": 0.049100000000000005,
+   "maturity_years": 5.0
+  },
+  {
+   "date": "2026-10-15",
+   "maturity": "year_7",
+   "rate": 0.05,
+   "maturity_years": 7.0
+  },
+  {
+   "date": "2026-10-15",
+   "maturity": "year_10",
+   "rate": 0.051,
+   "maturity_years": 10.0
+  },
+  {
+   "date": "2026-10-15",
+   "maturity": "year_20",
+   "rate": 0.0548,
+   "maturity_years": 20.0
+  },
+  {
+   "date": "2026-10-15",
+   "maturity": "year_30",
+   "rate": 0.054299999999999994,
+   "maturity_years": 30.0
+  }
+ ]
+}

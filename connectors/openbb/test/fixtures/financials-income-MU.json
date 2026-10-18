@@ -1,0 +1,31 @@
+{
+ "results": [
+  {
+   "period_ending": "2026-05-31",
+   "total_revenue": 41456000000.0,
+   "gross_profit": 35056000000.0,
+   "operating_income": 33318000000.0,
+   "net_income": 28243000000.0,
+   "diluted_earnings_per_share": 24.67,
+   "weighted_average_diluted_shares_outstanding": 1145000000.0
+  },
+  {
+   "period_ending": "2026-02-28",
+   "total_revenue": 23860000000.0,
+   "gross_profit": 17755000000.0,
+   "operating_income": 16135000000.0,
+   "net_income": 13785000000.0,
+   "diluted_earnings_per_share": 12.07,
+   "weighted_average_diluted_shares_outstanding": 1142000000.0
+  },
+  {
+   "period_ending": "2025-11-30",
+   "total_revenue": 13643000000.0,
+   "gross_profit": 7646000000.0,
+   "operating_income": 6136000000.0,
+   "net_income": 5240000000.0,
+   "diluted_earnings_per_share": 4.6,
+   "weighted_average_diluted_shares_outstanding": 1138000000.0
+  }
+ ]
+}

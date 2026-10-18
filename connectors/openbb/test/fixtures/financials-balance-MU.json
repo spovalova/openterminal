@@ -1,0 +1,22 @@
+{
+ "results": [
+  {
+   "period_ending": "2026-05-31",
+   "cash_and_cash_equivalents": 24995000000.0,
+   "total_debt": 6376000000.0,
+   "ordinary_shares_number": 1129393151.0
+  },
+  {
+   "period_ending": "2026-02-28",
+   "cash_and_cash_equivalents": 13908000000.0,
+   "total_debt": 10798000000.0,
+   "ordinary_shares_number": 1128000000.0
+  },
+  {
+   "period_ending": "2025-11-30",
+   "cash_and_cash_equivalents": 9731000000.0,
+   "total_debt": 12425000000.0,
+   "ordinary_shares_number": 1126000000.0
+  }
+ ]
+}

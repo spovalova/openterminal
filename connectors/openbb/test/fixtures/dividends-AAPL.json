@@ -1,0 +1,24 @@
+{
+ "results": [
+  {
+   "ex_dividend_date": "2025-08-11",
+   "amount": 0.26
+  },
+  {
+   "ex_dividend_date": "2025-11-10",
+   "amount": 0.26
+  },
+  {
+   "ex_dividend_date": "2026-02-09",
+   "amount": 0.26
+  },
+  {
+   "ex_dividend_date": "2026-05-11",
+   "amount": 0.27
+  },
+  {
+   "ex_dividend_date": "2026-08-10",
+   "amount": 0.27
+  }
+ ]
+}

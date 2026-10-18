@@ -15,11 +15,11 @@ vi.mock('@terminal/ui', async () => {
   return makeUiMock()
 })
 
-import { SeriesView } from '../SeriesView'
+import { SeriesView, legendText } from '../SeriesView'
 import { viewFor } from '../view-for'
 import { fixture } from '../fixtures'
 import { formatPercent, formatPrice } from '../format'
-import { toCandleData, toLineData, groupBars } from '../series-data'
+import { toCandleData, toLineData, groupBars, legendRows, seriesColumns } from '../series-data'
 
 function mock() {
   return charts.current!
@@ -179,6 +179,59 @@ describe('SeriesView lifecycle', () => {
   it('viewFor picks SeriesView for series views', () => {
     expect(viewFor({ type: 'series' })).toBe(SeriesView)
     expect(viewFor({ type: 'series', candle: true })).toBe(SeriesView)
+  })
+})
+
+describe('SeriesView over macro frames', () => {
+  it('groups by series and plots value, one line per series in palette order, on business days', () => {
+    const { widget, frame } = fixture('macro')
+    expect(seriesColumns(frame)).toEqual({ group: 'series', value: 'value' })
+    const grouped = groupBars(frame, false)
+    expect(grouped.map((g) => g.group)).toEqual(['treasury_10y', 'treasury_2y', 'fed_funds'])
+    expect(grouped.every((g) => g.bars.length === 52)).toBe(true)
+    expect(grouped[0]!.bars[0]!.close).toBe(frame.rows[0]![2])
+    render(<SeriesView widget={widget} frame={frame} />)
+    const [chart] = mock().charts
+    expect(chart!.series.map((s) => (s.definition as { type: string }).type)).toEqual(['Line', 'Line', 'Line'])
+    expect(chart!.series.map((s) => (s.options as { color: string }).color)).toEqual(['#4c8dff', '#ff9f43', '#2ecc71'])
+    expect((chart!.options as { rightPriceScale: { mode: number } }).rightPriceScale.mode).toBe(0)
+    expect((chart!.options as { timeScale: { timeVisible: boolean } }).timeScale.timeVisible).toBe(false)
+    const data = chart!.series[0]!.stub.setData.mock.calls[0]![0] as { time: unknown; value: number }[]
+    expect(data[0]!.time).toEqual({ year: 2025, month: 10, day: 24 })
+    expect(data.map((d) => d.value)).toEqual(grouped[0]!.bars.map((b) => b.close))
+    expect(document.querySelector('[data-view="series"]')!.getAttribute('data-kind')).toBe('macro')
+  })
+
+  it('legend shows each series as a rate with the move in basis points, from preview stats', () => {
+    const { widget, frame } = fixture('macro')
+    render(<SeriesView widget={widget} frame={frame} />)
+    const stats = preview(frame).stats
+    const items = within(screen.getByRole('list', { name: 'Series legend' })).getAllByRole('listitem')
+    expect(items.map((el) => el.getAttribute('data-symbol'))).toEqual(['treasury_10y', 'treasury_2y', 'fed_funds'])
+    expect(items.map((el) => el.querySelector('span:nth-child(2)')!.textContent)).toEqual(['10Y', '2Y', 'Fed funds'])
+    for (const item of items) {
+      const v = stats[item.getAttribute('data-symbol')!]!.value!
+      expect(item.querySelector('[data-field="last"]')!.textContent).toBe(`${v.last.toFixed(2)}%`)
+      const bp = Math.round((v.last - v.first) * 100)
+      expect(item.querySelector('[data-field="change"]')!.textContent).toBe(`${bp > 0 ? '+' : ''}${bp} bp`)
+    }
+    // the fed funds path fell: coloured down
+    const ff = items[2]!.querySelector('[data-field="change"]') as HTMLElement
+    expect(ff.style.color).toBe(hexToRgb(DOWN))
+    expect(legendRows(frame, ['treasury_10y'], () => undefined)[0]).toMatchObject({ group: 'treasury_10y', first: stats.treasury_10y!.value!.first, last: stats.treasury_10y!.value!.last })
+  })
+
+  it('legendText: m2 is a compact dollar amount with a relative change; ohlcv keeps price and percent', () => {
+    expect(legendText({ group: 'm2', first: 21_000_000_000_000, last: 21_900_000_000_000, changePct: 4.29, color: undefined }, 'macro')).toEqual({ label: 'M2', last: '21.9T', change: '+4.29%', changeValue: 4.29 })
+    expect(legendText({ group: 'cpi_yoy', first: 3.3, last: 2.9, changePct: -12.12, color: undefined }, 'macro')).toEqual({ label: 'CPI YoY', last: '2.90%', change: '-40 bp', changeValue: -40 })
+    expect(legendText({ group: 'MU', first: 100, last: 110, changePct: 10, color: undefined }, 'ohlcv')).toEqual({ label: 'MU', last: '110.00', change: '+10.00%', changeValue: 10 })
+    expect(legendText({ group: 'sofr', first: null, last: null, changePct: null, color: undefined }, 'macro')).toEqual({ label: 'SOFR', last: '–', change: '–', changeValue: null })
+  })
+
+  it('renders the macro empty state', () => {
+    const { widget, frame } = fixture('macro')
+    render(<SeriesView widget={widget} frame={{ ...frame, rows: [] }} />)
+    expect(screen.getByTestId('empty-state').textContent).toContain('No observations')
   })
 })
 

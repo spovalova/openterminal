@@ -12,10 +12,44 @@ import {
   type LineSeriesPartialOptions,
   type SeriesType,
 } from 'lightweight-charts'
-import { DOWN_COLOR, EmptyState, UP_COLOR, chartTheme, seriesPalette } from '@terminal/ui'
+import { DOWN_COLOR, EmptyState, UP_COLOR, chartTheme, formatCompact, seriesPalette } from '@terminal/ui'
+import type { Kind } from '@terminal/core'
 import type { ViewProps } from './types'
 import { direction, formatPercent, formatPrice, withAlpha } from './format'
 import { groupBars, intervalIsIntraday, legendRows, seriesMode, toCandleData, toLineData, toVolumeData, type LegendRow } from './series-data'
+
+/** Short legend labels for the macro series; everything else (a symbol) is its own label. */
+const MACRO_LABELS: Record<string, string> = {
+  treasury_3m: '3M',
+  treasury_2y: '2Y',
+  treasury_10y: '10Y',
+  treasury_30y: '30Y',
+  spread_10y_2y: '10Y-2Y',
+  fed_funds: 'Fed funds',
+  sofr: 'SOFR',
+  cpi_yoy: 'CPI YoY',
+  unemployment: 'Unemployment',
+  m2: 'M2',
+}
+
+/** Macro series that are dollar amounts rather than percents (compact numbers, relative change). */
+const MACRO_AMOUNTS: ReadonlySet<string> = new Set(['m2'])
+
+/**
+ * Legend text for one row. ohlcv: last close and change over the range. macro: the last value as a
+ * percent (every series but m2 is a rate) with the move in basis points, `last - first` from the same
+ * preview stats; m2 shows a compact dollar amount and the relative change.
+ */
+export function legendText(row: LegendRow, kind: Kind): { label: string; last: string; change: string; changeValue: number | null } {
+  if (kind !== 'macro') return { label: row.group, last: formatPrice(row.last), change: formatPercent(row.changePct), changeValue: row.changePct }
+  const label = MACRO_LABELS[row.group] ?? row.group
+  if (MACRO_AMOUNTS.has(row.group)) {
+    return { label, last: row.last == null ? '–' : formatCompact(row.last), change: formatPercent(row.changePct), changeValue: row.changePct }
+  }
+  const bp = row.last != null && row.first != null ? Math.round((row.last - row.first) * 100) : null
+  const change = bp == null ? '–' : `${bp > 0 ? '+' : ''}${bp} bp`
+  return { label, last: row.last == null ? '–' : `${row.last.toFixed(2)}%`, change, changeValue: bp }
+}
 
 /** Colour for the i-th symbol: fixed palette order, never cycled past the palette size. */
 function colorFor(i: number): string | undefined {
@@ -29,13 +63,15 @@ function themeBackground(theme: DeepPartial<ChartOptions>): string | undefined {
 }
 
 /**
- * `series` view: an ohlcv frame on lightweight-charts.
- * - default: one line per symbol (palette order)
- * - candle: one candlestick series plus a volume histogram on its own scale at the bottom
- * - normalize: lines on an indexed-to-100 price scale, so every symbol rebases at the first visible bar
- * The legend lists each symbol's last close and change over the range, exactly as `preview()` reports them.
+ * `series` view: an ohlcv or macro frame on lightweight-charts.
+ * - default: one line per group (a symbol, or a macro series), palette order
+ * - candle (ohlcv): one candlestick series plus a volume histogram on its own scale at the bottom
+ * - normalize (ohlcv): lines on an indexed-to-100 price scale, so every symbol rebases at the first visible bar
+ * The legend lists each group's last value and change over the range, exactly as `preview()` reports them.
+ * Macro is never intraday: its points land on business days.
  */
 export const SeriesView: FC<ViewProps> = ({ widget, frame }) => {
+  const kind = widget.query.kind
   const mode = seriesMode(widget.view)
   const intraday = widget.query.kind === 'ohlcv' ? intervalIsIntraday(widget.query.params.interval) : false
   const series = useMemo(() => {
@@ -46,7 +82,7 @@ export const SeriesView: FC<ViewProps> = ({ widget, frame }) => {
     () =>
       legendRows(
         frame,
-        series.map((s) => s.symbol),
+        series.map((s) => s.group),
         mode === 'candle' ? () => UP_COLOR : colorFor,
       ),
     [frame, series, mode],
@@ -134,6 +170,7 @@ export const SeriesView: FC<ViewProps> = ({ widget, frame }) => {
           lastValueVisible: series.length === 1,
           crosshairMarkerRadius: 4,
         }
+        if (kind === 'macro' && MACRO_AMOUNTS.has(s.group)) opts.priceFormat = { type: 'custom', formatter: formatCompact, minMove: 1 }
         const color = colorFor(i)
         if (color) opts.color = color
         const line = chart.addSeries(LineSeries, opts)
@@ -142,16 +179,20 @@ export const SeriesView: FC<ViewProps> = ({ widget, frame }) => {
       })
     }
     chart.timeScale().fitContent()
-  }, [series, mode])
+  }, [series, mode, kind])
 
   if (empty) {
-    return <EmptyState title="No bars" hint="The query returned no price bars for this range." />
+    return kind === 'macro' ? (
+      <EmptyState title="No observations" hint="The query returned no values for this range." />
+    ) : (
+      <EmptyState title="No bars" hint="The query returned no price bars for this range." />
+    )
   }
 
   return (
-    <div data-view="series" data-mode={mode} style={rootStyle}>
+    <div data-view="series" data-mode={mode} data-kind={kind} style={rootStyle}>
       <div ref={hostRef} style={hostStyle} />
-      <Legend rows={legend} background={themeBackground(theme)} />
+      <Legend rows={legend} kind={kind} background={themeBackground(theme)} />
     </div>
   )
 }
@@ -159,7 +200,7 @@ export const SeriesView: FC<ViewProps> = ({ widget, frame }) => {
 const rootStyle: CSSProperties = { position: 'relative', width: '100%', height: '100%', minHeight: 160 }
 const hostStyle: CSSProperties = { position: 'absolute', inset: 0 }
 
-const Legend: FC<{ rows: LegendRow[]; background: string | undefined }> = ({ rows, background }) => (
+const Legend: FC<{ rows: LegendRow[]; kind: Kind; background: string | undefined }> = ({ rows, kind, background }) => (
   <div
     data-legend=""
     role="list"
@@ -183,14 +224,15 @@ const Legend: FC<{ rows: LegendRow[]; background: string | undefined }> = ({ row
     }}
   >
     {rows.map((row) => {
-      const dir = direction(row.changePct)
+      const text = legendText(row, kind)
+      const dir = direction(text.changeValue)
       return (
-        <div key={row.symbol} role="listitem" data-symbol={row.symbol} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div key={row.group} role="listitem" data-symbol={row.group} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span aria-hidden="true" style={{ display: 'inline-block', width: 10, height: 2, borderRadius: 1, background: row.color ?? 'currentColor' }} />
-          <span style={{ fontWeight: 600 }}>{row.symbol}</span>
-          <span data-field="last">{formatPrice(row.last)}</span>
+          <span style={{ fontWeight: 600 }}>{text.label}</span>
+          <span data-field="last">{text.last}</span>
           <span data-field="change" style={{ color: dir === 'up' ? UP_COLOR : dir === 'down' ? DOWN_COLOR : undefined, opacity: dir === 'flat' ? 0.7 : 1 }}>
-            {formatPercent(row.changePct)}
+            {text.change}
           </span>
         </div>
       )

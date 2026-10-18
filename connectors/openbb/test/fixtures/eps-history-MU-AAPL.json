@@ -1,0 +1,46 @@
+{
+ "results": [
+  {
+   "symbol": "MU",
+   "date": "2026-12-23",
+   "eps_actual": null,
+   "eps_estimated": 38.28,
+   "surprise_percent": null
+  },
+  {
+   "symbol": "MU",
+   "date": "2026-09-30",
+   "eps_actual": 33.42,
+   "eps_estimated": 31.82,
+   "surprise_percent": 5.03
+  },
+  {
+   "symbol": "MU",
+   "date": "2026-06-24",
+   "eps_actual": 25.11,
+   "eps_estimated": 20.69,
+   "surprise_percent": 21.39
+  },
+  {
+   "symbol": "AAPL",
+   "date": "2026-11-02",
+   "eps_actual": null,
+   "eps_estimated": 1.98,
+   "surprise_percent": null
+  },
+  {
+   "symbol": "AAPL",
+   "date": "2026-07-30",
+   "eps_actual": 2.02,
+   "eps_estimated": 1.89,
+   "surprise_percent": 6.74
+  },
+  {
+   "symbol": "AAPL",
+   "date": "2026-04-30",
+   "eps_actual": 2.01,
+   "eps_estimated": 1.94,
+   "surprise_percent": 3.46
+  }
+ ]
+}

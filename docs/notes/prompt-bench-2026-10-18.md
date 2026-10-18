@@ -43,3 +43,19 @@ In order of how well they land, from this run:
 8. **ETF quotes always fall back** because yfinance has no `last_price` for ETFs. Correct but it means any watchlist with SPY in it gets its quote table from yahoo; a per-symbol merge (openbb for stocks, yahoo for the ETF) would keep openbb first for the table. Low priority.
 
 Nothing here changes the five-kind catalog or the contracts; findings 1 and 2 are prompt edits, 3 is a small catalog change, 4 and 5 are registry and connector policy.
+
+
+## v1.2 run (same day, evening): six prompts over the new kinds
+
+Run against a scratch server on the v1.2 source with openbb first, before the production redeploy. Every prompt built the intended workspace; the agent picked the new kinds and views without being told which to use. Times are to the finished reply.
+
+| Prompt | Time | Widgets (hero first) | Notes |
+|---|---|---|---|
+| What do options say about NVDA into earnings? | 23.7 s | options chain (Nov 20 expiry, snapped from the Nov 18 report date), volatility, candle, earnings, news | Serial step worked: earnings first, then the chain at the first expiration after it. Read near-the-money IV (40 to 41%) against IV30 (36.9%) and IV rank 32. Admitted a strike it could not identify past the 25-row preview. |
+| Is MU expensive here? | 23.8 s | metrics for MU plus three peers, estimates, financials, eps_history, 1y candle | Multiples compared across peers, seven straight beats from eps_history, 77.6% consensus upside, and the cyclical caveat. |
+| What's the macro backdrop this week? | 21.4 s | macro 10Y, 2Y, fed funds (series), calendar, yield curve, SPY 5d | Quoted rate moves in points from the new `change` stat, named the baseline for SPY ("against 778.57 the Friday before"), said it saw 25 of 40 calendar rows. |
+| Who has been selling MU? | 22.7 s | insiders, institutions, short interest, 6mo candle | Named the seller and lot sizes, 13F cuts and adds with percents, short interest trend with days to cover. |
+| What's moving today and why? | 22.5 s | movers gainers, losers, active, a quote table of sector ETFs, news on the names | Second serial step with symbols read from the movers preview; tied losers to the CoreWeave debt headline and gainers to crude. Said which drops it could not explain. |
+| What's inside SMH and how are the top holdings doing? | 21.1 s | normalized 3mo chart of SMH and top five, holdings, quotes for all ten, earnings, news | Weights, Friday moves per holding, upcoming reports. |
+
+Defects seen: replies use bold labels ("**Losers:**") although the prompt forbids markdown headings and lists; the 25-row preview cap surfaces in three of six replies. Both are prompt or preview-size follow-ups, not data problems. The full transcripts are in the session scratchpad (`bench-v12.log`), not committed.

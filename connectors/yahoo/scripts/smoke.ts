@@ -1,4 +1,4 @@
-// Live smoke: one frame per kind for MU, NVDA, SPY through a core ConnectorRegistry. Not a test.
+// Live smoke: one frame per kind (v1 for MU, NVDA, SPY; v1.2 fallbacks for MU, NVDA, SMH) through a core ConnectorRegistry. Not a test.
 // From connectors/yahoo: pnpm smoke
 import { ConnectorRegistry, MemoryCache, type Frame, type QueryInput } from '@terminal/core'
 import yahoo from '../src/index.js'
@@ -13,6 +13,16 @@ const queries: QueryInput[] = [
   { kind: 'quote', params: { symbols: ['MU', 'NVDA', 'SPY'] } },
   { kind: 'ohlcv', params: { symbols: ['MU', 'NVDA', 'SPY'], interval: '5m', range: '1d' } },
   { kind: 'earnings', params: { symbols: ['MU', 'NVDA', 'SPY'], from: today, to: inSixMonths } },
+  { kind: 'profile', params: { symbols: ['MU', 'NVDA', 'SMH'] } },
+  { kind: 'metrics', params: { symbols: ['MU', 'NVDA'] } },
+  { kind: 'estimates', params: { symbols: ['MU', 'NVDA'] } },
+  { kind: 'eps_history', params: { symbols: ['MU', 'NVDA'], limit: 4 } },
+  { kind: 'dividends', params: { symbols: ['MU', 'NVDA'], limit: 4 } },
+  { kind: 'insiders', params: { symbols: ['MU', 'NVDA'], limit: 5 } },
+  { kind: 'institutions', params: { symbols: ['MU', 'NVDA'], limit: 5 } },
+  { kind: 'short_interest', params: { symbols: ['MU', 'NVDA'] } },
+  { kind: 'options', params: { symbol: 'MU', strikes: 3 } },
+  { kind: 'holdings', params: { symbol: 'SMH' } },
 ]
 
 function print(q: QueryInput, frame: Frame, ms: number) {

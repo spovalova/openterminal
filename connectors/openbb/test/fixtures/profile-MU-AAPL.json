@@ -1,0 +1,26 @@
+{
+ "results": [
+  {
+   "symbol": "AAPL",
+   "name": "Apple Inc.",
+   "stock_exchange": "NMS",
+   "sector": "Technology",
+   "industry_category": "Consumer Electronics",
+   "market_cap": 5012516765696,
+   "employees": 150000,
+   "beta": 1.069,
+   "long_description": "Apple Inc."
+  },
+  {
+   "symbol": "MU",
+   "name": "Micron Technology, Inc.",
+   "stock_exchange": "NMS",
+   "sector": "Technology",
+   "industry_category": "Semiconductors",
+   "market_cap": 994340044800,
+   "employees": 61000,
+   "beta": 2.226,
+   "long_description": "Micron Technology, Inc."
+  }
+ ]
+}

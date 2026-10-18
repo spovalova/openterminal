@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatCell, formatDuration, inferFormats, sortRows, direction } from '../src/format.js'
+import { formatCell, formatCompact, formatDuration, inferFormats, isNumericFormat, sortRows, direction } from '../src/format.js'
 
 describe('formatCell', () => {
   it('renders empty values as a dash', () => {
@@ -12,10 +12,30 @@ describe('formatCell', () => {
     expect(formatCell(1234.5, 'price')).toBe('1,234.50')
     expect(formatCell(0.005, 'price')).toBe('0.01')
   })
-  it('percent is signed with two decimals', () => {
-    expect(formatCell(1.234, 'percent')).toBe('+1.23%')
+  it('percent is a plain level with two decimals, never signed', () => {
+    expect(formatCell(36.9, 'percent')).toBe('36.90%')
+    expect(formatCell(1.234, 'percent')).toBe('1.23%')
     expect(formatCell(-0.5, 'percent')).toBe('-0.50%')
     expect(formatCell(0, 'percent')).toBe('0.00%')
+  })
+  it('change is signed with two decimals', () => {
+    expect(formatCell(1.234, 'change')).toBe('+1.23%')
+    expect(formatCell(-0.5, 'change')).toBe('-0.50%')
+    expect(formatCell(0, 'change')).toBe('0.00%')
+  })
+  it('compact scales to K, M, B, T with one decimal (two under ten)', () => {
+    expect(formatCell(1_234_000_000, 'compact')).toBe('1.23B')
+    expect(formatCell(45_600_000_000, 'compact')).toBe('45.6B')
+    expect(formatCell(456_700_000, 'compact')).toBe('456.7M')
+    expect(formatCell(12_340, 'compact')).toBe('12.3K')
+    expect(formatCell(4_420_000_000_000, 'compact')).toBe('4.42T')
+    expect(formatCell(-2_150_000_000, 'compact')).toBe('-2.15B')
+    expect(formatCell(950, 'compact')).toBe('950')
+    expect(formatCell(12.5, 'compact')).toBe('12.5')
+    expect(formatCell(null, 'compact')).toBe('—')
+    expect(formatCompact(NaN)).toBe('—')
+    expect(isNumericFormat('compact')).toBe(true)
+    expect(isNumericFormat('change')).toBe(true)
   })
   it('integer rounds and groups', () => {
     expect(formatCell(12345678.9, 'integer')).toBe('12,345,679')
@@ -55,7 +75,7 @@ describe('inferFormats', () => {
         { name: 'url', type: 'string' },
         { name: 'date', type: 'string' },
       ]),
-    ).toEqual({ symbol: 'text', price: 'price', change_pct: 'percent', volume: 'integer', time: 'time', url: 'link', date: 'date' })
+    ).toEqual({ symbol: 'text', price: 'price', change_pct: 'change', volume: 'integer', time: 'time', url: 'link', date: 'date' })
   })
 })
 

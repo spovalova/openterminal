@@ -2,18 +2,20 @@
 // `YahooClient`, so tests inject a fake that replays recorded fixtures and never touch the network.
 import YahooFinance from 'yahoo-finance2'
 import type { ChartOptionsWithReturnArray as ChartOptions, ChartResultArray } from 'yahoo-finance2/modules/chart'
+import type { OptionsOptions, OptionsResult } from 'yahoo-finance2/modules/options'
 import type { Quote } from 'yahoo-finance2/modules/quote'
-import type { QuoteSummaryResult } from 'yahoo-finance2/modules/quoteSummary'
+import type { QuoteSummaryModules, QuoteSummaryResult } from 'yahoo-finance2/modules/quoteSummary'
 import type { SearchOptions, SearchResult } from 'yahoo-finance2/modules/search'
 
-export type { ChartOptions, ChartResultArray, Quote, QuoteSummaryResult, SearchOptions, SearchResult }
+export type { ChartOptions, ChartResultArray, OptionsOptions, OptionsResult, Quote, QuoteSummaryModules, QuoteSummaryResult, SearchOptions, SearchResult }
 
 /** The subset of yahoo-finance2 the connector uses. */
 export interface YahooClient {
   search(term: string, opts: SearchOptions): Promise<SearchResult>
   quote(symbols: string[]): Promise<Quote[]>
   chart(symbol: string, opts: ChartOptions): Promise<ChartResultArray>
-  quoteSummary(symbol: string, opts: { modules: ['calendarEvents'] }): Promise<QuoteSummaryResult>
+  quoteSummary(symbol: string, opts: { modules: QuoteSummaryModules[] }): Promise<QuoteSummaryResult>
+  options(symbol: string, opts: OptionsOptions): Promise<OptionsResult>
 }
 
 export const RETRY_DELAY_MS = 500
@@ -40,13 +42,14 @@ export async function retryOn429<T>(fn: () => Promise<T>, opts: RetryOptions = {
   }
 }
 
-/** Wrap any object with the four library methods (a real `YahooFinance` or a fake) with the 429 retry. */
+/** Wrap any object with the five library methods (a real `YahooFinance` or a fake) with the 429 retry. */
 export function wrapClient(raw: YahooClient, opts: RetryOptions = {}): YahooClient {
   return {
     search: (term, o) => retryOn429(() => raw.search(term, o), opts),
     quote: (symbols) => retryOn429(() => raw.quote(symbols), opts),
     chart: (symbol, o) => retryOn429(() => raw.chart(symbol, o), opts),
     quoteSummary: (symbol, o) => retryOn429(() => raw.quoteSummary(symbol, o), opts),
+    options: (symbol, o) => retryOn429(() => raw.options(symbol, o), opts),
   }
 }
 
@@ -59,6 +62,7 @@ export function createYahooClient(opts: RetryOptions = {}): YahooClient {
       quote: (symbols) => yf.quote(symbols),
       chart: (symbol, o) => yf.chart(symbol, { ...o, return: 'array' }),
       quoteSummary: (symbol, o) => yf.quoteSummary(symbol, o),
+      options: (symbol, o) => yf.options(symbol, o),
     },
     opts,
   )

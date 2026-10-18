@@ -1,0 +1,44 @@
+{
+ "results": [
+  {
+   "symbol": "XLABW",
+   "name": "Exascale Labs Holdings Inc. Warrant",
+   "price": 0.195,
+   "change": 0.1244,
+   "change_percent": 1.76204,
+   "volume": null
+  },
+  {
+   "symbol": "BCAT",
+   "name": "BlackRock Capital Allocation Term Trust",
+   "price": 0.0007,
+   "change": 0.0004,
+   "change_percent": 1.333333,
+   "volume": null
+  },
+  {
+   "symbol": "CDTTW",
+   "name": "Conduit Pharmaceuticals Inc. ",
+   "price": 0.006,
+   "change": 0.0033,
+   "change_percent": 1.222222,
+   "volume": null
+  },
+  {
+   "symbol": "OGGWZ",
+   "name": "Osisko Gold Group Inc. Warrant expiring 5/27/2027",
+   "price": 0.03,
+   "change": 0.0149,
+   "change_percent": 0.986755,
+   "volume": null
+  },
+  {
+   "symbol": "XLAB",
+   "name": "Exascale Labs Holdings Inc. Class A Common Stock",
+   "price": 2.35,
+   "change": 0.99,
+   "change_percent": 0.727941,
+   "volume": null
+  }
+ ]
+}

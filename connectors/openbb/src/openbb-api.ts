@@ -1,8 +1,8 @@
 // Helpers for talking to a local OpenBB Platform REST API (`openbb-api`, FastAPI on 127.0.0.1:6900):
 // config, URL building, the result envelope, a circuit breaker for when it is not running, and the
 // time and provider maps. Handlers live in index.ts; nothing here knows about frames.
-// Probed against OpenBB 5.0.0 on 2026-10-17; see docs/notes/openbb-probe.md.
-import { HttpError, KindNameSchema, type Ctx, type Interval, type Kind, type Range } from '@terminal/core'
+// Probed against OpenBB 5.0.0 on 2026-10-17 (v1 kinds) and 2026-10-18 (v1.2 kinds); see docs/notes/openbb-probe.md.
+import { HttpError, KindNameSchema, type Ctx, type Interval, type Kind, type MacroSeries, type Range } from '@terminal/core'
 import { z } from 'zod'
 
 export const DEFAULT_BASE_URL = 'http://127.0.0.1:6900'
@@ -23,17 +23,43 @@ export const ConfigSchema = z.object({
 export type Config = z.infer<typeof ConfigSchema>
 
 /**
- * Keyless providers that answered each kind best in the probe. yfinance has no equity search and its company news
- * returns 204; nasdaq search carries the listing exchange, nasdaq news and earnings carry publisher and session.
+ * Keyless providers that answered each kind best in the probes (docs/notes/openbb-probe.md). yfinance has no equity
+ * search and its company news returns 204; nasdaq search carries the listing exchange, nasdaq news and earnings carry
+ * publisher and session. The v1.2 kinds: yfinance for company data, sec for Form 4 insiders, nasdaq for institutions,
+ * the calendar, IPOs, movers and ETF holdings, finra for short interest, cboe for chains and IV, federal_reserve for
+ * rates (macro's cpi_yoy and unemployment always come from oecd, whatever `providers.macro` says).
  */
-export const DEFAULT_PROVIDERS: Partial<Record<Kind, string>> = { search: 'nasdaq', quote: 'yfinance', ohlcv: 'yfinance', news: 'nasdaq', earnings: 'nasdaq' }
-
-export function providerFor(config: Config, kind: Kind): string {
-  return config.providers[kind] ?? DEFAULT_PROVIDERS[kind] ?? 'yfinance'
+export const DEFAULT_PROVIDERS: Record<Kind, string> = {
+  search: 'nasdaq',
+  quote: 'yfinance',
+  ohlcv: 'yfinance',
+  news: 'nasdaq',
+  earnings: 'nasdaq',
+  profile: 'yfinance',
+  metrics: 'yfinance',
+  financials: 'yfinance',
+  estimates: 'yfinance',
+  eps_history: 'yfinance',
+  dividends: 'yfinance',
+  insiders: 'sec',
+  institutions: 'nasdaq',
+  short_interest: 'finra',
+  options: 'cboe',
+  volatility: 'cboe',
+  calendar: 'nasdaq',
+  ipos: 'nasdaq',
+  movers: 'yfinance',
+  holdings: 'nasdaq',
+  macro: 'federal_reserve',
+  yield_curve: 'federal_reserve',
 }
 
-/** Providers whose unified routes take `symbol=A,B`. Others are called once per symbol. */
-export const MULTI_SYMBOL_PROVIDERS: ReadonlySet<string> = new Set(['yfinance', 'nasdaq', 'tmx', 'fmp', 'polygon', 'intrinio', 'tiingo'])
+export function providerFor(config: Config, kind: Kind): string {
+  return config.providers[kind] ?? DEFAULT_PROVIDERS[kind]
+}
+
+/** Providers whose unified routes take `symbol=A,B`. Others are called once per symbol. Some routes are single-symbol whatever the provider (see eachSymbol). */
+export const MULTI_SYMBOL_PROVIDERS: ReadonlySet<string> = new Set(['yfinance', 'nasdaq', 'tmx', 'finra', 'fmp', 'polygon', 'intrinio', 'tiingo'])
 
 /** Our interval names → the provider's token, where they differ. Unknown providers get ours unchanged. */
 const PROVIDER_INTERVALS: Record<string, Partial<Record<Interval, string>>> = {
@@ -293,15 +319,146 @@ export function changePct(row: Record<string, unknown>, price: number | null): n
  * A failing symbol is logged and skipped; the call only throws when every call failed.
  */
 export async function bySymbols<R>(ctx: Ctx<Config>, provider: string, symbols: string[], fn: (symbolParam: string) => Promise<R[]>): Promise<R[]> {
-  const batches = MULTI_SYMBOL_PROVIDERS.has(provider) ? [symbols.join(',')] : symbols
+  return settleBatches(ctx, MULTI_SYMBOL_PROVIDERS.has(provider) ? [symbols.join(',')] : symbols, fn)
+}
+
+/** Run `fn` once per symbol in parallel, for routes that take one symbol whatever the provider (statements, dividends, holders, holdings). Same skip-and-log rule as bySymbols. */
+export async function eachSymbol<R>(ctx: Ctx<Config>, symbols: string[], fn: (symbol: string) => Promise<R[]>): Promise<R[]> {
+  return settleBatches(ctx, symbols, fn)
+}
+
+async function settleBatches<R>(ctx: Ctx<Config>, batches: string[], fn: (symbolParam: string) => Promise<R[]>): Promise<R[]> {
   const results = await Promise.allSettled(batches.map(fn))
   const rows: R[] = []
   const failures: string[] = []
   results.forEach((r, i) => {
     if (r.status === 'fulfilled') rows.push(...r.value)
-    else failures.push(`${batches[i]}: ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`)
+    else failures.push(`${batches[i]}: ${errorText(r.reason)}`)
   })
   if (failures.length === results.length) throw new Error(failures.length === 1 ? failures[0]!.replace(/^[^:]+: /, '') : `openbb: every symbol failed (${failures.join('; ')})`)
   failures.forEach((f) => ctx.log(`skipped ${f}`))
   return rows
 }
+
+export const errorText = (e: unknown): string => (e instanceof Error ? e.message : String(e))
+
+// ---- units and small maps for the v1.2 kinds ----
+
+const round4 = (v: number): number => Math.round(v * 1e4) / 1e4
+
+/** A provider fraction (0.0563, 0.5164) → catalog percent (5.63, 51.64). Null stays null. */
+export const pct = (v: unknown): number | null => {
+  const n = num(v)
+  return n === null ? null : round4(n * 100)
+}
+
+/** Calendar cells as nasdaq prints them: "-" and blank mean nothing; everything else is kept as text. */
+export function cleanText(v: unknown): string | null {
+  if (typeof v !== 'string') return v === null || v === undefined ? null : String(v)
+  const t = v.trim()
+  return t === '' || t === '-' || t === '--' ? null : t
+}
+
+/** Catalog country ("United States") → the route's `lowercase_underscore` choice ("united_states"). Codes pass through lowercased. */
+export function countryParam(country: string): string {
+  return country.trim().toLowerCase().replace(/[\s-]+/g, '_')
+}
+
+/** Rows newest first per symbol, cut to `limit` per symbol, symbols in the requested order. `dateKey` must be sortable text (ISO dates). */
+export function newestPerSymbol<R extends Record<string, unknown>>(rows: R[], symbols: string[], limit: number, dateKey = 'date'): R[] {
+  const order = new Map(symbols.map((s, i) => [s, i]))
+  const sorted = [...rows].sort((a, b) => (order.get(String(a.symbol)) ?? 1e9) - (order.get(String(b.symbol)) ?? 1e9) || String(b[dateKey] ?? '').localeCompare(String(a[dateKey] ?? '')))
+  const seen = new Map<string, number>()
+  return sorted.filter((r) => {
+    const k = String(r.symbol)
+    const n = (seen.get(k) ?? 0) + 1
+    seen.set(k, n)
+    return n <= limit
+  })
+}
+
+/** Sort rows by the requested symbol order, stable within a symbol. */
+export function inRequestedOrder<R extends Record<string, unknown>>(rows: R[], symbols: string[]): R[] {
+  const order = new Map(symbols.map((s, i) => [s, i]))
+  return [...rows].sort((a, b) => (order.get(String(a.symbol)) ?? 1e9) - (order.get(String(b.symbol)) ?? 1e9))
+}
+
+/**
+ * Catalog insider `action` from the provider's words. sec (Form 4) gives `acquisition_or_disposition` plus the
+ * transaction code's long name; yfinance gives a free-text `description` ("Sale at price 959.14 per share.").
+ */
+export function insiderAction(acquisitionOrDisposition: unknown, transactionType: unknown, description: unknown): 'buy' | 'sell' | 'grant' | 'other' {
+  const ad = typeof acquisitionOrDisposition === 'string' ? acquisitionOrDisposition.toLowerCase() : ''
+  const type = typeof transactionType === 'string' ? transactionType.toLowerCase() : ''
+  const text = typeof description === 'string' ? description.toLowerCase() : ''
+  // Gifts and shares withheld for taxes or an exercise price are dispositions on the form but not selling.
+  if (ad.startsWith('d')) return /gift|tax liability|exercise price/.test(type) ? 'other' : 'sell'
+  if (ad.startsWith('a')) {
+    if (/open market|purchase/.test(type)) return 'buy'
+    if (/grant|award/.test(type)) return 'grant'
+    return 'other'
+  }
+  if (/^sale|\bsold\b|^sell/.test(text)) return 'sell'
+  if (/^purchase|^buy|\bbought\b/.test(text)) return 'buy'
+  if (/grant|award|gift/.test(text)) return 'grant'
+  return 'other'
+}
+
+/** federal_reserve maturity keys (`month_1`, `year_10`) → catalog labels (`1M`, `10Y`). Unknown keys pass through. */
+export function maturityLabel(maturity: unknown): string | null {
+  if (typeof maturity !== 'string' || !maturity) return null
+  const m = /^(month|year)_(\d+)$/.exec(maturity)
+  if (!m) return maturity
+  return `${m[2]}${m[1] === 'month' ? 'M' : 'Y'}`
+}
+
+/** IV rank: where `iv` sits inside its one-year range, 0..100; null when any input is missing or the range is zero. Inputs already percent (or all fractions). */
+export function ivRank(iv: number | null, low: number | null, high: number | null): number | null {
+  if (iv === null || low === null || high === null || high <= low) return null
+  return round4(Math.min(100, Math.max(0, ((iv - low) / (high - low)) * 100)))
+}
+
+/** nasdaq mover categories for the catalog's list names. */
+/** yfinance screener presets per list (price_min and a 500M market-cap floor keep warrants and trusts out). */
+export const YFINANCE_MOVER_PRESETS: Record<'gainers' | 'losers' | 'active', string> = { gainers: 'day_gainers', losers: 'day_losers', active: 'most_actives' }
+
+export const NASDAQ_MOVER_CATEGORIES: Record<'gainers' | 'losers' | 'active', string> = { gainers: 'most_advanced', losers: 'most_declined', active: 'most_active_share_volume' }
+
+export type Expiration = { expiration: string; dte: number }
+
+/**
+ * The one expiration an `options` query is about. With `requested`, the first listed expiration on or after it (none →
+ * null, the caller reports it). Without, the nearest with dte ≥ 7, else the nearest with dte ≥ 1, else the first listed.
+ */
+export function pickExpiration(listed: Expiration[], requested?: string): Expiration | null {
+  const sorted = [...listed].sort((a, b) => a.expiration.localeCompare(b.expiration))
+  if (sorted.length === 0) return null
+  if (requested) return sorted.find((e) => e.expiration >= requested) ?? null
+  return sorted.find((e) => e.dte >= 7) ?? sorted.find((e) => e.dte >= 1) ?? sorted[0]!
+}
+
+/** The `n` strikes nearest the price on each side; a strike equal to the price is included too. Ascending. */
+export function strikeWindow(strikes: number[], price: number, n: number): number[] {
+  const uniq = [...new Set(strikes)].sort((a, b) => a - b)
+  const below = uniq.filter((s) => s < price).slice(-n)
+  const at = uniq.filter((s) => s === price)
+  const above = uniq.filter((s) => s > price).slice(0, n)
+  return [...below, ...at, ...above]
+}
+
+/** Which OpenBB route answers each macro series; one treasury call covers four series plus the spread. */
+export type MacroRoute = 'treasury' | 'effr' | 'sofr' | 'm2' | 'cpi' | 'unemployment'
+export const MACRO_ROUTES: Record<MacroSeries, MacroRoute> = {
+  treasury_3m: 'treasury',
+  treasury_2y: 'treasury',
+  treasury_10y: 'treasury',
+  treasury_30y: 'treasury',
+  spread_10y_2y: 'treasury',
+  fed_funds: 'effr',
+  sofr: 'sofr',
+  m2: 'm2',
+  cpi_yoy: 'cpi',
+  unemployment: 'unemployment',
+}
+/** Treasury series → the federal_reserve column (fractions). */
+export const TREASURY_COLUMNS: Partial<Record<MacroSeries, string>> = { treasury_3m: 'month_3', treasury_2y: 'year_2', treasury_10y: 'year_10', treasury_30y: 'year_30' }

@@ -23,6 +23,18 @@ describe('fixtures', () => {
     for (const id of ['A1', 'A2', 'A3', 'A4', 'A5', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4']) expect(ids).toContain(id)
   })
 
+  it('cover the v1.2 views: a chain, macro on series, and the new tables', () => {
+    const ids = FIXTURES.map((f) => f.id)
+    for (const id of ['options', 'macro', 'financials', 'insiders', 'calendar', 'movers', 'volatility']) expect(ids).toContain(id)
+    const options = FIXTURES.find((f) => f.id === 'options')!
+    expect(options.widget.view.type).toBe('chain')
+    expect(new Set(options.frame.rows.map((r) => r[3])).size).toBe(20) // 10 strikes each side
+    expect(new Set(options.frame.rows.map((r) => r[1])).size).toBe(1) // one expiration
+    const macro = FIXTURES.find((f) => f.id === 'macro')!
+    expect(macro.widget.view.type).toBe('series')
+    expect(Object.keys(preview(macro.frame).stats)).toEqual(['treasury_10y', 'treasury_2y', 'fed_funds'])
+  })
+
   for (const f of FIXTURES) {
     it(`${f.id}: widget is valid and the frame matches the ${f.widget.query.kind} columns`, () => {
       expect(WidgetSchema.safeParse(f.widget).success).toBe(true)
@@ -58,5 +70,7 @@ describe('ViewsGallery', () => {
     expect(cards).toHaveLength(FIXTURES.length)
     expect(container.querySelectorAll('[data-view="series"]')).toHaveLength(FIXTURES.filter((f) => f.widget.view.type === 'series').length)
     expect(container.querySelectorAll('[data-view="table"]')).toHaveLength(FIXTURES.filter((f) => f.widget.view.type === 'table').length)
+    expect(container.querySelectorAll('[data-view="chain"]')).toHaveLength(FIXTURES.filter((f) => f.widget.view.type === 'chain').length)
+    expect(container.querySelectorAll('[data-view="chain"]').length).toBeGreaterThan(0)
   })
 })

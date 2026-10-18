@@ -147,7 +147,7 @@ describe('use case A: theme research', () => {
     expect(JSON.stringify(sw.inputSchema)).toContain('"normalize"')
     const qt = tools.find((t) => t.name === 'query')!
     expect(JSON.stringify(qt.inputSchema)).toContain('"ohlcv"') // the kind enum; params are an open object validated by parseQuery
-    expect(systemPromptSentOn(model, 0)).toContain('Answerable now: search, quote, ohlcv, news, earnings.')
+    expect(systemPromptSentOn(model, 0)).toContain('Answerable now: search, quote, ohlcv, news, earnings, options, macro.')
   })
 })
 
@@ -248,6 +248,63 @@ describe('set_workspace validation', () => {
     expect(fed.ok).toBe(false)
     expect(fed.errors).toHaveLength(3)
     expect(fed.errors[0]).toMatch(/^widgets\[0\] view\.candle:/)
+  })
+
+  it('accepts a chain view on options and a series view on macro, and rejects a chain view on quote (v1.2 views)', async () => {
+    const bad = {
+      name: 'set_workspace',
+      input: {
+        widgets: [
+          { title: 'NVDA chain', size: 'lg', query: { kind: 'options', params: { symbol: 'NVDA', strikes: 5 } }, view: { type: 'chain' } },
+          { title: 'Chain on quote', size: 'md', query: { kind: 'quote', params: { symbols: ['NVDA'] } }, view: { type: 'chain' } },
+          { title: 'Rates', size: 'md', query: { kind: 'macro', params: { series: ['treasury_10y', 'treasury_2y'] } }, view: { type: 'series' } },
+          { title: 'Rates as candles', size: 'md', query: { kind: 'macro', params: { series: ['treasury_10y'] } }, view: { type: 'series', candle: true } },
+        ],
+      },
+    }
+    const good = {
+      name: 'set_workspace',
+      input: {
+        widgets: [
+          { title: 'NVDA chain', size: 'lg', query: { kind: 'options', params: { symbol: 'NVDA', strikes: 5 } }, view: { type: 'chain' } },
+          { title: 'Rates', size: 'md', query: { kind: 'macro', params: { series: ['treasury_10y', 'treasury_2y'] } }, view: { type: 'series' } },
+        ],
+      },
+    }
+    const turns: Turn[] = [
+      { toolCalls: [q('options', { symbol: 'NVDA', strikes: 5 }), q('macro', { series: ['treasury_10y', 'treasury_2y'] })] },
+      { toolCalls: [bad] },
+      { toolCalls: [good] },
+      { text: 'The 10-year is at 4.11%. [[widget:w1]] [[widget:w2]]' },
+    ]
+    const { promise, model, messages, fake } = run(turns)
+    const message = await promise
+
+    // The two v1.2 queries ran with defaults applied by core and the documented summaries.
+    const summaries = message.steps!.map((s) => s.summary)
+    expect(summaries).toContain('options NVDA nearest both · 20 rows')
+    expect(summaries).toContain('macro treasury_10y, treasury_2y 1y · 24 rows')
+    expect(fake.calls.find((c) => c.kind === 'options')!.params).toMatchObject({ symbol: 'NVDA', strikes: 5, type: 'both' })
+    // The macro preview is keyed by `series`, not `symbol`.
+    const previews = toolResultsSentOn(model, 1) as { kind: string; preview: { stats: Record<string, Record<string, { last: number }>> } }[]
+    const macro = previews.find((p) => p.kind === 'macro')!
+    expect(Object.keys(macro.preview.stats)).toEqual(['treasury_10y', 'treasury_2y'])
+    expect(macro.preview.stats.treasury_10y!.value!.last).toBe(4.11)
+
+    // The bad set: chain on quote and candle on macro are refused; the two good widgets alone are not applied either.
+    const [, , badStep, goodStep] = message.steps!
+    expect(badStep!.summary).toBe('set_workspace · 2 invalid widgets')
+    expect(badStep!.error).toContain('widgets[1] view: chain view requires an options query')
+    expect(badStep!.error).toContain('widgets[3] view: candle and normalize are only for ohlcv')
+    expect(badStep!.error).not.toContain('widgets[0]')
+    expect(badStep!.error).not.toContain('widgets[2]')
+    expect(goodStep!.summary).toBe('set_workspace · 2 widgets')
+
+    const sets = widgetsOf(messages)
+    expect(sets).toHaveLength(1)
+    for (const w of sets[0]!) expect(WidgetSchema.safeParse(w).success).toBe(true)
+    expect(sets[0]![0]).toMatchObject({ id: 'w1', size: 'lg', query: { kind: 'options', params: { symbol: 'NVDA', strikes: 5, type: 'both' } }, view: { type: 'chain' } })
+    expect(sets[0]![1]).toMatchObject({ id: 'w2', query: { kind: 'macro', params: { series: ['treasury_10y', 'treasury_2y'], range: '1y' } }, view: { type: 'series' } })
   })
 
   it('rejects widgets on kinds no connector answers', async () => {

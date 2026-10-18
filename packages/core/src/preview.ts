@@ -2,7 +2,8 @@ import type { Column, Frame } from './frame.js'
 import { columnIndex } from './frame.js'
 
 /** What the agent sees of a frame. Numbers in a reply must come from here. */
-export type Stats = { first: number; last: number; min: number; max: number; changePct: number | null }
+/** `change` is last − first in the column's own units (points for rates, dollars for prices); `changePct` is relative. */
+export type Stats = { first: number; last: number; min: number; max: number; change: number; changePct: number | null }
 export type Preview = {
   columns: Column[]
   rowCount: number
@@ -47,6 +48,7 @@ export function preview(frame: Frame, opts: { maxRows?: number } = {}): Preview 
         last,
         min: Math.min(...values),
         max: Math.max(...values),
+        change: round4(last - first),
         changePct: first === 0 ? null : round(((last - first) / first) * 100),
       }
     }
@@ -66,4 +68,7 @@ function num(v: unknown): number {
 }
 function round(n: number): number {
   return Math.round(n * 100) / 100
+}
+function round4(n: number): number {
+  return Math.round(n * 10_000) / 10_000
 }

@@ -21,8 +21,8 @@ describe('preview', () => {
     const p = preview(f)
     expect(p.rowCount).toBe(5)
     expect(p.rows).toHaveLength(5)
-    expect(p.stats.MU!.close).toEqual({ first: 100, last: 120, min: 100, max: 120, changePct: 20 })
-    expect(p.stats.WDC!.close).toEqual({ first: 50, last: 45, min: 45, max: 50, changePct: -10 })
+    expect(p.stats.MU!.close).toEqual({ first: 100, last: 120, min: 100, max: 120, change: 20, changePct: 20 })
+    expect(p.stats.WDC!.close).toEqual({ first: 50, last: 45, min: 45, max: 50, change: -5, changePct: -10 })
     expect(p.stats.MU!.time).toBeUndefined()
     expect(p.stats.MU!.volume).toBeDefined()
   })
@@ -42,7 +42,7 @@ describe('preview', () => {
 
   it('uses * when there is no symbol column and ignores nulls', () => {
     const f = { columns: [{ name: 'x', type: 'number' as const }], rows: [[null], [2], [4]], meta: { connector: 't', fetchedAt: 0, ttl: 0 } }
-    expect(preview(f).stats['*']!.x).toEqual({ first: 2, last: 4, min: 2, max: 4, changePct: 100 })
+    expect(preview(f).stats['*']!.x).toEqual({ first: 2, last: 4, min: 2, max: 4, change: 2, changePct: 100 })
   })
 
   it('gives null changePct when first is zero', () => {

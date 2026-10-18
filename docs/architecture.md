@@ -14,15 +14,17 @@ packages/
   web/        React app: shell, state, WebSocket client, palette, connectors page, views (src/views)
   cli/        `npx terminal` → starts the server on localhost, opens the browser
 connectors/
-  yahoo/      no key; search, quote, ohlcv, earnings
+  openbb/     no key; every kind, through a local OpenBB Platform API (listed first, free when not running)
+  yahoo/      no key; search, quote, ohlcv, earnings, plus the yahoo-finance2 fallbacks listed in PLAN.md section 14
   finnhub/    free key; quote, news, earnings
 docs/
-  vocabulary.md, writing-a-connector.md, architecture.md
+  vocabulary.md, writing-a-connector.md, architecture.md, notes/
 scripts/
-  query.ts    `pnpm query <kind> <params…>` prints a frame
+  query.ts            `pnpm query <kind> key=value …` prints a frame for any kind
+  prompt-bench.mjs    `pnpm bench` runs scripts/prompts.json against a running server
 ```
 
-`packages/core` is the shared contract and is frozen: every other package compiles against it and nobody else edits it. The stack is Zod for every schema, Hono for HTTP and WebSocket, Vite + React, Tailwind for tokens, lightweight-charts, cmdk for the palette, the Vercel AI SDK for the agent, Vitest for tests.
+`packages/core` is the shared contract: every other package compiles against it and it changes only with the plan (the v1.2 catalog in PLAN.md section 14 was one such change). The stack is Zod for every schema, Hono for HTTP and WebSocket, Vite + React, Tailwind for tokens, lightweight-charts, cmdk for the palette, the Vercel AI SDK for the agent, Vitest for tests.
 
 ## The data path: prompt to pixels
 
@@ -37,15 +39,15 @@ prompt ─▶ agent ─▶ query tool ─▶ registry ─▶ connector ─▶ fr
 ```
 
 1. **Prompt.** The user types in the PromptBox. The web app sends `{ t: 'prompt', workspaceId, text }` over the socket.
-2. **Agent.** The server's `AgentRunner` runs the loop (Vercel AI SDK, provider and key from config). The system prompt holds the kind catalog with param schemas generated from core, the kinds the registry can currently answer, the current workspace JSON, today's date and market state, and the rules (run queries before writing numbers, four to six widgets, first widget is the hero, short titles, a prompt overwrites the workspace). Hard cap of ten tool calls per prompt. Symbol lookup is `query('search', { q: [...] })`, batched.
+2. **Agent.** The server's `AgentRunner` runs the loop (Vercel AI SDK, provider and key from config). The system prompt holds the kind catalog with param schemas generated from core, the kinds the registry can currently answer, the current workspace JSON, today's date and market state, and the rules (run queries before writing numbers, four to six widgets by default and fewer when asked, first widget is the hero, short titles, a prompt overwrites the workspace, the reply begins with the answer, period changes are measured from the close before the period), plus six worked examples. The `query` tool takes `params` as an open object that `parseQuery` validates against the kind. Hard cap of ten tool calls per prompt. Symbol lookup is `query('search', { q: [...] })`, batched.
 3. **`query(kind, params)` tool.** Calls the registry. The registry validates the query against the catalog, serves from cache when fresh, else tries connectors in config order and falls back on error, then validates the returned frame's columns against the catalog (name, type, order) and caches it for the kind's TTL.
 4. **Connector.** A plain module made with `defineConnector`. It receives validated params and a `Ctx` (`http.get`, `config`, `log`, `signal`) and returns a `Frame` via `toFrame`. See `writing-a-connector.md`.
-5. **Frame → preview (to the agent).** The tool returns a `preview(frame)`: columns, row count, rows (all when 25 or fewer, else the first 25), and per-symbol per-numeric-column stats (`first`, `last`, `min`, `max`, `changePct`). The agent may only write numbers that appear in a preview. The full frame stays in the cache so rendering does not refetch.
-6. **`set_workspace({ name?, widgets })` tool.** Validates every widget against the kind and view schemas (`WidgetSchema`: series requires an `ohlcv` query, `candle` and `normalize` are mutually exclusive, `candle` requires exactly one symbol), replaces the workspace's widgets, and starts executing their queries. The server emits `widgets` immediately and a `frame` or `frameError` per widget as each query settles.
-7. **Frame → view → widget (to the browser).** The web app matches each `frame` message to its widget by id and renders it with the widget's view: `series` on lightweight-charts (options `candle` or `normalize`; the legend shows each symbol's last price and change over the range) or `table` (typed formatting and column sort). A widget is a skeleton until its frame lands and shows an error state on `frameError`.
+5. **Frame → preview (to the agent).** The tool returns a `preview(frame)`: columns, row count, rows (all when 25 or fewer, else the first 25), and per-symbol (per-series for `macro`) per-numeric-column stats (`first`, `last`, `min`, `max`, `changePct`). The agent may only write numbers that appear in a preview. The full frame stays in the cache so rendering does not refetch.
+6. **`set_workspace({ name?, widgets })` tool.** Validates every widget against the kind and view schemas (`WidgetSchema`: `series` requires an `ohlcv` or `macro` query, `candle` and `normalize` are only for `ohlcv` and mutually exclusive, `candle` requires exactly one symbol, `chain` requires an `options` query), replaces the workspace's widgets, and starts executing their queries. The server emits `widgets` immediately and a `frame` or `frameError` per widget as each query settles.
+7. **Frame → view → widget (to the browser).** The web app matches each `frame` message to its widget by id and renders it with the widget's view: `series` on lightweight-charts (one line per symbol, or per series for `macro`; options `candle` or `normalize`; the legend shows each line's last value and change over the range), `table` (typed formatting per kind and column sort), or `chain` (calls on the left, strikes in the middle, puts on the right, the underlying price marked). A widget is a skeleton until its frame lands and shows an error state on `frameError`.
 8. **Reply with chips.** The agent's final text streams as `delta` messages and lands as `done` with the full `Message`. `[[widget:<id>]]` tokens in the text render as chips that scroll to and flash the widget.
 
-Widgets keep polling after the reply: the cache TTL per kind (quote 10 s, intraday ohlcv 60 s, daily ohlcv 10 min, news 2 min, earnings 1 h, search 1 d) bounds how often a connector is hit, and only the focused workspace polls (`{ t: 'focus', workspaceId }`).
+Widgets keep polling after the reply: the cache TTL per kind (quote 10 s, intraday ohlcv, options and movers 60 s, daily ohlcv and volatility 10 min, news 2 min, earnings, estimates, metrics, insiders, calendar, ipos, macro and yield_curve 1 h, the rest 1 d; the full list is in `kinds.ts`) bounds how often a connector is hit, and only the focused workspace polls (`{ t: 'focus', workspaceId }`).
 
 ## Message sequence over the socket
 
@@ -97,7 +99,7 @@ Also: the sidebar toggles with ⌘\ and overlays the grid below 1100px. The grid
 | Stub agent (fixed use-case-A widget set when no LLM key) | `packages/server/src/stub-agent.ts` |
 | Tokens, components, chart theme, series palette | `packages/ui` |
 | Shell, states, socket client, palette, connectors page | `packages/web` |
-| `series` and `table` views | `packages/web/src/views` |
+| `series`, `table` and `chain` views | `packages/web/src/views` |
 | `npx terminal` | `packages/cli` |
 | Connectors | `connectors/<name>/src/index.ts` |
 | Config and workspaces on disk | `~/.terminal/config.yml`, `~/.terminal/workspaces/` (override the directory with `TERMINAL_HOME`) |
@@ -110,7 +112,7 @@ From PLAN.md section 0, so nobody reopens them by accident:
 
 - A prompt overwrites the workspace. No diff, no accept/reject. A follow-up re-emits the widgets it wants to keep.
 - Layout is automatic. The agent assigns sizes, never positions. No dragging.
-- Five kinds, two views, two agent tools, two connectors in v1. Add nothing without a use case that needs it.
+- Five kinds, two views, two agent tools, two connectors in v1; v1.2 grew the catalog to 22 kinds and added the `chain` view (PLAN.md section 14) because the top data gaps were all keyless routes one connector already served. Still two tools. Add nothing without a use case that needs it.
 - Local-first, bring your own keys. One process on localhost plus the browser. No accounts, no hosted backend.
 - US equities only. No streaming; TTL polling instead.
 - cordis is deferred. Contributors only see `defineConnector`, so the loader can be swapped later without touching a connector.

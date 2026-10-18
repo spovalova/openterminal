@@ -1,6 +1,7 @@
 /**
  * Hand-written, recorded-shape fixture frames: one per widget row in PLAN.md section 5
- * (A1–A5, B1–B4, C1–C4) plus one `search` frame so every kind has a table fixture.
+ * (A1–A5, B1–B4, C1–C4), one `search` frame, and one per v1.2 kind with a view worth looking at
+ * (options on the chain view, macro on the series view, the rest on tables).
  * Columns come straight from `KINDS` so they always match the catalog.
  */
 import { KINDS, parseWidget, type Frame, type Kind, type Widget, type WidgetInput } from '@terminal/core'
@@ -301,7 +302,253 @@ const SEARCH: Fixture = {
   ]),
 }
 
-export const FIXTURES: Fixture[] = [A1, A2, A3, A4, A5, B1, B2, B3, B4, C1, C2, C3, C4, SEARCH]
+// ---- v1.2: the chain view, macro on the series view, and the new tables -----------------------
+
+/** Standard normal CDF and PDF, for Black–Scholes prices on the fixture chain. */
+function cdf(x: number): number {
+  const t = 1 / (1 + 0.2316419 * Math.abs(x))
+  const d = 0.3989423 * Math.exp((-x * x) / 2)
+  const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))))
+  return x > 0 ? 1 - p : p
+}
+const pdf = (x: number) => Math.exp((-x * x) / 2) / Math.sqrt(2 * Math.PI)
+
+/**
+ * One expiration of an option chain: `each` strikes on both sides of the spot, Black–Scholes quotes
+ * with a put skew, a bid/ask around the model price, and volume and open interest that peak at the
+ * money. Rows are calls ascending by strike, then puts ascending, as the connector returns them.
+ */
+function chain(symbol: string, spot: number, expiration: string, dte: number, step: number, each: number): unknown[][] {
+  const T = dte / 365
+  const r = 0.04
+  const base = Math.ceil(spot / step) * step
+  const strikes = Array.from({ length: each * 2 }, (_, i) => r2(base + (i - each) * step))
+  const rows: unknown[][] = []
+  for (const type of ['call', 'put'] as const) {
+    strikes.forEach((K, i) => {
+      const moneyness = Math.log(K / spot)
+      const iv = 0.44 - 0.9 * moneyness + 2.2 * moneyness * moneyness // skew: puts below spot richer
+      const d1 = (Math.log(spot / K) + (r + (iv * iv) / 2) * T) / (iv * Math.sqrt(T))
+      const d2 = d1 - iv * Math.sqrt(T)
+      const disc = Math.exp(-r * T)
+      const call = spot * cdf(d1) - K * disc * cdf(d2)
+      const price = type === 'call' ? call : call - spot + K * disc
+      const delta = type === 'call' ? cdf(d1) : cdf(d1) - 1
+      const gamma = pdf(d1) / (spot * iv * Math.sqrt(T))
+      const vega = (spot * pdf(d1) * Math.sqrt(T)) / 100
+      const thetaCall = (-(spot * pdf(d1) * iv) / (2 * Math.sqrt(T)) - r * K * disc * cdf(d2)) / 365
+      const theta = type === 'call' ? thetaCall : thetaCall + (r * K * disc) / 365
+      const half = Math.max(0.01, price * 0.012)
+      const distance = Math.abs(i + 0.5 - each)
+      const oi = Math.round(18_000 * Math.exp(-distance / 4) * (K % 5 === 0 ? 1.6 : 1)) + 350
+      const vol = Math.round(oi * 0.31 * (1 + ((i * 5) % 3) / 10))
+      rows.push([symbol, expiration, type, K, r2(price - half), r2(price + half), r2(price + half * (((i % 3) - 1) / 2)), vol, oi, r2(iv * 100), r2(delta), round4(gamma), r2(theta), r2(vega), spot, dte])
+    })
+  }
+  return rows
+}
+const r2 = (n: number) => Math.round(n * 100) / 100
+const round4 = (n: number) => Math.round(n * 10_000) / 10_000
+
+const OPTIONS: Fixture = {
+  id: 'options',
+  note: 'options NVDA, 10 strikes each side, one expiration · chain · lg',
+  widget: widget({
+    id: 'options',
+    title: 'NVDA chain, Oct 23',
+    size: 'lg',
+    query: { kind: 'options', params: { symbol: 'NVDA', expiration: '2026-10-23', strikes: 10, type: 'both' } },
+    view: { type: 'chain' },
+  }),
+  frame: frame('options', chain('NVDA', 182.43, '2026-10-23', 7, 2.5, 10)),
+}
+
+const OPTIONS_SM: Fixture = {
+  id: 'options-sm',
+  note: 'the same chain at sm (volume and delta dropped) · chain · sm',
+  widget: widget({
+    id: 'options-sm',
+    title: 'NVDA chain',
+    size: 'sm',
+    query: { kind: 'options', params: { symbol: 'NVDA', expiration: '2026-10-23', strikes: 10, type: 'both' } },
+    view: { type: 'chain' },
+  }),
+  frame: OPTIONS.frame,
+}
+
+/** 52 Fridays ending 2026-10-16, at the daily-series time (13:30 UTC). */
+const WEEKS = Array.from({ length: 52 }, (_, i) => day(10, 16) - (51 - i) * 7 * 86_400_000)
+
+/** A smooth path from `from` to `to` with a little weekly wobble, two decimals. */
+function path(from: number, to: number, wobble: number): number[] {
+  return WEEKS.map((_, i) => {
+    const t = i / (WEEKS.length - 1)
+    return r2(from + (to - from) * t + wobble * Math.sin(i / 3.1) + (wobble / 2) * Math.sin(i / 1.3))
+  })
+}
+/** A policy rate: flat between cuts of 25bp at the given week indexes. */
+function steps(start: number, cuts: number[]): number[] {
+  return WEEKS.map((_, i) => r2(start - 0.25 * cuts.filter((c) => c <= i).length))
+}
+
+const MACRO: Fixture = {
+  id: 'macro',
+  note: 'macro treasury_10y, treasury_2y, fed_funds, 1y · series · lg',
+  widget: widget({
+    id: 'macro',
+    title: 'Rates, one year',
+    size: 'lg',
+    query: { kind: 'macro', params: { series: ['treasury_10y', 'treasury_2y', 'fed_funds'], range: '1y' } },
+    view: { type: 'series' },
+  }),
+  frame: frame('macro', [
+    ...path(4.08, 4.21, 0.11).map((v, i) => ['treasury_10y', WEEKS[i]!, v]),
+    ...path(4.02, 3.49, 0.08).map((v, i) => ['treasury_2y', WEEKS[i]!, v]),
+    ...steps(4.58, [9, 22, 44, 48]).map((v, i) => ['fed_funds', WEEKS[i]!, v]),
+  ]),
+}
+
+const FINANCIALS: Fixture = {
+  id: 'financials',
+  note: 'financials NVDA quarterly, 4 periods · table · md',
+  widget: widget({
+    id: 'financials',
+    title: 'NVDA quarterly statements',
+    size: 'md',
+    query: { kind: 'financials', params: { symbols: ['NVDA'], period: 'quarter', limit: 4 } },
+    view: { type: 'table' },
+  }),
+  frame: frame('financials', [
+    ['NVDA', '2026-07-26', 46_743_000_000, 33_851_000_000, 28_440_000_000, 26_422_000_000, 1.08, 23_855_000_000, -1_306_000_000, 22_549_000_000, 56_791_000_000, 8_467_000_000, 24_420_000_000],
+    ['NVDA', '2026-04-27', 44_062_000_000, 26_668_000_000, 21_638_000_000, 18_775_000_000, 0.76, 27_414_000_000, -1_227_000_000, 26_187_000_000, 53_691_000_000, 8_464_000_000, 24_460_000_000],
+    ['NVDA', '2026-01-26', 39_331_000_000, 28_723_000_000, 24_034_000_000, 22_091_000_000, 0.89, 16_629_000_000, -1_077_000_000, 15_552_000_000, 43_210_000_000, 8_463_000_000, 24_530_000_000],
+    ['NVDA', '2025-10-27', 35_082_000_000, 26_156_000_000, 21_869_000_000, 19_309_000_000, 0.78, 17_629_000_000, -813_000_000, 16_816_000_000, 38_487_000_000, 8_462_000_000, 24_570_000_000],
+  ]),
+}
+
+const INSIDERS: Fixture = {
+  id: 'insiders',
+  note: 'insiders NVDA, latest 6 · table · md',
+  widget: widget({
+    id: 'insiders',
+    title: 'NVDA insider transactions',
+    size: 'md',
+    query: { kind: 'insiders', params: { symbols: ['NVDA'], limit: 20 } },
+    view: { type: 'table' },
+  }),
+  frame: frame('insiders', [
+    ['NVDA', '2026-10-14', 'Jensen Huang', 'President and CEO', 'sell', 75_000, 181.92, 13_644_000, 'https://example.com/sec/nvda-huang-1014'],
+    ['NVDA', '2026-10-10', 'Jensen Huang', 'President and CEO', 'sell', 75_000, 186.4, 13_980_000, 'https://example.com/sec/nvda-huang-1010'],
+    ['NVDA', '2026-10-07', 'Colette Kress', 'EVP and CFO', 'sell', 40_000, 188.15, 7_526_000, 'https://example.com/sec/nvda-kress-1007'],
+    ['NVDA', '2026-10-01', 'Mark Stevens', 'Director', 'sell', 300_000, 187.02, 56_106_000, 'https://example.com/sec/nvda-stevens-1001'],
+    ['NVDA', '2026-09-24', 'Ajay Puri', 'EVP Worldwide Field Operations', 'grant', 120_000, null, null, 'https://example.com/sec/nvda-puri-0924'],
+    ['NVDA', '2026-09-18', 'Tench Coxe', 'Director', 'sell', 500_000, 176.33, 88_165_000, 'https://example.com/sec/nvda-coxe-0918'],
+  ]),
+}
+
+const CALENDAR: Fixture = {
+  id: 'calendar',
+  note: 'calendar US, next week · table · md',
+  widget: widget({
+    id: 'calendar',
+    title: 'US economic calendar',
+    size: 'md',
+    query: { kind: 'calendar', params: { from: '2026-10-19', to: '2026-10-23', country: 'United States' } },
+    view: { type: 'table' },
+  }),
+  frame: frame('calendar', [
+    [Date.UTC(2026, 9, 19, 14, 0), 'United States', 'NAHB Housing Market Index (Oct)', null, '38', '37'],
+    [Date.UTC(2026, 9, 20, 12, 30), 'United States', 'Housing Starts (Sep)', null, '1.32M', '1.31M'],
+    [Date.UTC(2026, 9, 20, 12, 30), 'United States', 'Building Permits (Sep)', null, '1.34M', '1.33M'],
+    [Date.UTC(2026, 9, 21, 14, 30), 'United States', 'EIA Weekly Crude Oil Stocks Change', null, '-1.2M', '3.5M'],
+    [Date.UTC(2026, 9, 21, 18, 0), 'United States', 'Fed Beige Book', null, null, null],
+    [Date.UTC(2026, 9, 22, 12, 30), 'United States', 'Initial Jobless Claims (week ending Oct 17)', null, '228K', '231K'],
+    [Date.UTC(2026, 9, 22, 14, 0), 'United States', 'Existing Home Sales (Sep)', null, '4.05M', '4.00M'],
+    [Date.UTC(2026, 9, 23, 12, 30), 'United States', 'Consumer Price Index MoM (Sep), delayed release following the federal government shutdown', null, '0.3%', '0.4%'],
+    [Date.UTC(2026, 9, 23, 12, 30), 'United States', 'Core CPI YoY (Sep)', null, '3.1%', '3.1%'],
+    [Date.UTC(2026, 9, 23, 13, 45), 'United States', 'S&P Global Manufacturing PMI Flash (Oct)', null, '52.0', '52.0'],
+  ]),
+}
+
+const MOVERS: Fixture = {
+  id: 'movers',
+  note: 'movers gainers, top 10 · table · sm',
+  widget: widget({
+    id: 'movers',
+    title: 'Top gainers',
+    size: 'sm',
+    query: { kind: 'movers', params: { list: 'gainers', limit: 10 } },
+    view: { type: 'table' },
+  }),
+  frame: frame('movers', [
+    ['OKLO', 'Oklo Inc.', 142.18, 18.42, 31_400_000],
+    ['IONQ', 'IonQ, Inc.', 71.05, 14.9, 22_800_000],
+    ['RGTI', 'Rigetti Computing, Inc.', 48.6, 12.37, 61_200_000],
+    ['SMR', 'NuScale Power Corporation', 44.21, 11.08, 19_300_000],
+    ['QUBT', 'Quantum Computing Inc.', 22.14, 9.71, 44_900_000],
+    ['ASTS', 'AST SpaceMobile, Inc.', 79.9, 8.64, 17_600_000],
+    ['CRWV', 'CoreWeave, Inc.', 141.33, 7.95, 26_100_000],
+    ['SOUN', 'SoundHound AI, Inc.', 18.72, 7.4, 39_500_000],
+    ['NBIS', 'Nebius Group N.V.', 128.46, 6.88, 12_700_000],
+    ['APLD', 'Applied Digital Corporation', 32.19, 6.21, 28_300_000],
+  ]),
+}
+
+const VOLATILITY: Fixture = {
+  id: 'volatility',
+  note: 'volatility NVDA, AMD, TSLA, SPY · table · md',
+  widget: widget({
+    id: 'volatility',
+    title: 'Implied vs realized vol',
+    size: 'md',
+    query: { kind: 'volatility', params: { symbols: ['NVDA', 'AMD', 'TSLA', 'SPY'] } },
+    view: { type: 'table' },
+  }),
+  frame: frame('volatility', [
+    ['NVDA', 44.8, 71.2, 31.5, 33.5, 38.1, 92.4, 24.6, 212.19, 86.62],
+    ['AMD', 52.3, 78.9, 36.1, 37.9, 49.7, 101.3, 29.8, 267.08, 76.48],
+    ['TSLA', 58.6, 94.5, 42.2, 31.4, 54.3, 118.7, 35.1, 488.54, 214.25],
+    ['SPY', 15.2, 45.3, 10.4, 13.8, 11.9, 48.6, 7.2, 673.11, 481.8],
+  ]),
+}
+
+const PROFILE: Fixture = {
+  id: 'profile',
+  note: 'profile NVDA, AMD (long description truncates) · table · md',
+  widget: widget({
+    id: 'profile',
+    title: 'Company profiles',
+    size: 'md',
+    query: { kind: 'profile', params: { symbols: ['NVDA', 'AMD'] } },
+    view: { type: 'table' },
+  }),
+  frame: frame('profile', [
+    [
+      'NVDA',
+      'NVIDIA Corporation',
+      'NMS',
+      'Technology',
+      'Semiconductors',
+      4_452_000_000_000,
+      36_000,
+      2.12,
+      'NVIDIA Corporation provides graphics, compute and networking solutions in the United States, Taiwan, China, Hong Kong, and internationally. The Compute & Networking segment includes its Data Center accelerated computing platforms and AI solutions, networking, automotive platforms, Jetson for robotics and other embedded platforms, and DGX Cloud computing services.',
+    ],
+    [
+      'AMD',
+      'Advanced Micro Devices, Inc.',
+      'NMS',
+      'Technology',
+      'Semiconductors',
+      375_600_000_000,
+      28_000,
+      1.94,
+      'Advanced Micro Devices, Inc. operates as a semiconductor company worldwide. It operates through Data Center, Client, Gaming, and Embedded segments, offering x86 microprocessors and GPUs as standalone devices or incorporated into accelerated processing units, chipsets, data center and professional GPUs, embedded processors, semi-custom SoC products, and FPGAs.',
+    ],
+  ]),
+}
+
+export const FIXTURES: Fixture[] = [A1, A2, A3, A4, A5, B1, B2, B3, B4, C1, C2, C3, C4, SEARCH, OPTIONS, OPTIONS_SM, MACRO, FINANCIALS, INSIDERS, CALENDAR, MOVERS, VOLATILITY, PROFILE]
 
 export function fixture(id: string): Fixture {
   const f = FIXTURES.find((x) => x.id === id)

@@ -1,0 +1,44 @@
+{
+ "results": [
+  {
+   "symbol": "MU",
+   "date": "2025-12-31",
+   "owner_name": "Vanguard Group Inc",
+   "shares_held": 106608094.0,
+   "shares_change_percent": 0.018680000000000002,
+   "market_value": 93691457.0
+  },
+  {
+   "symbol": "MU",
+   "date": "2026-06-30",
+   "owner_name": "Blackrock, Inc.",
+   "shares_held": 104827219.0,
+   "shares_change_percent": 0.01628,
+   "market_value": 92126353.0
+  },
+  {
+   "symbol": "MU",
+   "date": "2026-06-30",
+   "owner_name": "Vanguard Capital Management Llc",
+   "shares_held": 73659544.0,
+   "shares_change_percent": 0.00714,
+   "market_value": 64734954.0
+  },
+  {
+   "symbol": "MU",
+   "date": "2026-06-30",
+   "owner_name": "State Street Corp",
+   "shares_held": 50075870.0,
+   "shares_change_percent": -0.041420000000000005,
+   "market_value": 44008678.0
+  },
+  {
+   "symbol": "MU",
+   "date": "2026-06-30",
+   "owner_name": "Invesco Ltd.",
+   "shares_held": 36315240.0,
+   "shares_change_percent": 0.01773,
+   "market_value": 31915286.0
+  }
+ ]
+}
