@@ -479,3 +479,100 @@ Theme pass, recordings of the three use cases for the README, fresh-clone `npx t
 - A series view takes `labels?: Record<string, string>`: a legend label per symbol (ohlcv) or series (macro), trimmed, 1 to 32 characters, and every key must be one of the query's own symbols or series so a label never outlives its line. The legend shows the override in place of the symbol and keeps the symbol as the row's `title`; numbers are unchanged. The widget editor shows one input per line of the query (placeholder: the default label), derived from the params as typed, so adding a symbol adds an input and removing one drops its label. The field flows into `set_workspace` through `WidgetSchema`, with one line in the prompt telling the agent to use it only when the user names a line. Hiding a line is not part of this: that would be a query change, not a label.
 
 **Verification.** 382 tests on the branch, 415 after merging the design system (schema accept/reject, legend override, editor inputs and round trip, reply with bold, list, code, chips, table, raw HTML), typecheck and lint green; before and after screenshots of the same production workspace in `docs/screenshots/chat-markdown-*.png` and `legend-*.png`.
+
+## 17. v2: routes replace kinds (proposal)
+
+**Status: proposal, 2026-10-18.** Not built. Reviewed as a PR; becomes the plan when merged.
+
+### Why
+
+Bench v2 (section 0, `docs/notes/prompt-bench-v2-2026-10-18.md`) failed six of seven prompts, and five of the six were data the OpenBB API on this machine already serves with no kind in front of it: corporate bond yields, a screener, sector performance, the full economic calendar, earnings reactions. The catalog model means every new question costs a day of kind-writing before the agent can even try, and the long tail never ends. OpenBB describes itself completely (1,012 GET routes, 5,031 parameters, 1,102 response models with 12,755 fields, 99% of them with a description, all in `/openapi.json`), so the description work is already done by the provider. What the product adds should be discovery, typing, and guarantees, not a second copy of the schema.
+
+The user's decision: remove kinds and work directly on provider APIs, with infrastructure designed to grow. The two things kinds guaranteed, correct units and views that know their columns, are kept by two smaller mechanisms, annotations and shapes, described below.
+
+### Vocabulary changes (section 3)
+
+| Term | v2 definition |
+|---|---|
+| **Route** | One endpoint of a provider API, described by a **descriptor**: path, parameters (name, type, enum, default, description), providers, response fields (name, type, description), and a liveness record. Replaces **kind** as the unit of data. |
+| **Connector** | A plugin that exposes routes and answers them. It publishes its descriptors (OpenBB: generated from its OpenAPI document at startup; yahoo and finnhub: a hand-written descriptor file in the same format, one entry per endpoint they wrap). Holds its config. Runs server-side. |
+| **Query** | `{ connector, route, params }`. Params are validated against the descriptor, not a Zod schema per kind. |
+| **Catalog** | The searchable union of every connector's descriptors, with liveness. Generated, never edited. What `find_route` searches and the Connectors page lists. |
+| **Frame** | Unchanged: typed columns plus rows. Columns come from the descriptor's response fields, with runtime inference as the fallback. |
+| **Shape** | What a frame has, detected from its columns: a time column, numeric columns, a group column (symbol, series, ticker), option columns (strike, expiration, option_type), one row per group. Views declare the shape they need. Replaces per-kind view wiring. |
+| **Annotation** | A hand-written fact about one field of one route: unit (`fraction`, `percent`, `ratio`, `usd`, `shares`), display label, format, priority for narrow widgets. Lives in a data file, grown by the bench. The residue of kinds. |
+| **Recipe** | A named, saved query with a title template, preferred view and size, and an ordered list of alternative routes (fallback). Data, not code. The 22 kinds become 22 recipes. The prompt lists the top recipes as examples; the agent may use any route. |
+
+Widget, Workspace, View, Agent, preview, reply, chip and step are unchanged. Registry becomes the catalog plus a runner.
+
+### The descriptor format
+
+One JSON document per connector, `Descriptor[]`:
+
+```ts
+type Descriptor = {
+  connector: string            // 'openbb' | 'yahoo' | 'finnhub' | ...
+  route: string                // 'equity/price/historical', 'fixedincome/corporate/bond_prices', 'quote'
+  summary: string              // one line from the schema
+  description?: string
+  params: Array<{ name: string; type: 'string'|'number'|'integer'|'boolean'|'date'|'string[]'; enum?: string[]; default?: unknown; required: boolean; description?: string; providers?: string[] }>
+  providers: string[]          // [] for connectors without the concept
+  fields: Array<{ name: string; type: 'number'|'string'|'time'|'boolean'; description?: string }>
+  liveness?: { checkedAt: number; ok: boolean; rows?: number; ms?: number; error?: string; sampleColumns?: string[] }
+}
+```
+
+`connectors/openbb/src/descriptors.ts` generates it from `/openapi.json`: one entry per GET route, parameter unions collapsed to one entry with a `providers` list, response model resolved to fields, `date`/`datetime` fields typed `time`. The 8.5 MB document becomes about 300 KB, cached in `~/.terminal/catalog/openbb.json` with the OpenBB version, regenerated when the version changes. yahoo and finnhub ship `descriptors.json` in the package (about 15 and 3 entries), so the same code path serves all three.
+
+A new connector is therefore either: an OpenAPI URL plus auth plus an envelope rule (a generic `openapi` connector that OpenBB is the first instance of; any REST API with a schema becomes a connector by config), or a code connector that ships a descriptor file. `defineConnector` keeps its name and config schema and gains `descriptors()` and `call(route, params, ctx)` in place of per-kind `queries`.
+
+### Catalog, search, liveness
+
+- `packages/core/src/catalog.ts`: load every connector's descriptors, index them for keyword search (route path, summary, description, field names; BM25 over tokens, no embeddings, no network), `find(query, { limit })` returning compact entries (route, summary, required params, top fields). Ranked with a bias toward equity, options, fixed income, news, economy and index namespaces over commodity and agriculture series.
+- Liveness: `scripts/probe-catalog.ts` calls every route once with default params and a sample symbol, records the liveness block. Runs on demand from the Connectors page ("Probe routes", a few minutes for 1,000 routes, concurrency 8) and in CI against a recorded OpenBB fixture. The agent only sees routes whose liveness is ok or unknown; dead routes are listed on the Connectors page with their error.
+- The Connectors page shows the catalog per connector: route count, alive count, last probe, and a searchable table. This is the human view of the same index.
+
+### Frames, shapes, annotations
+
+- Column inference: descriptor fields first; if the response has fields the descriptor lacks, add them with the type inferred from the first non-null value; `time` when the field is typed date/datetime or every value parses as a date. Nested objects are flattened one level with dotted names; arrays of scalars are joined.
+- Shape detection (`packages/core/src/shape.ts`): pure function of columns and row sample. `time`: first `time` column. `group`: first of `symbol`, `series`, `ticker`, `cusip`, `name` when the frame has several distinct values. `numeric`: all number columns. `options`: has strike + expiration + option_type (or type). `oneRowPerGroup`: group column with no duplicates.
+- Views declare requirements: `series` needs time and at least one numeric; `chain` needs options; `stat` needs oneRowPerGroup and a numeric; `table` needs nothing. `view-for` picks by shape; the editor offers only views whose requirements the frame meets. Candle needs open, high, low, close by name; normalize needs a group.
+- Annotations (`packages/core/annotations.yml`, loaded at startup, about 100 lines to start): `openbb.equity/price/quote.change_percent: { unit: fraction, label: "Chg %" }`, `openbb.*.market_cap: { unit: usd, format: compact }`, `*.volume: { format: integer, priority: 3 }`. Matching by connector, route glob, and field. The runner converts units to the product's conventions (fractions become percent) and stamps the column with its unit, so previews and views are consistent. A field without an annotation is shown as-is with its description available in the tooltip and the preview, and the prompt tells the agent that unannotated numbers carry no unit guarantee.
+
+### Caching and TTL
+
+Cache key is `connector + route + canonical params`. TTL by route pattern in a small table: `*/quote*` and `*/price/quote` 10 s, `*/historical*` with intraday intervals 1 min else 10 min, `news/*` 5 min, `*/calendar/*` 1 h, fundamentals and ownership 1 day, default 10 min. Recipes can override.
+
+### Agent
+
+Tools: `find_route(query: string)` returns up to five catalog entries; `query(connector, route, params)` validates against the descriptor and returns a preview as today; `set_workspace` unchanged except widgets hold `{ connector, route, params }` or a `recipe` name with params. Prompt: the recipe list with one example query each (about 25 lines, replacing the kind guidance), the rule "use a recipe when one fits; search the catalog when none does; never write a figure that is not in a preview", the unit rule above, and the worked examples rewritten with routes. Expected cost: one extra tool call on prompts that leave the recipes, about two seconds.
+
+### Migration
+
+- Stored widgets with `{ kind, params }` are read as `{ recipe: kind, params }` by a one-time migration in the store; recipes carry the exact routes the kinds used, so every existing workspace renders unchanged.
+- `pnpm query` takes `<connector> <route> key=value…` and keeps `pnpm query <recipe> …`.
+- The bench and its notes are unchanged; bench v2 is the acceptance test.
+
+### Removed
+
+`packages/core/src/kinds.ts` and its 22 schemas; per-kind handlers in all three connectors (OpenBB's 600-line `index.ts` becomes the descriptor generator plus a 60-line caller); `formatsFor`, `KIND_PRIORITY`, `subtitleFor` per kind (replaced by shape and annotations: subtitle is route summary plus the params that matter); `STAT_KEY_COLUMN` (replaced by annotation `key: true` or the first numeric). Section 7.1's table becomes the recipe list in `recipes.yml`.
+
+### Phases
+
+0. **Trunk** (one agent, sequential): descriptor type, catalog with search, shape detection, annotations loader, unit conversion, the runner, and tests with a recorded `openapi.json` fixture. Nothing user-visible changes.
+1. **Parallel**: (a) OpenBB descriptor generator, caller, probe script and liveness; (b) yahoo and finnhub descriptor files and callers; (c) agent tools and prompt with recipes; (d) web: views by shape, editor from descriptors, Connectors page catalog, subtitles from routes; (e) store migration, `pnpm query`, docs (`writing-a-connector.md` rewritten around descriptors, the README kinds table replaced by "any route, plus these recipes").
+2. **Integrate and accept**: bench v2 rerun; the target is the three user prompts passing and no regression on bench v1; new annotations added for every unit mistake found.
+3. **Remove**: delete the kind code once the bench passes; PLAN.md sections 7.1, 14 marked superseded.
+
+### Risks and answers
+
+- *Wrong units in replies.* Annotations for every field the recipes touch before phase 2; the preview shows the unit per column; the prompt forbids stating a unit the column does not carry. The bench grades it.
+- *The agent picks a bad route.* Liveness filters dead ones; ranking prefers the trading namespaces; recipes cover the common 80%. Measured by bench v2.
+- *Views that render garbage.* Shapes gate the views; the table is the floor and always renders.
+- *Prompt latency.* One extra tool call only off the recipe path.
+- *Fixtures.* Tests run against a recorded `openapi.json` and a dozen recorded responses, never the network, as today.
+- *Losing the typed contributor contract.* A contributor adds a REST API by descriptor file, which is simpler than 50 lines per kind, and the catalog validates it at load.
+
+### Out of scope
+
+Write routes (orders), authentication flows beyond API keys and basic auth, embeddings for search, streaming routes.
