@@ -1,0 +1,16 @@
+[Unit]
+Description=OpenBB Platform API for the terminal (loopback only, port 6900)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h
+Environment=HOME=%h
+ExecStart=%h/.venvs/openbb/bin/openbb-api --host 127.0.0.1 --port 6900 --no-build
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

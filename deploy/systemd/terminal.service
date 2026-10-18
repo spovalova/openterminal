@@ -1,0 +1,22 @@
+[Unit]
+Description=terminal (production, http://127.0.0.1:4242)
+After=network-online.target openbb-api.service
+Wants=openbb-api.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/terminal
+Environment=HOME=%h
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=NODE_ENV=production
+Environment=PORT=4242
+# ANTHROPIC_API_KEY / FINNHUB_API_KEY etc. Gitignored; keys never enter the repo.
+EnvironmentFile=-%h/terminal/.env
+ExecStart=%h/.local/bin/node packages/cli/bin/terminal.js --no-open
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
