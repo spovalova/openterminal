@@ -1,0 +1,118 @@
+# v2 phase 1 seams
+
+Written in v2 phase 0 (PLAN.md section 17, 2026-10-18) so the five phase 1 workstreams compile against each other before any of them is finished. Everything below exists in `packages/core/src` with tests; the owning workstream consumes the exports as they are and provides the stubs named under "must provide". Change a core signature only by editing this file in the same commit, and say why in PLAN.md section 17.
+
+Nothing user-visible changed in phase 0. Production's v1 path (`{ kind, params }` queries, `WidgetSchema`, `KINDS`, `toFrame`, the kind handlers in all three connectors) is untouched and stays until phase 3; every v2 type sits beside its v1 counterpart.
+
+## What core exports (read `packages/core/src` before building)
+
+| Module | Exports phase 1 consumes |
+|---|---|
+| `descriptor.ts` | `Descriptor`, `DescriptorParam`, `DescriptorField`, `Liveness`, `DescriptorRef`, `DescriptorSchema`, `parseDescriptors(input)`, `descriptorKey(ref)` (`connector:route`), `routeNamespace(route)`, `fieldsToColumns(d)`, `validateParams(d, params) → { ok, params } \| { ok: false, issues }`, `parseParams(d, params)` (throws `ParamError`), `describeDescriptor(d)` |
+| `descriptor-openapi.ts` | `descriptorsFromOpenApi(doc, connector, { prefix = '/api/v1', skipParams = ['chart'], resultsKey = 'results' })`, `fieldType(prop)`. Pure. One descriptor per GET route whose 200 response is a results envelope; the `provider` query param becomes `providers`; per-provider param variants collapse to one entry with `providers` and an `enum` only when every variant constrains it; `symbol`-style params that take comma lists are `string[]`; date and date-time fields are `time`. |
+| `catalog.ts` | `Catalog` (`new Catalog(descriptors)`, `get(connector, route)`, `all()`, `connectors()`, `find(query, { limit = 5, namespaces?, connectors?, includeDead? }) → CatalogHit[]`, `setLiveness(ref, liveness)`, `replace(connector, descriptors)`, `stats()`), `NAMESPACE_BIAS`, `tokenize(text)`. BM25 over route path (×3), summary (×2), description, param and field names; dead routes hidden unless `includeDead`. |
+| `query.ts` | `RouteQuery`, `RecipeQuery`, `TransformQuery`, `QueryV2` (union), `QueryV2Schema`, `RouteQuerySchema`, `RecipeQuerySchema`, `TransformQuerySchema`, `LegacyQuery` (= v1 `Query`), `AnyQuery`, `AnyQuerySchema`, `parseAnyQuery`, `isRouteQuery/isRecipeQuery/isTransformQuery/isLegacyQuery`, `canonicalKey(q)` (the cache key; equal to v1 `cacheKey` for kind queries), `canonicalParams`, `legacyToRecipe(kindQuery)`, `resolveRecipe(recipes, q, { now? }) → RouteQuery[]`, `anyQuerySymbols(q)`, `describeQuery(q)` |
+| `fields.ts` | `FieldRole` (`time, group, measure, label, level, x`), `Unit` (`fraction, percent, ratio, usd, shares, count, days, years, bps`), `Format`, `FieldConfig`, `FieldConfigSchema`, `FieldOverrides(Schema)`, `rolesFromShape(shape)`, `mergeFieldConfig(shape, annotations, overrides)`, `displayUnit`, `defaultFormat(config, columnType)`, `orderByPriority(names, fields)`, `keyField(fields, order?)` |
+| `shape.ts` | `Shape`, `detectShape(columns, rowsSample)`, `GROUP_CANDIDATES`, `SHAPE_REQUIREMENTS`, `PRESET_NAMES`, `PresetName`, `presetsFor(shape)` |
+| `annotations.ts` | `AnnotationRule`, `parseAnnotations(doc, { orderFrom? })`, `annotationsFor(rules, ref, field)`, `annotationsForColumns(rules, ref, columns)`, `applyAnnotations(frame, ref, rules) → Frame` (fractions ×100 and stamped `percent`; `meta.fields` filled; idempotent), `globToRegExp`, `ruleMatches`, `describeRule` |
+| `recipes.ts` | `Recipe`, `RecipeSchema`, `RecipeRoute`, `RecipeDataset`, `parseRecipes(doc)`, `validateRecipe(r)`, `recipeDatasets(r)`, `recipeParamsSchema(r) → ZodObject`, `recipeParams(r) → DescriptorParam[]`, `recipeDescriptor(r)`, `expandRecipe(r, params, { now? }) → { params, title, routes, data }`, `titleFor(r, params)`, `renderValue`, `FILTERS`, `recipeSummaryLines(recipes)`, `recipeMap` |
+| `json-schema.ts` | `JsonSchemaObject`, `JsonSchemaProperty`, `jsonSchemaToZod`, `jsonSchemaToParams`, `zodToJsonSchemaObject` |
+| `layers.ts` | `Mark`, `Layer` (line, area, bar, histogram, candle, marker, level, band, cell, profile), `Pane`, `PaneSchema`, `LayerSchema`, `Scale`, `XType` (`time, number, category`), `parsePanes`, `paneDatasets` |
+| `presets.ts` | `ViewV2`, `ViewV2Schema` (discriminated on `preset`: price, compare, curve, indicator, table, stat, facts, chain, heatmap, each with its options), `expandPreset(view, datasets) → Pane[]`, `controlFor(view, datasets) → TableControl \| StatControl \| FactsControl \| ChainControl \| ChartControl`, `DatasetsFieldConfig`, `datasetFieldsFrom(frame)`, `primaryDataset`, `measureOf`, `markerLayer`, `isChartPreset`, `WIDE_COLUMNS`, `WIDE_VALUE` |
+| `widget.ts` | v1: `WidgetSchema`, `Widget`, `ViewSchema`, `parseWidget`, `SIZE_SPANS`, `STAT_KEY_COLUMN` (unchanged). v2: `WidgetV2Schema`, `WidgetV2` (`{ id, title, size, data: Record<name, AnyQuery>, view: ViewV2, fields?, query? }`), `migrateWidget(v1) → WidgetV2`, `migrateView`, `parseAnyWidget(input) → WidgetV2`, `AnyWidgetSchema`, `isWidgetV2`, `widgetQueries(w)`, `DEFAULT_DATASET = 'main'`, `DATASET_NAME_RE` |
+| `layout.ts` | `columnsFor(width)` (3 columns from 960), `THREE_COLUMNS_MIN`, `ContentHint = { rows?, kind: 'table' \| 'chart' \| 'stat' \| 'facts' \| 'chain' }`, `LayoutWidget = { size, contentHint? }`, `effectiveSpan(widget, columns, count)`, `packLayout(widgets, columns)` (`Placement` gains `demoted`), `SHORT_TABLE_ROWS = 6`, `TALL_CHART_MAX_WIDGETS = 6` |
+| `clock.ts` | `nyParts`, `nyDate`, `nyWallToUtc`, `nyMidnight`, `NYSE_HOLIDAYS` (2024–2027), `NYSE_EARLY_CLOSES`, `isTradingDay`, `tradingDays(start, end)`, `previousTradingDay`, `nextTradingDay`, `tradingDaysBack`, `sessionAt(now) → 'pre' \| 'regular' \| 'post' \| 'closed'`, `sessionBounds(date)`, `describeMarketTime(now)`, `lastTradingDay(now)`, `lastWeek(now)`, `thisWeek(now)`, `rangeStart(range, now)`, `baselineFor(range, now)`, `prevClose(frame, { value?, group? })`, `weekdayLabel`, `addDays` |
+| `transform.ts` | `TransformEngine` (`run(inputs, code, columns?, { signal?, timeoutMs? }) → Promise<Frame \| { error, traceback? }>`, optional `warmup()`, `close()`), `TransformOutput`, `isTransformError`, `TRANSFORM_LIMITS`, `TRANSFORM_ALLOWED_IMPORTS`, `checkTransformInputs`, `checkTransformOutput`, `OT_HELPERS`, `otHelpersDoc()`, `TRANSFORM_EXAMPLE` |
+| `infer.ts` | `inferFrame(rows, meta, { descriptor?, only?, dropEmpty? })`, `inferColumns`, `flattenRow`, `coerceCell`, `parseTime` (OpenBB date conventions), `looksLikeDate` |
+| `connector.ts` | `defineConnector(def)` accepts `queries` (v1) or `descriptors()` + `call(route, params, ctx)` (v2) or both; a `Connector` always has `kinds`, `queries`, `descriptors(): Promise<Descriptor[]>`, `call`, `mode`. `descriptorFromKind(connector, kind)`, `callRoute`, `CallHandler`, `toFrame` (unchanged) |
+| `registry.ts` | `ConnectorRegistry` options gain `recipes`, `annotations`, `transform`, `now`; `run(q)` accepts v1 kind queries (exact v1 path) and v2 route, recipe and transform queries; `catalog(): Promise<Catalog>`; `descriptorsOf(name)`, `descriptorFor(connector, route)`; `recipes()`, `setRecipes`, `setAnnotations`, `setTransformEngine`; `ttlForRoute(route, params)`, `ROUTE_TTLS`, `DEFAULT_ROUTE_TTL`; `TransformFailed` (carries `traceback`); `RegisteredConnector.mode` |
+| `cache.ts` | `Cache` keyed by `AnyQuery` through `canonicalKey`; `MemoryCache` gains `getByKey`/`setByKey` |
+| `frame.ts` | `FrameMeta` gains optional `fields: Record<string, FieldConfig>` and `lineage: Lineage` (`{ connector?, route?, params?, provider?, recipe?, inputs?, code? }`); v1 frames still validate |
+| `protocol.ts` | `frame` and `frameError` messages gain optional `workspaceId` and `dataset`; `frameKey(ref)` and `frameDataset(m)` default the dataset to `main`; `refresh` gains optional `dataset`; `Step.tool` accepts `find_route` and `transform` (`TOOL_NAMES`) |
+| `@terminal/core/node` (`node.ts`) | `loadRecipesFile(path?)`, `loadAnnotationsFile(path?, { orderFrom? })`, `builtinRecipes()`, `builtinAnnotations()`, `BUILTIN_RECIPES_PATH`, `BUILTIN_ANNOTATIONS_PATH`, `loadYamlFile`. Node only (reads `packages/core/recipes.yml` and `annotations.yml`); never import it from the web. |
+
+Data files: `packages/core/recipes.yml` (the 22 kinds as recipes plus `index` and `screener`), `packages/core/annotations.yml` (about 330 rules: every field the recipes touch on their OpenBB, yahoo and finnhub routes, plus the v1 kind routes). Fixture: `packages/core/test/fixtures/openbb-openapi.json` (40 OpenBB GET routes across equity, news, derivatives, economy, fixedincome, etf, index, commodity, currency, crypto, eia, usda, federal_reserve, yfinance, nasdaq; 398 KB; produces 38 descriptors).
+
+## Conventions every workstream shares
+
+- A v2 query is `{ connector, route, params }`, `{ recipe, params }` or `{ inputs, code, columns? }`. `string[]` params arrive at `call` as arrays; the connector joins them (OpenBB: commas). `provider` is a param the registry validates against the descriptor's `providers` and passes through.
+- Frames from `call` go through `applyAnnotations` in the registry: a `fraction` field is ×100 and stamped `percent`. Connectors must not convert units themselves on v2 routes; they return provider values and let the annotation say what they are. `meta.lineage` is stamped by the registry; `meta.ttl` comes from `ttlForRoute` (or the kind's TTL for a v1 connector's kind route; or the recipe's `ttl`).
+- Field config reaches a view as `mergeFieldConfig(detectShape(columns, rows), frame.meta.fields, widget.fields)`; `datasetFieldsFrom(frame)` is the short form used by `expandPreset` and `controlFor`.
+- Dataset names are Python identifiers (`DATASET_NAME_RE`); `main` is the default and what a v1 widget migrates to.
+- Cache keys are `canonicalKey(q)`; the persistent cache (e) and the in-memory cache share them.
+- Times are epoch ms; provider dates parse with `parseTime` (date-only = New York midnight, zone-less datetime = New York wall time).
+
+## (a) connectors — openbb descriptors, probe, liveness, yahoo and finnhub descriptor files and `call`
+
+Owns: `connectors/openbb/src/descriptors.ts` (new), `connectors/openbb/src/call.ts` (new), `connectors/openbb/src/index.ts` (add `descriptors` and `call` to the existing `defineConnector`; the kind handlers stay), `connectors/yahoo/src/descriptors.json` and `call.ts`, `connectors/finnhub/src/descriptors.json` and `call.ts`, `scripts/probe-catalog.ts`, `packages/server/src/liveness.ts` (new; the store schema for probe results is (e)'s, agree the row shape: `{ connector, route, checkedAt, ok, rows?, ms?, error?, sampleColumns? }` = `Liveness` plus the ref).
+
+Consumes: `descriptorsFromOpenApi`, `inferFrame`, `parseTime`, `validateParams`, `Catalog.setLiveness`, `Liveness`, `ttlForRoute`.
+
+Must provide:
+- `openbb.descriptors()`: fetch `${baseUrl}/openapi.json`, cache the generated descriptors in `~/.terminal/catalog/openbb.json` with the OpenBB version (`info.version`), regenerate when it changes. Keep the breaker: when the API is down, return the cached file or `[]`.
+- `openbb.call(route, params, ctx)`: `GET /api/v1/<route>` with params (arrays joined by commas, `provider` passed through), `results` unwrapped (`get()` in `openbb-api.ts` already does this), rows → `inferFrame(rows, { connector: 'openbb' }, { descriptor })`. Single-symbol historical rows carry no `symbol`: add it from the params when the descriptor has a `symbol` field and the rows lack it.
+- yahoo `descriptors.json`: exactly the five yahoo-finance2 endpoints the recipes name: `search` (`q`), `quote` (`symbols: string[]`), `chart` (`symbol: string[]`, `period1: date`, `period2?: date`, `interval`, `includePrePost?: boolean`, `events?`), `options` (`symbol`, `date?: date`), `quoteSummary` (`symbol: string[]`, `modules: string[]`). `call` flattens quoteSummary one level (`financialData.grossMargins`) by returning the module objects as nested rows: `inferFrame` does the flattening. Fields may be `[]` for quoteSummary; inference fills them.
+- finnhub `descriptors.json`: `quote` (`symbol`), `company-news` (`symbol`, `from`, `to`), `calendar/earnings` (`from`, `to`, `symbol?`). `company-news` `datetime` is seconds: convert to ms in `call` (or expose as number and annotate; ms is the frame convention).
+- `scripts/probe-catalog.ts`: for every descriptor of every registered connector, one call with default params and a sample symbol (`NVDA`, dates = last week, country `united_states`), concurrency 8, record `Liveness` through `Catalog.setLiveness` and (e)'s store; a CI mode against the fixture that only checks the generator.
+- Tests: generator on the live document shape (use the core fixture), `call` with recorded responses (the existing `connectors/openbb/test` fixtures already hold raw rows per route).
+
+## (b) transforms — Pyodide worker, `ot` helpers, the `transform` tool
+
+Owns: `packages/server/src/transform/` (worker, engine, `ot.py`), `packages/server/src/agent/tools-transform.ts` (the tool body; (c) wires it into the tool list), the Pyodide vendoring in `packages/server/package.json` (report the dependency, do not add others).
+
+Consumes: `TransformEngine`, `TransformOutput`, `TRANSFORM_LIMITS`, `TRANSFORM_ALLOWED_IMPORTS`, `checkTransformInputs/Output`, `OT_HELPERS` (the Python module must implement exactly these names and signatures), `TRANSFORM_EXAMPLE`, `clock.ts` (`NYSE_HOLIDAYS`, `sessionBounds` for parity tests), `Frame`, `FieldConfig`.
+
+Must provide:
+- `createTransformEngine(opts: { log?, timeoutMs? }): TransformEngine` in `packages/server/src/transform/index.ts`; the server passes it to `new ConnectorRegistry({ transform })` (or `registry.setTransformEngine`).
+- Frame ↔ DataFrame: `time` columns → tz-aware `America/New_York` datetimes; result datetimes → epoch ms; numbers → `number`; bools → `boolean`; else `string`. `NaN` → null.
+- Import guard (`TRANSFORM_ALLOWED_IMPORTS`), CPU and memory limits, restart on breach, input and output caps (the registry checks them too).
+- `ot.py` implementing `OT_HELPERS` with the same calendar as `clock.ts` (holidays through 2027); unit tests recompute one value by hand per helper.
+- The `transform` tool: `transform(inputs, code, columns?)` → `registry.run({ inputs, code, columns })` → `preview(frame)` with the lineage, or `{ error, traceback }` for the agent to fix.
+
+## (c) agent — `find_route`, `query` v2, `transform`, `set_workspace` v2, prompt with recipes, reply verification, run log
+
+Owns: `packages/server/src/agent/*` except `tools-transform.ts`, `packages/server/src/verify.ts` (reply verification), `packages/server/src/runlog.ts` (the log writer; the table is (e)'s).
+
+Consumes: `registry.catalog()` → `Catalog.find`, `describeDescriptor`, `registry.run` with v2 queries, `preview`, `recipeSummaryLines(registry.recipes())`, `recipeParams`, `WidgetV2Schema`, `parseAnyWidget`, `controlFor` and `datasetFieldsFrom` (to reject a `table` over a one-row frame, rule 8), `effectiveSpan`/`packLayout` with `contentHint`, `describeMarketTime`, `lastWeek`, `baselineFor`, `otHelpersDoc`, `TRANSFORM_EXAMPLE`, `TOOL_NAMES`.
+
+Must provide:
+- Tools: `find_route({ query, namespaces? })` → up to five `CatalogHit`s; `query({ connector, route, params } | { recipe, params })` → preview (keep `{ kind, params }` accepted until phase 3); `transform` from (b); `set_workspace({ name?, widgets: WidgetV2Input[] })` validating with `WidgetV2Schema` (accept v1 widgets through `parseAnyWidget`), running `packLayout` with content hints from the previews it has seen.
+- Prompt: the recipe list (`recipeSummaryLines`), the rules from section 17 (use a recipe when one fits, search when none does, never a figure outside a preview, unannotated numbers carry no unit), the units line per preview column from `frame.meta.fields`, the worked examples rewritten with routes, the P/E example.
+- Reply verification: numbers extracted from the reply matched against that run's previews with unit-aware tolerance (percent vs fraction, rounding); result in the run log and a `verification` field on the `done` message (add it to `MessageSchema` as optional; report the core change here).
+- Run log rows: `{ id, workspaceId, startedAt, ms, model, steps, tokens?, cost?, verification }` written through (e)'s store interface.
+
+## (d) web views — field config pipeline, presets to lightweight-charts panes and layers, table control, facts card, heatmap, workspace-keyed frames
+
+Owns: `packages/web/src/views/*`, `packages/web/src/state/frames.ts` (new), `packages/ui` chart theme additions (palette for marks, diverging scale).
+
+Consumes: `WidgetV2`, `isWidgetV2`, `migrateWidget`, `widgetQueries`, `detectShape`, `mergeFieldConfig`, `datasetFieldsFrom`, `expandPreset`, `controlFor`, `Pane`, `Layer`, `WIDE_COLUMNS/WIDE_VALUE`, `defaultFormat`, `orderByPriority`, `keyField`, `frameKey`, `frameDataset`, `DEFAULT_DATASET`, `presetsFor` (editor view list), `ContentHint` (report the frame's row count and view kind to the grid).
+
+Must provide:
+- `packages/web/src/views/index.ts`: `ViewProps = { widget: AnyWidget; frames: Record<string, Frame> }` (one frame per dataset; v1 widgets get `{ main }`), `viewFor(widget)`, and the renderers: `ChartView` (panes and layers on lightweight-charts 5: `addPane`, `priceScaleId`, `createSeriesMarkers`, `createPriceLine`, histogram, signed bars, band primitive, numeric x via `createYieldCurveChart` or a numeric time scale, legend chips, last-value badges), `TableView` from `TableControl` (columns by priority, sort, highlight, conditional colour, best and worst), `FactsCard` from `FactsControl` (and the one-row rule: a `table` over one row renders the card), `StatView` from `StatControl`, `ChainView`, `HeatmapView` from a `cell` layer (melting wide frames).
+- Frames keyed by `frameKey({ workspaceId, widgetId, dataset })` in the web state; `frameMatches` stays as belt and braces.
+- `contentHintFor(widget, frames): ContentHint` so the grid can demote; `Grid` passes `{ size, contentHint }` to `packLayout`.
+- Screenshots per section 17 (before on production, after on the branch server) for the chart, table, facts, stat, heatmap at 1440×900.
+
+## (e) shell and store — SQLite, migration, persistent cache, three-tab editor, Data page, virtualised tables, export and import, ticker and market strips
+
+Owns: `packages/server/src/store/*` (new; `node:sqlite`), `packages/server/src/cache-sqlite.ts`, `packages/server/src/routes-data.ts` (catalog, probe, recipes HTTP routes), `packages/web/src/pages/Data.tsx`, `packages/web/src/components/Editor*.tsx`, `packages/web/src/components/TickerStrip.tsx`, `MarketStrip.tsx`, `packages/web/src/components/VirtualTable.tsx`, export and import routes and UI, `scripts/query.ts` (v2 form `pnpm query <connector> <route> key=value…` beside `pnpm query <recipe> …`).
+
+Consumes: `Cache` (implement it over SQLite keyed by `canonicalKey`), `WorkspaceSchema` (widgets as `AnyWidgetSchema` during coexistence; report the core change when you switch `WorkspaceSchema.widgets` to it), `migrateWidget` (the one-time JSON → SQLite migration reads v1 widgets as `{ recipe: kind, params }`), `parseRecipes`/`RecipeSchema` (user recipes in `~/.terminal/recipes.yml` and the promote flow), `builtinRecipes`, `builtinAnnotations`, `loadAnnotationsFile` (a user file with `orderFrom: builtin.length`), `Catalog.stats()`, `Catalog.find`, `describeRule`, `recipeParams` (editor form), `presetsFor` (editor view tab), `ViewV2Schema` option schemas (editor view tab), `TRANSFORM_EXAMPLE` (editor placeholder), `sessionAt`/`describeMarketTime` (market strip), `recipeDescriptor`.
+
+Must provide:
+- `Store` interface in `packages/server/src/store/types.ts`: workspaces (widgets as `AnyWidget`), recipes (user), catalog cache per connector (`{ connector, version, descriptors, generatedAt }`), liveness rows, run log rows, frame cache rows (`key, frame, expiresAt`). JSON store kept behind the same interface until the migration has run once.
+- HTTP: `GET /api/catalog?q=&limit=&namespaces=` (hits), `GET /api/catalog/:connector` (descriptors with liveness and stats), `POST /api/catalog/probe` (runs (a)'s script in-process), `GET/PUT /api/recipes`, `GET /api/workspaces/:id/export`, `POST /api/workspaces/import`.
+- Editor tabs: data (graph, per-dataset preview, add dataset as route, recipe or transform), transform (CodeMirror 6, traceback inline), view (preset and options from `ViewV2Schema`, expanded panes read-only).
+- Ticker strip: six `{ recipe: 'quote' }` datasets on their own TTL; market strip from `describeMarketTime`.
+
+## Test fixtures available
+
+- `packages/core/test/fixtures/openbb-openapi.json`: trimmed OpenBB OpenAPI document (40 routes). Use it for generator tests and for a fake OpenBB server in route tests.
+- `connectors/openbb/test/fixtures/*`: raw OpenBB envelopes per v1 kind (quote, historical, news, earnings, profile, metrics, statements, estimates, eps, dividends, insiders, institutions, short interest, chains, calendar, ipo, movers, holdings, treasury, yield curve) recorded live; the rows under `results` are what `call` will see.
+- `connectors/yahoo/test/*` and `connectors/finnhub/test/*`: recorded yahoo-finance2 and finnhub responses.
+- `packages/core/test/presets.test.ts` builds frames for every preset (bars, quotes, curve, indicators, correlation matrix, chain, events); copy them for view fixtures.
+- `packages/core/recipes.yml` and `annotations.yml` load in tests through `@terminal/core/node`.
+
+## Not in core yet (report, do not patch)
+
+`MessageSchema.verification`, `WorkspaceSchema.widgets` as `AnyWidgetSchema`, a `widgets` server message carrying v2 widgets, a `catalog` or `recipes` server message: each is a one-line core change that the workstream that needs it first reports in its PR, and the integration bot lands.

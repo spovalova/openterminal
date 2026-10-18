@@ -92,6 +92,13 @@ Also: the sidebar toggles with ⌘\ and overlays the grid below 1100px. The grid
 | Cache (in-memory, keyed by kind + stable params) | `packages/core/src/cache.ts` |
 | `preview()` | `packages/core/src/preview.ts` |
 | Socket and HTTP message schemas, `AgentRunner` interface | `packages/core/src/protocol.ts` |
+| v2 (PLAN.md section 17, phase 0; beside the kinds until phase 3): descriptors and the OpenAPI generator | `packages/core/src/descriptor.ts`, `descriptor-openapi.ts` |
+| v2 catalog (BM25 search, liveness) | `packages/core/src/catalog.ts` |
+| v2 queries (route, recipe, transform; `canonicalKey`) | `packages/core/src/query.ts` |
+| v2 field config, shapes, annotations (`annotations.yml`), recipes (`recipes.yml`) | `packages/core/src/fields.ts`, `shape.ts`, `annotations.ts`, `recipes.ts` |
+| v2 widget model: datasets, presets, panes and layers | `packages/core/src/widget.ts`, `presets.ts`, `layers.ts` |
+| v2 clock (ET sessions, NYSE calendar), transform contract, frame inference | `packages/core/src/clock.ts`, `transform.ts`, `infer.ts` |
+| Phase 1 seams (who owns and consumes what) | `docs/notes/v2-contracts.md` |
 | Config loading, built-in connector map, registry wiring | `packages/server/src` (`connectors.ts` holds the map) |
 | HTTP and WebSocket routes, widget execution, polling | `packages/server/src` |
 | Workspace store (`~/.terminal/workspaces/<id>.json`) | `packages/server/src` |
