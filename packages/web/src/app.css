@@ -16,22 +16,17 @@ body,
   font-family: var(--font-sans);
 }
 
-/* The grid packs widgets by size; spans come from SIZE_SPANS. */
+/*
+ * The grid is laid out by packLayout (core): `--grid-cols` is set from the grid's own width by Grid.tsx
+ * (3 by default, for the gallery), every child carries an explicit grid-column / grid-row, and no cell
+ * stays empty. `--grid-row` is the row height Grid.tsx computes from the pane's height (rows share it,
+ * never under 240px), so one or two rows fill the pane and three or more scroll.
+ */
 .widget-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-auto-rows: 280px;
-  grid-auto-flow: dense;
+  grid-template-columns: repeat(var(--grid-cols, 3), minmax(0, 1fr));
+  grid-auto-rows: var(--grid-row, 280px);
   gap: 8px;
-}
-@media (max-width: 720px) {
-  .widget-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .widget-grid > * {
-    grid-column: span 1 !important;
-    grid-row: span 1 !important;
-  }
 }
 
 /* Sidebar overlays the grid below 1100px. */

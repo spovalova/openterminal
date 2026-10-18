@@ -1,13 +1,42 @@
-import { SIZE_SPANS, type Workspace } from '@terminal/core'
+import { columnsFor, packLayout, rowHeightFor, type Workspace } from '@terminal/core'
 import { Button, EmptyState } from '@terminal/ui'
-import { useState } from 'react'
+import { useCallback, useLayoutEffect, useState } from 'react'
 import type { WorkspaceState } from '../state'
 import { WidgetCell } from './WidgetCell'
 import { WidgetEditor } from './WidgetEditor'
 
-/** CSS grid, three columns, dense auto-flow; spans from SIZE_SPANS; first widget placed first. */
+/** Vertical padding of the pane plus the "+ Widget" strip under the grid. */
+const CHROME_HEIGHT = 16 + 36
+
+/**
+ * Pane size, measured on the scroll container itself (not the viewport: the sidebar takes a third of a
+ * laptop). A callback ref, so a pane that first showed the empty state is measured once widgets arrive.
+ */
+function usePaneSize(): [(el: HTMLDivElement | null) => void, { width: number; height: number }] {
+  const [el, setEl] = useState<HTMLDivElement | null>(null)
+  const [size, setSize] = useState({ width: 1200, height: 0 })
+  const ref = useCallback((node: HTMLDivElement | null) => setEl(node), [])
+  useLayoutEffect(() => {
+    if (!el) return
+    const update = () => setSize({ width: el.clientWidth - 16, height: el.clientHeight })
+    update()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [el])
+  return [ref, size]
+}
+
+/**
+ * CSS grid laid out by `packLayout`: the column count follows the grid's width, every widget gets an
+ * explicit position and span, and no cell stays empty (product rule 3). Rows share the pane's height
+ * down to MIN_ROW_HEIGHT (core), so one or two rows fill it and more scroll.
+ */
 export function Grid({ workspace, ws }: { workspace: Workspace; ws: WorkspaceState }) {
   const [adding, setAdding] = useState(false)
+  const [ref, pane] = usePaneSize()
+  const columns = columnsFor(pane.width)
 
   if (workspace.widgets.length === 0) {
     return (
@@ -33,19 +62,33 @@ export function Grid({ workspace, ws }: { workspace: Workspace; ws: WorkspaceSta
     )
   }
 
+  const layout = packLayout(workspace.widgets, columns)
+  const rows = layout.reduce((n, p) => Math.max(n, p.row + p.rows), 0)
+  const rowHeight = rowHeightFor(rows, pane.height, CHROME_HEIGHT)
+
   return (
-    <div className="h-full overflow-y-auto p-2">
-      <div className="widget-grid">
-        {workspace.widgets.map((widget) => {
-          const span = SIZE_SPANS[widget.size]
+    <div ref={ref} className="flex h-full flex-col overflow-y-auto p-2">
+      <div
+        className="widget-grid"
+        style={{ '--grid-cols': columns, '--grid-row': `${rowHeight}px` } as React.CSSProperties}
+        data-columns={columns}
+        data-rows={rows}
+      >
+        {workspace.widgets.map((widget, i) => {
+          const p = layout[i]!
           return (
-            <div key={widget.id} style={{ gridColumn: `span ${span.cols}`, gridRow: `span ${span.rows}` }} className="min-w-0 min-h-0">
+            <div
+              key={widget.id}
+              style={{ gridColumn: `${p.col + 1} / span ${p.cols}`, gridRow: `${p.row + 1} / span ${p.rows}` }}
+              className="min-w-0 min-h-0"
+              data-stretched={p.stretched ? '' : undefined}
+            >
               <WidgetCell widget={widget} workspaceId={workspace.id} />
             </div>
           )
         })}
       </div>
-      <div className="flex justify-end px-1 py-2">
+      <div className="flex shrink-0 justify-end px-1 py-2">
         <Button size="sm" variant="ghost" onClick={() => setAdding(true)}>
           + Widget
         </Button>

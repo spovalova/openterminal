@@ -65,6 +65,49 @@ const KIND_FORMATS: Record<Kind, Record<string, CellFormat>> = {
   yield_curve: { date: 'date', years: 'price', rate: 'percent' },
 }
 
+/**
+ * Column priority per kind, most important first. The first three always show; each later column needs
+ * the widget body to be about 60px wider (ranks map to container-query thresholds in @terminal/ui
+ * styles.css). Columns not listed come after the listed ones in frame order. Kinds not listed keep
+ * frame order.
+ */
+const KIND_PRIORITY: Partial<Record<Kind, string[]>> = {
+  search: ['symbol', 'name', 'exchange', 'query'],
+  quote: ['symbol', 'price', 'change_pct', 'volume', 'market_state', 'extended_price', 'extended_change_pct'],
+  ohlcv: ['symbol', 'time', 'close', 'volume', 'open', 'high', 'low'],
+  news: ['headline', 'time', 'source', 'symbol', 'url'],
+  earnings: ['symbol', 'date', 'eps_estimate', 'session'],
+  profile: ['symbol', 'name', 'sector', 'market_cap', 'industry', 'exchange', 'employees', 'beta', 'description'],
+  metrics: ['symbol', 'pe', 'forward_pe', 'market_cap', 'ps', 'ev_ebitda', 'peg', 'pb', 'gross_margin', 'operating_margin', 'profit_margin', 'revenue_growth', 'earnings_growth', 'roe', 'debt_to_equity', 'dividend_yield'],
+  financials: ['symbol', 'period_ending', 'revenue', 'net_income', 'eps', 'gross_profit', 'operating_income', 'free_cash_flow', 'operating_cash_flow', 'capex', 'cash', 'debt', 'shares'],
+  estimates: ['symbol', 'target_consensus', 'upside_pct', 'recommendation', 'analysts', 'target_low', 'target_high', 'eps_estimate_q', 'eps_estimate_y', 'eps_growth_y'],
+  eps_history: ['symbol', 'date', 'eps_actual', 'eps_estimate', 'surprise_pct'],
+  dividends: ['symbol', 'ex_date', 'amount'],
+  insiders: ['symbol', 'name', 'action', 'date', 'value', 'shares', 'price', 'title', 'url'],
+  institutions: ['symbol', 'holder', 'value', 'change_pct', 'shares', 'date'],
+  short_interest: ['symbol', 'date', 'short_interest', 'days_to_cover', 'change_pct', 'avg_volume'],
+  options: ['strike', 'type', 'bid', 'ask', 'iv', 'open_interest', 'volume', 'last', 'delta', 'expiration', 'dte', 'symbol', 'gamma', 'theta', 'vega', 'underlying_price'],
+  volatility: ['symbol', 'iv30', 'iv_rank', 'hv30', 'iv30_high', 'iv30_low', 'hv30_high', 'hv30_low', 'year_high', 'year_low'],
+  calendar: ['event', 'time', 'actual', 'consensus', 'previous', 'country'],
+  ipos: ['symbol', 'name', 'date', 'price', 'offer_amount', 'exchange', 'status'],
+  movers: ['symbol', 'change_pct', 'price', 'name', 'volume'],
+  holdings: ['symbol', 'weight', 'name', 'etf'],
+  macro: ['series', 'time', 'value'],
+  yield_curve: ['maturity', 'rate', 'date', 'years'],
+}
+
+/** Rank per column for a DataTable: 0 for the first three in priority order, then 3, 4, … in that order. */
+export function priorityFor(kind: Kind, columns: Column[]): Record<string, number> {
+  const listed = KIND_PRIORITY[kind] ?? []
+  const names = columns.map((c) => c.name)
+  const order = [...listed.filter((n) => names.includes(n)), ...names.filter((n) => !listed.includes(n))]
+  const out: Record<string, number> = {}
+  order.forEach((name, i) => {
+    out[name] = i < 3 ? 0 : Math.min(i, 15)
+  })
+  return out
+}
+
 /** Default sort per kind; `undefined` keeps the connector's row order. */
 const KIND_DEFAULT_SORT: Record<Kind, SortSpec | undefined> = {
   search: undefined,
@@ -179,8 +222,15 @@ export const TableView: FC<ViewProps> = ({ widget, frame }) => {
   }
 
   return (
-    <div data-view="table" style={{ width: '100%', height: '100%', overflow: 'auto' }}>
-      <DataTable columns={frame.columns} rows={sortRows(frame, sort)} formats={formatsFor(kind, frame.columns)} sort={sort} onSort={onSort} />
+    <div data-view="table" className="h-full w-full overflow-hidden">
+      <DataTable
+        columns={frame.columns}
+        rows={sortRows(frame, sort)}
+        formats={formatsFor(kind, frame.columns)}
+        priority={priorityFor(kind, frame.columns)}
+        sort={sort}
+        onSort={onSort}
+      />
     </div>
   )
 }

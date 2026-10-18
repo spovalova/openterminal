@@ -1,6 +1,7 @@
 export * from './frame.js'
 export * from './kinds.js'
 export * from './widget.js'
+export * from './layout.js'
 export * from './workspace.js'
 export * from './preview.js'
 export * from './connector.js'

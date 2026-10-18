@@ -105,7 +105,8 @@ export const WidgetFrame: FC<WidgetFrameProps> = ({
           </div>
         )}
       </header>
-      <div className="relative min-h-0 min-w-0 flex-1">{body}</div>
+      {/* The `widget` container: views and DataTable columns respond to this width, not the size enum. */}
+      <div className="@container/widget relative min-h-0 min-w-0 flex-1 overflow-hidden">{body}</div>
     </section>
   )
 }
