@@ -539,13 +539,42 @@ A new connector is therefore either: an OpenAPI URL plus auth plus an envelope r
 - Views declare requirements: `series` needs time and at least one numeric; `chain` needs options; `stat` needs oneRowPerGroup and a numeric; `table` needs nothing. `view-for` picks by shape; the editor offers only views whose requirements the frame meets. Candle needs open, high, low, close by name; normalize needs a group.
 - Annotations (`packages/core/annotations.yml`, loaded at startup, about 100 lines to start): `openbb.equity/price/quote.change_percent: { unit: fraction, label: "Chg %" }`, `openbb.*.market_cap: { unit: usd, format: compact }`, `*.volume: { format: integer, priority: 3 }`. Matching by connector, route glob, and field. The runner converts units to the product's conventions (fractions become percent) and stamps the column with its unit, so previews and views are consistent. A field without an annotation is shown as-is with its description available in the tooltip and the preview, and the prompt tells the agent that unannotated numbers carry no unit guarantee.
 
+### Transforms: deriving frames from frames
+
+The user wants the agent to manipulate, merge and modify what it fetched, with "P/E over time" as the example: daily closes joined to trailing-twelve-month EPS, which no provider route returns. A **transform** is a SQL statement over one or more frames that produces a frame. It is the fourth kind of thing a widget can hold, and the result goes through the same inference, annotations, preview and view path as a route's frame, so product rule 4 is untouched: every number in a reply still comes from a preview.
+
+- **Engine:** DuckDB in-process (`@duckdb/node-api`), read-only, `enable_external_access=false`, no extensions, a memory cap and a 5 s timeout per statement. Input frames are registered as in-memory tables named by the agent (`price`, `eps`). DuckDB has window functions and `ASOF JOIN`, which is exactly what time-series derivations need, and the model writes SQL far more reliably than ad-hoc code over unknown shapes. A JavaScript escape hatch is deliberately not in v2.
+- **Vocabulary (section 3):** a **transform** is `{ inputs: Record<name, Query>, sql: string, columns?: Record<name, Annotation> }`. A widget's query may be a route, a recipe, or a transform. The `columns` block lets the agent declare the unit and label of columns it created (`pe: { unit: ratio, label: "P/E (TTM)" }`); columns that keep an input's name keep its annotation.
+- **Agent tool:** `transform(inputs, sql, columns?)`. Inputs are queries the agent already ran (cache hits) or new ones (run first, in parallel). The tool returns the preview of the result and the error text from DuckDB on failure, so the agent can fix its SQL in the next step. The prompt gets one rule and one worked example:
+
+  ```sql
+  -- P/E over time: price / TTM EPS as of each trading day
+  WITH ttm AS (
+    SELECT symbol, date AS time,
+           SUM(eps_actual) OVER (PARTITION BY symbol ORDER BY date ROWS 3 PRECEDING) AS eps_ttm,
+           COUNT(*)        OVER (PARTITION BY symbol ORDER BY date ROWS 3 PRECEDING) AS n
+    FROM eps)
+  SELECT p.symbol, p.time, p.close, t.eps_ttm, p.close / t.eps_ttm AS pe
+  FROM price p ASOF JOIN ttm t ON p.symbol = t.symbol AND p.time >= t.time
+  WHERE t.n = 4 AND t.eps_ttm > 0
+  ORDER BY p.symbol, p.time
+  ```
+
+  with inputs `price = ohlcv NVDA 1d 2y` and `eps = eps_history NVDA limit 12`. The result has a time column and a numeric `pe`, so the series view renders it as a line, and the stat view shows the latest value.
+- **Widgets refresh their derivations.** A transform widget re-runs its inputs on their TTLs (cache hits when nothing changed) and the SQL after, so a derived chart stays live. The editor shows the inputs and the SQL and lets the user edit both; the subtitle reads "derived from 2 queries".
+- **Lineage in previews.** The preview of a transform carries the SQL and the input queries, so a reply can say "P/E (TTM) is 42.1, derived from closes and reported EPS" and the chip opens a widget that shows exactly that derivation.
+- **Guardrails.** Row cap on inputs (250k) and outputs (50k); `SELECT` only, parsed and rejected otherwise; no `COPY`, `ATTACH`, `INSTALL`; the bench grades derivations by recomputing one value by hand, as it did for trailing P/E in v2.
+- **Scope:** joins, window functions, aggregation, resampling (daily to weekly), rebasing, spreads between series, ratios between frames, filters. Not in v2: user-defined functions, Python, charts of more than one derived frame per widget.
+
+Transforms are workstream (f) in phase 1 and get their own bench prompts in phase 2: P/E over time, 10y minus 2y from two macro series, a basket's equal-weighted index, and net debt from the balance sheet.
+
 ### Caching and TTL
 
 Cache key is `connector + route + canonical params`. TTL by route pattern in a small table: `*/quote*` and `*/price/quote` 10 s, `*/historical*` with intraday intervals 1 min else 10 min, `news/*` 5 min, `*/calendar/*` 1 h, fundamentals and ownership 1 day, default 10 min. Recipes can override.
 
 ### Agent
 
-Tools: `find_route(query: string)` returns up to five catalog entries; `query(connector, route, params)` validates against the descriptor and returns a preview as today; `set_workspace` unchanged except widgets hold `{ connector, route, params }` or a `recipe` name with params. Prompt: the recipe list with one example query each (about 25 lines, replacing the kind guidance), the rule "use a recipe when one fits; search the catalog when none does; never write a figure that is not in a preview", the unit rule above, and the worked examples rewritten with routes. Expected cost: one extra tool call on prompts that leave the recipes, about two seconds.
+Tools: `find_route(query: string)` returns up to five catalog entries; `query(connector, route, params)` validates against the descriptor and returns a preview as today; `transform(inputs, sql, columns?)` as above; `set_workspace` unchanged except widgets hold `{ connector, route, params }`, a `recipe` name with params, or a transform. Prompt: the recipe list with one example query each (about 25 lines, replacing the kind guidance), the rule "use a recipe when one fits; search the catalog when none does; never write a figure that is not in a preview", the unit rule above, and the worked examples rewritten with routes. Expected cost: one extra tool call on prompts that leave the recipes, about two seconds.
 
 ### Migration
 
@@ -560,7 +589,7 @@ Tools: `find_route(query: string)` returns up to five catalog entries; `query(co
 ### Phases
 
 0. **Trunk** (one agent, sequential): descriptor type, catalog with search, shape detection, annotations loader, unit conversion, the runner, and tests with a recorded `openapi.json` fixture. Nothing user-visible changes.
-1. **Parallel**: (a) OpenBB descriptor generator, caller, probe script and liveness; (b) yahoo and finnhub descriptor files and callers; (c) agent tools and prompt with recipes; (d) web: views by shape, editor from descriptors, Connectors page catalog, subtitles from routes; (e) store migration, `pnpm query`, docs (`writing-a-connector.md` rewritten around descriptors, the README kinds table replaced by "any route, plus these recipes").
+1. **Parallel**: (a) OpenBB descriptor generator, caller, probe script and liveness; (b) yahoo and finnhub descriptor files and callers; (c) agent tools and prompt with recipes; (d) web: views by shape, editor from descriptors, Connectors page catalog, subtitles from routes; (e) store migration, `pnpm query`, docs (`writing-a-connector.md` rewritten around descriptors, the README kinds table replaced by "any route, plus these recipes"); (f) transforms: DuckDB runner, the tool, the widget type, editor and subtitle.
 2. **Integrate and accept**: bench v2 rerun; the target is the three user prompts passing and no regression on bench v1; new annotations added for every unit mistake found.
 3. **Remove**: delete the kind code once the bench passes; PLAN.md sections 7.1, 14 marked superseded.
 
@@ -575,4 +604,4 @@ Tools: `find_route(query: string)` returns up to five catalog entries; `query(co
 
 ### Out of scope
 
-Write routes (orders), authentication flows beyond API keys and basic auth, embeddings for search, streaming routes.
+Write routes (orders), authentication flows beyond API keys and basic auth, embeddings for search, streaming routes, user-defined functions or JavaScript in transforms.
