@@ -1,7 +1,8 @@
 import type { FC } from 'react'
 import clsx from 'clsx'
 import { WidgetFrame, sizeClass } from '@terminal/ui'
-import { FIXTURES, type Fixture } from './fixtures'
+import { subtitleFor } from '../subtitle'
+import { FETCHED_AT, FIXTURES, type Fixture } from './fixtures'
 import { viewFor } from './view-for'
 
 /**
@@ -22,7 +23,16 @@ export const ViewsGallery: FC<{ fixtures?: Fixture[] }> = ({ fixtures = FIXTURES
             <div className="truncate text-[11px] text-fg-3" title={f.note}>
               {f.id} · {f.note}
             </div>
-            <WidgetFrame title={f.widget.title} size={f.widget.size} empty={f.frame.rows.length === 0} className="min-h-0 flex-1">
+            <WidgetFrame
+              title={f.widget.title}
+              subtitle={subtitleFor(f.widget, f.frame, FETCHED_AT + 30 * 60_000)}
+              size={f.widget.size}
+              empty={f.frame.rows.length === 0}
+              onEdit={() => {}}
+              onRefresh={() => {}}
+              onExpand={() => {}}
+              className="min-h-0 flex-1"
+            >
               <View widget={f.widget} frame={f.frame} />
             </WidgetFrame>
           </div>

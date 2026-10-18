@@ -548,7 +548,94 @@ const PROFILE: Fixture = {
   ]),
 }
 
-export const FIXTURES: Fixture[] = [A1, A2, A3, A4, A5, B1, B2, B3, B4, C1, C2, C3, C4, SEARCH, OPTIONS, OPTIONS_SM, MACRO, FINANCIALS, INSIDERS, CALENDAR, MOVERS, VOLATILITY, PROFILE]
+// ---- stat view: one headline number per symbol ----------------------------------------------
+
+const STAT_QUOTE: Fixture = {
+  id: 'stat-quote',
+  note: 'quote NVDA after hours · stat · sm',
+  widget: widget({
+    id: 'stat-quote',
+    title: 'NVDA',
+    size: 'sm',
+    query: { kind: 'quote', params: { symbols: ['NVDA'] } },
+    view: { type: 'stat' },
+  }),
+  frame: frame('quote', [['NVDA', 177.8, -3.48, 98_200_000, 'POST', 178.42, 0.35]]),
+}
+
+const STAT_QUOTES: Fixture = {
+  id: 'stat-quotes',
+  note: 'quote basket in the regular session · stat, four cards · md',
+  widget: widget({
+    id: 'stat-quotes',
+    title: 'Memory basket',
+    size: 'md',
+    query: { kind: 'quote', params: { symbols: ['MU', 'SNDK', 'WDC', 'STX'] } },
+    view: { type: 'stat' },
+  }),
+  frame: frame('quote', [
+    ['MU', 199.6, 3.29, 21_430_000, 'REGULAR', null, null],
+    ['SNDK', 112.45, 4.31, 5_120_000, 'REGULAR', null, null],
+    ['WDC', 112.3, -1.26, 7_010_000, 'REGULAR', null, null],
+    ['STX', 241.7, 2.24, 3_280_000, 'REGULAR', null, null],
+  ]),
+}
+
+const STAT_METRICS: Fixture = {
+  id: 'stat-metrics',
+  note: 'metrics RDDT, forward P/E picked with `column` · stat · sm',
+  widget: widget({
+    id: 'stat-metrics',
+    title: 'RDDT forward multiple',
+    size: 'sm',
+    query: { kind: 'metrics', params: { symbols: ['RDDT'] } },
+    view: { type: 'stat', column: 'forward_pe' },
+  }),
+  frame: frame('metrics', [['RDDT', 30_000_000_000, 36.31, 16.13, 0.78, 34.03, 9.82, 9.14, 91.44, 28.79, 31.35, 61.1, 106.2, 24.1, 0.02, null]]),
+}
+
+const STAT_VOL: Fixture = {
+  id: 'stat-volatility',
+  note: 'volatility NVDA, the key column (iv30) with IV rank under it · stat · sm',
+  widget: widget({
+    id: 'stat-volatility',
+    title: 'NVDA implied vol',
+    size: 'sm',
+    query: { kind: 'volatility', params: { symbols: ['NVDA'] } },
+    view: { type: 'stat' },
+  }),
+  frame: frame('volatility', [['NVDA', 44.8, 71.2, 31.5, 33.5, 38.1, 92.4, 24.6, 212.19, 86.62]]),
+}
+
+export const FIXTURES: Fixture[] = [
+  A1,
+  A2,
+  A3,
+  A4,
+  A5,
+  B1,
+  B2,
+  B3,
+  B4,
+  C1,
+  C2,
+  C3,
+  C4,
+  SEARCH,
+  OPTIONS,
+  OPTIONS_SM,
+  MACRO,
+  FINANCIALS,
+  INSIDERS,
+  CALENDAR,
+  MOVERS,
+  VOLATILITY,
+  PROFILE,
+  STAT_QUOTE,
+  STAT_QUOTES,
+  STAT_METRICS,
+  STAT_VOL,
+]
 
 export function fixture(id: string): Fixture {
   const f = FIXTURES.find((x) => x.id === id)

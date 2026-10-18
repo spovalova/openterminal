@@ -85,16 +85,47 @@ describe('fieldsFor', () => {
     expect(paramsFrom('macro', { series: ['fed_funds'], range: '2y' })).toEqual({ series: ['fed_funds'], range: '2y' })
     expect(paramsFrom('yield_curve', { date: '' })).toEqual({})
   })
-  it('viewTypesFor: series for ohlcv and macro, chain for options, table for all', () => {
+  it('viewTypesFor: series for ohlcv and macro, chain for options, stat for the one-row-per-symbol kinds, table for all', () => {
     expect(viewTypesFor('ohlcv')).toEqual(['series', 'table'])
     expect(viewTypesFor('macro')).toEqual(['series', 'table'])
     expect(viewTypesFor('options')).toEqual(['chain', 'table'])
-    expect(viewTypesFor('quote')).toEqual(['table'])
+    expect(viewTypesFor('quote')).toEqual(['table', 'stat'])
+    expect(viewTypesFor('metrics')).toEqual(['table', 'stat'])
+    expect(viewTypesFor('short_interest')).toEqual(['table', 'stat'])
     expect(viewTypesFor('calendar')).toEqual(['table'])
+    expect(viewTypesFor('news')).toEqual(['table'])
   })
 })
 
 describe('WidgetEditor', () => {
+  it('builds a stat widget on metrics with a column override, and edits one back to the default column', async () => {
+    render(<WidgetEditor open onClose={() => {}} workspaceId="ws1" />)
+    fireEvent.change(input('Title'), { target: { value: 'MU forward P/E' } })
+    fireEvent.change(input('Kind'), { target: { value: 'metrics' } })
+    expect(Array.from((input('View') as HTMLSelectElement).options).map((o) => o.value)).toEqual(['table', 'stat'])
+    expect(screen.queryByLabelText('Column')).toBeNull()
+    fireEvent.change(input('View'), { target: { value: 'stat' } })
+    const column = input('Column') as HTMLSelectElement
+    expect(Array.from(column.options).map((o) => o.value)).toEqual(['', 'market_cap', 'forward_pe', 'peg', 'ev_ebitda', 'ps', 'pb', 'gross_margin', 'operating_margin', 'profit_margin', 'revenue_growth', 'earnings_growth', 'roe', 'debt_to_equity', 'dividend_yield'])
+    expect(column.options[0]!.textContent).toBe('pe (default)')
+    fireEvent.change(column, { target: { value: 'forward_pe' } })
+    fireEvent.change(input(/^symbols/), { target: { value: 'mu' } })
+    submit()
+    const w = await saved()
+    expect(() => parseWidget(w)).not.toThrow()
+    expect(w.query).toEqual({ kind: 'metrics', params: { symbols: ['MU'] } })
+    expect(w.view).toEqual({ type: 'stat', column: 'forward_pe' })
+
+    cleanup()
+    actions.saveWidget.mockClear()
+    render(<WidgetEditor open onClose={() => {}} workspaceId="ws1" widget={w} />)
+    expect((input('View') as HTMLSelectElement).value).toBe('stat')
+    expect((input('Column') as HTMLSelectElement).value).toBe('forward_pe')
+    fireEvent.change(input('Column'), { target: { value: '' } })
+    submit()
+    expect((await saved()).view).toEqual({ type: 'stat' })
+  })
+
   it('builds a macro widget from the generated fields (checkbox series, range select) on the series view', async () => {
     render(<WidgetEditor open onClose={() => {}} workspaceId="ws1" />)
     fireEvent.change(input('Title'), { target: { value: 'Rates' } })
