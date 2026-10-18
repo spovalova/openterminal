@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, type FC } from 'react'
 import clsx from 'clsx'
 import { columnIndex, type Frame, type Size } from '@terminal/core'
+import { useWidth } from './use-width'
 import { EMPTY_CELL, EmptyState, formatCell } from '@terminal/ui'
 import type { ViewProps } from './types'
 
@@ -117,11 +118,27 @@ const ALL_COLUMNS: SideColumn[] = [
   { key: 'iv', label: 'IV', format: fmtIv },
   { key: 'delta', label: 'Delta', format: fmtDelta },
 ]
-const SM_DROPPED: ReadonlySet<ContractField> = new Set(['volume', 'delta'])
+/**
+ * Per-side columns by the view's width (the widget body, not the size enum), so a wide hero in a narrow
+ * grid still fits and never scrolls sideways. Thresholds leave each column about 60px.
+ */
+const WIDTH_TIERS: { min: number; keys: ContractField[] }[] = [
+  { min: 840, keys: ['bid', 'ask', 'last', 'volume', 'open_interest', 'iv', 'delta'] },
+  { min: 660, keys: ['bid', 'ask', 'last', 'open_interest', 'iv'] },
+  { min: 480, keys: ['bid', 'ask', 'open_interest', 'iv'] },
+  { min: 400, keys: ['bid', 'ask', 'iv'] },
+  { min: 0, keys: ['bid', 'ask'] },
+]
 
-/** The per-side columns at a widget size: `sm` drops volume and delta. */
-export function sideColumns(size: Size): SideColumn[] {
-  return size === 'sm' ? ALL_COLUMNS.filter((c) => !SM_DROPPED.has(c.key)) : ALL_COLUMNS
+/** The per-side columns that fit a view of this width. */
+export function sideColumns(width: number): SideColumn[] {
+  const tier = WIDTH_TIERS.find((t) => width >= t.min) ?? WIDTH_TIERS[WIDTH_TIERS.length - 1]!
+  return ALL_COLUMNS.filter((c) => tier.keys.includes(c.key))
+}
+
+/** Width to assume before the view is measured (or without ResizeObserver): a size's usual width. */
+export function hintWidth(size: Size): number {
+  return size === 'sm' ? 700 : Infinity
 }
 
 /** "2026-10-24" → "Oct 24, 2026"; anything else passes through. */
@@ -142,7 +159,10 @@ const ATM_SHADOW = 'shadow-[inset_0_1px_0_var(--color-accent),inset_0_-1px_0_var
  */
 export const ChainView: FC<ViewProps> = ({ widget, frame }) => {
   const chain = useMemo(() => buildChain(frame), [frame])
-  const columns = sideColumns(widget.size)
+  const [rootRef, measured] = useWidth()
+  const width = measured ?? hintWidth(widget.size)
+  const columns = sideColumns(width)
+  const narrow = width < 660
   const scrollRef = useRef<HTMLDivElement>(null)
   const atmRef = useRef<HTMLTableRowElement>(null)
 
@@ -164,12 +184,12 @@ export const ChainView: FC<ViewProps> = ({ widget, frame }) => {
   const n = columns.length
 
   // border-separate (not collapse) so the sticky header's cell backgrounds cover the rows scrolling under it.
-  const pad = widget.size === 'sm' ? 'px-1.5' : 'px-2'
+  const pad = narrow ? 'px-1.5' : 'px-2'
   const cellCls = `h-6 ${pad} text-right whitespace-nowrap border-b border-border/60`
   const headCls = `h-6 ${pad} text-right whitespace-nowrap border-b border-border bg-surface text-[11px] font-medium text-fg-3`
 
   return (
-    <div data-view="chain" data-size={widget.size} className="flex h-full w-full flex-col">
+    <div ref={rootRef} data-view="chain" data-size={widget.size} data-columns={columns.length} className="flex h-full w-full flex-col overflow-hidden">
       <div data-chain-header="" className="flex h-7 shrink-0 items-center gap-3 overflow-hidden border-b border-border px-3 text-xs whitespace-nowrap text-fg-2">
         {chain.symbol && <span className="font-medium text-fg">{chain.symbol}</span>}
         {chain.expiration && <span data-field="expiration">{formatExpiration(chain.expiration)}</span>}
@@ -180,8 +200,8 @@ export const ChainView: FC<ViewProps> = ({ widget, frame }) => {
           </span>
         )}
       </div>
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full border-separate border-spacing-0 text-xs tabular-nums">
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+        <table className="w-full table-fixed border-separate border-spacing-0 text-xs tabular-nums">
           <thead className="sticky top-0 z-10">
             <tr>
               {showCalls && (

@@ -15,7 +15,7 @@ import {
   type ServerMsg,
   type Step,
   type Widget,
-} from '@terminal/core'
+ packLayout } from '@terminal/core'
 
 /** Hard cap of tool calls per prompt, including set_workspace. */
 export const MAX_TOOL_CALLS = 10
@@ -113,6 +113,20 @@ function queryHead(input: unknown): string {
     default:
       return `${kind} ${list(p.symbols ?? p.symbol)}`.trim()
   }
+}
+
+/**
+ * How the packer laid the widgets out in the three-column grid. Empty when the sizes tile; otherwise
+ * names the widgets that were stretched to fill cells that would have stayed empty, so the agent can
+ * pick a tiling set next time (an md pairs with an sm; two sm share a row).
+ */
+export function layoutNote(widgets: Widget[]): string {
+  const stretched = packLayout(widgets, 3)
+    .map((p, i) => (p.stretched ? widgets[i]! : undefined))
+    .filter((w): w is Widget => w !== undefined)
+  if (stretched.length === 0) return ''
+  const names = stretched.map((w) => `${w.id} (${w.size})`).join(', ')
+  return `Layout repaired: ${names} ${stretched.length === 1 ? 'was' : 'were'} stretched to fill cells that would have stayed empty in the 3-column grid (lg is 2x2, md 2x1, sm 1x1). This is fine; a set that tiles (an md beside an sm, two sm in a row) needs no repair. `
 }
 
 export function workspaceSummary(count: number, invalid = 0): string {
@@ -239,7 +253,7 @@ export function createTools(deps: ToolDeps) {
         ok: true,
         widgetIds: res.widgets.map((x) => x.id),
         ...(name ? { name } : {}),
-        note: `Applied ${res.widgets.length} widgets. Now write the reply and end it with [[widget:<id>]] chips.`,
+        note: `Applied ${res.widgets.length} widgets. ${layoutNote(res.widgets)}Now write the reply and end it with [[widget:<id>]] chips.`,
       }
     },
   })

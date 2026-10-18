@@ -129,3 +129,23 @@
   animation-duration: 220ms;
   animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
+
+/*
+ * Tables never scroll sideways. A DataTable column with a `data-rank` above 0 needs the `widget`
+ * container (the WidgetFrame body) to be at least this wide, about 60px per extra column; narrower
+ * containers hide it, in rank order, so the important columns keep their room. The expand dialog is
+ * not a `widget` container, so it shows every column.
+ */
+@container widget (width < 320px) { .data-table [data-rank="3"] { display: none; } }
+@container widget (width < 380px) { .data-table [data-rank="4"] { display: none; } }
+@container widget (width < 440px) { .data-table [data-rank="5"] { display: none; } }
+@container widget (width < 500px) { .data-table [data-rank="6"] { display: none; } }
+@container widget (width < 560px) { .data-table [data-rank="7"] { display: none; } }
+@container widget (width < 620px) { .data-table [data-rank="8"] { display: none; } }
+@container widget (width < 700px) { .data-table [data-rank="9"] { display: none; } }
+@container widget (width < 780px) { .data-table [data-rank="10"] { display: none; } }
+@container widget (width < 860px) { .data-table [data-rank="11"] { display: none; } }
+@container widget (width < 940px) { .data-table [data-rank="12"] { display: none; } }
+@container widget (width < 1020px) { .data-table [data-rank="13"] { display: none; } }
+@container widget (width < 1100px) { .data-table [data-rank="14"] { display: none; } }
+@container widget (width < 1200px) { .data-table [data-rank="15"] { display: none; } }

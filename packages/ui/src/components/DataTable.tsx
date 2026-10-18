@@ -14,6 +14,11 @@ export type DataTableProps = {
   onSort?: (column: string) => void
   /** Column header labels by name; defaults to the name with underscores as spaces. */
   labels?: Record<string, string>
+  /**
+   * Column priority by name: 0 always shows, higher ranks need a wider container (see `[data-rank]`
+   * in styles.css, driven by the `widget` container query). Columns not listed are rank 0.
+   */
+  priority?: Record<string, number>
   /** Sticky header; the table scrolls inside its container. Default true. */
   stickyHeader?: boolean
   className?: string
@@ -24,6 +29,19 @@ export type DataTableProps = {
 /** Strings longer than this are capped at 64ch with an ellipsis and a title tooltip. */
 const LONG_TEXT = 80
 
+/**
+ * Fixed column widths per format, in px, for `table-layout: fixed`: numbers and dates take a known
+ * width and text columns share what is left, so a headline or a name gets the room and nothing scrolls
+ * sideways. `symbol` is text but short.
+ */
+const COLUMN_WIDTH: Partial<Record<CellFormat, number>> = { price: 76, change: 72, integer: 84, compact: 76, percent: 68, date: 88, time: 80, link: 56 }
+const SYMBOL_WIDTH = 72
+
+export function columnWidth(name: string, format: CellFormat): number | undefined {
+  if (name === 'symbol' || name === 'etf') return SYMBOL_WIDTH
+  return COLUMN_WIDTH[format]
+}
+
 function label(name: string, labels?: Record<string, string>): string {
   return labels?.[name] ?? name.replace(/_/g, ' ')
 }
@@ -33,7 +51,7 @@ function label(name: string, labels?: Record<string, string>): string {
  * descending. The table sorts its rows itself from `sort` (controlled) or its
  * own state; `onSort(column)` is called on every header click either way.
  */
-export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, onSort, labels, stickyHeader = true, className, now }) => {
+export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, onSort, labels, priority, stickyHeader = true, className, now }) => {
   const [internal, setInternal] = useState<{ column: string; dir: SortDir } | undefined>(undefined)
   const active = sort ?? internal
   const fmts = useMemo(() => ({ ...inferFormats(columns), ...formats }), [columns, formats])
@@ -53,19 +71,22 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
   }
 
   return (
-    <div className={clsx('h-full w-full overflow-auto', className)}>
-      <table className="w-full border-collapse text-sm tabular-nums">
+    <div className={clsx('data-table h-full w-full overflow-x-hidden overflow-y-auto', className)}>
+      <table className="w-full table-fixed border-collapse text-sm tabular-nums">
         <thead className={clsx(stickyHeader && 'sticky top-0 z-10')}>
           <tr className="bg-surface">
             {columns.map((c) => {
               const f = fmts[c.name] ?? 'text'
               const numeric = isNumericFormat(f)
               const isActive = active?.column === c.name
+              const width = columnWidth(c.name, f)
               return (
                 <th
                   key={c.name}
                   scope="col"
                   aria-sort={isActive ? (active.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  data-rank={priority?.[c.name] || undefined}
+                  style={width ? { width } : undefined}
                   className={clsx('h-7 border-b border-border px-2 text-xs font-medium whitespace-nowrap select-none', numeric ? 'text-right' : 'text-left')}
                 >
                   <button
@@ -121,15 +142,16 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                 return (
                   <td
                     key={c.name}
+                    data-rank={priority?.[c.name] || undefined}
                     className={clsx(
-                      'h-7 max-w-[32ch] truncate border-b border-border/60 px-2 whitespace-nowrap',
+                      'h-7 truncate border-b border-border/60 px-2 whitespace-nowrap',
                       numeric ? 'text-right' : 'text-left',
                       dir === 'up' && 'text-up',
                       dir === 'down' && 'text-down',
                       text === '—' && 'text-fg-3',
                       c.name === 'symbol' && 'font-medium text-fg',
                     )}
-                    title={typeof v === 'string' && v.length > 24 ? v : undefined}
+                    title={typeof v === 'string' && v.length > 12 ? v : undefined}
                   >
                     {content}
                   </td>

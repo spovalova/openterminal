@@ -3,7 +3,7 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { Frame, Widget } from '@terminal/core'
 
-import { ChainView, buildChain, inTheMoney, sideColumns } from '../ChainView'
+import { ChainView, buildChain, hintWidth, inTheMoney, sideColumns } from '../ChainView'
 import { TableView } from '../TableView'
 import { SeriesView } from '../SeriesView'
 import { viewFor } from '../view-for'
@@ -38,10 +38,16 @@ describe('buildChain', () => {
     expect(inTheMoney('put', 185, null)).toBe(false)
   })
 
-  it('sm drops volume and delta', () => {
-    expect(sideColumns('lg').map((c) => c.key)).toEqual(['bid', 'ask', 'last', 'volume', 'open_interest', 'iv', 'delta'])
-    expect(sideColumns('md').map((c) => c.key)).toEqual(['bid', 'ask', 'last', 'volume', 'open_interest', 'iv', 'delta'])
-    expect(sideColumns('sm').map((c) => c.key)).toEqual(['bid', 'ask', 'last', 'open_interest', 'iv'])
+  it('sheds per-side columns as the view narrows, about 60px per column', () => {
+    expect(sideColumns(Infinity).map((c) => c.key)).toEqual(['bid', 'ask', 'last', 'volume', 'open_interest', 'iv', 'delta'])
+    expect(sideColumns(884).map((c) => c.key)).toEqual(['bid', 'ask', 'last', 'volume', 'open_interest', 'iv', 'delta']) // a hero beside the open sidebar
+    expect(sideColumns(800).map((c) => c.key)).toEqual(['bid', 'ask', 'last', 'open_interest', 'iv'])
+    expect(sideColumns(587).map((c) => c.key)).toEqual(['bid', 'ask', 'open_interest', 'iv'])
+    expect(sideColumns(430).map((c) => c.key)).toEqual(['bid', 'ask', 'iv'])
+    expect(sideColumns(289).map((c) => c.key)).toEqual(['bid', 'ask'])
+    // before the view is measured, the size is the hint: sm assumes a narrow cell, lg and md a wide one
+    expect(sideColumns(hintWidth('sm')).map((c) => c.key)).toEqual(['bid', 'ask', 'last', 'open_interest', 'iv'])
+    expect(sideColumns(hintWidth('lg'))).toHaveLength(7)
   })
 })
 
@@ -96,12 +102,14 @@ describe('ChainView', () => {
     expect(puts[6]).toBe(put.delta!.toFixed(2))
   })
 
-  it('sm size drops volume and delta on both sides', () => {
+  it('an unmeasured sm widget assumes a narrow view and drops volume and delta on both sides', () => {
     const { widget, frame } = fixture('options')
     render(<ChainView widget={{ ...widget, size: 'sm' }} frame={frame} />)
     expect(headerLabels()).toEqual(['IV', 'OI', 'Last', 'Ask', 'Bid', 'Bid', 'Ask', 'Last', 'OI', 'IV'])
     expect(bodyRows()[0]!.querySelectorAll('td')).toHaveLength(11)
     expect(document.querySelector('[data-view="chain"]')!.getAttribute('data-size')).toBe('sm')
+    expect(document.querySelector('[data-view="chain"]')!.getAttribute('data-columns')).toBe('5')
+    expect(document.querySelector('[data-view="chain"] table')!.className).toContain('table-fixed')
   })
 
   it('hides a side that has no contracts (type: call)', () => {
