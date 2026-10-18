@@ -72,7 +72,7 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
 
   return (
     <div className={clsx('data-table h-full w-full overflow-x-hidden overflow-y-auto', className)}>
-      <table className="w-full table-fixed border-collapse text-sm tabular-nums">
+      <table className="w-full table-fixed border-collapse text-sm">
         <thead className={clsx(stickyHeader && 'sticky top-0 z-10')}>
           <tr className="bg-surface">
             {columns.map((c) => {
@@ -117,6 +117,8 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                 const text = formatCell(v, f, nowMs)
                 const dir = f === 'change' ? direction(v) : null
                 const numeric = isNumericFormat(f)
+                // Numbers, dates, times and tickers are set in the mono stack (the `num` utility); prose stays sans.
+                const mono = numeric || f === 'date' || f === 'time' || c.name === 'symbol' || c.name === 'etf'
                 let content: React.ReactNode = text
                 if (f === 'text' && typeof v === 'string' && v.length > LONG_TEXT) {
                   // max-width is ignored on table cells, so a paragraph (profile.description, a calendar event) is capped inside a block
@@ -146,6 +148,7 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                     className={clsx(
                       'h-7 truncate border-b border-border/60 px-2 whitespace-nowrap',
                       numeric ? 'text-right' : 'text-left',
+                      mono && 'num',
                       dir === 'up' && 'text-up',
                       dir === 'down' && 'text-down',
                       text === '—' && 'text-fg-3',

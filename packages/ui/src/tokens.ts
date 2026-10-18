@@ -24,8 +24,9 @@ export const tokens = {
   fontSize: { xs: 11, sm: 12, base: 13, lg: 15, xl: 18, '2xl': 24 },
   lineHeight: { xs: 16, sm: 16, base: 20, lg: 22, xl: 24, '2xl': 30 },
   font: {
-    sans: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
-    mono: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+    sans: '"Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
+    /** A locally installed Berkeley Mono wins; the bundled Ioskeley Mono (OFL) is the fallback everyone gets. */
+    mono: '"Berkeley Mono", "Ioskeley Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace',
   },
   radius: { sm: 3, md: 5, lg: 8 },
 } as const

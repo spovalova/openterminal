@@ -248,3 +248,5 @@ The easiest contribution is a connector: one file, about 50 lines per kind, test
 ## License
 
 MIT.
+
+Type: UI text is [Geist](https://vercel.com/font) (OFL, via Fontsource); numbers and code are [Ioskeley Mono](https://github.com/ahatem/IoskeleyMono) (OFL), an [Iosevka](https://typeof.net/Iosevka/) build vendored in `packages/ui/src/fonts`. A locally installed Berkeley Mono is used first when you have it.

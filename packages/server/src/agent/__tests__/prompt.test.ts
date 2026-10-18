@@ -43,7 +43,9 @@ describe('buildSystemPrompt', () => {
 
   it('teaches the views per kind and which kinds take symbol, symbols, or none', () => {
     const p = buildSystemPrompt({ kinds: [...KIND_NAMES], workspace: workspace(), now, marketState: 'regular' })
-    expect(p).toContain('for ohlcv and macro; `{ type: "chain" }` for options; `{ type: "table" }` for any kind')
+    expect(p).toContain('for ohlcv and macro; `{ type: "chain" }` for options; `{ type: "stat", column?: string }` for quote, metrics, volatility, estimates, profile and short_interest; `{ type: "table" }` for any kind')
+    expect(p).toContain('stat shows one big number per symbol')
+    expect(p).toContain('Use it, at sm size with one or a few symbols, when the question is about that headline number')
     expect(p).toContain('one line per symbol (ohlcv) or per series (macro)')
     expect(p).toContain('neither on macro')
     expect(p).toContain('options and holdings take one `symbol`')

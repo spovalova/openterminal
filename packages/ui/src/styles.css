@@ -4,6 +4,43 @@
  */
 @import "tailwindcss";
 
+/*
+ * Type. UI text is Geist (Fontsource, variable weight, OFL). Numbers and code are monospace: a locally
+ * installed Berkeley Mono wins when the reader has it (paid, never committed); the bundled fallback is
+ * Ioskeley Mono (an Iosevka build in the same spirit, OFL, vendored in ./fonts/ioskeley). Vite bundles
+ * every file, so `npx terminal` serves them from localhost and nothing is fetched from a CDN.
+ */
+@import "@fontsource-variable/geist";
+
+@font-face {
+  font-family: "Ioskeley Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/ioskeley/IoskeleyMono-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Ioskeley Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/ioskeley/IoskeleyMono-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Ioskeley Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/ioskeley/IoskeleyMono-SemiBold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Ioskeley Mono";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/ioskeley/IoskeleyMono-Italic.woff2") format("woff2");
+}
+
 @theme {
   /* Reset Tailwind's default palette so only our tokens exist. */
   --color-*: initial;
@@ -59,8 +96,8 @@
   --text-2xl: 24px;
   --text-2xl--line-height: 30px;
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Berkeley Mono", "Ioskeley Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --radius-sm: 3px;
   --radius-md: 5px;
@@ -84,6 +121,7 @@
     font-family: var(--font-sans);
     font-size: var(--text-base);
     line-height: var(--text-base--line-height);
+    font-variant-numeric: tabular-nums;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
@@ -123,6 +161,74 @@
   }
 }
 
+/*
+ * `num`: a number or a code (a price, a percent, a ticker, a tool name) in the mono stack, half a pixel
+ * smaller than the sans on the same line so the two faces sit at one visual size (the mono's x-height
+ * is taller). `1em` in font-size is the parent's size, so this is relative to whatever line it is on;
+ * apply it to the leaf element, not to a container of other `num` elements.
+ */
+@utility num {
+  font-family: var(--font-mono);
+  font-size: calc(1em - 0.5px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+/*
+ * Widget chrome. The header holds the title and the sub-header; the actions sit at the right and are
+ * quiet until the widget is hovered or one of them has focus. The whole widget lifts its border on hover.
+ */
+.widget-frame {
+  transition: border-color 120ms ease-out;
+}
+.widget-frame:hover,
+.widget-frame:focus-within {
+  border-color: var(--color-border-strong);
+}
+.widget-frame > header .widget-actions {
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+.widget-frame:hover > header .widget-actions,
+.widget-frame:focus-within > header .widget-actions,
+.widget-frame > header .widget-actions:focus-within {
+  opacity: 1;
+}
+@media (hover: none) {
+  .widget-frame > header .widget-actions {
+    opacity: 0.7;
+  }
+}
+
+/* A stat value that just changed on a refreshed frame: one short highlight in the direction's colour, no loop. */
+@keyframes stat-tick-up {
+  0% {
+    background-color: color-mix(in oklab, var(--color-up) 28%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+@keyframes stat-tick-down {
+  0% {
+    background-color: color-mix(in oklab, var(--color-down) 28%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+[data-tick="up"] {
+  animation: stat-tick-up 900ms ease-out 1;
+}
+[data-tick="down"] {
+  animation: stat-tick-down 900ms ease-out 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-tick] {
+    animation: none;
+  }
+}
+
 /* Marker used by the view transition when the PromptBox moves from center to sidebar. */
 ::view-transition-old(prompt-box),
 ::view-transition-new(prompt-box) {
@@ -136,6 +242,14 @@
  * containers hide it, in rank order, so the important columns keep their room. The expand dialog is
  * not a `widget` container, so it shows every column.
  */
+.data-table th:first-child,
+.data-table td:first-child {
+  padding-left: 12px;
+}
+.data-table th:last-child,
+.data-table td:last-child {
+  padding-right: 12px;
+}
 @container widget (width < 320px) { .data-table [data-rank="3"] { display: none; } }
 @container widget (width < 380px) { .data-table [data-rank="4"] { display: none; } }
 @container widget (width < 440px) { .data-table [data-rank="5"] { display: none; } }
