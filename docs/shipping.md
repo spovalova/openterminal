@@ -56,6 +56,16 @@ scripts/pr.sh "<same title>" pr-body.md
 
 `pr-feedback.sh` prints the PR state, each review with its verdict, every line comment with its file and line, and the conversation, as Markdown. The brief for an iteration bot is "address the review on PR #N" plus the template above; it starts by running the script.
 
+## Merging and deploying
+
+After review, merge from the terminal so the deploy follows in the same step:
+
+```sh
+scripts/pr-merge.sh 4 5 3 --deploy    # merges in that order, fast-forwards main, runs deploy/redeploy.sh
+```
+
+A PR that conflicts is reported as not merged; hand it back to its author to merge `main` into the branch (merge, not rebase, so `pr.sh` can push without force), then run `pr-merge.sh` again for that number.
+
 ## Rules
 
 - One topic per branch. PLAN.md changes in the same commit as the code when the plan was wrong, with the reason in the commit message.
