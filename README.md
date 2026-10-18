@@ -214,7 +214,7 @@ pnpm bench        # run scripts/prompts.json against a running server and score 
 | `deploy/` | systemd units for an always-on instance |
 | `docs/` | [architecture](docs/architecture.md), [vocabulary](docs/vocabulary.md), [writing a connector](docs/writing-a-connector.md), probe and bench notes |
 
-The plan, the decisions behind it, and the handoff for whoever works on it next are in [PLAN.md](PLAN.md).
+The plan, the decisions behind it, and the handoff for whoever works on it next are in [PLAN.md](PLAN.md). How a change becomes a PR, for people and agents alike, is in [docs/shipping.md](docs/shipping.md).
 
 ## How it compares
 
