@@ -6,3 +6,6 @@ dist/
 *.log
 .vite/
 coverage/
+
+# agent worktrees (one per branch)
+.worktrees/
