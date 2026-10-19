@@ -108,6 +108,8 @@ export function Grid({ workspace, ws }: { workspace: Workspace; ws: WorkspaceSta
               className="min-w-0 min-h-0"
               data-stretched={p.stretched ? '' : undefined}
               data-demoted={p.demoted ? '' : undefined}
+              data-hint={JSON.stringify(hints[i])}
+              data-natural={items[i]!.natural}
             >
               <WidgetCell widget={widget} workspaceId={workspace.id} fit={short[i] ? 'content' : 'fill'} onNatural={onNatural} />
             </div>

@@ -3,7 +3,7 @@ import { tableContentWidth } from '@openterminal/ui'
 import { controlOf, primaryFrame, viewOf } from './fields'
 import { factsControlOf, factsOf, heroFact } from './FactsCard'
 import { orderStats, statRows, symbolOrder, seriesDetails, detailRows } from './StatView'
-import { cellFormat, pivotMetricColumn, projectFrame, ranksFor, tableControlOf } from './TableView'
+import { cellFormat, formatsOf, pivotMetricColumn, projectFrame, ranksFor, tableControlOf } from './TableView'
 
 /**
  * What a widget will show, for the packer's size-by-content rule (PLAN.md section 17, taste round 2): the view kind
@@ -55,11 +55,11 @@ function tableHint(widget: AnyWidget, frames: Record<string, Frame>): Partial<Co
   const frame = control ? frames[control.data] : undefined
   if (!control || !frame) return {}
   const projected = projectFrame(frame, control.columns)
-  const formats = Object.fromEntries(Object.entries(control.formats).map(([k, f]) => [k, cellFormat(f)]))
+  const formats = formatsOf(control)
   const limited = control.limit ? projected.rows.slice(0, control.limit) : projected.rows
-  const { width, minWidth } = tableContentWidth(projected.columns, limited, formats, control.labels, ranksFor(control.columns, control.sort?.column))
-  // Two or three rows render as cards (one per row): one card is about 220px wide and the cards wrap.
-  if (limited.length <= 3) return { width: 220, minWidth: 220, rows: limited.length, fields: Math.max(0, projected.columns.length - 1) }
+  const { width, minWidth } = tableContentWidth(projected.columns, limited, formats, control.labels, ranksFor(control.columns, control.sort?.column, formats))
+  // Two or three rows are cards side by side where they fit (about 210px each), else the table's own widths.
+  if (limited.length <= 3) return { width: Math.min(width, limited.length * 208 + 24), minWidth: Math.min(minWidth, limited.length * 208 + 24), rows: limited.length, fields: Math.max(0, projected.columns.length - 1) }
   // A pivoted compare table (metrics as rows, a column per symbol) sheds nothing: every symbol is the comparison.
   if (pivotMetricColumn(projected)) return { width, minWidth: width, rows: limited.length }
   return { width, minWidth, rows: limited.length }

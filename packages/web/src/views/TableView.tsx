@@ -1,12 +1,13 @@
 import { useMemo, useState, type FC } from 'react'
 import clsx from 'clsx'
-import { columnIndex, controlFor, type Column, type Format, type Frame, type TableControl } from '@openterminal/core'
+import { columnIndex, controlFor, rowCardsFit, type Column, type Format, type Frame, type TableControl } from '@openterminal/core'
 import { DataTable, EMPTY_CELL, EmptyState, direction, displayText, formatCell, type CellFormat } from '@openterminal/ui'
 import type { ViewProps } from './types'
 import { VirtualTable } from '../components/VirtualTable'
 import { FactsCard } from './FactsCard'
 import { columnLabel, shortLabel } from './labels'
 import { controlOf, datasetsFor, emptyHintFor, primaryFrame, viewOf } from './fields'
+import { useWidth } from './use-width'
 
 export type SortSpec = { column: string; dir: 'asc' | 'desc' }
 
@@ -15,8 +16,12 @@ export type SortSpec = { column: string; dir: 'asc' | 'desc' }
  * view sorts by counts as the second, whatever its place: it is what the table ranks (a sectors table sorted by its
  * week change shed that column in a one-column cell and kept two closes).
  */
-export function ranksFor(columns: readonly string[], sortedBy?: string): Record<string, number> {
-  const order = sortedBy && columns.indexOf(sortedBy) > 0 ? [columns[0]!, sortedBy, ...columns.slice(1).filter((c) => c !== sortedBy)] : columns
+export function ranksFor(columns: readonly string[], sortedBy?: string, formats?: Record<string, CellFormat>): Record<string, number> {
+  // The answer columns rank right after the first: the sort column, then the signed moves (round 2: "Last week vs
+  // peers" shed its "Last week %" at 1440 and kept two closes, the one column that answered the question gone).
+  const moves = formats ? columns.slice(1).filter((c) => formats[c] === 'change' && c !== sortedBy) : []
+  const promoted = [...(sortedBy && columns.indexOf(sortedBy) > 0 ? [sortedBy] : []), ...moves]
+  const order = promoted.length > 0 ? [columns[0]!, ...promoted, ...columns.slice(1).filter((c) => !promoted.includes(c))] : columns
   const out: Record<string, number> = {}
   order.forEach((name, i) => {
     out[name] = i < 3 ? 0 : Math.min(i, 15)
@@ -235,6 +240,7 @@ export const TableView: FC<ViewProps> = ({ widget, frames }) => {
     return table.extremes ? extremesFor(projected, table.columns, { ...formats, ...table.formats }, table.labels) : undefined
   }, [projected, table, formats])
   const sorted = useMemo(() => (projected ? sortRows(projected, sort) : []), [projected, sort])
+  const [widthRef, width] = useWidth()
 
   if (!frame || !projected) return <EmptyState title="No data" hint="The frame has not landed." />
   if (frame.rows.length === 0) return <EmptyState title="No rows" hint={emptyHintFor(widget)} />
@@ -251,12 +257,13 @@ export const TableView: FC<ViewProps> = ({ widget, frames }) => {
   const highlightRow = hi && hiIndex >= 0 ? (row: unknown[]) => String(row[hiIndex]) === String(hi.value) : undefined
   const cellMark = extremes ? (row: unknown[], column: string) => extremes.get(row)?.[column] : undefined
 
-  const common = { columns: projected.columns, rows: limited, formats, labels: table.labels, priority: ranksFor(table.columns, table.sort?.column), sort, onSort }
-  // Two or three rows cannot fill a grid row as a table (the (d) note: 28px rows in a 240px cell); each row becomes a
-  // card of label-over-value facts, the key column as its heading, so the cell reads full and every column shows.
-  if (limited.length <= ROW_CARDS_MAX) return <RowCards frame={projected} rows={limited} formats={formats} labels={table.labels} columns={table.columns} />
+  const common = { columns: projected.columns, rows: limited, formats, labels: table.labels, priority: ranksFor(table.columns, table.sort?.column, formats), sort, onSort }
+  // Two or three rows that sit side by side as cards (a two-way comparison: the backtest's strategy and buy and hold)
+  // become one card of label-over-value facts per row; stacked in one column they were 800px of cards (round 2), so
+  // there they stay a table, as tall as its rows.
+  if (limited.length <= ROW_CARDS_MAX && (width === undefined || rowCardsFit(limited.length, width))) return <RowCards rootRef={widthRef} frame={projected} rows={limited} formats={formats} labels={table.labels} columns={table.columns} />
   return (
-    <div data-view="table" data-rows={frame.rows.length} data-virtual={limited.length > VIRTUAL_ROWS ? '' : undefined} className="h-full w-full overflow-hidden">
+    <div ref={widthRef} data-view="table" data-rows={frame.rows.length} data-virtual={limited.length > VIRTUAL_ROWS ? '' : undefined} className="h-full w-full overflow-hidden">
       {limited.length > VIRTUAL_ROWS ? (
         // Screener and transform outputs in the thousands of rows: (e)'s windowed table, same API without the marks.
         <VirtualTable {...common} />
@@ -276,12 +283,12 @@ export const ROW_CARDS_MAX = 3
  * Two or three rows as cards: the first text column (symbol, name) heads each card and the other columns follow as
  * label over value, the same formats as the table; signed changes coloured. Each card takes a column of the cell.
  */
-const RowCards: FC<{ frame: Frame; rows: unknown[][]; formats: Record<string, CellFormat>; labels: Record<string, string>; columns: readonly string[] }> = ({ frame, rows, formats, labels, columns }) => {
+const RowCards: FC<{ rootRef?: (el: HTMLElement | null) => void; frame: Frame; rows: unknown[][]; formats: Record<string, CellFormat>; labels: Record<string, string>; columns: readonly string[] }> = ({ rootRef, frame, rows, formats, labels, columns }) => {
   const names = frame.columns.map((c) => c.name)
   const head = columns.find((c) => names.includes(c) && frame.columns[columnIndex(frame, c)]!.type === 'string') ?? columns[0]!
   const rest = columns.filter((c) => c !== head && names.includes(c))
   return (
-    <div data-view="table" data-rows={frame.rows.length} data-cards="" className="row-cards h-full w-full overflow-x-hidden overflow-y-auto p-3">
+    <div ref={rootRef} data-view="table" data-rows={frame.rows.length} data-cards="" className="row-cards w-full overflow-x-hidden p-3">
       {rows.map((row, ri) => {
         const headText = String(row[columnIndex(frame, head)] ?? '')
         return (
@@ -329,7 +336,7 @@ const SIGNED = /_pct$|^change|growth|return|surprise|upside|reaction|_chg$/
 export const ONE_SIGNED = /vs_?52w|52w_high_pct|from_(52w_)?high|off_(the_)?(high|peak)|below_high|to_be|breakeven|move_to|be_pct|(^|_)delta($|_)|drawdown/
 
 /** Cell formats from the control: its formats, with colorized percent columns that read as moves rendered as signed changes. */
-function formatsOf(table: TableControl | undefined): Record<string, CellFormat> {
+export function formatsOf(table: TableControl | undefined): Record<string, CellFormat> {
   const out: Record<string, CellFormat> = {}
   if (!table) return out
   for (const c of table.columns) {

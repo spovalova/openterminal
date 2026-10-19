@@ -27,7 +27,7 @@ m = m[m.eps_ttm > 0]
 m["pe"] = m.close / m.eps_ttm
 result = m[["symbol", "time", "close", "eps_ttm", "pe"]]
 `
-const PE = t({ price: r('ohlcv', { symbols: ['NVDA'], interval: '1d', range: '2y' }), eps: r('eps_history', { symbols: ['NVDA'], limit: 12 }) }, PE_CODE, { pe: { unit: 'ratio', label: 'P/E (TTM)' }, eps_ttm: { unit: 'usd', label: 'EPS (TTM)' } })
+const PE = t({ price: r('ohlcv', { symbols: ['NVDA'], interval: '1d', range: '2y' }), eps: r('eps_history', { symbols: ['NVDA'], limit: 12 }) }, PE_CODE, { pe: { unit: 'ratio', label: 'P/E (TTM)', key: true }, eps_ttm: { unit: 'usd', label: 'EPS (TTM)' } })
 
 const KEY_EVENTS = t(
   { cal: r('calendar', { from: '2026-10-12', to: '2026-10-16', country: 'United States' }) },

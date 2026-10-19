@@ -18,7 +18,7 @@ import {
   type PriceFormat,
   type SeriesType,
 } from 'lightweight-charts'
-import { DOWN_COLOR, EmptyState, UP_COLOR, chartTheme, levelColor, zeroLineColor } from '@openterminal/ui'
+import { DOWN_COLOR, EmptyState, UP_COLOR, chartTheme, levelColor, tokens, zeroLineColor } from '@openterminal/ui'
 import type { ViewProps } from './types'
 import { withAlpha } from './format'
 import { datasetsFor, expandView, recipeOf, viewOf } from './fields'
@@ -41,6 +41,28 @@ function legendSeries(spec: ChartSpec, pane: number): SeriesSpec[] {
   const own = spec.series.filter((s) => s.pane === pane && (s.legend || (pane > 0 && s.lastValue)))
   const drawn = own.filter((s) => s.kind !== 'histogram')
   return drawn.length > 0 ? drawn : own
+}
+
+/** WCAG relative luminance of a #rrggbb colour. */
+function luminance(hex: string): number {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(hex)
+  if (!m) return 0
+  const lin = (c: string) => {
+    const v = parseInt(c, 16) / 255
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+  }
+  return 0.2126 * lin(m[1]!) + 0.7152 * lin(m[2]!) + 0.0722 * lin(m[3]!)
+}
+
+/**
+ * The text on a badge: dark (the background token) unless light text reads better on that colour. Violet badges took
+ * dark text at 3.5:1; light text on them is 4.6:1 (the pure-hue palette, PR #22).
+ */
+export function badgeTextColor(fill: string): string {
+  const l = luminance(fill)
+  const dark = (l + 0.05) / (luminance(tokens.color.bg) + 0.05)
+  const light = (luminance(tokens.color.fg) + 0.05) / (l + 0.05)
+  return light > dark ? tokens.color.fg : tokens.color.bg
 }
 
 /** At most three last-value badges per chart (taste round 2, change 3), all on the price pane. */
@@ -694,8 +716,8 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
               )}
               <div
                 data-badge=""
-                className="num pointer-events-none absolute z-10 flex items-center justify-center overflow-hidden text-[11px] leading-none font-medium text-bg"
-                style={{ left: box.left + 1, width: box.width - 1, top, height: BADGE_HEIGHT, background: b.color }}
+                className="num pointer-events-none absolute z-10 flex items-center justify-center overflow-hidden text-[11px] leading-none font-medium"
+                style={{ left: box.left + 1, width: box.width - 1, top, height: BADGE_HEIGHT, background: b.color, color: badgeTextColor(b.color) }}
               >
                 {b.text}
               </div>

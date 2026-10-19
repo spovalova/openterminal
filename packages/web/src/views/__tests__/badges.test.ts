@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { BADGE_MAX, atTheMoney, badgePlan, barOnlyPanes, rebaseData, signedPercent, stackBadges } from '../ChartView'
+import { tokens } from '@openterminal/ui'
+import { BADGE_MAX, atTheMoney, badgePlan, badgeTextColor, barOnlyPanes, rebaseData, signedPercent, stackBadges } from '../ChartView'
 import type { SeriesSpec } from '../chart/data'
 
 const series = (id: string, over: Partial<SeriesSpec> = {}): SeriesSpec => ({
@@ -45,6 +46,14 @@ describe('badgePlan (taste round 2, change 3: at most three badges per chart)', 
     expect(badgePlan({ x: 'number', series: [series('oi', { kind: 'histogram' }), series('vol', { kind: 'histogram' })] })).toEqual({ series: new Set(), levels: 0, legend: 'totals' })
     const plan = badgePlan({ x: 'time', series: [series('amd'), series('rsi', { pane: 2 }), series('macd', { pane: 3 }), series('signal', { pane: 3 })] })
     expect([...plan.series]).toEqual(['amd'])
+  })
+})
+
+describe('badgeTextColor (PR #22: dark text on violet was 3.5:1)', () => {
+  it('puts light text on the violet slot and dark text on the bright hues', () => {
+    expect(badgeTextColor('#9500ff')).toBe(tokens.color.fg)
+    expect(badgeTextColor('#ffd500')).toBe(tokens.color.bg)
+    expect(badgeTextColor('#00ff00')).toBe(tokens.color.bg)
   })
 })
 

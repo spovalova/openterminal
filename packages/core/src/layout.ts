@@ -179,7 +179,16 @@ export function cardsPerRow(width: number): number {
   return Math.max(1, Math.floor((width - 16 + 8) / (136 + 8)))
 }
 
-/** Fields per line of a card's field grid at this width: pairs of 140 to 180px with 20px between (web `.field-grid`). */
+/**
+ * Whether a table of two or three rows draws them as cards side by side at this width (200px a card, 8px between,
+ * 12px padding): a comparison of two or three rows reads as cards only when they sit side by side (round 2: three
+ * earnings cards stacked in one column were 800px tall and opened scrolled into the middle of a card).
+ */
+export function rowCardsFit(rows: number, width: number): boolean {
+  return rows >= 2 && rows <= 3 && width >= rows * 200 + (rows - 1) * 8 + 24
+}
+
+/** Fields per line of a card's field grid at this width: pairs of 140 to 200px with 20px between (web `.field-grid`). */
 export function fieldsPerLine(width: number): number {
   return Math.max(1, Math.floor((width - 24 + 20) / 160))
 }
@@ -215,12 +224,10 @@ export function naturalHeight(hint: ContentHint | undefined, width: number): num
     case 'table': {
       const rows = hint.rows
       if (rows === undefined || rows > SHORT_TABLE_ROWS) return undefined
-      if (rows <= 3) {
-        // Two or three rows are cards, one per row, wrapping at 200px: a heading over label-over-value pairs, two across.
-        const perRow = Math.max(1, Math.floor((width - 24 + 8) / 208))
-        const cardRows = Math.ceil(rows / Math.min(perRow, rows))
+      if (rows <= 3 && rowCardsFit(rows, width)) {
+        // Two or three rows side by side are cards, one per row: a heading over label-over-value pairs, two across.
         const card = 20 + 26 + Math.ceil((hint.fields ?? 4) / 2) * 36
-        return FRAME_HEADER + 24 + cardRows * card + (cardRows - 1) * 8
+        return FRAME_HEADER + 24 + card
       }
       return FRAME_HEADER + TABLE_HEAD_HEIGHT + rows * TABLE_ROW_HEIGHT + 4
     }
@@ -415,6 +422,10 @@ export function pixelCost(widgets: readonly LayoutWidget[], placements: readonly
     const h = placementHeight(p, tracks, gap)
     const it = items[i]!
     if (it.short && it.natural !== undefined) cost += Math.max(0, h - it.natural)
+    // A table taller than all of its rows shows blank space under them (rows keep 28px): costed like a card's.
+    const hint = widgets[i]!.contentHint
+    // (Up to a dozen rows: a longer table, a news list whose headlines wrap, fills what it gets and scrolls.)
+    if (!it.short && hint?.kind === 'table' && hint.rows !== undefined && hint.rows <= 12) cost += Math.max(0, h - (FRAME_HEADER + TABLE_HEAD_HEIGHT + hint.rows * TABLE_ROW_HEIGHT + 4))
     if (widgets[i]!.contentHint?.kind === 'chart') cost += Math.max(0, h - 1.4 * widthOf(p))
     // The lg chart or table is the hero or the answer: it keeps most of the page's height.
     if (widgets[i]!.size === 'lg' && !it.short) cost += 2 * Math.max(0, 0.6 * height - h)

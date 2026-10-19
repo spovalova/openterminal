@@ -160,7 +160,8 @@ export function textWidths(columns: readonly Column[], rows: readonly unknown[][
     for (const row of rows) {
       const v = row[i]
       if (v == null) continue
-      longest = Math.max(longest, String(v).length)
+      // Measured as displayed: a ticker list shows three and "+n" (round 2: sized by its raw 200 characters it took the row).
+      longest = Math.max(longest, (typeof v === 'string' ? displayText(v) : String(v)).length)
       if (longest > SHORT_TEXT) return
     }
     const mono = /^(symbol|ticker|pair|etf)$/i.test(c.name)
@@ -212,7 +213,7 @@ const PROSE_WIDTH = 300
 /**
  * The px a table needs across (round 2, for the packer): `width` with every column at its content width (prose at a
  * readable 300px), `minWidth` with only the columns it never sheds (rank 0: the first three and the sort column) and
- * prose at its 120px floor. A table no wider than a grid column takes one column; one whose `minWidth` fits may.
+ * prose at 90px. A table no wider than a grid column takes one column; one whose `minWidth` fits may.
  */
 export function tableContentWidth(columns: readonly Column[], rows: readonly unknown[][], formats: Record<string, CellFormat> = {}, labels?: Record<string, string>, priority?: Record<string, number>): { width: number; minWidth: number } {
   const fmts = uniformFormats(columns, rows, { ...inferFormats([...columns]), ...formats })
@@ -220,7 +221,8 @@ export function tableContentWidth(columns: readonly Column[], rows: readonly unk
   const sized = { ...numberWidths(columns, rows, fmts, headers, Date.now()), ...textWidths(columns, rows, fmts, headers) }
   const need = (c: Column, prose: number) => sized[c.name] ?? columnWidth(c.name, fmts[c.name] ?? 'text', headers[c.name]) ?? prose
   const width = columns.reduce((n, c) => n + need(c, PROSE_WIDTH), 0)
-  const minWidth = columns.filter((c) => (priority?.[c.name] ?? 0) <= 0).reduce((n, c) => n + need(c, TEXT_COLUMN_MIN), 0)
+  // (A headline squeezes to 90px before it reads as a column of fragments: two lines of two or three words.)
+  const minWidth = columns.filter((c) => (priority?.[c.name] ?? 0) <= 0).reduce((n, c) => n + need(c, 90), 0)
   return { width: Math.round(width), minWidth: Math.round(minWidth) }
 }
 
