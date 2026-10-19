@@ -117,7 +117,9 @@ export function markerStyle(kind: string | null | undefined): { color: string; l
 
 /** Horizontal levels (strikes, targets, RSI 30/70) and shaded bands (an earnings window, a negative spread). */
 export const levelColor = tokens.color.fg3
-export const bandColor = 'rgba(144, 133, 233, 0.14)'
+export const bandColor = 'rgba(144, 133, 233, 0.08)'
+/** The 1px edges of an x band ("last week"): the band reads as a faint range with crisp ends (taste round, change 14). */
+export const bandEdgeColor = 'rgba(144, 133, 233, 0.55)'
 /** The zero line under signed bars and the MACD histogram. */
 export const zeroLineColor = tokens.color.borderStrong
 

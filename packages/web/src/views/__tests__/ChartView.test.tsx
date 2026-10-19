@@ -304,14 +304,17 @@ describe('ChartView v2 presets', () => {
     expect(mock().charts[0]!.chart.scales['right:0']!.mode).toBe(3)
   })
 
-  it('curve: a numeric x goes through the yield-curve chart with maturities in months, one line per series', () => {
+  it('curve: maturities on a categorical tenor axis (one evenly spaced slot each, dots at the tenors), one line per series (change 14)', () => {
     const { widget, frames } = fixture('v2-curve')
     render(<ChartView widget={widget} frames={frames} />)
-    expect(mock().createYieldCurveChart).toHaveBeenCalledTimes(1)
+    expect(mock().createYieldCurveChart).not.toHaveBeenCalled()
+    expect(mock().createOptionsChart).toHaveBeenCalledTimes(1)
     expect(mock().createChart).not.toHaveBeenCalled()
     const [chart] = mock().charts
-    expect(chart!.factory).toBe('months')
     expect(chart!.series).toHaveLength(2)
+    expect((chart!.series[0]!.options as { pointMarkersVisible?: boolean }).pointMarkersVisible).toBe(true)
+    const opts = mock().createOptionsChart.mock.calls[0]![1] as { timeScale: { tickMarkFormatter: (m: number) => string } }
+    expect([1, 6, 24, 360].map((m) => opts.timeScale.tickMarkFormatter(m))).toEqual(['1M', '6M', '2Y', '30Y'])
     const data = chart!.series[0]!.stub.setData.mock.calls[0]![0] as { time: number; value: number }[]
     expect(data.map((d) => d.time)).toEqual([1, 3, 6, 12, 24, 36, 60, 84, 120, 240, 360])
     expect(data[8]!.value).toBe(4.02)

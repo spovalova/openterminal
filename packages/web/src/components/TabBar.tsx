@@ -20,7 +20,8 @@ export function TabBar() {
   const active = state.workspaces.find((w) => w.id === state.activeId)
   const items = state.workspaces.map((w) => {
     const ws = state.ws[w.id]
-    return { id: w.id, label: ws?.status === 'streaming' ? `${w.name} ·` : w.name }
+    const label = tabLabel(w.name)
+    return { id: w.id, label: ws?.status === 'streaming' ? `${label} ·` : label }
   })
 
   // The ui Tabs component has no rename hook; the first click of a double-click selects the tab, so the active one is the target.
@@ -158,4 +159,20 @@ function MenuItem({ children, onClick, disabled }: { children: React.ReactNode; 
       {children}
     </button>
   )
+}
+
+/** Upper-case words that are not tickers. */
+const NOT_TICKERS = new Set(['AI', 'ETF', 'ETFS', 'IV', 'RSI', 'MACD', 'SMA', 'EMA', 'PE', 'EPS', 'CPI', 'PPI', 'GDP', 'FOMC', 'US', 'USA', 'IPO', 'YTD', 'TTM', 'OI', 'ATM', 'DTE', 'VS'])
+
+/**
+ * A tab's label with its subject first (taste round, change 15): a name that mentions a ticker after its first word
+ * ("Why is CRWV down?") reads "CRWV · Why is CRWV down?", so the ticker survives truncation; others are unchanged.
+ */
+export function tabLabel(name: string): string {
+  const words = name.split(/\s+/)
+  const first = words[0]?.replace(/[^A-Z^.]/g, '') ?? ''
+  if (/^\^?[A-Z]{1,5}(\.[A-Z])?$/.test(first) && words[0] === first && !NOT_TICKERS.has(first)) return name
+  const m = name.match(/(?:^|[\s(,])(\^?[A-Z]{2,5}(?:\.[A-Z])?)(?=$|[\s),.?!:'’])/g)
+  const ticker = m?.map((t) => t.trim().replace(/^[(,]/, '')).find((t) => !NOT_TICKERS.has(t.replace('^', '')))
+  return ticker ? `${ticker} · ${name}` : name
 }

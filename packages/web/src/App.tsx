@@ -212,11 +212,8 @@ export function App() {
                 ●
               </span>
               <span>{state.socket === 'open' ? 'connected' : state.socket === 'connecting' ? 'connecting…' : 'disconnected, retrying'}</span>
-              {state.health && (
-                <span>
-                  · {state.health.connectors.length} {state.health.connectors.length === 1 ? 'connector' : 'connectors'} · {state.health.recipes} recipes{state.health.llm ? '' : ' · no LLM key'}
-                </span>
-              )}
+              {/* Counts of connectors and recipes are internal (taste round, change 15); only a missing key is the user's business. */}
+              {state.health && !state.health.llm && <span>· no LLM key</span>}
               <span className="text-fg-3">·</span>
               <MarketStrip />
             </div>

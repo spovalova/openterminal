@@ -40,6 +40,7 @@ export {
   markerStyle,
   levelColor,
   bandColor,
+  bandEdgeColor,
   zeroLineColor,
   divergingScale,
   sequentialScale,

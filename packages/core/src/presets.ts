@@ -165,6 +165,12 @@ export function markerLayer(name: string, ds: DatasetFields): Layer | undefined 
   return layer
 }
 
+/** A field that counts things (contracts, shares): open interest and volume. */
+function isCount(ds: DatasetsFieldConfig[string], y: string): boolean {
+  const unit = ds.fields[y]?.unit
+  return unit === 'count' || unit === 'shares' || /(^|_)(open_interest|oi|volume)$/.test(y)
+}
+
 export function expandPreset(view: ViewV2, datasets: DatasetsFieldConfig): Pane[] {
   const name = primaryDataset(view, datasets)
   const ds = name ? datasets[name] : undefined
@@ -192,18 +198,23 @@ export function expandPreset(view: ViewV2, datasets: DatasetsFieldConfig): Pane[
       return [{ height: 1, x: 'time', layers, scales: { left }, legend: true, lastValue: true }]
     }
     case 'curve': {
-      const x = view.x ?? ds.shape.x
+      // A maturity or strike column is the curve's x before any time column (a yield curve frame carries its date on
+      // every row; drawing over it collapsed the curve to one point at "04:00").
+      const x = view.x ?? ds.shape.numeric.find((n) => /maturity|tenor|^years$|strike/.test(n)) ?? ds.shape.x
       if (!x) return []
       const ys = Array.isArray(view.y) ? view.y : view.y ? [view.y] : [measureOf(ds, ['rate', 'yield', 'iv', 'implied_volatility', 'open_interest', 'value'])].filter((v): v is string => !!v && v !== x)
       if (ys.length === 0) return []
       const group = view.group ?? ds.shape.group
+      const xType = ds.fields[x]?.role === 'time' || ds.shape.time === x ? 'time' : ds.shape.numeric.includes(x) ? 'number' : 'category'
+      // Counts over discrete x (open interest and volume by strike) are bars, never a zig-zag line through the
+      // strikes (taste round, change 14); rates, yields and IV stay lines.
+      const bars = xType !== 'time' && ys.every((y) => isCount(ds, y))
       const layers: Layer[] = ys.map((y) => {
-        const l: Layer = { mark: 'line', data: name, x, y }
+        const l: Layer = bars ? { mark: 'bar', data: name, x, y } : { mark: 'line', data: name, x, y }
         if (group) l.group = group
         return l
       })
       const scale = scaleFor(ds, ys[0])
-      const xType = ds.fields[x]?.role === 'time' || ds.shape.time === x ? 'time' : ds.shape.numeric.includes(x) ? 'number' : 'category'
       // The last-value badge stays on a numeric axis too: it marks the curve's long end, and every chart carries one (section 17 checklist).
       return [{ height: 1, x: xType, layers, ...(scale ? { scales: { left: scale } } : {}), legend: true, lastValue: true }]
     }

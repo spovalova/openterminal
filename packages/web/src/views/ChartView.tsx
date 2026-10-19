@@ -9,7 +9,6 @@ import {
   PriceScaleMode,
   createChart,
   createOptionsChart,
-  createYieldCurveChart,
   type ChartOptions,
   type DeepPartial,
   type IChartApiBase,
@@ -78,6 +77,15 @@ type Pin = { id: string; x: number; y: number; below: boolean; paneTop: number; 
 /** Pin circle diameter and the stem between the bar and the circle. */
 const PIN = 14
 const STEM = 6
+
+/** Axis labels on a strike axis: a paired bar's offset x rounds back to its strike. */
+function xStepLabel(step: number | undefined): (v: number) => string {
+  const digits = step && !Number.isInteger(step) ? 2 : 0
+  return (v: number) => {
+    const x = step ? Math.round(v / step) * step : v
+    return x.toFixed(Number.isInteger(x) ? 0 : digits)
+  }
+}
 
 /** The first value of a series (the base of an indexed-to-100 axis). */
 function firstValue(s: SeriesSpec): number | null {
@@ -152,7 +160,7 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
     return out
   }, [spec, widget, frames])
   const empty = spec.series.length === 0
-  const structure = `${spec.x}|${spec.intraday}|${spec.panes.map((p) => `${p.height}:${p.side.right?.indexed}:${p.side.left?.indexed}`).join(',')}`
+  const structure = `${spec.x}|${spec.xStep ?? 0}|${spec.intraday}|${spec.panes.map((p) => `${p.height}:${p.side.right?.indexed}:${p.side.left?.indexed}`).join(',')}`
 
   const hostRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<Chart | null>(null)
@@ -308,14 +316,16 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
     }
     let chart: Chart
     if (spec.x === 'time') chart = createChart(el, base) as unknown as Chart
-    else if (spec.x === 'months') {
-      const months = [...spec.xLabels.keys()]
-      const max = months.length ? Math.max(...months) : 120
-      chart = createYieldCurveChart(el, {
+    else {
+      // A tenor or strike axis is categorical (change 14): one evenly spaced slot per maturity or strike, so the
+      // 1M-6M end is not a cliff at x = 0; labels "3M", "10Y" (or the strike), with room for the last one.
+      const label = spec.x === 'months' ? (m: number) => spec.xLabels.get(m) ?? (m < 12 ? `${m}M` : `${(m / 12).toFixed(m % 12 ? 1 : 0)}Y`) : xStepLabel(spec.xStep)
+      chart = createOptionsChart(el, {
         ...(base as DeepPartial<ChartOptions>),
-        yieldCurve: { baseResolution: 1, minimumTimeRange: Math.max(12, max), startTimeRange: 0, formatTime: (m: number) => spec.xLabels.get(m) ?? (m < 12 ? `${m}M` : `${(m / 12).toFixed(m % 12 ? 1 : 0)}Y`) },
+        localization: { ...(base as { localization?: object }).localization, timeFormatter: label },
+        timeScale: { ...base.timeScale, tickMarkFormatter: label, rightOffset: 0.6 },
       } as never) as unknown as Chart
-    } else chart = createOptionsChart(el, base as never) as unknown as Chart
+    }
     chartRef.current = chart
 
     // The axis font is a web font (font-display: swap): repaint once it has loaded so the ticks do not keep the fallback face.
@@ -392,7 +402,8 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
           series = chart.addSeries(HistogramSeries, { ...common, color: withAlpha(s.color, 0.6), base: 0 }, s.pane)
           break
         default:
-          series = chart.addSeries(LineSeries, { ...common, color: s.color, lineWidth: s.width as LineWidth, crosshairMarkerRadius: 4 }, s.pane)
+          // Dots at each tenor or strike on a categorical axis (change 14).
+          series = chart.addSeries(LineSeries, { ...common, color: s.color, lineWidth: s.width as LineWidth, crosshairMarkerRadius: 4, ...(spec.x !== 'time' ? { pointMarkersVisible: true, pointMarkersRadius: 3 } : {}) }, s.pane)
       }
       series.setData(s.data as never)
       if (s.kind === 'histogram' && (s.data as { value: number }[]).some((d) => d.value < 0)) {
