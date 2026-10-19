@@ -301,12 +301,14 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
   }
   if (dense) {
     // More symbols than compact cards fit the cell (five in a 340x190 cell): one line per symbol, ticker · value ·
-    // change, so nothing scrolls or clips under the foot (taste round, change 2).
+    // change, so nothing scrolls or clips under the foot (taste round, change 2). The lines share the cell's height
+    // (29px at most, 21 at least): at 29px the seventh Mag 7 line sat under the foot of a 190px cell.
+    const line = size ? denseLineHeight(stats.length, size.height) : undefined
     return (
       <div ref={sizeRef} data-view="stat" data-column={column} data-count={stats.length} data-dense="" className="flex h-full w-full flex-col overflow-x-hidden overflow-y-auto px-3 py-1.5">
         <div className="my-auto flex flex-col">
           {stats.map((s) => (
-            <div key={s.symbol} data-symbol={s.symbol} className="flex min-w-0 items-baseline gap-3 border-b border-border/50 py-1 text-sm leading-5 last:border-b-0">
+            <div key={s.symbol} data-symbol={s.symbol} className={clsx('flex min-w-0 gap-3 border-b border-border/50 text-sm leading-5 last:border-b-0', line ? 'items-center' : 'items-baseline py-1')} style={line ? { height: line } : undefined}>
               <span data-field="symbol" className="num w-14 shrink-0 truncate font-semibold text-fg">
                 {s.symbol}
               </span>
@@ -337,6 +339,11 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
       </div>
     </div>
   )
+}
+
+/** The height of one line of the dense stat list: the lines share the cell (12px padding), 21px at least and 29px at most. */
+export function denseLineHeight(n: number, height: number): number {
+  return Math.max(21, Math.min(29, Math.floor((height - 12) / Math.max(1, n))))
 }
 
 /** How many compact cards (136px wide at least, 8px gaps, 8px padding) one row of a cell this wide holds. */
