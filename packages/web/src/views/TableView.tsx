@@ -10,10 +10,15 @@ import { controlOf, datasetsFor, emptyHintFor, primaryFrame, viewOf } from './fi
 
 export type SortSpec = { column: string; dir: 'asc' | 'desc' }
 
-/** Rank per column for a DataTable: 0 for the first three in display order, then 3, 4, … so narrow widgets shed the tail. */
-export function ranksFor(columns: readonly string[]): Record<string, number> {
+/**
+ * Rank per column for a DataTable: 0 for the first three, then 3, 4, … so narrow widgets shed the tail. The column the
+ * view sorts by counts as the second, whatever its place: it is what the table ranks (a sectors table sorted by its
+ * week change shed that column in a one-column cell and kept two closes).
+ */
+export function ranksFor(columns: readonly string[], sortedBy?: string): Record<string, number> {
+  const order = sortedBy && columns.indexOf(sortedBy) > 0 ? [columns[0]!, sortedBy, ...columns.slice(1).filter((c) => c !== sortedBy)] : columns
   const out: Record<string, number> = {}
-  columns.forEach((name, i) => {
+  order.forEach((name, i) => {
     out[name] = i < 3 ? 0 : Math.min(i, 15)
   })
   return out
@@ -57,14 +62,17 @@ export function cellFormat(format: Format): CellFormat {
   return format === 'ratio' ? 'price' : format
 }
 
-/** Columns where a lower value is the better one (multiples, leverage, days to cover); every other numeric column reads higher-is-better. */
-const LOWER_IS_BETTER = /(^|_)(pe|peg|ps|pb|ev_ebitda|ev_revenue|debt|debt_to_equity|days_to_cover|cost|expense|short_interest|iv|iv30|hv30)$/
+/**
+ * Columns where a lower value is the better one (multiples, leverage, days to cover); every other numeric column reads
+ * higher-is-better. A multiple may carry a qualifier ("pe_forward", "pe_ttm"), as the pivoted rows already allowed.
+ */
+const LOWER_IS_BETTER = /(^|_)(pe|peg|ps|pb|ev_ebitda|ev_revenue)($|_)|(^|_)(debt|debt_to_equity|days_to_cover|cost|expense|short_interest|iv|iv30|hv30)$/
 /** Multiples where a value under one (or negative: losses) is an artefact, not the best of the group. */
-const MULTIPLE = /(^|_)(pe|forward_pe|peg|ps|pb|ev_ebitda|ev_revenue)$/
+const MULTIPLE = /(^|_)(pe|forward_pe|peg|ps|pb|ev_ebitda|ev_revenue)($|_)/
 /** Names that are comparisons (rates, multiples, margins, growth): marked whatever their format. */
 const COMPARATIVE = /(^|_)(pe|peg|ps|pb|ev_ebitda|ev_revenue|debt_to_equity|margin|growth|yield|return|roe|roa|upside|surprise|reaction|move|change|pct|cagr|drawdown)($|_)|margin|growth/
 /** Absolute levels (prices, counts, amounts): never marked, a "best" EPS estimate or close means nothing (change 6). */
-const ABSOLUTE = /(^|_)(eps|close|open|high|low|price|last|market_cap|mktcap|revenue|volume|count|analysts|shares|cash|debt_total|fcf|ebitda|income|strike|bid|ask|oi|open_interest)($|_)/
+const ABSOLUTE = /(^|_)(eps|close|open|high|low|price|last|market_cap|mktcap|mkt_cap|mcap|revenue|volume|count|analysts|shares|cash|debt_total|fcf|ebitda|income|strike|bid|ask|oi|open_interest)($|_)/
 
 /** Whether a column carries a comparison worth marking best and worst: by its name first, else by its core format. */
 export function markable(name: string, format: Format | CellFormat | undefined): boolean {
@@ -73,24 +81,36 @@ export function markable(name: string, format: Format | CellFormat | undefined):
   return format === 'ratio' || format === 'percent' || format === 'change'
 }
 
+/**
+ * The names a column is judged by: its own in snake case ("trailingPE" is "trailing_pe") and its label in the same
+ * vocabulary ("Fwd P/E" is "fwd_pe", "Mkt cap ($B)" is "mkt_cap_b"), so an agent's `fpe` or `mcap_b` column is
+ * marked the way its header reads (a forward P/E of 25.4 was marked best, a market cap marked at all).
+ */
+function columnKeys(name: string, label: string | undefined): string[] {
+  const own = name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
+  return label ? [own, metricKey(label)] : [own]
+}
+
 export type Extremes = Map<unknown[], Record<string, 'best' | 'worst'>>
 
 /**
  * The best and worst value per comparative column (compare tables, change 6): max and min, swapped where lower is
  * better; absolute columns (EPS, close, market cap, counts) are never marked, and a multiple under one is skipped.
- * `formats` are the control's core formats (`ratio` is a comparison; a `price` column is a level).
+ * `formats` are the control's core formats (`ratio` is a comparison; a `price` column is a level); `labels` the headers.
  */
-export function extremesFor(frame: Pick<Frame, 'columns' | 'rows'>, columns: readonly string[], formats: Record<string, Format | CellFormat>): Extremes {
+export function extremesFor(frame: Pick<Frame, 'columns' | 'rows'>, columns: readonly string[], formats: Record<string, Format | CellFormat>, labels: Record<string, string> = {}): Extremes {
   const out: Extremes = new Map()
   if (frame.rows.length < 2) return out
   for (const name of columns) {
     const f = formats[name]
     if (!f || f === 'text' || f === 'date' || f === 'time' || f === 'link') continue
-    if (!markable(name, f)) continue
+    const keys = columnKeys(name, labels[name])
+    const any = (re: RegExp) => keys.some((k) => re.test(k))
+    if (!any(COMPARATIVE) && (any(ABSOLUTE) || !markable(keys[0]!, f))) continue
     const i = columnIndex(frame, name)
     if (i < 0) continue
-    const lower = LOWER_IS_BETTER.test(name)
-    const multiple = MULTIPLE.test(name)
+    const lower = any(LOWER_IS_BETTER)
+    const multiple = any(MULTIPLE)
     let hi: unknown[] | undefined
     let lo: unknown[] | undefined
     for (const row of frame.rows) {
@@ -212,7 +232,7 @@ export const TableView: FC<ViewProps> = ({ widget, frames }) => {
     // A pivoted compare table (metrics as rows) marks across each row whether or not the control asked (the compare recipe's shape).
     const metric = pivotMetricColumn(projected)
     if (metric) return rowExtremesFor(projected, metric, table.columns.filter((c) => c !== metric))
-    return table.extremes ? extremesFor(projected, table.columns, { ...formats, ...table.formats }) : undefined
+    return table.extremes ? extremesFor(projected, table.columns, { ...formats, ...table.formats }, table.labels) : undefined
   }, [projected, table, formats])
   const sorted = useMemo(() => (projected ? sortRows(projected, sort) : []), [projected, sort])
 
@@ -231,7 +251,7 @@ export const TableView: FC<ViewProps> = ({ widget, frames }) => {
   const highlightRow = hi && hiIndex >= 0 ? (row: unknown[]) => String(row[hiIndex]) === String(hi.value) : undefined
   const cellMark = extremes ? (row: unknown[], column: string) => extremes.get(row)?.[column] : undefined
 
-  const common = { columns: projected.columns, rows: limited, formats, labels: table.labels, priority: ranksFor(table.columns), sort, onSort }
+  const common = { columns: projected.columns, rows: limited, formats, labels: table.labels, priority: ranksFor(table.columns, table.sort?.column), sort, onSort }
   // Two or three rows cannot fill a grid row as a table (the (d) note: 28px rows in a 240px cell); each row becomes a
   // card of label-over-value facts, the key column as its heading, so the cell reads full and every column shows.
   if (limited.length <= ROW_CARDS_MAX) return <RowCards frame={projected} rows={limited} formats={formats} labels={table.labels} columns={table.columns} />

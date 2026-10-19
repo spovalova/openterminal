@@ -8,7 +8,7 @@ vi.mock('@openterminal/ui', async () => {
   return makeUiMock()
 })
 
-import { ONE_SIGNED, TableView, extremesFor, pivotMetricColumn, projectFrame, rowExtremesFor, sortRows } from '../TableView'
+import { ONE_SIGNED, TableView, extremesFor, pivotMetricColumn, projectFrame, ranksFor, rowExtremesFor, sortRows } from '../TableView'
 import { viewFor } from '../view-for'
 import { RECIPE_FIXTURES, fixture } from '../fixtures'
 import { controlOf } from '../fields'
@@ -166,6 +166,26 @@ describe('TableView from the table control (v2)', () => {
     const marked = new Set([...ex.values()].flatMap((m) => Object.keys(m)))
     expect([...marked]).toEqual(['forward_pe'])
     expect(ex.get(frame.rows[1]!)).toEqual({ forward_pe: 'best' }) // 0.01 is an artefact, not the cheapest
+  })
+
+  it('judges an agent column by its label and camel-case name: a forward P/E and a trailingPE are multiples, a market cap is a level', () => {
+    // The post-taste cheap-tech screen: `fpe` labelled "Fwd P/E" marked 25.4 best and 0.01 worst, `mcap_b` labelled
+    // "Mkt cap ($B)" was marked at all, and yahoo's `trailingPE` marked the cheapest name worst.
+    const frame = {
+      columns: [{ name: 'symbol', type: 'string' as const }, { name: 'trailingPE', type: 'number' as const }, { name: 'fpe', type: 'number' as const }, { name: 'mcap_b', type: 'number' as const }],
+      rows: [['FIS', 5.55, 5.42, 18.7], ['KSPI', 8.4, 0.01, 17.4], ['NTNX', 13.13, 25.4, 18.4], ['MU', 12.21, 4.39, 1026.7]],
+    }
+    const ex = extremesFor(frame, ['symbol', 'trailingPE', 'fpe', 'mcap_b'], { symbol: 'text', trailingPE: 'ratio', fpe: 'price', mcap_b: 'price' }, { trailingPE: 'P/E (TTM)', fpe: 'Fwd P/E', mcap_b: 'Mkt cap ($B)' })
+    expect(ex.get(frame.rows[0]!)).toEqual({ trailingPE: 'best' })
+    expect(ex.get(frame.rows[1]!)).toBeUndefined() // 0.01 is skipped
+    expect(ex.get(frame.rows[2]!)).toEqual({ trailingPE: 'worst', fpe: 'worst' })
+    expect(ex.get(frame.rows[3]!)).toEqual({ fpe: 'best' })
+  })
+
+  it('never sheds the column the view sorts by before the plain ones', () => {
+    expect(ranksFor(['symbol', 'close_oct9', 'close_oct16', 'week_pct'])).toEqual({ symbol: 0, close_oct9: 0, close_oct16: 0, week_pct: 3 })
+    expect(ranksFor(['symbol', 'close_oct9', 'close_oct16', 'week_pct'], 'week_pct')).toEqual({ symbol: 0, week_pct: 0, close_oct9: 0, close_oct16: 3 })
+    expect(ranksFor(['symbol', 'pe', 'name'], 'symbol')).toEqual({ symbol: 0, pe: 0, name: 0 })
   })
 
   it('marks across each row of a pivoted compare table by the metric (change 6)', () => {

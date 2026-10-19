@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { annotationsFor, annotationsForColumns, applyAnnotations, describeRule, globToRegExp, parseAnnotations, recipeDatasets, ruleMatches, type Frame } from '../src/index.js'
+import { annotationsFor, annotationsForColumns, applyAnnotations, describeRule, globToRegExp, orderByPriority, parseAnnotations, recipeDatasets, ruleMatches, type Frame } from '../src/index.js'
 import { builtinAnnotations, builtinRecipes } from '../src/node.js'
 
 const rules = parseAnnotations({
@@ -149,6 +149,12 @@ describe('the seed file (packages/core/annotations.yml)', () => {
     expect(label('openbb', 'equity/calendar/earnings', 'eps_consensus')).toBe('EPS est.')
     expect(label('yahoo', 'quote', 'change_pct')).toBe('Chg %')
     expect(label('openbb', 'equity/fundamental/metrics', 'enterprise_to_ebitda')).toBe('EV/EBITDA')
+  })
+  it('ranks the short-interest date low in the yahoo quoteSummary frame the metrics recipe falls back to', () => {
+    // A migrated "valuation vs peers" table showed "Settlement" first after the symbol: priority 1 put it before the multiples.
+    const cols = ['symbol', 'summaryDetail.trailingPE', 'defaultKeyStatistics.dateShortInterest', 'financialData.revenueGrowth', 'price.longName']
+    const fields = annotationsForColumns(seed, { connector: 'yahoo', route: 'quoteSummary' }, cols)
+    expect(orderByPriority(cols, fields).slice(-1)).toEqual(['defaultKeyStatistics.dateShortInterest'])
   })
   it('covers every field the recipes name in their view columns: an annotation on the first route, or the main transform’s own `columns`', () => {
     for (const r of builtinRecipes()) {
