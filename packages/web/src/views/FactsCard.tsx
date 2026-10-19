@@ -1,6 +1,6 @@
 import { useMemo, type FC } from 'react'
 import clsx from 'clsx'
-import { columnIndex, controlFor, type FactsControl, type Frame } from '@terminal/core'
+import { columnIndex, controlFor, enumLabel, type FactsControl, type Frame } from '@terminal/core'
 import { EMPTY_CELL, EmptyState, direction, formatCell, type CellFormat } from '@terminal/ui'
 import type { ViewProps } from './types'
 import { cellFormat } from './TableView'
@@ -19,7 +19,8 @@ export function factsOf(frame: Frame, control: FactsControl, row = 0): Fact[] {
     if (i < 0) continue
     const format = cellFormat(control.formats[column] ?? 'text')
     const raw = r[i]
-    const text = formatCell(raw, format)
+    // A string that reads as an enum (`after-hours`, `buy`, `not-supplied`) gets its display reading (change 11).
+    const text = format === 'text' && typeof raw === 'string' ? enumLabel(formatCell(raw, format)) : formatCell(raw, format)
     out.push({ column, label: control.labels[column] ?? columnLabel(column), text, format, dir: format === 'change' ? direction(raw) : null, raw })
   }
   return out
@@ -34,41 +35,70 @@ export function factsControlOf(widget: ViewProps['widget'], frames: Record<strin
   return control?.kind === 'facts' ? control : undefined
 }
 
+const NUMERIC: ReadonlySet<CellFormat> = new Set<CellFormat>(['price', 'percent', 'change', 'integer', 'compact'])
+
 /**
- * `facts` preset, and what a `table` renders over one row (product rule 8): label over value, wrapped to the
- * width, the same formats and mono numbers as the table, signed changes coloured, long text truncated with the
- * full value on hover. A frame with several rows shows the first row's facts.
+ * The one fact a card sets large (change 3): the field marked `key`, else the first numeric fact. Dates, enums and
+ * strings are never the hero; a card of only strings has none.
+ */
+export function heroFact(facts: readonly Fact[], fields: Record<string, { key?: boolean }> = {}): Fact | undefined {
+  return facts.find((f) => fields[f.column]?.key && NUMERIC.has(f.format)) ?? facts.find((f) => NUMERIC.has(f.format))
+}
+
+/**
+ * `facts` preset, and what a `table` renders over one row (product rule 8): one hero number, then every other field
+ * as label : value at body size in a two- or three-column grid, the same formats and mono numbers as the table,
+ * signed changes coloured, long text truncated with the full value on hover. The card's height is its content: it
+ * centres when it fits and scrolls when it does not, so nothing renders under the header or clips at the foot.
  */
 export const FactsCard: FC<ViewProps> = ({ widget, frames }) => {
   const control = useMemo(() => factsControlOf(widget, frames), [widget, frames])
   const frame = control ? frames[control.data] : primaryFrame(widget, frames)
   const facts = useMemo(() => (frame && control ? factsOf(frame, control) : []), [frame, control])
+  const fields = useMemo(() => (control ? (datasetsFor(widget, frames)[control.data]?.fields ?? {}) : {}), [widget, frames, control])
   if (!frame || frame.rows.length === 0) return <EmptyState title="No data" hint="The query returned no rows." />
   if (facts.length === 0) return <EmptyState title="No facts" hint="The frame has no columns to show." />
+  const hero = heroFact(facts, fields)
+  const rest = facts.filter((f) => f !== hero)
   return (
-    <div data-view="facts" data-count={facts.length} data-few={facts.length <= 6 ? '' : undefined} className="facts-card h-full w-full overflow-x-hidden overflow-y-auto p-3">
-      {facts.map((f) => {
-        const long = f.format === 'text' && typeof f.raw === 'string' && f.raw.length > 40
-        return (
-          <div key={f.column} data-fact={f.column} className="flex min-w-0 flex-col gap-0.5 border-b border-border/60 pb-1.5">
-            {/* Labels and values wrap to two lines at word boundaries rather than cutting mid-word (section 17 checklist). */}
-            <div className="line-clamp-2 text-xs leading-4 break-words text-fg-3" title={f.label}>
-              {f.label}
+    <div data-view="facts" data-count={facts.length} className="facts-card flex h-full w-full flex-col overflow-x-hidden overflow-y-auto p-3">
+      <div className="my-auto flex min-h-0 flex-col gap-2.5">
+        {hero && (
+          <div data-fact={hero.column} data-hero="" className="flex min-w-0 flex-col">
+            <div className="truncate text-xs leading-4 text-fg-3" title={hero.label}>
+              {hero.label}
             </div>
-            <div
-              data-field="value"
-              title={long ? String(f.raw) : undefined}
-              className={clsx(
-                'line-clamp-2 min-w-0 text-sm leading-5 break-words',
-                f.format !== 'text' && f.format !== 'link' && 'num',
-                f.text === EMPTY_CELL ? 'text-fg-3' : f.dir === 'up' ? 'text-up' : f.dir === 'down' ? 'text-down' : 'text-fg',
-              )}
-            >
-              {f.text}
+            <div data-field="value" className={clsx('facts-hero num truncate font-semibold', hero.text === EMPTY_CELL ? 'text-fg-3' : hero.dir === 'up' ? 'text-up' : hero.dir === 'down' ? 'text-down' : 'text-fg')}>
+              {hero.text}
             </div>
           </div>
-        )
-      })}
+        )}
+        {rest.length > 0 && (
+          <div className={clsx('grid grid-cols-2 gap-x-5 gap-y-1 text-xs leading-5 @[420px]/widget:grid-cols-3', hero && 'border-t border-border/60 pt-2')}>
+            {rest.map((f) => {
+              const long = typeof f.raw === 'string' && f.raw.length > 24
+              return (
+                <div key={f.column} data-fact={f.column} className="flex min-w-0 items-baseline justify-between gap-2">
+                  <span className="truncate text-fg-3" title={f.label}>
+                    {f.label}
+                  </span>
+                  <span
+                    data-field="value"
+                    title={long ? String(f.raw) : undefined}
+                    className={clsx(
+                      'min-w-0 truncate text-right',
+                      f.format !== 'text' && f.format !== 'link' && 'num',
+                      f.text === EMPTY_CELL ? 'text-fg-3' : f.dir === 'up' ? 'text-up' : f.dir === 'down' ? 'text-down' : 'text-fg',
+                    )}
+                  >
+                    {f.text}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

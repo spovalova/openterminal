@@ -265,7 +265,6 @@ function packOnce(widgets: readonly LayoutWidget[], spans: readonly { cols: numb
       if (r >= limit && fallback) {
         fill(i, fallback.r, fallback.c, span.rows, span.cols)
         out.push({ col: fallback.c, row: fallback.r, cols: span.cols, rows: span.rows, stretched: false, demoted: span.demoted })
-        placed = true
         break
       }
       for (let c = 0; c < cols; c++) {
@@ -278,11 +277,6 @@ function packOnce(widgets: readonly LayoutWidget[], spans: readonly { cols: numb
         out.push({ col: c, row: r, cols: span.cols, rows: span.rows, stretched: false, demoted: span.demoted })
         placed = true
         break
-      }
-      if (!placed && fallback && r >= limit) {
-        fill(i, fallback.r, fallback.c, span.rows, span.cols)
-        out.push({ col: fallback.c, row: fallback.r, cols: span.cols, rows: span.rows, stretched: false, demoted: span.demoted })
-        placed = true
       }
     }
   })

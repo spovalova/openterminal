@@ -4,7 +4,7 @@
  * `legacyFieldConfig(kind, columns)` is the annotations layer `mergeFieldConfig` folds under the widget's own
  * overrides. Nothing else reads a kind.
  */
-import { STAT_KEY_COLUMN, type Column, type FieldOverrides, type Kind, type StatKind } from '@terminal/core'
+import { STAT_KEY_COLUMN, fieldLabel, type Column, type FieldOverrides, type Kind, type StatKind } from '@terminal/core'
 import type { CellFormat } from '@terminal/ui'
 
 export type SortSpec = { column: string; dir: 'asc' | 'desc' }
@@ -194,7 +194,10 @@ export const COLUMN_LABEL: Record<string, string> = {
 }
 
 export function columnLabel(column: string): string {
-  return COLUMN_LABEL[column] ?? column.replace(/_/g, ' ')
+  const known = COLUMN_LABEL[column]
+  // Sentence case everywhere (taste round, change 5 and 11): the known labels keep their acronyms, anything else reads through fieldLabel.
+  if (known) return known.charAt(0).toUpperCase() + known.slice(1)
+  return fieldLabel(column)
 }
 
 /**

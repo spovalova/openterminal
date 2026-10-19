@@ -76,7 +76,7 @@ describe('buildSystemPrompt (v2)', () => {
     expect(p).toContain('use stat for one or two headline numbers, facts for a snapshot with several, the reply or a chart marker for a single date or fact, a pivot through a transform')
     expect(p).toContain('four to six by default, fewer when the user asks for fewer')
     expect(p).toContain('it is not a floor. When the user asks for one or two widgets, build one or two.')
-    expect(p).toContain('the grid sizes by content: tables with six rows or fewer, stats and facts cards are one row tall, charts two')
+    expect(p).toContain('the grid has three equal columns and sizes by content: the lg hero is 2x2, every other chart is one cell (never taller than wide), tables with six rows or fewer, stats and facts cards are one row tall and never full width')
     expect(p).toContain('The first widget is the hero and should be lg')
   })
 

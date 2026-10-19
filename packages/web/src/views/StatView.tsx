@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FC } from 'react'
 import clsx from 'clsx'
-import { columnIndex, type Frame, type Kind, type StatControl } from '@terminal/core'
+import { columnIndex, isWidgetV2, type Frame, type Kind, type StatControl } from '@terminal/core'
 import { EMPTY_CELL, EmptyState, direction, formatCell, type CellFormat } from '@terminal/ui'
 import type { ViewProps } from './types'
 import { cellFormat } from './TableView'
@@ -206,9 +206,30 @@ function useTicks(stats: Stat[]): Record<string, Tick> {
 }
 
 /**
- * `stat` preset: the control's column (the key field, else the first measure) as one big number per group, the
- * group as its label, and a change line under it (quote: the day change, plus the extended-hours price outside
- * the regular session). One group fills the widget; several become a row of compact cards.
+ * The symbols the widget asked for, in the user's order (a quote recipe's `symbols`, a v1 query's `symbols`): the
+ * cards keep that order rather than the provider's (change 2: "NVDA, AMD, MU, TSLA, AAPL" came back scrambled).
+ */
+export function symbolOrder(widget: ViewProps['widget']): string[] {
+  const queries: unknown[] = isWidgetV2(widget) ? Object.values(widget.data) : [widget.query]
+  for (const q of queries) {
+    const params = (q as { params?: { symbols?: unknown } } | undefined)?.params
+    if (params && Array.isArray(params.symbols)) return params.symbols.map(String)
+  }
+  return []
+}
+
+/** Stats in the order the widget asked for its symbols; symbols the query did not name keep their frame order after them. */
+export function orderStats(stats: Stat[], order: readonly string[]): Stat[] {
+  if (order.length === 0) return stats
+  const rank = new Map(order.map((s, i) => [s.toUpperCase(), i]))
+  return stats.map((s, i) => ({ s, i, r: rank.get(s.symbol.toUpperCase()) ?? order.length + i })).sort((a, b) => a.r - b.r).map((x) => x.s)
+}
+
+/**
+ * `stat` preset: the control's column (the key field, else the first measure) as one number per group, the group
+ * as its label, and a change line under it (quote: the day change, plus the extended-hours price outside the
+ * regular session). One group is a quote card: the number capped at 32px with its companions in a 3x2 grid
+ * (change 2); several are a row of compact 80px cards that fills or centres, never full-width slabs.
  */
 export const StatView: FC<ViewProps> = ({ widget, frames }) => {
   const kind = kindOf(widget)
@@ -216,44 +237,49 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
   const stat = control?.kind === 'stat' ? control : undefined
   const frame = stat ? frames[stat.data] : primaryFrame(widget, frames)
   const column = stat?.column ?? ''
-  const stats = useMemo(() => (frame && stat ? statRows(frame, kind, column, stat) : []), [frame, stat, kind, column])
+  const stats = useMemo(() => (frame && stat ? orderStats(statRows(frame, kind, column, stat), symbolOrder(widget)) : []), [frame, stat, kind, column, widget])
   const ticks = useTicks(stats)
 
   if (stats.length === 0) {
     return <EmptyState title="No data" hint="The query returned no rows for these symbols." />
   }
 
-  const label = stat?.label && stat.label !== column ? stat.label : columnLabel(column)
+  const raw = stat?.label && stat.label !== column ? stat.label : columnLabel(column)
+  const label = raw.charAt(0).toUpperCase() + raw.slice(1) // sentence case (change 11); a v1 kind table wrote "forward P/E"
   if (stats.length === 1) {
     const s = stats[0]!
-    // One symbol fills the card: the headline, then up to six companion figures (prev close, range, volume, cap),
-    // so a quote or volatility stat reads like a quote card rather than one number in a blank cell (section 17 fill rule).
+    // One symbol is a quote card: the headline, then up to six companion figures (prev close, range, volume, cap) in
+    // a two- or three-column label:value grid, so a quote or volatility stat reads like a quote card at body size.
     const details = frame ? [...seriesDetails(frame, column, stat ? cellFormat(stat.format) : 'price'), ...detailRows(frame, column, stat?.change, frame.meta.fields ?? {})].slice(0, 6) : []
     return (
-      <div data-view="stat" data-column={column} data-count={1} className="flex h-full w-full flex-col justify-center gap-5 overflow-hidden p-3">
-        <div>
-          <StatBody stat={s} label={label} tick={ticks[s.symbol]} hero />
-        </div>
-        {details.length > 0 && (
-          <div data-details="" className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border/60 pt-3 text-xs leading-5 @[420px]/widget:grid-cols-3">
-            {details.map((d) => (
-              <div key={d.label} className="flex min-w-0 items-baseline justify-between gap-2">
-                <span className="truncate text-fg-3">{d.label}</span>
-                <span className="num whitespace-nowrap text-fg-2">{d.text}</span>
-              </div>
-            ))}
+      <div data-view="stat" data-column={column} data-count={1} className="flex h-full w-full flex-col overflow-hidden p-3">
+        <div className="my-auto flex min-h-0 flex-col gap-3">
+          <div>
+            <StatBody stat={s} label={label} tick={ticks[s.symbol]} hero />
           </div>
-        )}
+          {details.length > 0 && (
+            <div data-details="" className="grid grid-cols-2 gap-x-5 gap-y-1.5 border-t border-border/60 pt-2.5 text-xs leading-5 @[360px]/widget:grid-cols-3">
+              {details.map((d) => (
+                <div key={d.label} className="flex min-w-0 items-baseline justify-between gap-2">
+                  <span className="truncate text-fg-3">{d.label}</span>
+                  <span className="num whitespace-nowrap text-fg-2">{d.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     )
   }
   return (
-    <div data-view="stat" data-column={column} data-count={stats.length} className="stat-cards h-full w-full overflow-x-hidden overflow-y-auto p-3">
-      {stats.map((s) => (
-        <div key={s.symbol} data-symbol={s.symbol} className="flex min-w-0 flex-col justify-center overflow-hidden rounded-md border border-border bg-surface-2/50 px-3 py-2.5">
-          <StatBody stat={s} label={label} tick={ticks[s.symbol]} />
-        </div>
-      ))}
+    <div data-view="stat" data-column={column} data-count={stats.length} className="flex h-full w-full flex-col overflow-x-hidden overflow-y-auto p-2">
+      <div className="stat-cards my-auto">
+        {stats.map((s) => (
+          <div key={s.symbol} data-symbol={s.symbol} className="stat-card flex min-w-0 flex-col justify-center overflow-hidden rounded-md border border-border bg-surface-2/50 px-3 py-2">
+            <StatBody stat={s} label={label} tick={ticks[s.symbol]} />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

@@ -186,7 +186,7 @@ export function layoutNote(widgets: readonly WidgetV2[], memory: PreviewMemory):
     const names = stretched.map((w) => `${w.id} (${w.size})`).join(', ')
     parts.push(`Layout repaired: ${names} ${stretched.length === 1 ? 'was' : 'were'} stretched to fill cells that would have stayed empty in the 3-column grid (lg is 2x2, md 2x1, sm 1x1). This is fine; a set that tiles (an md beside an sm, two sm in a row) needs no repair.`)
   }
-  if (sized.length > 0) parts.push(`Sized by content: ${sized.join(', ')} (tables with six rows or fewer, stats and facts cards are one row; charts are two, and a non-hero md chart is one column wide so three charts tile across).`)
+  if (sized.length > 0) parts.push(`Sized by content: ${sized.join(', ')} (tables with six rows or fewer, stats and facts cards are one row and never full width; the lg hero is 2x2 and every other chart one cell, never taller than wide).`)
   return parts.length ? `${parts.join(' ')} ` : ''
 }
 

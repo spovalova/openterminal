@@ -180,9 +180,9 @@ describe('content hints and the layout note', () => {
     const news: WidgetV2 = { id: 'w4', title: 'n', size: 'md', data: { main: { recipe: 'news', params: { symbols: MEMORY, limit: 20 } } }, view: { preset: 'price' } }
     const note = layoutNote([chart, short, stat, news], memory)
     // The lg four-row table is one row tall; the md chart is two rows tall; the lg chart and the sm stat keep their span.
-    expect(note).toContain('Sized by content: w2 (table, lg) is one row tall, w4 (price, md) is one column wide and 2 rows tall (tables with six rows or fewer, stats and facts cards are one row; charts are two, and a non-hero md chart is one column wide so three charts tile across).')
-    // With the md chart one column wide the set tiles (hero 2x2, stat and chart stacked beside it, the table under): nothing is stretched.
-    expect(note).not.toMatch(/stretched to fill cells/)
+    expect(note).toContain('Sized by content: w2 (table, lg) is one row tall, w4 (price, md) is one column wide and one row tall (tables with six rows or fewer, stats and facts cards are one row and never full width; the lg hero is 2x2 and every other chart one cell, never taller than wide).')
+    // The stat and the one-cell chart stack beside the hero; the one-row table under them grows across the row (a table may be full width).
+    expect(note).toMatch(/w2 \(lg\) was stretched to fill cells/)
     // A set that tiles without resizing: an lg chart (2x2) beside two sm tables stacked.
     const tiles = layoutNote([chart, { ...news, id: 'w2', size: 'sm', view: { preset: 'table' } }, { ...news, id: 'w3', size: 'sm', view: { preset: 'table' } }], memory)
     expect(tiles).toBe('')

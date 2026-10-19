@@ -30,69 +30,49 @@ body,
 }
 
 /*
- * The stat view. The hero number scales with the widget body (a `widget` container, so cqw is its
- * width): about 40px in a one-column cell, capped at 64px in a hero. Cards wrap to the width and keep
- * their number a step smaller.
+ * The stat view (taste round, change 2). One symbol is a quote card: the number is capped at 32px, never a 90px
+ * slab, and its companions sit under it in a label:value grid. Several symbols are compact cards about 80px tall
+ * (symbol · label / number / change) in a wrapping row that fills the width or centres a short last row.
  */
 .stat-hero {
-  /* one symbol per cell: the number is the widget (section 17 fill rule: a card fills 60% of its body); scales with the
-     cell's width and height so a 470px row at 1920 gets a number to match */
-  font-size: clamp(32px, min(15cqw, 30cqh), 112px);
-  line-height: 1.05;
-  letter-spacing: -0.05em;
-}
-.stat-card-value {
-  /* a four-digit price with separators ("1,299.30") must fit a 136px card: 3.8cqw of the widget, 24px at most */
-  font-size: clamp(16px, 3.8cqw, 24px);
-  line-height: 1.15;
+  font-size: clamp(22px, 7cqw, 32px);
+  line-height: 1.1;
   letter-spacing: -0.04em;
 }
+.stat-card-value {
+  /* a four-digit price with separators ("1,299.30") must fit a 136px card */
+  font-size: clamp(18px, 2.8cqw, 26px);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
 .stat-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
-  /* cards share the body's height (quote tiles), so a row of four fills its cell */
-  align-content: stretch;
+}
+.stat-card {
+  flex: 1 1 136px;
+  max-width: 240px;
+  min-height: 72px;
 }
 
-/*
- * The facts card (a one-row frame): label over value, wrapped to the width, about 180px per fact so a dozen
- * facts take three rows in a wide cell. Centred when it does not scroll; a card with six facts or fewer sets
- * its values a step larger, like a row of stats.
- */
-/* Two or three table rows as cards (TableView RowCards): one column per card, sharing the body's height. */
+/* Two or three table rows as cards (TableView RowCards): one column per card, content height, centred when they fit. */
 .row-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 8px;
-  align-content: stretch;
+  align-content: center;
 }
 
-.facts-card {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 10px 16px;
-  /* the rows share the cell's height when the facts fit (an eight-fact card in a tall 1920 row sat centred at half the
-     cell); when they do not, rows are their content height and the card scrolls */
-  align-content: stretch;
-  grid-auto-rows: minmax(min-content, 1fr);
-}
-.facts-card > [data-fact] {
-  justify-content: center;
-}
-.facts-card[data-few] {
-  /* a handful of facts (a count, a median, a universe) spreads out and scales with the cell's height; the rows share the
-     height so four facts in two columns fill a 1920 row rather than sitting at its top */
-  gap: clamp(10px, 4cqh, 28px) 24px;
-  align-content: stretch;
-  grid-auto-rows: 1fr;
-}
-.facts-card[data-few] > [data-fact] {
-  justify-content: center;
-}
-.facts-card[data-few] [data-field="value"] {
-  font-size: clamp(var(--text-xl), 9cqh, 44px);
-  line-height: 1.15;
+/*
+ * The facts card (change 3): one hero number at most 32px, every other field label : value at body size. The card
+ * is its content's height (centred by the auto margins inside it when it fits, scrolling when it does not).
+ */
+.facts-hero {
+  font-size: clamp(22px, 7cqw, 32px);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
 }
 
 /* Sidebar overlays the grid below 1100px. */
