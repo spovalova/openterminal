@@ -72,7 +72,10 @@ describe('websocket', () => {
     expect(order.filter((t) => t === 'step')).toHaveLength(2)
     expect(order.indexOf('step')).toBeLessThan(order.indexOf('widgets'))
     expect(order.indexOf('widgets')).toBeLessThan(order.indexOf('frame'))
-    expect(order.filter((t) => t === 'frame')).toHaveLength(5)
+    // Five live frames, then (taste round 2, change 5) the same five again marked as the reply's held snapshot.
+    const frames = received.filter((m): m is Extract<ServerMsg, { t: 'frame' }> => m.t === 'frame')
+    expect(frames.filter((m) => m.frame.meta.heldAt === undefined)).toHaveLength(5)
+    expect(frames.filter((m) => m.frame.meta.heldAt !== undefined)).toHaveLength(5)
     expect(order.filter((t) => t === 'frameError')).toHaveLength(0)
     expect(order.at(-1)).toBe('done')
     if (done.t !== 'done') throw new Error('unreachable')
@@ -119,6 +122,33 @@ describe('websocket', () => {
     const failed = await next((m) => m.t === 'failed')
     expect(failed.t === 'failed' && failed.error).toMatch(/not found/)
     ws.close()
+  })
+
+  it('one snapshot (taste round 2, change 5): a returning client sees the reply\'s held frames without a fetch until it asks for live data', async () => {
+    const first = await connect()
+    const { id } = await createWorkspace()
+    first.ws.send(JSON.stringify({ t: 'prompt', workspaceId: id, text: 'memory' }))
+    const done = await first.next((m) => m.t === 'done')
+    first.ws.close()
+    const at = done.t === 'done' ? done.message.at : undefined
+    // A new socket focusing the workspace gets the held frames, as of the reply, and fetches nothing.
+    const before = calls.length
+    const second = await connect()
+    second.ws.send(JSON.stringify({ t: 'focus', workspaceId: id }))
+    const held = await second.next((m) => m.t === 'frame' && m.widgetId === 'memory-snapshot')
+    expect(held.t === 'frame' && held.frame.meta.heldAt).toBe(at)
+    await second.next((m) => m.t === 'frame' && m.widgetId === 'memory-news')
+    expect(calls.length).toBe(before)
+    // "Live data" releases every widget: fresh frames, not held.
+    second.ws.send(JSON.stringify({ t: 'live', workspaceId: id }))
+    const live = await second.next((m) => m.t === 'frame' && m.widgetId === 'memory-snapshot' && m.frame.meta.heldAt === undefined)
+    expect(live.t).toBe('frame')
+    // and the release is stored: the next focus is live from the start
+    second.received.length = 0
+    second.ws.send(JSON.stringify({ t: 'focus', workspaceId: id }))
+    const again = await second.next((m) => m.t === 'frame' && m.widgetId === 'memory-snapshot')
+    expect(again.t === 'frame' && again.frame.meta.heldAt).toBeUndefined()
+    second.ws.close()
   })
 
   it('prompt on a missing workspace fails and invalid messages are ignored', async () => {

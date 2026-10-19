@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { FrameSchema } from './frame.js'
+import { FrameSchema, type Frame } from './frame.js'
+import type { AnyQuery } from './query.js'
 import { MessageSchema, StepSchema, type Workspace, type Message } from './workspace.js'
 import { AnyWidgetSchema, DEFAULT_DATASET } from './widget.js'
 
@@ -10,6 +11,8 @@ export const ClientMsgSchema = z.discriminatedUnion('t', [
   /** `dataset` (v2) refreshes one dataset of the widget; absent means every dataset. */
   z.object({ t: z.literal('refresh'), widgetId: z.string(), workspaceId: z.string().optional(), dataset: z.string().optional() }),
   z.object({ t: z.literal('focus'), workspaceId: z.string() }),
+  /** Taste round 2: release the reply's held frames (one widget, or every widget of the workspace) to live data. */
+  z.object({ t: z.literal('live'), workspaceId: z.string(), widgetId: z.string().optional() }),
 ])
 export type ClientMsg = z.infer<typeof ClientMsgSchema>
 
@@ -49,5 +52,15 @@ export function frameDataset(m: Extract<ServerMsg, { t: 'frame' | 'frameError' }
  * The server emits started before calling run, and done/failed after it settles.
  */
 export interface AgentRunner {
-  run(input: { workspace: Workspace; prompt: string; signal: AbortSignal; emit(m: ServerMsg): void }): Promise<Message>
+  run(input: {
+    workspace: Workspace
+    prompt: string
+    signal: AbortSignal
+    emit(m: ServerMsg): void
+    /**
+     * Taste round 2 (one snapshot): called with every frame the run fetched (a query's, a transform's), so the server
+     * can show the widgets the very frames the reply is verified against.
+     */
+    record?(query: AnyQuery, frame: Frame): void
+  }): Promise<Message>
 }

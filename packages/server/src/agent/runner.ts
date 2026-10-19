@@ -1,6 +1,6 @@
 import { streamText, stepCountIs, type LanguageModel, type ModelMessage, type TextStreamPart } from 'ai'
 import { nanoid } from 'nanoid'
-import { TOOL_NAMES, type AgentRunner, type Catalog, type Message, type Registry, type ServerMsg, type Step, type Verification, type WidgetV2 } from '@openterminal/core'
+import { TOOL_NAMES, type AgentRunner, type AnyQuery, type Catalog, type Frame, type Message, type Registry, type ServerMsg, type Step, type Verification, type WidgetV2 } from '@openterminal/core'
 import { runCost, type ModelPricing, type RunLog, type RunLogRow } from '../runlog.js'
 import { plainProse } from '../plain.js'
 import { verificationOf, verifyReply } from '../verify.js'
@@ -63,6 +63,27 @@ export class AgentAbortError extends Error {
   }
 }
 
+/** The registry with `run` reporting every frame it returns; everything else as is. */
+export function recordingRegistry<R extends { run(q: AnyQuery, opts?: never): Promise<Frame> }>(registry: R, record: (q: AnyQuery, frame: Frame) => void): R {
+  return new Proxy(registry, {
+    get(target, prop) {
+      if (prop === 'run') {
+        return async (q: AnyQuery, opts?: never) => {
+          const frame = await target.run(q, opts)
+          try {
+            record(q, frame)
+          } catch {
+            /* a recorder never fails the run */
+          }
+          return frame
+        }
+      }
+      const value = Reflect.get(target, prop, target) as unknown
+      return typeof value === 'function' ? (value as (...a: unknown[]) => unknown).bind(target) : value
+    },
+  })
+}
+
 /**
  * The agent loop behind a concrete language model. `createAgentRunner` in index.ts resolves the
  * model from LlmConfig; tests pass a mock model here directly.
@@ -83,7 +104,7 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
   const modelId = typeof deps.model === 'string' ? deps.model : deps.model.modelId
 
   return {
-    async run({ workspace, prompt, signal, emit }): Promise<Message> {
+    async run({ workspace, prompt, signal, emit, record: recordFrame }): Promise<Message> {
       if (signal.aborted) throw new AgentAbortError(signal.reason)
       const startedAt = nowDate()
       const steps: Step[] = []
@@ -109,7 +130,9 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
       const system = buildSystemPrompt({ recipes, connectors, workspace, now: startedAt, ...(catalog ? { catalogRoutes: catalog.size } : {}) })
 
       const tools = createTools({
-        registry: deps.registry,
+        // Every frame the tools fetch (a query's, a transform's) goes to `record` too (taste round 2, change 5): the
+        // server shows the widgets those very frames, so the reply and the widgets read one snapshot.
+        registry: recordFrame ? recordingRegistry(deps.registry, recordFrame) : deps.registry,
         workspaceId: workspace.id,
         recipes,
         ...(catalog ? { catalog } : {}),

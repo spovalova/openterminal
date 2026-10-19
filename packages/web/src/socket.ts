@@ -99,6 +99,10 @@ export class TerminalSocket {
   refresh(widgetId: string, workspaceId?: string): void {
     this.send(workspaceId ? { t: 'refresh', widgetId, workspaceId } : { t: 'refresh', widgetId })
   }
+  /** Release the reply's held frames to live data (taste round 2, change 5): one widget or the whole workspace. */
+  live(workspaceId: string, widgetId?: string): void {
+    this.send(widgetId ? { t: 'live', workspaceId, widgetId } : { t: 'live', workspaceId })
+  }
   focus(workspaceId: string): void {
     this.send({ t: 'focus', workspaceId })
   }

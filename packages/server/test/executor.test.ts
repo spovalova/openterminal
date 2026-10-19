@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ConnectorRegistry, MemoryCache, type ServerMsg, type WidgetV2 } from '@openterminal/core'
 import { Executor, nextExpiry, withProviderOverrides } from '../src/executor.js'
+import { recordingRegistry } from '../src/agent/runner.js'
 import { fakeConnector, fakeRecipes, type Call } from './fake-connector.js'
 
 function setup() {
@@ -58,6 +59,26 @@ describe('Executor', () => {
     expect(frames).toBeUndefined()
     expect(sent.map((m) => m.t)).toEqual(['frameError'])
     expect((sent[0] as { error: string }).error).toMatch(/unknown recipe "holdings"/)
+  })
+
+  it('serves the agent run\'s own frame for a query it fetched, and fetches when told to bypass (taste round 2, change 5)', async () => {
+    const { executor, emit, sent, calls } = setup()
+    const runFrame = { columns: [{ name: 'price', type: 'number' as const }], rows: [[123.45]], meta: { connector: 'fake', fetchedAt: 1, ttl: 10_000 } }
+    const overlay = (q: unknown) => (JSON.stringify(q) === JSON.stringify(quote.data.main) ? runFrame : undefined)
+    await executor.run(quote, emit, { workspaceId: 'ws1', overlay })
+    expect(calls).toHaveLength(0)
+    expect(sent[0]).toMatchObject({ t: 'frame', frame: { rows: [[123.45]] } })
+    await executor.run(quote, emit, { workspaceId: 'ws1', overlay, bypassCache: true })
+    expect(calls).toHaveLength(1)
+  })
+
+  it('recordingRegistry reports every frame a run fetches and passes everything else through', async () => {
+    const { registry } = setup()
+    const seen: unknown[] = []
+    const wrapped = recordingRegistry(registry, (q, f) => seen.push([q, f.rows.length]))
+    const frame = await wrapped.run(quote.data.main!)
+    expect(seen).toEqual([[quote.data.main, frame.rows.length]])
+    expect(wrapped.recipes()).toEqual(registry.recipes())
   })
 
   it('nextExpiry is the soonest frame expiry; provider overrides fill in missing providers only', () => {

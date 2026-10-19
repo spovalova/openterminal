@@ -4,7 +4,7 @@ import { widgetQueries, type AnyWidget } from '@openterminal/core'
 import { useActions } from '../actions'
 import { widgetDomId } from '../chips'
 import { useApp } from '../state'
-import { errorFor, framesFor } from '../state/frames'
+import { asOfLabel, errorFor, framesFor } from '../state/frames'
 import { subtitleForWidget } from '../subtitle'
 import { primaryFrame, viewFor } from '../views'
 import { Editor } from './Editor'
@@ -34,6 +34,7 @@ export function WidgetCell({ widget, workspaceId, fit = 'fill', onNatural }: { w
   const primary = primaryFrame(widget, frames)
   const ready = !!primary
   const datasetCount = Object.keys(widgetQueries(widget)).length
+  const heldAt = Object.values(frames).find((f) => f.meta.heldAt !== undefined)?.meta.heldAt
 
   useEffect(() => {
     const el = cellRef.current
@@ -62,7 +63,16 @@ export function WidgetCell({ widget, workspaceId, fit = 'fill', onNatural }: { w
         loading={!ready && !error}
         error={ready ? undefined : error}
         empty={!!primary && primary.rows.length === 0}
-        meta={datasetCount > 1 ? <span className="num">{datasetCount} datasets</span> : undefined}
+        meta={
+          heldAt !== undefined ? (
+            // Taste round 2 (one snapshot): the frame the reply was verified against, held; the refresh button goes live.
+            <span data-held="" className="whitespace-nowrap text-fg-3" title="The data the reply was written from. Refresh for live data.">
+              as of {asOfLabel(heldAt)}
+            </span>
+          ) : datasetCount > 1 ? (
+            <span className="num">{datasetCount} datasets</span>
+          ) : undefined
+        }
         onEdit={() => setEditing(true)}
         onRefresh={() => refreshWidget(widget.id, workspaceId)}
         onExpand={() => setExpanded(true)}

@@ -1,11 +1,17 @@
 // Widget execution: run each widget's datasets (PLAN.md section 17: a data graph of recipe, route and transform
 // queries) through the registry and emit frame / frameError per dataset. TTL polling: only the focused workspace
 // re-executes widgets when their frames' TTLs expire.
-import { DEFAULT_DATASET, describeQuery, isRouteQuery, isTransformQuery, widgetQueries, type AnyQuery, type AnyWidget, type Frame, type Registry, type ServerMsg, type Workspace } from '@openterminal/core'
+import { DEFAULT_DATASET, describeQuery, heldFrames, isRouteQuery, isTransformQuery, releaseSnapshot, widgetQueries, type AnyQuery, type AnyWidget, type Frame, type Registry, type ReplySnapshot, type ServerMsg, type Workspace } from '@openterminal/core'
 
 export type Emit = (m: ServerMsg) => void
 
-export type RunOptions = { bypassCache?: boolean; signal?: AbortSignal; workspaceId?: string }
+export type RunOptions = {
+  bypassCache?: boolean
+  signal?: AbortSignal
+  workspaceId?: string
+  /** Frames to use instead of fetching, by query: the agent run's own (taste round 2, change 5: one snapshot). */
+  overlay?: (q: AnyQuery) => Frame | undefined
+}
 
 export type Frames = Record<string, Frame>
 export type DatasetResult = { frames: Frames; errors: Record<string, string> }
@@ -53,7 +59,7 @@ export class Executor {
     await Promise.all(
       Object.entries(queries).map(async ([name, q]) => {
         try {
-          frames[name] = await this.runQuery(q, opts)
+          frames[name] = (!opts.bypassCache ? opts.overlay?.(q) : undefined) ?? (await this.runQuery(q, opts))
         } catch (err) {
           errors[name] = errorMessage(err)
         }
@@ -118,6 +124,8 @@ export function nextExpiry(frames: Frames): number {
  */
 export class Poller {
   private workspaceId: string | undefined
+  /** The reply's snapshot for the focused workspace: the widgets it holds show their held frames, no timers. */
+  private snapshot: ReplySnapshot | undefined
   private widgets = new Map<string, AnyWidget>()
   private timers = new Map<string, NodeJS.Timeout>()
   private generation = 0
@@ -140,19 +148,49 @@ export class Poller {
     return this.workspaceId
   }
 
-  /** Focus a workspace: stop polling the previous one, run every widget, start the TTL timers. */
-  focus(workspace: Workspace): Promise<void> {
+  /**
+   * Focus a workspace: stop polling the previous one, run every widget, start the TTL timers. A widget the reply's
+   * snapshot holds (taste round 2, change 5) gets its held frames instead, and no timer, until it is released.
+   */
+  focus(workspace: Workspace, snapshot?: ReplySnapshot): Promise<void> {
     this.stop()
     this.workspaceId = workspace.id
+    this.snapshot = snapshot
     return this.track(workspace.widgets)
   }
 
-  /** Replace the focused workspace's widgets (after a prompt). No-op for an unfocused workspace. */
-  replaceWidgets(workspaceId: string, widgets: AnyWidget[]): Promise<void> | undefined {
+  /**
+   * Replace the focused workspace's widgets (after a prompt). No-op for an unfocused workspace. `overlay` serves the
+   * run's own frames for the queries it fetched, so the widgets show what the reply is verified against.
+   */
+  replaceWidgets(workspaceId: string, widgets: AnyWidget[], overlay?: RunOptions['overlay']): Promise<void> | undefined {
     if (workspaceId !== this.workspaceId) return undefined
     this.clearTimers()
     this.generation++
-    return this.track(widgets)
+    this.snapshot = undefined
+    return this.track(widgets, overlay)
+  }
+
+  /** Hold the reply's snapshot: its widgets stop refreshing and show their held frames (re-sent marked `heldAt`). */
+  hold(workspaceId: string, snapshot: ReplySnapshot): void {
+    if (workspaceId !== this.workspaceId) return
+    this.snapshot = snapshot
+    const scope = { workspaceId }
+    for (const widget of this.widgets.values()) {
+      const held = heldFrames(snapshot, widget, this.now())
+      if (!held) continue
+      this.clearTimer(widget.id)
+      for (const [dataset, frame] of Object.entries(held)) this.emit({ t: 'frame', widgetId: widget.id, frame, ...scope, ...(dataset === DEFAULT_DATASET ? {} : { dataset }) })
+    }
+  }
+
+  /** Release held widgets to live data (one, or every one): they run now and poll again. */
+  async release(widgetId?: string): Promise<void> {
+    if (!this.snapshot) return
+    const ids = widgetId ? [widgetId] : Object.keys(this.snapshot.widgets)
+    this.snapshot = releaseSnapshot(this.snapshot, ids)
+    const gen = this.generation
+    await Promise.all(ids.map((id) => this.widgets.get(id)).filter((w): w is AnyWidget => !!w).map((w) => this.cycle(w, gen, false)))
   }
 
   /** The focused workspace's widget with this id, if any. */
@@ -160,10 +198,11 @@ export class Poller {
     return this.widgets.get(widgetId)
   }
 
-  /** Re-run a focused widget bypassing the cache. Resolves false when the widget is not focused. */
+  /** Re-run a focused widget bypassing the cache (a held widget is released). Resolves false when the widget is not focused. */
   async refresh(widgetId: string): Promise<boolean> {
     const widget = this.widgets.get(widgetId)
     if (!widget) return false
+    if (this.snapshot) this.snapshot = releaseSnapshot(this.snapshot, [widgetId])
     this.clearTimer(widgetId)
     await this.cycle(widget, this.generation, true)
     return true
@@ -177,17 +216,33 @@ export class Poller {
     this.controller = new AbortController()
     this.workspaceId = undefined
     this.widgets.clear()
+    this.snapshot = undefined
   }
 
-  private track(widgets: AnyWidget[]): Promise<void> {
+  private track(widgets: AnyWidget[], overlay?: RunOptions['overlay']): Promise<void> {
     this.widgets = new Map(widgets.map((w) => [w.id, w]))
     const gen = this.generation
-    return Promise.all(widgets.map((w) => this.cycle(w, gen, false))).then(() => undefined)
+    const scope = this.workspaceId ? { workspaceId: this.workspaceId } : {}
+    return Promise.all(
+      widgets.map((w) => {
+        const held = heldFrames(this.snapshot, w, this.now())
+        if (!held) return this.cycle(w, gen, false, overlay)
+        for (const [dataset, frame] of Object.entries(held)) this.emit({ t: 'frame', widgetId: w.id, frame, ...scope, ...(dataset === DEFAULT_DATASET ? {} : { dataset }) })
+        return undefined
+      }),
+    ).then(() => undefined)
   }
 
-  private async cycle(widget: AnyWidget, gen: number, bypassCache: boolean): Promise<void> {
+  private async cycle(widget: AnyWidget, gen: number, bypassCache: boolean, overlay?: RunOptions['overlay']): Promise<void> {
     const signal = this.controller.signal
-    const frames = await this.executor.run(widget, this.emit, { bypassCache, signal, ...(this.workspaceId ? { workspaceId: this.workspaceId } : {}) })
+    // A widget held while this cycle ran (the run ended) keeps its held frames: a late live frame is dropped, no timer.
+    const isHeld = () => !!this.snapshot && !!heldFrames(this.snapshot, widget, this.now())
+    const emit: Emit = (m) => {
+      if ((m.t === 'frame' || m.t === 'frameError') && isHeld()) return
+      this.emit(m)
+    }
+    const frames = await this.executor.run(widget, emit, { bypassCache, signal, ...(this.workspaceId ? { workspaceId: this.workspaceId } : {}), ...(overlay ? { overlay } : {}) })
+    if (isHeld()) return
     if (gen !== this.generation || this.widgets.get(widget.id) !== widget) return
     const delay = frames ? Math.max(this.minDelayMs, nextExpiry(frames) - this.now()) : this.errorRetryMs
     this.clearTimer(widget.id)

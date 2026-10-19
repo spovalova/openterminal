@@ -80,6 +80,26 @@ export function errorFor(errors: FrameErrors, workspaceId: string | undefined, w
   return undefined
 }
 
+/**
+ * When the workspace's widgets show a reply's held snapshot (taste round 2, change 5): the `heldAt` of its frames, or
+ * undefined when every frame is live.
+ */
+export function workspaceHeldAt(store: FrameStore, workspaceId: string): number | undefined {
+  let at: number | undefined
+  for (const [key, frame] of Object.entries(store)) {
+    if (frame.meta.heldAt === undefined || parseFrameKey(key).workspaceId !== workspaceId) continue
+    at = Math.max(at ?? 0, frame.meta.heldAt)
+  }
+  return at
+}
+
+/** "14:29 ET" on the day, "Oct 17, 14:29 ET" before it (New York time, the clock the status bar shows). */
+export function asOfLabel(ms: number, now = Date.now()): string {
+  const time = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(ms)
+  const day = (v: number) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }).format(v)
+  return day(ms) === day(now) ? `${time} ET` : `${day(ms)}, ${time} ET`
+}
+
 /** True when every dataset of the widget has a frame. */
 export function framesComplete(widget: AnyWidget, frames: Record<string, Frame>): boolean {
   return Object.keys(widgetQueries(widget)).every((d) => !!frames[d])

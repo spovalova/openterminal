@@ -46,6 +46,11 @@ export const FrameMetaSchema = z.object({
   fields: z.record(z.string(), FieldConfigSchema).optional(),
   /** v2: the query graph that produced the frame. Absent on v1 frames. */
   lineage: LineageSchema.optional(),
+  /**
+   * Taste round 2 (one snapshot): set when this frame is the data a reply was verified against, held on screen (no
+   * live refresh) since this epoch ms until the user asks for live data. Absent on a live frame.
+   */
+  heldAt: z.number().optional(),
 })
 export type FrameMeta = z.infer<typeof FrameMetaSchema>
 
