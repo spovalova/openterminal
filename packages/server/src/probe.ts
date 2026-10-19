@@ -95,6 +95,8 @@ export type ProbeResult = LivenessRow & {
   errorClass?: ErrorClass
   /** Set when the route was not called: no sample params. */
   skipped?: string
+  /** Set when the recorded result came from the quiet retry pass. */
+  retried?: 'timeout'
 }
 
 export type ProbeOptions = {
@@ -115,6 +117,12 @@ export type ProbeOptions = {
   /** When a connector is down, poll its health this often and for this long before giving up on it. */
   downPollMs?: number
   downWaitMs?: number
+  /**
+   * Try routes that timed out once more at the end, two at a time, when the connector is no longer under the
+   * main pass's load. On by default: OpenBB serves blocking provider calls on one event loop, so a route that
+   * timed out behind a slow neighbour is usually alive.
+   */
+  retryTimeouts?: boolean
   log?: (msg: string) => void
   onResult?: (r: ProbeResult) => void
 }
@@ -129,6 +137,8 @@ export type ProbeSummary = {
   empty: number
   /** Routes that answered only after a keyless-provider retry. */
   keylessRetries: number
+  /** Routes that timed out in the main pass and answered on the quiet retry. */
+  timeoutRetries: number
   byConnector: Record<string, { routes: number; ok: number; failed: number; skipped: number }>
   byNamespace: Record<string, { routes: number; ok: number }>
   errorClasses: Array<{ errorClass: ErrorClass; count: number; examples: string[] }>
@@ -270,8 +280,31 @@ export async function probeCatalog(registry: ConnectorRegistry, catalog: Catalog
     }
   }
   await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, worker))
+
+  // The quiet pass: timeouts again, two at a time, now that nothing else is queued on the connector.
+  let timeoutRetries = 0
+  if (opts.retryTimeouts ?? true) {
+    const again = results.map((r, i) => [r, i] as const).filter(([r]) => !r.ok && !r.skipped && r.errorClass === 'timeout' && !dead.has(r.connector)).map(([, i]) => i)
+    if (again.length > 0) {
+      log(`probe: retrying ${again.length} timed-out routes two at a time`)
+      let n = 0
+      const retry = async () => {
+        for (;;) {
+          const i = again[n++]
+          if (i === undefined) return
+          const d = targets[i]!
+          const r = await probeRoute(registry, d, opts)
+          if (r.errorClass === 'down' && !r.ok) continue // the connector went away again; the first result stands
+          if (r.ok) timeoutRetries++
+          results[i] = r.ok ? { ...r, retried: 'timeout' } : r
+          if (!r.skipped) catalog.setLiveness(d, livenessOf(toRow(results[i]!)))
+        }
+      }
+      await Promise.all([retry(), retry()])
+    }
+  }
   if (opts.store) await opts.store.put(results.filter((r) => !r.skipped).map(toRow))
-  return summarize(results, Math.round(performance.now() - t0))
+  return summarize(results, Math.round(performance.now() - t0), timeoutRetries)
 }
 
 /** The liveness row of a result: the ref and the `Liveness` block, nothing the probe added for its summary. */
@@ -284,7 +317,7 @@ export function toRow(r: ProbeResult): LivenessRow {
   return row
 }
 
-export function summarize(results: ProbeResult[], ms: number): ProbeSummary {
+export function summarize(results: ProbeResult[], ms: number, timeoutRetries = 0): ProbeSummary {
   const byConnector: ProbeSummary['byConnector'] = {}
   const byNamespace: ProbeSummary['byNamespace'] = {}
   const classes = new Map<ErrorClass, { count: number; examples: string[] }>()
@@ -328,6 +361,7 @@ export function summarize(results: ProbeResult[], ms: number): ProbeSummary {
     skipped,
     empty,
     keylessRetries,
+    timeoutRetries,
     byConnector,
     byNamespace,
     errorClasses: [...classes.entries()].map(([errorClass, e]) => ({ errorClass, ...e })).sort((a, b) => b.count - a.count),
@@ -339,7 +373,7 @@ export function summarize(results: ProbeResult[], ms: number): ProbeSummary {
 /** The summary as text for the terminal and the probe note. */
 export function renderSummary(s: ProbeSummary): string {
   const lines: string[] = []
-  lines.push(`${s.total} routes: ${s.ok} answered (${s.empty} with no rows), ${s.failed} failed, ${s.skipped} skipped (no sample params); ${s.keylessRetries} answered only on a keyless provider; ${(s.ms / 1000).toFixed(1)} s`)
+  lines.push(`${s.total} routes: ${s.ok} answered (${s.empty} with no rows), ${s.failed} failed, ${s.skipped} skipped (no sample params); ${s.keylessRetries} answered only on a keyless provider, ${s.timeoutRetries} only on the quiet retry; ${(s.ms / 1000).toFixed(1)} s`)
   for (const [name, c] of Object.entries(s.byConnector)) lines.push(`  ${name}: ${c.ok}/${c.routes} ok, ${c.failed} failed, ${c.skipped} skipped`)
   const ns = Object.entries(s.byNamespace).sort((a, b) => b[1].routes - a[1].routes)
   lines.push(`  by namespace: ${ns.map(([k, v]) => `${k} ${v.ok}/${v.routes}`).join(', ')}`)

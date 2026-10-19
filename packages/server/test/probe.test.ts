@@ -69,8 +69,10 @@ const routes: Record<string, Descriptor> = {
   empty: { connector: 'fake', route: 'equity/calendar/ipo', summary: 'answers nothing', params: [], providers: [], fields: [{ name: 'symbol', type: 'string' }] },
   dead: { connector: 'fake', route: 'eia/petroleum', summary: 'breaks', params: [], providers: ['eia'], fields: [] },
   slow: { connector: 'fake', route: 'news/world', summary: 'never answers', params: [], providers: [], fields: [] },
+  retry: { connector: 'fake', route: 'news/slow', summary: 'times out once, then answers', params: [], providers: [], fields: [] },
 }
 const calls: { route: string; params: Record<string, unknown> }[] = []
+let slowCalls = 0
 const fake = defineConnector({
   name: 'fake',
   config: z.object({}),
@@ -89,6 +91,9 @@ const fake = defineConnector({
         throw new Error('OpenBB 500 on /eia/petroleum: Internal Server Error')
       case 'news/world':
         return new Promise((_resolve, reject) => ctx.signal?.addEventListener('abort', () => reject(ctx.signal?.reason)))
+      case 'news/slow':
+        if (slowCalls++ === 0) return new Promise((_resolve, reject) => ctx.signal?.addEventListener('abort', () => reject(ctx.signal?.reason)))
+        return inferFrame([{ a: 1 }], { connector: 'fake' })
     }
     throw new Error(`unexpected ${route}`)
   },
@@ -97,6 +102,7 @@ const fake = defineConnector({
 describe('probeCatalog', () => {
   it('calls every route once with sample params, retries a keyless provider on a key error, records liveness on the catalog and in the store', async () => {
     calls.length = 0
+    slowCalls = 0
     const registry = new ConnectorRegistry({ now: () => NOW })
     registry.register(fake, {})
     const catalog = await registry.catalog()
@@ -104,13 +110,16 @@ describe('probeCatalog', () => {
     const seen: string[] = []
     const summary = await probeCatalog(registry, catalog, { store, now: () => NOW, concurrency: 3, timeoutMs: 50, onResult: (r) => seen.push(r.route) })
 
-    expect(summary).toMatchObject({ total: 6, called: 5, ok: 3, failed: 2, skipped: 1, empty: 1, keylessRetries: 1 })
-    expect(summary.byConnector.fake).toEqual({ routes: 6, ok: 3, failed: 2, skipped: 1 })
+    expect(summary).toMatchObject({ total: 7, called: 6, ok: 4, failed: 2, skipped: 1, empty: 1, keylessRetries: 1, timeoutRetries: 1 })
+    expect(summary.byConnector.fake).toEqual({ routes: 7, ok: 4, failed: 2, skipped: 1 })
+    expect(summary.results.find((r) => r.route === 'news/slow')).toMatchObject({ ok: true, rows: 1, retried: 'timeout' })
+    expect(catalog.get('fake', 'news/slow')!.liveness).toMatchObject({ ok: true, rows: 1 })
     expect(summary.byNamespace.equity).toEqual({ routes: 2, ok: 2 })
     expect(summary.errorClasses.map((e) => [e.errorClass, e.count])).toEqual([
       ['provider error', 1],
-      ['timeout', 1],
+      ['timeout', 1], // news/world never answers, on the retry either
     ])
+    expect(calls.filter((c) => c.route === 'news/world')).toHaveLength(2)
     expect(summary.errorClasses[0]!.examples[0]).toMatch(/fake:eia\/petroleum: OpenBB 500/)
     expect(seen.sort()).toEqual(Object.values(routes).map((d) => d.route).sort())
 
@@ -125,15 +134,16 @@ describe('probeCatalog', () => {
     expect(catalog.get('fake', 'eia/petroleum')!.liveness).toMatchObject({ ok: false, error: expect.stringMatching(/OpenBB 500/) })
     expect(catalog.get('fake', 'news/world')!.liveness).toMatchObject({ ok: false, error: expect.stringMatching(/timed out after 50 ms/) })
     expect(catalog.get('fake', 'imf/dataflow')!.liveness).toBeUndefined() // skipped routes stay unknown
-    expect(catalog.stats().fake).toMatchObject({ routes: 6, alive: 3, dead: 2, unknown: 1 })
+    expect(catalog.stats().fake).toMatchObject({ routes: 7, alive: 4, dead: 2, unknown: 1 })
 
     const rows = await store.all()
-    expect(rows).toHaveLength(5)
+    expect(rows).toHaveLength(6)
     expect(rows.find((r) => r.route === 'economy/cpi')).toEqual({ connector: 'fake', route: 'economy/cpi', checkedAt: NOW, ok: true, rows: 1, ms: expect.any(Number), sampleColumns: ['date', 'value'] })
     expect(rows.every((r) => !('params' in r) && !('provider' in r) && !('errorClass' in r))).toBe(true)
 
     const text = renderSummary(summary)
-    expect(text).toMatch(/6 routes: 3 answered \(1 with no rows\), 2 failed, 1 skipped/)
+    expect(text).toMatch(/7 routes: 4 answered \(1 with no rows\), 2 failed, 1 skipped/)
+    expect(text).toMatch(/1 only on the quiet retry/)
     expect(text).toMatch(/provider error: 1/)
   })
   it('pauses on a down connector, retries the route once it is back, and never records down as liveness', async () => {
@@ -186,12 +196,15 @@ describe('probeCatalog', () => {
     const catalog = await registry.catalog()
     const only = await probeCatalog(registry, catalog, { now: () => NOW, match: (d) => d.route.startsWith('equity/'), timeoutMs: 50 })
     expect(only.total).toBe(2)
+    slowCalls = 0
+    const noRetry = await probeCatalog(registry, catalog, { now: () => NOW, match: (d) => d.route === 'news/slow', timeoutMs: 50, retryTimeouts: false })
+    expect(noRetry).toMatchObject({ ok: 0, failed: 1, timeoutRetries: 0 })
     expect((await probeCatalog(registry, catalog, { now: () => NOW, connectors: ['other'] })).total).toBe(0)
     expect((await probeCatalog(registry, catalog, { now: () => NOW, limit: 1, timeoutMs: 50 })).total).toBe(1)
     const r = await probeRoute(registry, routes.keyed!, { now: () => NOW })
     expect(r).toMatchObject({ ok: true, provider: 'oecd', errorClass: 'needs key', params: { country: 'united_states', provider: 'oecd' } })
-    const noRetry = await probeRoute(registry, routes.keyed!, { now: () => NOW, keylessRetry: false })
-    expect(noRetry).toMatchObject({ ok: false, errorClass: 'needs key' })
+    const noKeyRetry = await probeRoute(registry, routes.keyed!, { now: () => NOW, keylessRetry: false })
+    expect(noKeyRetry).toMatchObject({ ok: false, errorClass: 'needs key' })
     expect(keylessAlternatives(routes.keyed!, undefined)).toEqual(['oecd'])
     expect(keylessAlternatives(routes.dead!, undefined)).toEqual([])
     expect(KEYLESS_PROVIDERS).toContain('yfinance')
