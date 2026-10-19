@@ -7,7 +7,6 @@ import {
   type CatalogHit,
   type Descriptor,
   type Frame,
-  type Kind,
   type Recipe,
   type RegisteredConnector,
   type Workspace,
@@ -25,7 +24,7 @@ export class ApiError extends Error {
   }
 }
 
-export type Health = { ok: boolean; kinds: Kind[]; llm: boolean }
+export type Health = { ok: boolean; connectors: string[]; recipes: number; llm: boolean }
 export type WorkspacePatch = { name?: string; widgets?: AnyWidget[] }
 
 export type CatalogStats = Record<string, { routes: number; alive: number; dead: number; unknown: number; probedAt?: number }>

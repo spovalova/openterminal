@@ -6,7 +6,7 @@ import { JsonSchemaObjectSchema, jsonSchemaToParams, jsonSchemaToZod, type JsonS
 import { ViewV2Schema, type ViewV2 } from './presets.js'
 import type { RouteQuery, TransformQuery } from './query.js'
 import { SizeSchema } from './view-options.js'
-import type { Range } from './kinds.js'
+import type { Range } from './clock.js'
 
 /**
  * Recipes (PLAN.md section 17): a named, saved query with a title template, a param schema (JSON schema), a

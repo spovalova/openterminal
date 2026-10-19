@@ -71,7 +71,14 @@ export function createApp(deps: AppDeps) {
   })
 
   // ---- health ----
-  app.get('/api/health', (c) => c.json({ ok: true, kinds: registry.kinds(), llm: deps.llm }))
+  app.get('/api/health', (c) =>
+    c.json({
+      ok: true,
+      connectors: registry.connectors().filter((x) => x.status === 'ok').map((x) => x.name),
+      recipes: registry.recipes?.().length ?? 0,
+      llm: deps.llm,
+    }),
+  )
 
   // ---- workspaces ----
   app.get('/api/workspaces', async (c) => c.json(await store.list()))

@@ -108,7 +108,7 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
   log(`recipes: ${recipes.length} (${store.listRecipes().length} user) · annotations: ${annotations.length}`)
 
   const registry = opts.registry ?? buildRegistry(config, { log, cache: new SqliteCache(store), recipes, annotations })
-  log(`kinds answerable: ${registry.kinds().join(', ') || '(none)'}`)
+  log(`connectors: ${registry.connectors().filter((c) => c.status === 'ok').map((c) => c.name).join(', ') || '(none)'} · ${registry.recipes?.().length ?? 0} recipes`)
 
   const llm = resolvedLlm(config)
   let agent: AgentRunner
@@ -121,7 +121,7 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
     real = true
     log(`agent: ${llm.provider} ${llm.model}`)
   } else {
-    agent = createStubAgentRunner({ kinds: () => registry.kinds() })
+    agent = createStubAgentRunner()
     log('agent: stub (no LLM key in config.yml or ANTHROPIC_API_KEY / OPENAI_API_KEY); prompts return the canned memory workspace')
   }
 

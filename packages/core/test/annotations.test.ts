@@ -151,13 +151,17 @@ describe('the seed file (packages/core/annotations.yml)', () => {
     expect(label('openbb', 'equity/fundamental/metrics', 'enterprise_to_ebitda')).toBe('EV/EBITDA')
     expect(label('openbb', 'volatility', 'iv30_high')).toBe('IV30 high')
   })
-  it('covers every field the 22 recipes name in their view columns', () => {
+  it('covers every field the recipes name in their view columns: an annotation on the first route, or the main transform’s own `columns`', () => {
     for (const r of builtinRecipes()) {
       const cols = r.view.preset === 'table' || r.view.preset === 'facts' ? (r.view.columns ?? []) : r.view.preset === 'stat' && r.view.column ? [r.view.column] : []
-      for (const [, ds] of Object.entries(recipeDatasets(r))) {
+      const datasets = recipeDatasets(r)
+      const main = datasets.main
+      const derived = main && 'inputs' in main ? new Set(Object.keys(main.columns ?? {})) : new Set<string>()
+      for (const [, ds] of Object.entries(datasets)) {
         if (!('routes' in ds)) continue
         const first = ds.routes[0]!
         for (const c of cols) {
+          if (derived.has(c)) continue
           const cfg = annotationsFor(seed, { connector: first.connector, route: first.route }, c)
           expect(Object.keys(cfg).length, `${r.name}: ${first.connector}:${first.route}:${c} has no annotation`).toBeGreaterThan(0)
         }

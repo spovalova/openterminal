@@ -31,7 +31,7 @@ describe('WorkspaceStore', () => {
 
     const found = await store.findWidget('memory-news')
     expect(found?.workspace.id).toBe(ws.id)
-    expect((found?.widget as { query?: { kind: string } } | undefined)?.query?.kind).toBe('news')
+    expect((found?.widget as { data?: { main?: { recipe?: string } } } | undefined)?.data?.main?.recipe).toBe('news')
 
     const second = await store.create({ name: 'Other' })
     expect((await store.list()).map((w) => w.id)).toEqual([ws.id, second.id])
@@ -44,7 +44,7 @@ describe('WorkspaceStore', () => {
 
   it('rejects invalid widgets on patch and skips unreadable files on list', async () => {
     const ws = await store.create()
-    await expect(store.patch(ws.id, { widgets: [{ id: 'x', title: 'bad', size: 'lg', query: { kind: 'quote', params: { symbols: ['MU'] } }, view: { type: 'series' } } as never] })).rejects.toThrow()
+    await expect(store.patch(ws.id, { widgets: [{ id: 'x', title: 'bad', size: 'lg', data: {}, view: { preset: 'price' } } as never] })).rejects.toThrow()
     writeFileSync(join(store.dir, 'broken.json'), '{ not json')
     writeFileSync(join(store.dir, 'invalid.json'), JSON.stringify({ id: 'invalid' }))
     expect((await store.list()).map((w) => w.id)).toEqual([ws.id])

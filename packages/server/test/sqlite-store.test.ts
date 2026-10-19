@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { isWidgetV2, type Frame, type Recipe, type Widget } from '@terminal/core'
+import { isWidgetV2, type Frame, type Recipe } from '@terminal/core'
 import { SqliteStore, migrateJsonStore, migrateWorkspaceDoc, openStore, MIGRATION_KEY } from '../src/store/index.js'
 import { stubWidgets } from '../src/stub-agent.js'
 
@@ -37,7 +37,7 @@ const v2Widget = {
 } as const
 
 describe('SqliteStore', () => {
-  it('round-trips workspaces with v1 and v2 widgets, messages, patch, list, delete', async () => {
+  it('round-trips workspaces with widgets, messages, patch, list, delete', async () => {
     expect(await store.list()).toEqual([])
     const ws = await store.create({ name: 'Memory' })
     expect(await store.get(ws.id)).toEqual(ws)
@@ -45,7 +45,7 @@ describe('SqliteStore', () => {
     const widgets = [...stubWidgets(new Date('2026-10-16T00:00:00Z')), v2Widget as never]
     const patched = await store.patch(ws.id, { widgets, messages: [{ role: 'user', text: 'hi' }] })
     expect(patched?.widgets).toHaveLength(6)
-    expect(patched?.widgets.map((w) => isWidgetV2(w))).toEqual([false, false, false, false, false, true])
+    expect(patched?.widgets.map((w) => isWidgetV2(w))).toEqual([true, true, true, true, true, true])
     expect((await store.get(ws.id))?.widgets).toEqual(widgets)
     expect(patched!.updatedAt).toBeGreaterThanOrEqual(ws.updatedAt)
 
@@ -68,7 +68,7 @@ describe('SqliteStore', () => {
   it('rejects an invalid widget set and keeps the previous one', async () => {
     const ws = await store.create()
     await store.patch(ws.id, { widgets: stubWidgets() })
-    await expect(store.patch(ws.id, { widgets: [{ id: 'x', title: 'bad', size: 'lg', query: { kind: 'quote', params: { symbols: ['MU'] } }, view: { type: 'series' } } as never] })).rejects.toThrow()
+    await expect(store.patch(ws.id, { widgets: [{ id: 'x', title: 'bad', size: 'lg', data: {}, view: { preset: 'price' } } as never] })).rejects.toThrow()
     expect((await store.get(ws.id))?.widgets).toHaveLength(5)
   })
 
@@ -143,11 +143,23 @@ describe('SqliteStore', () => {
   })
 })
 
+/** Widgets as the v1 JSON store wrote them: `{ kind, params }` queries and typed views (use case A's set plus a macro series). */
+function jsonWidgets(from = '2026-10-16', to = '2026-12-15') {
+  const symbols = ['MU', 'SNDK', 'WDC', 'STX']
+  return [
+    { id: 'memory-3mo', title: 'Memory names, 3 months rebased', size: 'lg', query: { kind: 'ohlcv', params: { symbols, interval: '1d', range: '3mo' } }, view: { type: 'series', normalize: true } },
+    { id: 'mu-daily', title: 'MU daily', size: 'md', query: { kind: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '6mo' } }, view: { type: 'series', candle: true } },
+    { id: 'memory-snapshot', title: 'Basket snapshot', size: 'md', query: { kind: 'quote', params: { symbols } }, view: { type: 'table' } },
+    { id: 'memory-earnings', title: 'Upcoming earnings', size: 'sm', query: { kind: 'earnings', params: { symbols, from, to } }, view: { type: 'table' } },
+    { id: 'memory-news', title: 'Memory news', size: 'md', query: { kind: 'news', params: { symbols, limit: 20 } }, view: { type: 'table' } },
+  ]
+}
+
 describe('migration from the JSON store', () => {
   function writeJsonStore(dir: string) {
     mkdirSync(dir, { recursive: true })
-    const widgets = stubWidgets(new Date('2026-10-16T00:00:00Z'))
-    const macro: Widget = { id: 'rates', title: 'Rates', size: 'md', query: { kind: 'macro', params: { series: ['treasury_10y', 'fed_funds'], range: '1y' } }, view: { type: 'series' } }
+    const widgets = jsonWidgets()
+    const macro = { id: 'rates', title: 'Rates', size: 'md', query: { kind: 'macro', params: { series: ['treasury_10y', 'fed_funds'], range: '1y' } }, view: { type: 'series' } }
     writeFileSync(join(dir, 'ws1.json'), JSON.stringify({ id: 'ws1', name: 'Memory', widgets, messages: [{ role: 'user', text: 'memory?' }], createdAt: 1, updatedAt: 2 }))
     writeFileSync(join(dir, 'ws2.json'), JSON.stringify({ id: 'ws2', name: 'Rates', widgets: [macro, v2Widget], messages: [], createdAt: 3, updatedAt: 4 }))
     writeFileSync(join(dir, 'broken.json'), '{ not json')
@@ -155,14 +167,13 @@ describe('migration from the JSON store', () => {
   }
 
   it('migrateWorkspaceDoc rewrites v1 widgets through migrateWidget and keeps v2 ones', () => {
-    const widgets = stubWidgets(new Date('2026-10-16T00:00:00Z'))
+    const widgets = jsonWidgets()
     const { workspace, v1Widgets } = migrateWorkspaceDoc({ id: 'x', name: 'X', widgets: [...widgets, v2Widget], messages: [], createdAt: 1, updatedAt: 1 })
     expect(v1Widgets).toBe(5)
     expect(workspace.widgets.every((w) => isWidgetV2(w))).toBe(true)
     const first = workspace.widgets[0]!
     expect(isWidgetV2(first) && first.data).toEqual({ main: { recipe: 'ohlcv', params: { symbols: ['MU', 'SNDK', 'WDC', 'STX'], interval: '1d', range: '3mo' } } })
     expect(isWidgetV2(first) && first.view).toEqual({ preset: 'compare', normalize: true })
-    expect(isWidgetV2(first) && first.query).toEqual(widgets[0]!.query)
     expect(workspace.widgets[5]).toEqual(v2Widget)
   })
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ConnectorRegistry, type AnyQuery, type Frame } from '@terminal/core'
 import { SqliteCache } from '../src/cache-sqlite.js'
 import { SqliteStore } from '../src/store/index.js'
-import { fakeConnector } from './fake-connector.js'
+import { fakeConnector, type Call } from './fake-connector.js'
 
 const frame = (fetchedAt: number, ttl: number, rows = 1): Frame => ({
   columns: [{ name: 'symbol', type: 'string' }, { name: 'price', type: 'number' }],
@@ -15,12 +15,12 @@ describe('SqliteCache', () => {
     let now = 1_000
     const store = new SqliteStore(':memory:', { now: () => now })
     const cache = new SqliteCache(store, { now: () => now })
-    const q: AnyQuery = { kind: 'quote', params: { symbols: ['MU'] } }
+    const q: AnyQuery = { connector: 'fake', route: 'quote', params: { symbols: ['MU'] } }
     expect(cache.get(q)).toBeUndefined()
     cache.set(q, frame(now, 10_000))
     expect(cache.get(q)?.rows).toHaveLength(1)
-    expect(cache.get({ kind: 'quote', params: { symbols: ['MU'] } })).toBeDefined()
-    expect(cache.getByKey('quote:{"symbols":["MU"]}')).toBeDefined()
+    expect(cache.get({ connector: 'fake', route: 'quote', params: { symbols: ['MU'] } })).toBeDefined()
+    expect(cache.getByKey('route:fake/quote:{"symbols":["MU"]}')).toBeDefined()
     now += 9_999
     expect(cache.get(q)).toBeDefined()
     now += 1
@@ -55,31 +55,31 @@ describe('SqliteCache', () => {
     const cache = new SqliteCache(store, { now: () => now, maxRows: 3, pruneEvery: 1, maxFrameBytes: 200 })
     for (let i = 0; i < 6; i++) {
       now = i + 1
-      cache.set({ kind: 'quote', params: { symbols: [`S${i}`] } }, frame(now, 60_000))
+      cache.set({ connector: 'fake', route: 'quote', params: { symbols: [`S${i}`] } }, frame(now, 60_000))
     }
     expect(store.countFrames()).toBe(3)
-    expect(store.getFrame('quote:{"symbols":["S0"]}', now)).toBeUndefined()
-    expect(store.getFrame('quote:{"symbols":["S5"]}', now)).toBeDefined()
-    const big: AnyQuery = { kind: 'quote', params: { symbols: ['BIG'] } }
+    expect(store.getFrame('route:fake/quote:{"symbols":["S0"]}', now)).toBeUndefined()
+    expect(store.getFrame('route:fake/quote:{"symbols":["S5"]}', now)).toBeDefined()
+    const big: AnyQuery = { connector: 'fake', route: 'quote', params: { symbols: ['BIG'] } }
     cache.set(big, frame(now, 60_000, 50))
     expect(cache.get(big)?.rows).toHaveLength(50)
-    expect(store.getFrame('quote:{"symbols":["BIG"]}', now)).toBeUndefined()
+    expect(store.getFrame('route:fake/quote:{"symbols":["BIG"]}', now)).toBeUndefined()
   })
 
   it('is what the registry reads: a second run of the same query does not call the connector', async () => {
     const store = new SqliteStore(':memory:')
-    const calls: { kind: string; params: unknown }[] = []
+    const calls: Call[] = []
     const registry = new ConnectorRegistry({ cache: new SqliteCache(store) })
     registry.register(fakeConnector({ calls }), {})
-    await registry.run({ kind: 'quote', params: { symbols: ['MU'] } })
-    await registry.run({ kind: 'quote', params: { symbols: ['MU'] } })
+    await registry.run({ connector: 'fake', route: 'quote', params: { symbols: ['MU'] } })
+    await registry.run({ connector: 'fake', route: 'quote', params: { symbols: ['MU'] } })
     expect(calls).toHaveLength(1)
     // a fresh registry over the same store still hits
     const again = new ConnectorRegistry({ cache: new SqliteCache(store) })
     again.register(fakeConnector({ calls }), {})
-    await again.run({ kind: 'quote', params: { symbols: ['MU'] } })
+    await again.run({ connector: 'fake', route: 'quote', params: { symbols: ['MU'] } })
     expect(calls).toHaveLength(1)
-    await again.run({ kind: 'quote', params: { symbols: ['MU'] } }, { bypassCache: true })
+    await again.run({ connector: 'fake', route: 'quote', params: { symbols: ['MU'] } }, { bypassCache: true })
     expect(calls).toHaveLength(2)
   })
 })

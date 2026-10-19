@@ -95,7 +95,6 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
       const turns: NonNullable<RunLogRow['turns']> = []
       let continued = false
 
-      const answerable = deps.registry.kinds()
       const recipes = deps.registry.recipes?.() ?? []
       const connectors = deps.registry
         .connectors()
@@ -112,7 +111,6 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
       const tools = createTools({
         registry: deps.registry,
         workspaceId: workspace.id,
-        answerable,
         recipes,
         ...(catalog ? { catalog } : {}),
         memory,

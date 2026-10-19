@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { Column } from './frame.js'
+import { INTERVALS, MS, RANGES, isIntraday } from './clock.js'
 
 /**
  * The kind catalog: the contract from PLAN.md section 7.1.
@@ -39,15 +40,8 @@ export const KIND_NAMES = [
 export const KindNameSchema = z.enum(KIND_NAMES)
 export type Kind = z.infer<typeof KindNameSchema>
 
-export const IntervalSchema = z.enum(['1m', '5m', '15m', '1h', '1d', '1w'])
-export type Interval = z.infer<typeof IntervalSchema>
-export const RangeSchema = z.enum(['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y'])
-export type Range = z.infer<typeof RangeSchema>
-
-export const INTRADAY_INTERVALS: ReadonlySet<Interval> = new Set(['1m', '5m', '15m', '1h'])
-export function isIntraday(interval: Interval): boolean {
-  return INTRADAY_INTERVALS.has(interval)
-}
+export const IntervalSchema = z.enum(INTERVALS)
+export const RangeSchema = z.enum(RANGES)
 
 /** Macro series answerable without a key (federal_reserve, oecd on the OpenBB side). Rates and yields are percent. */
 export const MACRO_SERIES = ['treasury_3m', 'treasury_2y', 'treasury_10y', 'treasury_30y', 'spread_10y_2y', 'fed_funds', 'sofr', 'cpi_yoy', 'unemployment', 'm2'] as const
@@ -67,8 +61,6 @@ const col = (name: string, type: Column['type']): Column => ({ name, type })
 const S = (name: string) => col(name, 'string')
 const N = (name: string) => col(name, 'number')
 const T = (name: string) => col(name, 'time')
-
-export const MS = { second: 1_000, minute: 60_000, hour: 3_600_000, day: 86_400_000 } as const
 
 export type KindDef<P extends z.ZodType = z.ZodType> = {
   description: string

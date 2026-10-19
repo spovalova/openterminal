@@ -7,7 +7,7 @@ import { createApp } from '../src/app.js'
 import { loadConfig, workspacesDir } from '../src/config.js'
 import { WorkspaceStore } from '../src/store/index.js'
 import { createStubAgentRunner, stubWidgets } from '../src/stub-agent.js'
-import { fakeConnector } from './fake-connector.js'
+import { fakeConnector, fakeRecipes } from './fake-connector.js'
 
 let home: string
 let app: ReturnType<typeof createApp>['app']
@@ -16,7 +16,7 @@ let registry: ConnectorRegistry
 beforeEach(() => {
   home = mkdtempSync(join(tmpdir(), 'terminal-routes-'))
   loadConfig({ home, env: {} })
-  registry = new ConnectorRegistry({ cache: new MemoryCache() })
+  registry = new ConnectorRegistry({ cache: new MemoryCache(), recipes: fakeRecipes() })
   registry.register(fakeConnector(), {})
   const store = new WorkspaceStore(workspacesDir(home))
   app = createApp({ registry, store, agent: createStubAgentRunner(), home, llm: false, webDist: join(home, 'no-dist') }).app
@@ -32,7 +32,7 @@ describe('routes', () => {
   it('GET /api/health', async () => {
     const res = await app.request('/api/health')
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ ok: true, kinds: ['search', 'quote', 'ohlcv', 'news', 'earnings'], llm: false })
+    expect(await res.json()).toEqual({ ok: true, connectors: ['fake'], recipes: 5, llm: false })
   })
 
   it('workspaces CRUD', async () => {
@@ -78,7 +78,7 @@ describe('routes', () => {
   it('GET /api/widgets/:id/frame?workspace= looks the widget up in that workspace (ids repeat across workspaces)', async () => {
     const widgets = stubWidgets()
     const a = await body(await app.request('/api/workspaces', json({ name: 'A', widgets })))
-    const other = widgets.map((w) => (w.id === 'memory-snapshot' ? { ...w, query: { kind: 'quote', params: { symbols: ['ZZZ'] } } } : w))
+    const other = widgets.map((w) => (w.id === 'memory-snapshot' ? { ...w, data: { main: { recipe: 'quote', params: { symbols: ['ZZZ'] } } } } : w))
     const b = await body(await app.request('/api/workspaces', json({ name: 'B', widgets: other })))
     const fromA = await body(await app.request(`/api/widgets/memory-snapshot/frame?workspace=${a.id}`))
     const fromB = await body(await app.request(`/api/widgets/memory-snapshot/frame?workspace=${b.id}`))
