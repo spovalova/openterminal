@@ -44,7 +44,10 @@ export {
   zeroLineColor,
   divergingScale,
   sequentialScale,
-  mixHex,
+  HEAT_ALPHA_MAX,
   divergingColor,
   sequentialColor,
+  heatCell,
+  heatLegend,
 } from './chart-theme.js'
+export { parseColor, isNeutral, isPureHue, isAllowedColor, hueAngle, pureAt, hueAlpha, toPureHue, type Rgba } from './hue.js'

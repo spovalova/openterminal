@@ -113,9 +113,9 @@ export function makeChartsMock() {
   return { module, charts, markers, createChart, createOptionsChart, createYieldCurveChart, createSeriesMarkers, fitContent }
 }
 
-export const PALETTE = ['#4c8dff', '#ff9f43', '#2ecc71', '#e056a0', '#9b7bff', '#1abc9c']
-export const UP = '#22c55e'
-export const DOWN = '#ef4444'
+export const PALETTE = ['#0080ff', '#ff6a00', '#00ff80', '#ff00aa', '#aa00ff', '#00ffd5']
+export const UP = '#00ff40'
+export const DOWN = '#ff0000'
 
 /**
  * A `@openterminal/ui` stand-in that renders enough DOM to assert on props. The real module is spread
@@ -180,7 +180,7 @@ export async function makeUiMock() {
     DataTable,
     EmptyState,
     WidgetFrame,
-    chartTheme: { layout: { background: { type: 'solid', color: '#0b0d12' }, textColor: '#a0a6b3' }, rightPriceScale: { scaleMargins: { top: 0.1, bottom: 0.1 } } },
+    chartTheme: { layout: { background: { type: 'solid', color: '#0d0d0d' }, textColor: '#a6a6a6' }, rightPriceScale: { scaleMargins: { top: 0.1, bottom: 0.1 } } },
     seriesPalette: PALETTE,
     UP_COLOR: UP,
     DOWN_COLOR: DOWN,
