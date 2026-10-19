@@ -1,5 +1,5 @@
 [Unit]
-Description=OpenBB Platform API for the terminal (loopback only, port 6900)
+Description=OpenBB Platform API for Open Terminal (loopback only, port 6900)
 After=network-online.target
 
 [Service]
