@@ -124,6 +124,18 @@ describe('descriptorsFromOpenApi (OpenBB fixture)', () => {
     const limit = by('equity/fundamental/historical_eps').params.find((p) => p.name === 'limit')!
     expect(limit).toMatchObject({ type: 'integer', providers: ['yfinance'] })
   })
+  it('narrows a param to providers only from the description’s (provider: …) markers, never from list notes or schema extras', () => {
+    // `symbol` on dividends has a nasdaq widget-config key in its schema and no marker: every provider takes it.
+    expect(by('equity/fundamental/dividends').params.find((p) => p.name === 'symbol')!.providers).toBeUndefined()
+    // `date` on the yield curve says who takes a comma list; that is not who takes the param.
+    expect(by('fixedincome/government/yield_curve').params.find((p) => p.name === 'date')!.providers).toBeUndefined()
+    // `country` on cpi has a standard sentence plus an imf-specific one: standard wins.
+    expect(by('economy/cpi').params.find((p) => p.name === 'country')!.providers).toBeUndefined()
+    // Every segment marked: the union of the markers.
+    expect(by('equity/search').params.find((p) => p.name === 'use_cache')!.providers).toEqual(['cboe', 'sec', 'tmx'])
+    expect(by('equity/search').params.find((p) => p.name === 'is_etf')!.providers).toEqual(['nasdaq'])
+    expect(by('fixedincome/government/yield_curve').params.find((p) => p.name === 'rating')!.providers).toEqual(['ecb'])
+  })
   it('keeps an enum only when every provider constrains the value', () => {
     const country = by('economy/cpi').params.find((p) => p.name === 'country')!
     expect(country.enum).toBeUndefined() // imf takes free text

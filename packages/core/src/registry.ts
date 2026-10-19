@@ -219,7 +219,7 @@ export class ConnectorRegistry implements Registry {
     const e = this.entries.find((x) => x.connector.name === name)
     if (!e) return []
     if (!e.descriptors) {
-      e.descriptors = e.connector.descriptors().catch((err: unknown) => {
+      e.descriptors = e.connector.descriptors(e.ctx).catch((err: unknown) => {
         this.log(`[${name}] descriptors failed: ${err instanceof Error ? err.message : String(err)}`)
         return []
       })
@@ -299,7 +299,9 @@ export class ConnectorRegistry implements Registry {
     if (!descriptor) throw new RegistryError(`connector "${q.connector}" has no route "${q.route}"`)
     const params = parseParams(descriptor, q.params)
     const raw = await e.connector.call(q.route, params, { ...e.ctx, signal: opts.signal })
-    const isKind = (e.connector.kinds as string[]).includes(q.route)
+    // A kind route (a v1 connector's `quote`) is validated against the kind's columns and keeps the kind's TTL; a
+    // connector's own route of the same name is a v2 route like any other.
+    const isKind = (e.connector.kinds as string[]).includes(q.route) && !(await e.connector.ownRoutes(e.ctx)).has(q.route)
     const checked = isKind ? validateFrame({ kind: q.route as Kind, params: q.params } as Query, raw, e.connector.name) : raw
     const ttl = isKind ? checked.meta.ttl : ttlForRoute(q.route, params)
     const lineage: Lineage = { connector: q.connector, route: q.route, params: { ...params } }

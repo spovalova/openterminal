@@ -91,6 +91,30 @@ describe('defineConnector v2', () => {
     expect(f.rows[0]![1]).toBe(42)
     await expect(legacy.call('news', {}, { http: { get: async () => null }, config: {}, log: () => {} })).rejects.toThrow(/does not answer route "news"/)
   })
+  it('lets a connector in both modes name a route after a kind: the route goes to call(), the kind keeps the v1 path', async () => {
+    const ownQuote: Descriptor = { connector: 'dual', route: 'quote', summary: 'Yahoo-style quote', params: [{ name: 'symbols', type: 'string[]', required: true }], providers: [], fields: [{ name: 'symbol', type: 'string' }, { name: 'regularMarketPrice', type: 'number' }] }
+    const dual = defineConnector({
+      name: 'dual',
+      config: z.object({}),
+      descriptors: () => [ownQuote],
+      call: async (route, params) => inferFrame((params.symbols as string[]).map((s) => ({ symbol: s, regularMarketPrice: 7 })), { connector: 'dual' }, { descriptor: ownQuote }),
+      queries: { quote: async (p) => toFrame('quote', p.symbols.map((symbol) => ({ symbol, price: 1, change_pct: 0, volume: 0, market_state: null, extended_price: null, extended_change_pct: null })), { connector: 'dual' }) },
+    })
+    expect(dual.mode).toBe('both')
+    expect([...(await dual.ownRoutes())]).toEqual(['quote'])
+    expect((await dual.descriptors()).map((d) => d.route)).toEqual(['quote']) // the own descriptor, once
+    const ctx = { http: { get: async () => null }, config: {}, log: () => {} }
+    expect((await dual.call('quote', { symbols: ['MU'] }, ctx)).columns.map((c) => c.name)).toEqual(['symbol', 'regularMarketPrice'])
+    const r = new ConnectorRegistry({ now: () => 1_000 })
+    r.register(dual, {})
+    const viaRoute = await r.run({ connector: 'dual', route: 'quote', params: { symbols: 'MU' } })
+    expect(viaRoute.columns.map((c) => c.name)).toEqual(['symbol', 'regularMarketPrice']) // not validated against the kind's columns
+    expect(viaRoute.meta.ttl).toBe(10 * MS.second)
+    const viaKind = await r.run({ kind: 'quote', params: { symbols: ['MU'] } })
+    expect(viaKind.columns.map((c) => c.name)[1]).toBe('price') // the v1 path is untouched
+    expect([...(await acme.ownRoutes())]).toEqual(['equity/price/quote', 'equity/price/historical'])
+    expect((await legacy.ownRoutes()).size).toBe(0)
+  })
   it('refuses half a v2 definition and an empty one', () => {
     expect(() => defineConnector({ name: 'x', config: z.object({}), descriptors: () => [] })).toThrow(/no call/)
     expect(() => defineConnector({ name: 'x', config: z.object({}), call: async () => toFrame('quote', []) })).toThrow(/no descriptors/)

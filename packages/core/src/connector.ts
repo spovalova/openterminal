@@ -61,9 +61,11 @@ export type ConnectorDef<C> = {
   queries?: Queries<C>
   /**
    * v2: the routes this connector answers, as descriptors (PLAN.md section 17). OpenBB generates them from its
-   * OpenAPI document; yahoo and finnhub ship a file. Called once per registration and cached by the registry.
+   * OpenAPI document; yahoo and finnhub ship a file. Called once per registration and cached by the registry,
+   * with the connector's ctx (config, http, log) so a generator can reach its service; a connector that ships a
+   * file ignores it, and a connector called without one falls back to its defaults.
    */
-  descriptors?: () => Descriptor[] | Promise<Descriptor[]>
+  descriptors?: (ctx?: Ctx<C>) => Descriptor[] | Promise<Descriptor[]>
   /** v2: answer a route. Required with `descriptors`. */
   call?: CallHandler<C>
   /**
@@ -79,10 +81,16 @@ export type Connector<C = any> = Omit<ConnectorDef<C>, 'queries' | 'descriptors'
   kinds: Kind[]
   /** v1 handlers ({} for a routes-only connector). */
   queries: Queries<C>
-  /** Every route the connector answers: its own descriptors, plus one per kind derived from the catalog. */
-  descriptors(): Promise<Descriptor[]>
-  /** Answer a route: the connector's own `call`, or the kind handler of that name for v1 connectors. */
+  /** Every route the connector answers: its own descriptors, plus one per kind derived from the catalog. The registry passes the connector's ctx. */
+  descriptors(ctx?: Ctx<C>): Promise<Descriptor[]>
+  /** Answer a route: the connector's own `call` when its descriptors list the route, else the kind handler of that name. */
   call: CallHandler<C>
+  /**
+   * The routes the connector's own `call` answers (its own descriptors' routes; empty for a kinds-only connector).
+   * A connector in `both` mode may name a route after a kind (yahoo `quote`, finnhub `quote`): the route then
+   * belongs to `call`, with the descriptor's params and columns, and the kind handler keeps the v1 path only.
+   */
+  ownRoutes(ctx?: Ctx<C>): Promise<Set<string>>
   /** How the connector was defined. */
   mode: 'kinds' | 'routes' | 'both'
 }
@@ -108,19 +116,22 @@ export function defineConnector<C>(def: ConnectorDef<C>): Connector<C> {
   const mode: Connector['mode'] = hasRoutes && kinds.length > 0 ? 'both' : hasRoutes ? 'routes' : 'kinds'
   const rest: Omit<ConnectorDef<C>, 'queries' | 'descriptors' | 'call'> = { name: def.name, config: def.config }
   if (def.health) rest.health = def.health
+  const ownRoutes = async (ctx?: Ctx<C>): Promise<Set<string>> => new Set(ownDescriptors ? (await ownDescriptors(ctx)).map((d) => d.route) : [])
   return {
     ...rest,
     kinds,
     queries,
     mode,
-    async descriptors() {
-      const own = ownDescriptors ? await ownDescriptors() : []
+    async descriptors(ctx) {
+      const own = ownDescriptors ? await ownDescriptors(ctx) : []
       const fromKinds = kinds.filter((k) => !own.some((d) => d.route === k)).map((k) => descriptorFromKind(def.name, k))
       return [...own, ...fromKinds]
     },
+    ownRoutes,
     async call(route, params, ctx) {
       const handler = queries[route as Kind] as Handler<unknown, C> | undefined
-      if (handler && (kinds as string[]).includes(route)) {
+      const own = ownCall && (await ownRoutes(ctx)).has(route)
+      if (!own && handler && (kinds as string[]).includes(route)) {
         const q = parseQuery({ kind: route, params })
         return handler(q.params, ctx)
       }

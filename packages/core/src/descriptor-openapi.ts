@@ -98,26 +98,47 @@ function branches(schema: JsonSchema | undefined): JsonSchema[] {
 }
 
 const PROVIDER_IN_DESC = /\(provider(?:s)?:\s*([a-z0-9_,\s-]+)\)/gi
-const PROVIDERS_LIST = /provider\(s\):\s*([a-z0-9_,\s-]+?)(?:\.|;|$)/gi
 
-/** One param entry: type from the union of its per-provider variants, enum when every variant constrains it, providers from the schema's extras and the description. */
+/**
+ * Providers that take a param, from how OpenBB writes its descriptions. A provider-specific param's description
+ * is one segment per provider, each ending in `(provider: x)`, joined with `;` and spaces, and its title is the
+ * provider list (`cboe,tmx,yfinance`). A standard param has a plain sentence with no marker (its title is the
+ * field name) and may still carry a `Multiple comma separated items allowed for provider(s): …` note, which says
+ * who takes a list, not who takes the param, and provider-keyed extras in the schema (`choices`, widget config),
+ * which say the same. So: every segment marked → the union of the markers; any segment unmarked → everyone.
+ */
+function paramProviders(description: string | undefined, title: unknown, routeProviders: string[]): string[] | undefined {
+  if (routeProviders.length === 0) return undefined
+  const named = new Set<string>()
+  const add = (list: string) => list.split(',').forEach((x) => routeProviders.includes(x.trim()) && named.add(x.trim()))
+  const text = description ?? ''
+  // A trimmed document (the test fixture) cuts descriptions short with "..."; the title then decides.
+  const truncated = /\.\.\.$/.test(text)
+  const segments = text.split(/;\s{2,}/).map((s) => s.trim()).filter(Boolean)
+  segments.forEach((seg, i) => {
+    const marks = [...seg.matchAll(PROVIDER_IN_DESC)]
+    if (marks.length === 0 && !(truncated && i === segments.length - 1)) {
+      named.clear()
+      named.add('*')
+      return
+    }
+    for (const m of marks) add(m[1]!)
+  })
+  if (named.has('*')) return undefined
+  if ((truncated || named.size === 0) && typeof title === 'string') {
+    const parts = title.split(',').map((s) => s.trim())
+    if (parts.length > 0 && parts.every((x) => routeProviders.includes(x))) parts.forEach((x) => named.add(x))
+  }
+  return named.size > 0 && named.size < routeProviders.length ? routeProviders.filter((x) => named.has(x)) : undefined
+}
+
+/** One param entry: type from the union of its per-provider variants, enum when every variant constrains it, providers from the description's markers. */
 function collapseParam(p: NonNullable<OpenApiOperation['parameters']>[number], routeProviders: string[]): DescriptorParam {
   const schema = p.schema ?? {}
   const alts = branches(schema)
   const description = (p.description ?? (schema.description as string | undefined))?.trim()
 
-  // Providers that take this param: provider-keyed extras in the schema, names in the description, else all.
-  const named = new Set<string>()
-  for (const key of Object.keys(schema)) if (routeProviders.includes(key)) named.add(key)
-  for (const text of [description ?? '', String(schema.title ?? '')]) {
-    for (const m of text.matchAll(PROVIDER_IN_DESC)) m[1]!.split(',').forEach((x) => routeProviders.includes(x.trim()) && named.add(x.trim()))
-    for (const m of text.matchAll(PROVIDERS_LIST)) m[1]!.split(',').forEach((x) => routeProviders.includes(x.trim()) && named.add(x.trim()))
-  }
-  if (typeof schema.title === 'string' && schema.title.includes(',')) {
-    const parts = schema.title.split(',').map((s) => s.trim())
-    if (parts.every((x) => routeProviders.includes(x))) parts.forEach((x) => named.add(x))
-  } else if (typeof schema.title === 'string' && routeProviders.includes(schema.title)) named.add(schema.title)
-  const providers = named.size > 0 && named.size < routeProviders.length ? routeProviders.filter((x) => named.has(x)) : undefined
+  const providers = paramProviders(description, schema.title, routeProviders)
   const applicable = providers ?? routeProviders
 
   // Type: the widest scalar type across the variants.
