@@ -179,9 +179,9 @@ export function cardsPerRow(width: number): number {
   return Math.max(1, Math.floor((width - 16 + 8) / (136 + 8)))
 }
 
-/** Fields per line of a card's field grid at this width: pairs of at most 180px, two or three across. */
+/** Fields per line of a card's field grid at this width: pairs of 140 to 180px with 20px between (web `.field-grid`). */
 export function fieldsPerLine(width: number): number {
-  return width >= 520 ? 3 : 2
+  return Math.max(1, Math.floor((width - 24 + 20) / 160))
 }
 
 /** Whether a stat of `items` cards draws the dense one-line-per-symbol list at this width (more than four in one column). */

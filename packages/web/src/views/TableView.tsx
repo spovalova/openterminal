@@ -5,7 +5,7 @@ import { DataTable, EMPTY_CELL, EmptyState, direction, displayText, formatCell, 
 import type { ViewProps } from './types'
 import { VirtualTable } from '../components/VirtualTable'
 import { FactsCard } from './FactsCard'
-import { columnLabel } from './labels'
+import { columnLabel, shortLabel } from './labels'
 import { controlOf, datasetsFor, emptyHintFor, primaryFrame, viewOf } from './fields'
 
 export type SortSpec = { column: string; dir: 'asc' | 'desc' }
@@ -297,9 +297,9 @@ const RowCards: FC<{ frame: Frame; rows: unknown[][]; formats: Record<string, Ce
                 const dir = f === 'change' ? direction(v) : null
                 return (
                   <div key={c} className="flex min-w-0 flex-col">
-                    {/* Display names, wrapped at words rather than cut (change 11: "num estimates", "previous report date"). */}
+                    {/* Display names in their short form (round 2: "Estimates", "Last report"), wrapped at words rather than cut. */}
                     <span className="line-clamp-2 break-words text-fg-3" title={labels[c] ?? columnLabel(c)}>
-                      {labels[c] ?? columnLabel(c)}
+                      {shortLabel(labels[c] ?? columnLabel(c))}
                     </span>
                     <span className={clsx('line-clamp-2 break-words', f !== 'text' && 'num', text === EMPTY_CELL ? 'text-fg-3' : dir === 'up' ? 'text-up' : dir === 'down' ? 'text-down' : 'text-fg')} title={typeof v === 'string' ? v : undefined}>
                       {text}

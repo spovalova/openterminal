@@ -48,6 +48,38 @@ export const COLUMN_LABEL: Record<string, string> = {
   days_to_cover: 'days to cover',
 }
 
+/** Field labels a card would wrap, as a trader writes them (taste round 2: "Median move", "Universe", "Median P/E"). */
+const SHORT_LABEL: Record<string, string> = {
+  'median next-day move': 'Median move',
+  'average next-day move': 'Avg move',
+  'avg next-day move': 'Avg move',
+  'mean next-day move': 'Avg move',
+  'large-cap tech universe': 'Universe',
+  'number of estimates': 'Estimates',
+  'num estimates': 'Estimates',
+  'previous report date': 'Last report',
+  'period ending': 'Period',
+  'buy and hold return': 'B&H return',
+}
+
+/**
+ * A card's field label short enough for one line (taste round 2, change 2: labels never wrap). Known long labels have
+ * a trader's short form; past 16 characters an "of …" tail goes when two words or more stand before it ("Median P/E
+ * of passers" is "Median P/E") and then a parenthetical ("Realized vol (1mo)" is "Realized vol"). What is still long
+ * keeps its words and its pair takes two columns (FieldGrid).
+ */
+export function shortLabel(label: string): string {
+  const known = SHORT_LABEL[label.trim().toLowerCase()]
+  if (known) return known
+  let out = label.trim()
+  if (out.length > 16) {
+    const m = /^(.+?)\s+of\s+.+$/i.exec(out)
+    if (m && m[1]!.trim().split(/\s+/).length >= 2) out = m[1]!.trim()
+  }
+  if (out.length > 16) out = out.replace(/\s*\([^)]*\)\s*$/, '').trim() || out
+  return out
+}
+
 export function columnLabel(column: string): string {
   const known = COLUMN_LABEL[column]
   // Sentence case everywhere (taste round, changes 5 and 11): the known labels keep their acronyms, anything else reads through fieldLabel.

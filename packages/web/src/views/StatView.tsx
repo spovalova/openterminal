@@ -6,6 +6,7 @@ import type { ViewProps } from './types'
 import { cellFormat } from './TableView'
 import { controlOf, primaryFrame } from './fields'
 import { columnLabel } from './labels'
+import { FieldGrid } from './FieldGrid'
 
 export { columnLabel }
 
@@ -287,16 +288,7 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
           <div>
             <StatBody stat={s} label={label} tick={ticks[s.symbol]} hero />
           </div>
-          {details.length > 0 && (
-            <div data-details="" className="grid grid-cols-2 gap-x-5 gap-y-1.5 border-t border-border/60 pt-2.5 text-xs leading-5 @[360px]/widget:grid-cols-3">
-              {details.map((d) => (
-                <div key={d.label} className="flex min-w-0 items-baseline justify-between gap-2">
-                  <span className="line-clamp-2 min-w-0 break-words text-fg-3">{d.label}</span>
-                  <span className="num whitespace-nowrap text-fg-2">{d.text}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          {details.length > 0 && <FieldGrid fields={details.map((d) => ({ key: d.label, label: d.label, text: d.text, tone: 'text-fg-2' }))} />}
         </div>
       </div>
     )

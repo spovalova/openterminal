@@ -84,6 +84,28 @@ body,
   letter-spacing: -0.04em;
 }
 
+/*
+ * A card's label:value pairs (taste round 2, change 2): at most 180px each, two across in a 343px column and three in
+ * a 503px one, left-packed so a label never sits 300px from its value in a wide card.
+ */
+.field-grid {
+  display: grid;
+  /* auto-fill counts columns by the max track size when it is definite (180px gave one column in a 317px card), so the
+     tracks are 140px to 1fr and each pair is capped instead */
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  column-gap: 20px;
+  row-gap: 4px;
+}
+.field-grid > [data-fact] {
+  max-width: 200px;
+}
+.field-grid > [data-fact].col-span-2 {
+  max-width: 400px;
+}
+.field-grid > [data-fact].col-span-full {
+  max-width: none;
+}
+
 /* Sidebar overlays the grid below 1100px. */
 .sidebar {
   width: 380px;
