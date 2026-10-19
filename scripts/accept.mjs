@@ -161,7 +161,9 @@ const measure = () => {
         consider(table)
         tableRows = table.querySelectorAll('tbody tr').length
       }
-      for (const extra of body.querySelectorAll('[data-view] > :not(:has(table))')) consider(extra)
+      // The chain's header strip counts as content; a heatmap's legend at the bottom does not (the matrix must fill).
+      if (kind !== 'heatmap') for (const extra of body.querySelectorAll('[data-view] > :not(:has(table))')) consider(extra)
+      if (kind === 'table' && body.querySelector('[data-cards]')) for (const card of body.querySelectorAll('[data-cards] > [data-row]')) consider(card)
     } else if (kind === 'stat' || kind === 'facts') {
       for (const child of view.children) consider(child)
       if (view.children.length === 0) consider(view)

@@ -43,9 +43,12 @@ const LONG_TEXT = 80
 const COLUMN_WIDTH: Partial<Record<CellFormat, number>> = { price: 84, change: 80, integer: 88, compact: 80, percent: 76, date: 104, time: 104, link: 56 }
 const SYMBOL_WIDTH = 72
 
-export function columnWidth(name: string, format: CellFormat): number | undefined {
-  if (name === 'symbol' || name === 'etf') return SYMBOL_WIDTH
-  return COLUMN_WIDTH[format]
+export function columnWidth(name: string, format: CellFormat, header?: string): number | undefined {
+  const base = name === 'symbol' || name === 'etf' ? SYMBOL_WIDTH : COLUMN_WIDTH[format]
+  if (base === undefined) return undefined
+  // A fixed column is at least as wide as its header's longest word, so "Correlation" is never broken mid-word.
+  const longest = header ? Math.max(...header.split(/\s+/).map((w) => w.length)) : 0
+  return Math.max(base, longest * 7 + 20)
 }
 
 function label(name: string, labels?: Record<string, string>): string {
@@ -85,7 +88,7 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
               const f = fmts[c.name] ?? 'text'
               const numeric = isNumericFormat(f)
               const isActive = active?.column === c.name
-              const width = columnWidth(c.name, f)
+              const width = columnWidth(c.name, f, label(c.name, labels))
               return (
                 <th
                   key={c.name}
@@ -105,7 +108,7 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                     )}
                   >
                     {/* Two lines at most, wrapped at words: a header is never cut mid-word (section 17 checklist). */}
-                    <span className="line-clamp-2 break-words whitespace-normal">{label(c.name, labels)}</span>
+                    <span className="line-clamp-2 break-normal whitespace-normal">{label(c.name, labels)}</span>
                     <span aria-hidden className={clsx('text-[9px] leading-none', isActive ? 'text-accent' : 'opacity-0')}>
                       {active?.dir === 'desc' && isActive ? '▼' : '▲'}
                     </span>

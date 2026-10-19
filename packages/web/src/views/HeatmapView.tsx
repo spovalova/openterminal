@@ -129,7 +129,8 @@ export const HeatmapView: FC<ViewProps> = ({ widget, frames }) => {
   return (
     <div data-view="heatmap" data-palette={heat.palette} data-x={heat.xs.length} data-y={heat.ys.length} className="flex h-full w-full flex-col overflow-hidden">
       <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-2">
-        <table className="w-full table-fixed border-separate border-spacing-px text-xs">
+        {/* `h-full`: a 7x7 matrix shares the cell's height between its rows instead of sitting in the top third (section 17 fill rule). */}
+        <table className="h-full w-full table-fixed border-separate border-spacing-px text-xs">
           <thead>
             <tr>
               <th className="w-[72px]" />
