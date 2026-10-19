@@ -7,7 +7,7 @@ export type ButtonProps = {
 } & ButtonHTMLAttributes<HTMLButtonElement>
 
 const variants = {
-  primary: 'bg-accent text-accent-fg border-transparent hover:brightness-110 active:brightness-95',
+  primary: 'bg-accent text-accent-fg border-transparent hover:brightness-110 active:opacity-90',
   ghost: 'bg-transparent text-fg-2 border-border hover:bg-surface-2 hover:text-fg hover:border-border-strong',
   danger: 'bg-transparent text-down border-border hover:bg-down/10 hover:border-down/50',
 }
