@@ -27,3 +27,5 @@ export { WorkspaceStore, type WorkspaceInit, type WorkspacePatch } from './store
 export { Executor, Poller, errorMessage, type Emit, type RunOptions, type PollerOptions } from './executor.js'
 export { createStubAgentRunner, stubWidgets, STUB_SYMBOLS, STUB_REPLY, STUB_WORKSPACE_NAME, type StubAgentOptions } from './stub-agent.js'
 export { createAgentRunner, type LlmConfig as AgentLlmConfig } from './agent/index.js'
+export { MemoryRunLog, JsonFileRunLog, RunLogRowSchema, runCost, type RunLog, type RunLogRow, type RunLogQuery, type ModelPricing } from './runlog.js'
+export { verifyReply, extractNumbers, maskNonFigures, candidateValues, matchMention, verificationOf, BARE_INTEGER_MIN, type PreviewRecord, type NumberMention, type Match, type VerificationReport } from './verify.js'
