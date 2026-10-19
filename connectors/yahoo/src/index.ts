@@ -2,6 +2,7 @@
 // v1.2 fallbacks: profile, metrics, estimates, eps_history, dividends, insiders, institutions, short_interest, options, holdings.
 import { z } from 'zod'
 import { defineConnector, type Connector } from '@terminal/core'
+import { makeCall, yahooDescriptors } from './call.js'
 import { defaultClient, type YahooClient } from './client.js'
 import { makeDividends } from './dividends.js'
 import { makeEarnings } from './earnings.js'
@@ -21,6 +22,7 @@ import { makeShortInterest } from './short-interest.js'
 export type { YahooClient } from './client.js'
 export { createYahooClient, wrapClient, retryOn429, isRateLimited } from './client.js'
 export { rangeToPeriod, sessionStart, toYahooInterval, nyDate, utcDate } from './time.js'
+export { yahooDescriptors, makeCall, summaryRows, chartRowsV2, optionRows, flattenDeep, YAHOO_ROUTES, type YahooRoute } from './call.js'
 
 export type YahooConnectorDeps = {
   /** Library seam; defaults to the shared live client. Tests inject a fake. */
@@ -38,6 +40,9 @@ export function createYahooConnector(deps: YahooConnectorDeps = {}): Connector<z
   return defineConnector({
     name: 'yahoo',
     config: YahooConfig,
+    // v2 (PLAN.md section 17): the five yahoo-finance2 endpoints as routes (descriptors.json) through inferFrame. The kind handlers below stay for v1.
+    descriptors: () => yahooDescriptors(),
+    call: makeCall(client, now),
     queries: {
       search: makeSearch(client),
       quote: makeQuote(client),

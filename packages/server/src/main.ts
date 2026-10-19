@@ -10,6 +10,8 @@ import { createApp, type App } from './app.js'
 import { SqliteCache } from './cache-sqlite.js'
 import { loadConfig, resolvedLlm, terminalHome, workspacesDir, type Config } from './config.js'
 import { buildRegistry } from './connectors.js'
+import { applyLiveness, livenessStoreOver } from './liveness.js'
+import { createProbeFn } from './probe.js'
 import { loadUserRecipes, type ProbeFn } from './routes-data.js'
 import { RunLogRowSchema, type RunLog, type RunLogRow } from './runlog.js'
 import { openStore, type MigrationReport, type Store } from './store/index.js'
@@ -123,6 +125,11 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
     log('agent: stub (no LLM key in config.yml or ANTHROPIC_API_KEY / OPENAI_API_KEY); prompts return the canned memory workspace')
   }
 
+  // (a)'s catalog probe over the store's liveness rows; the rows already stored are stamped onto the catalog once
+  // it is built, so `find_route` hides dead routes from the previous probe after a restart.
+  const liveness = livenessStoreOver(store)
+  const probe: ProbeFn | undefined = opts.probe ?? (registry instanceof ConnectorRegistry ? createProbeFn({ registry, store: liveness, log }) : undefined)
+
   const webDist = opts.webDist === false ? undefined : (opts.webDist ?? (existsSync(DEFAULT_WEB_DIST) ? DEFAULT_WEB_DIST : undefined))
   const { app, injectWebSocket, wss } = createApp({
     registry,
@@ -134,7 +141,7 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
     webDist,
     builtinRecipes,
     storeInfo: () => ({ kind: storeKind, ...(migration ? { migration } : {}) }),
-    ...(opts.probe ? { probe: opts.probe } : {}),
+    ...(probe ? { probe } : {}),
   })
 
   const server = await new Promise<ServerType>((resolveServer) => {
@@ -143,6 +150,13 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
   injectWebSocket(server)
   // The transform engine (phase 1 (b)): one Pyodide worker, warmed after listen so the first prompt does not pay the
   // cold start. A server started with an injected registry (tests) runs without one.
+  if (!opts.registry && registry instanceof ConnectorRegistry) {
+    void registry
+      .catalog()
+      .then((cat) => applyLiveness(cat, liveness))
+      .then((n) => log(`catalog: ${registry.connectors().length} connectors, ${n} liveness rows applied`))
+      .catch((err: unknown) => log(`catalog failed: ${err instanceof Error ? err.message : String(err)}`))
+  }
   let transform: ServerTransformEngine | undefined
   if (!opts.registry && registry instanceof ConnectorRegistry) {
     transform = createTransformEngine({ log })

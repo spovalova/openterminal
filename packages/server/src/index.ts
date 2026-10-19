@@ -44,6 +44,8 @@ export {
   type FrameCacheRow,
 } from './store/index.js'
 export { SqliteCache, type SqliteCacheOptions } from './cache-sqlite.js'
+export { MemoryLivenessStore, FileLivenessStore, livenessStoreOver, openLivenessStore, applyLiveness, livenessRow, livenessOf, livenessPath, LivenessRowSchema, type LivenessStore, type LivenessBackend } from './liveness.js'
+export { probeCatalog, probeRoute, createProbeFn, sampleParams, sampleValue, classifyError, renderSummary, summarize, toRow, KEYLESS_PROVIDERS, SAMPLE, type ProbeOptions, type ProbeResult, type ProbeSummary, type ErrorClass } from './probe.js'
 export {
   createDataRoutes,
   exportDocument,

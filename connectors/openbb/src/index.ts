@@ -1,6 +1,8 @@
 // OpenBB Platform connector: all 22 kinds through a local `openbb-api`, any OpenBB provider per kind.
 // Keyless by default (yfinance, nasdaq, sec, finra, cboe, federal_reserve, oecd); keyed providers are configured on the OpenBB side. See README.md.
 import { defineConnector, toFrame, type MacroSeries } from '@terminal/core'
+import { callRoute } from './call.js'
+import { descriptorsFor } from './descriptors.js'
 import {
   ConfigSchema,
   MACRO_ROUTES,
@@ -42,6 +44,8 @@ const SEARCH_LIMIT = 10
 type Row = Record<string, unknown>
 
 export { ConfigSchema, DEFAULT_PROVIDERS, DEFAULT_BASE_URL, INSTALL_HINT } from './openbb-api.js'
+export { loadDescriptors, descriptorsFor, descriptorFor, resetDescriptors, defaultCatalogPath, fingerprintOpenApi, readCatalogCache, writeCatalogCache, type CatalogCache, type LoadResult } from './descriptors.js'
+export { callRoute, toQuery, fillSymbol, singleSymbol, applicableParams, defaultProvider, withProvider, ROUTE_PROVIDER_PREFERENCE } from './call.js'
 
 export default defineConnector<Config>({
   name: 'openbb',
@@ -53,6 +57,11 @@ export default defineConnector<Config>({
     const shown = providers.slice(0, 8).join(', ') + (providers.length > 8 ? ', …' : '')
     return `OpenBB API at ${ctx.config.baseUrl}${providers.length ? ` · ${providers.length} providers (${shown})` : ''}`
   },
+
+  // v2 (PLAN.md section 17): every GET route of the local API, generated from its openapi.json and cached under
+  // ~/.terminal/catalog; `call` answers any of them through inferFrame. The kind handlers below stay for v1.
+  descriptors: (ctx) => descriptorsFor(ctx),
+  call: (route, params, ctx) => callRoute(route, params, ctx),
 
   queries: {
     // GET /equity/search?query=Q per query string; nasdaq rows carry a listing-exchange code.
