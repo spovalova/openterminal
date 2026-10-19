@@ -106,7 +106,9 @@ export function defaultFormat(config: FieldConfig, type: 'string' | 'number' | '
     case 'bps':
       return 'integer'
     default:
-      return 'text'
+      // A number nobody annotated (a transform's rsi, a pivot's cells) still reads as a number: two decimals with
+      // separators, never the raw float (phase 2b: "37.765730145489876" in a stat).
+      return 'ratio'
   }
 }
 

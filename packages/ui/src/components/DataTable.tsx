@@ -40,7 +40,7 @@ const LONG_TEXT = 80
  */
 // A YYYY-MM-DD in the mono stack at the table's size is 84px plus the cell padding, so date and time take 104
 // (the bench v2 "2026-10…" defect); the number widths leave room for a two-word header.
-const COLUMN_WIDTH: Partial<Record<CellFormat, number>> = { price: 84, change: 80, integer: 88, compact: 80, percent: 76, date: 104, time: 104, link: 56 }
+const COLUMN_WIDTH: Partial<Record<CellFormat, number>> = { price: 84, change: 96, integer: 88, compact: 80, percent: 88, date: 104, time: 104, link: 112 }
 const SYMBOL_WIDTH = 72
 
 export function columnWidth(name: string, format: CellFormat, header?: string): number | undefined {
@@ -81,7 +81,9 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
 
   return (
     <div className={clsx('data-table h-full w-full overflow-x-hidden overflow-y-auto', className)}>
-      <table className="w-full table-fixed border-collapse text-sm">
+      {/* `h-full`: a table shorter than its cell shares the height between its rows (an 11-row hero in a two-row cell, a
+          4-row table in a tall 1920 row) instead of leaving the bottom blank; a longer table scrolls as before. */}
+      <table className="h-full w-full table-fixed border-collapse text-sm">
         <thead className={clsx(stickyHeader && 'sticky top-0 z-10')}>
           <tr className="bg-surface">
             {columns.map((c) => {

@@ -39,6 +39,8 @@ const only = (flag('--cases', '') || '').split(',').filter(Boolean)
 const viewports = flag('--viewports', '1440x900,1920x1080').split(',').map((v) => v.split('x').map(Number))
 const jsonOut = flag('--json')
 const settleMs = Number(flag('--settle', '3000'))
+/** Screenshot file prefix: `accept-` for the hand-built workspaces, `accept-agent-` for the agent's (bench transcripts). */
+const prefix = flag('--prefix', 'accept-')
 const pwDir = process.env.PLAYWRIGHT_DIR ?? join(homedir(), '.local/share/openterminal-dev/browser')
 if (!runs) {
   console.error('usage: BASE=... node scripts/accept.mjs --runs <bench out dir> [--out dir] [--cases a,b] [--viewports 1440x900,1920x1080] [--json file]')
@@ -281,7 +283,7 @@ for (const [width, height] of viewports) {
       )
       .catch(() => console.error(`${slug} ${viewport}: still loading after 90 s`))
     await page.waitForTimeout(settleMs)
-    const file = join(out, `accept-${slug}-${viewport}.png`)
+    const file = join(out, `${prefix}${slug}-${viewport}.png`)
     await page.screenshot({ path: file })
     const m = await page.evaluate(measure)
     const { pass, result } = score(m, facts)

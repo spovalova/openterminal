@@ -51,7 +51,16 @@ export function datasetFields(widget: AnyWidget, frame: Frame): DatasetFields {
     annotations.value = amounts ? { unit: 'usd', format: 'compact', label: 'Value' } : { unit: 'percent', format: 'percent', label: 'Rate' }
   }
   const overrides = isWidgetV2(widget) ? (widget.fields ?? {}) : {}
-  return { shape, fields: mergeFieldConfig(shape, annotations, overrides) }
+  const fields = mergeFieldConfig(shape, annotations, overrides)
+  // A numeric column with no unit and no format: whole numbers (counts, row ids, contract sizes) read as integers,
+  // anything else as a number with two decimals (core's default); the values decide, since nobody annotated them.
+  for (const c of frame.columns) {
+    const f = fields[c.name]
+    if (c.type !== 'number' || !f || f.unit || f.format) continue
+    const sample = frame.rows.slice(0, 200).map((r) => r[frame.columns.indexOf(c)]).filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+    if (sample.length > 0 && sample.every((v) => Number.isInteger(v))) fields[c.name] = { ...f, format: 'integer' }
+  }
+  return { shape, fields }
 }
 
 /** Field config for every dataset that has landed. */
