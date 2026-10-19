@@ -15,6 +15,7 @@ import {
   isRouteQuery,
   isTransformQuery,
   packLayout,
+  TRACKS_PER_ROW,
   parseAnyQuery,
   recipeDescriptor,
   validateParams,
@@ -138,13 +139,18 @@ export function layoutNote(widgets: readonly WidgetV2[], memory: PreviewMemory):
     3,
   )
   const stretched = placements.flatMap((p, i) => (p.stretched ? [widgets[i]!] : []))
-  const sized = placements.flatMap((p, i) => (p.demoted ? [`${widgets[i]!.id} (${widgets[i]!.view.preset}, ${widgets[i]!.size}) is ${p.cols === 1 && widgets[i]!.size !== 'sm' ? 'one column wide and ' : ''}${p.rows === 1 ? 'one row' : `${p.rows} rows`} tall`] : []))
+  // Placements are in grid tracks, two per row (round 2): a short widget is one track, as tall as its content.
+  const sized = placements.flatMap((p, i) => {
+    if (!p.demoted) return []
+    const how = [p.cols === 1 && widgets[i]!.size !== 'sm' ? 'one column wide' : '', p.rows < TRACKS_PER_ROW ? 'as tall as its content' : ''].filter(Boolean).join(' and ')
+    return [`${widgets[i]!.id} (${widgets[i]!.view.preset}, ${widgets[i]!.size}) is ${how || 'resized'}`]
+  })
   const parts: string[] = []
   if (stretched.length > 0) {
     const names = stretched.map((w) => `${w.id} (${w.size})`).join(', ')
     parts.push(`Layout repaired: ${names} ${stretched.length === 1 ? 'was' : 'were'} stretched to fill cells that would have stayed empty in the 3-column grid (lg is 2x2, md 2x1, sm 1x1). This is fine; a set that tiles (an md beside an sm, two sm in a row) needs no repair.`)
   }
-  if (sized.length > 0) parts.push(`Sized by content: ${sized.join(', ')} (tables with six rows or fewer, stats and facts cards are one row and never full width; the lg hero is 2x2 and every other chart one cell, never taller than wide).`)
+  if (sized.length > 0) parts.push(`Sized by content: ${sized.join(', ')} (tables with six rows or fewer, stats and facts cards are as tall as their content, a card one column wide; a table narrower than a column takes one; the lg hero is 2x2 and every other chart one cell, never taller than wide).`)
   return parts.length ? `${parts.join(' ')} ` : ''
 }
 

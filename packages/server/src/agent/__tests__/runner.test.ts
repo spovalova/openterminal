@@ -144,7 +144,7 @@ describe('use case A: theme research (v2 recipes and presets)', () => {
     expect(basket.preview.stats.MU!.close!.changePct).toBe(31)
     const applied = toolResultsSentOn(model, 3).at(-1) as { ok: boolean; widgetIds: string[]; name: string; note: string }
     expect(applied).toMatchObject({ ok: true, widgetIds: ['w1', 'w2', 'w3', 'w4', 'w5'], name: 'Memory' })
-    expect(applied.note).toContain('Sized by content: w2 (price, md) is one column wide and one row tall')
+    expect(applied.note).toContain('Sized by content: w2 (price, md) is one column wide')
 
     // The model was offered the four tools, with schemas derived from core.
     const tools = (model.doStreamCalls[0]!.tools ?? []) as { name: string; inputSchema: { properties?: Record<string, unknown> } }[]

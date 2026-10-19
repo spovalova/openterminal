@@ -97,12 +97,18 @@ describe('fixtures', () => {
 describe('content hints', () => {
   it('report the view kind and the row count; a one-row table is a facts card; charts are charts before the frame lands', () => {
     const a1 = FIXTURES.find((f) => f.id === 'A1')!
-    expect(contentHintFor(a1.widget, a1.frames)).toEqual({ kind: 'chart', rows: a1.frame.rows.length })
-    expect(contentHintFor(a1.widget, {})).toEqual({ kind: 'chart' })
+    expect(contentHintFor(a1.widget, a1.frames)).toMatchObject({ kind: 'chart', rows: a1.frame.rows.length })
+    expect(contentHintFor(a1.widget, {})).toMatchObject({ kind: 'chart' })
     const c2 = FIXTURES.find((f) => f.id === 'C2')!
-    expect(contentHintFor(c2.widget, c2.frames)).toEqual({ kind: 'facts', rows: 1 })
+    const facts = contentHintFor(c2.widget, c2.frames)
+    expect(facts).toMatchObject({ kind: 'facts', rows: 1 })
+    expect(facts.fields).toBeGreaterThan(0) // round 2: the card's height comes from its fields
     const a3 = FIXTURES.find((f) => f.id === 'A3')!
-    expect(contentHintFor(a3.widget, a3.frames)).toEqual({ kind: 'table', rows: 4, columns: a3.frame.columns.length }) // the column count keeps a wide compare table two grid columns wide
+    const table = contentHintFor(a3.widget, a3.frames)
+    expect(table).toMatchObject({ kind: 'table', rows: 4, columns: a3.frame.columns.length }) // the column count keeps a wide compare table two grid columns wide
+    // Round 2: the content width (every column) and the width of the columns it never sheds, for the narrow-table rule.
+    expect(table.width).toBeGreaterThan(0)
+    expect(table.minWidth).toBeLessThanOrEqual(table.width!)
     expect(contentHintFor(FIXTURES.find((f) => f.id === 'stat-quote')!.widget, {})).toEqual({ kind: 'stat' })
     expect(contentHintFor(FIXTURES.find((f) => f.id === 'options')!.widget, {})).toEqual({ kind: 'chain' })
     expect(contentHintFor(FIXTURES.find((f) => f.id === 'v2-heatmap')!.widget, {})).toEqual({ kind: 'chart' })

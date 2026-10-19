@@ -206,6 +206,24 @@ export function columnsThatFit(columns: readonly Column[], width: number | undef
   return visible
 }
 
+/** A prose column (a headline, a description) at the width it reads well at, for the table's natural width. */
+const PROSE_WIDTH = 300
+
+/**
+ * The px a table needs across (round 2, for the packer): `width` with every column at its content width (prose at a
+ * readable 300px), `minWidth` with only the columns it never sheds (rank 0: the first three and the sort column) and
+ * prose at its 120px floor. A table no wider than a grid column takes one column; one whose `minWidth` fits may.
+ */
+export function tableContentWidth(columns: readonly Column[], rows: readonly unknown[][], formats: Record<string, CellFormat> = {}, labels?: Record<string, string>, priority?: Record<string, number>): { width: number; minWidth: number } {
+  const fmts = uniformFormats(columns, rows, { ...inferFormats([...columns]), ...formats })
+  const headers = headerLabels(columns, fmts, labels)
+  const sized = { ...numberWidths(columns, rows, fmts, headers, Date.now()), ...textWidths(columns, rows, fmts, headers) }
+  const need = (c: Column, prose: number) => sized[c.name] ?? columnWidth(c.name, fmts[c.name] ?? 'text', headers[c.name]) ?? prose
+  const width = columns.reduce((n, c) => n + need(c, PROSE_WIDTH), 0)
+  const minWidth = columns.filter((c) => (priority?.[c.name] ?? 0) <= 0).reduce((n, c) => n + need(c, TEXT_COLUMN_MIN), 0)
+  return { width: Math.round(width), minWidth: Math.round(minWidth) }
+}
+
 export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, onSort, labels, priority, stickyHeader = true, className, now, highlightRow, cellMark }) => {
   const [internal, setInternal] = useState<{ column: string; dir: SortDir } | undefined>(undefined)
   const active = sort ?? internal
@@ -255,9 +273,9 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
 
   return (
     <div ref={wrap} className={clsx('data-table h-full w-full overflow-x-hidden overflow-y-auto', className)}>
-      {/* `h-full`: a table shorter than its cell shares the height between its rows (an 11-row hero in a two-row cell, a
-          4-row table in a tall 1920 row) instead of leaving the bottom blank; a longer table scrolls as before. */}
-      <table className="h-full w-full table-fixed border-collapse text-sm">
+      {/* Rows keep their 28px (taste round 2: stretched to 58px they made the best/worst bars read as cell borders); the
+          grid sizes a short table's track to its rows and a longer table scrolls. */}
+      <table className="w-full table-fixed border-collapse text-sm">
         <thead className={clsx(stickyHeader && 'sticky top-0 z-10')}>
           <tr className="bg-surface">
             {visible.map((c) => {

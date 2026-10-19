@@ -24,6 +24,11 @@ export type WidgetFrameProps = PropsWithChildren<{
   meta?: ReactNode
   className?: string
   id?: string
+  /**
+   * `content` (round 2): the body is as tall as the view's content, not the cell, so the grid can measure a card's
+   * natural height and end its track there; the frame still fills its cell. `fill` (default): the body takes the cell.
+   */
+  fit?: 'fill' | 'content'
 }>
 
 /** Grid spans per size: lg 2x2, md 2x1, sm 1x1 (mirrors SIZE_SPANS in core). */
@@ -53,6 +58,7 @@ export const WidgetFrame: FC<WidgetFrameProps> = ({
   meta,
   className,
   id,
+  fit = 'fill',
   children,
 }) => {
   let body: ReactNode
@@ -124,7 +130,9 @@ export const WidgetFrame: FC<WidgetFrameProps> = ({
         )}
       </header>
       {/* The `widget` container: views and DataTable columns respond to this width, not the size enum. */}
-      <div className="@container/widget relative min-h-0 min-w-0 flex-1 overflow-hidden">{body}</div>
+      <div data-body="" data-fit={fit} className={clsx('@container/widget relative min-w-0 overflow-hidden', fit === 'content' && !loading && !error && !empty ? 'shrink-0' : 'min-h-0 flex-1')}>
+        {body}
+      </div>
     </section>
   )
 }

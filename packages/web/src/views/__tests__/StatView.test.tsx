@@ -3,7 +3,8 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { type Frame, type WidgetV2 } from '@openterminal/core'
 
-import { StatView, balancedRows, cardHeightFor, cardsFit, cardsPerRow, columnLabel, denseLineHeight, detailRows, orderStats, statRows, symbolOrder } from '../StatView'
+import { denseStat } from '@openterminal/core'
+import { StatView, balancedRows, cardsPerRow, columnLabel, detailRows, orderStats, statRows, symbolOrder } from '../StatView'
 import { viewFor } from '../view-for'
 import { fixture } from '../fixtures'
 
@@ -162,20 +163,12 @@ describe('StatView, the taste round (change 2)', () => {
   })
 })
 
-describe('cardsFit (change 2: five cards in a short cell become one line per symbol)', () => {
-  it('fits four cards in a 340x190 cell and not five', () => {
-    expect(cardsFit(4, 340, 190)).toBe(true)
-    expect(cardsFit(5, 340, 190)).toBe(false)
-    expect(cardsFit(7, 1000, 190)).toBe(true)
-    expect(cardsFit(5, 0, 0)).toBe(true) // unmeasured: cards
-  })
-})
-
-describe('denseLineHeight (the one-line-per-symbol list fits its cell)', () => {
-  it('shares the height: seven lines in a 189px cell are 25px, never under 21 or over 29', () => {
-    expect(denseLineHeight(7, 189)).toBe(25) // the Mag 7 at 1440: 7 x 29px hid TSLA under the foot
-    expect(denseLineHeight(5, 400)).toBe(29)
-    expect(denseLineHeight(12, 189)).toBe(21)
+describe('denseStat (round 2: the width alone picks cards or the one-line-per-symbol list)', () => {
+  it('lists more than four symbols in a column that holds two cards across, and keeps cards otherwise', () => {
+    expect(denseStat(4, 340)).toBe(false)
+    expect(denseStat(5, 340)).toBe(true)
+    expect(denseStat(7, 690)).toBe(false) // the morning watchlist across two columns: four and three cards
+    expect(denseStat(7, 1000)).toBe(false)
   })
 })
 
@@ -225,10 +218,3 @@ describe('detailRows (companions in the headline unit)', () => {
   })
 })
 
-describe('cardHeightFor (compact cards share a tall cell)', () => {
-  it('fills a tall row up to 128px and keeps 72px in a short one', () => {
-    expect(cardHeightFor(3, 480, 250)).toBe(128)
-    expect(cardHeightFor(4, 340, 190)).toBe(83)
-    expect(cardHeightFor(2, 340, 80)).toBe(72)
-  })
-})

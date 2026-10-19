@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FC } from 'react'
 import clsx from 'clsx'
-import { columnIndex, type Frame, type StatControl } from '@openterminal/core'
+import { DENSE_LINE_HEIGHT, STAT_CARD_HEIGHT, cardsPerRow, columnIndex, denseStat, type Frame, type StatControl } from '@openterminal/core'
 import { EMPTY_CELL, EmptyState, direction, formatCell, type CellFormat } from '@openterminal/ui'
 import type { ViewProps } from './types'
 import { cellFormat } from './TableView'
@@ -261,8 +261,9 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
   const stats = useMemo(() => (frame && stat ? orderStats(statRows(frame, column, stat), symbolOrder(widget)) : []), [frame, stat, column, widget])
   const ticks = useTicks(stats)
   const [sizeRef, size] = useSize()
-  const dense = stats.length > 1 && size != null && !cardsFit(stats.length, size.width, size.height)
-  const cardHeight = size && !dense ? cardHeightFor(stats.length, size.width, size.height) : undefined
+  // Taste round 2: the card is as tall as its content, so the choice between cards and the dense list is the width's
+  // alone (more than four symbols in a column that holds two cards across), never the cell's height.
+  const dense = stats.length > 1 && size != null && denseStat(stats.length, size.width)
 
   if (stats.length === 0) {
     return <EmptyState title="No data" hint="The query returned no rows for these symbols." />
@@ -280,8 +281,9 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
           .slice(0, 6)
       : []
     return (
-      <div data-view="stat" data-column={column} data-count={1} className="flex h-full w-full flex-col overflow-hidden p-3">
-        <div className={clsx('flex flex-col gap-3', details.length > 0 ? 'flex-auto justify-between' : 'my-auto min-h-0')}>
+      // Round 2: the card is as tall as its content (hero, 8px, the fields), the grid ends its track there.
+      <div data-view="stat" data-column={column} data-count={1} className="flex w-full flex-col overflow-hidden p-3">
+        <div className="flex flex-col gap-2">
           <div>
             <StatBody stat={s} label={label} tick={ticks[s.symbol]} hero />
           </div>
@@ -300,15 +302,13 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
     )
   }
   if (dense) {
-    // More symbols than compact cards fit the cell (five in a 340x190 cell): one line per symbol, ticker · value ·
-    // change, so nothing scrolls or clips under the foot (taste round, change 2). The lines share the cell's height
-    // (29px at most, 21 at least): at 29px the seventh Mag 7 line sat under the foot of a 190px cell.
-    const line = size ? denseLineHeight(stats.length, size.height) : undefined
+    // More than four symbols in a column that holds two cards across: one line per symbol, ticker · value · change,
+    // each line 26px, the list as tall as its lines (round 2: the grid ends the track there).
     return (
-      <div ref={sizeRef} data-view="stat" data-column={column} data-count={stats.length} data-dense="" className="flex h-full w-full flex-col overflow-x-hidden overflow-y-auto px-3 py-1.5">
-        <div className="my-auto flex flex-col">
+      <div ref={sizeRef} data-view="stat" data-column={column} data-count={stats.length} data-dense="" className="flex w-full flex-col overflow-x-hidden px-3 py-1.5">
+        <div className="flex flex-col">
           {stats.map((s) => (
-            <div key={s.symbol} data-symbol={s.symbol} className={clsx('flex min-w-0 gap-3 border-b border-border/50 text-sm leading-5 last:border-b-0', line ? 'items-center' : 'items-baseline py-1')} style={line ? { height: line } : undefined}>
+            <div key={s.symbol} data-symbol={s.symbol} className="flex min-w-0 items-center gap-3 border-b border-border/50 text-sm leading-5 last:border-b-0" style={{ height: DENSE_LINE_HEIGHT }}>
               <span data-field="symbol" className="num w-14 shrink-0 truncate font-semibold text-fg">
                 {s.symbol}
               </span>
@@ -325,12 +325,12 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
     )
   }
   return (
-    <div ref={sizeRef} data-view="stat" data-column={column} data-count={stats.length} className="flex h-full w-full flex-col overflow-x-hidden overflow-y-auto p-2">
-      <div className="stat-cards my-auto">
+    <div ref={sizeRef} data-view="stat" data-column={column} data-count={stats.length} className="flex w-full flex-col overflow-x-hidden p-2">
+      <div className="stat-cards">
         {balancedRows(stats, size ? cardsPerRow(size.width) : stats.length).map((row) => (
           <div key={row[0]!.symbol} className="stat-card-row">
             {row.map((s) => (
-              <div key={s.symbol} data-symbol={s.symbol} className="stat-card flex min-w-0 flex-col justify-center overflow-hidden rounded-md border border-border bg-surface-2/50 px-3 py-2" style={cardHeight ? { height: cardHeight } : undefined}>
+              <div key={s.symbol} data-symbol={s.symbol} className="stat-card flex min-w-0 flex-col justify-center overflow-hidden rounded-md border border-border bg-surface-2/50 px-3 py-2" style={{ height: STAT_CARD_HEIGHT }}>
                 <StatBody stat={s} label={label} tick={ticks[s.symbol]} />
               </div>
             ))}
@@ -341,15 +341,7 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
   )
 }
 
-/** The height of one line of the dense stat list: the lines share the cell (12px padding), 21px at least and 29px at most. */
-export function denseLineHeight(n: number, height: number): number {
-  return Math.max(21, Math.min(29, Math.floor((height - 12) / Math.max(1, n))))
-}
-
-/** How many compact cards (136px wide at least, 8px gaps, 8px padding) one row of a cell this wide holds. */
-export function cardsPerRow(width: number): number {
-  return Math.max(1, Math.floor((width - 16 + 8) / (136 + 8)))
-}
+export { cardsPerRow }
 
 /**
  * The cards in rows of near-equal length, longer rows first: seven cards four and three rather than six and one, three
@@ -368,24 +360,6 @@ export function balancedRows<T>(items: readonly T[], perRow: number): T[][] {
     at += n
   }
   return out
-}
-
-/** Whether `n` compact cards (136px wide at least, 72px tall, 8px gaps, 8px padding) fit a cell of this size. */
-export function cardsFit(n: number, width: number, height: number): boolean {
-  if (width <= 0 || height <= 0) return true
-  const perRow = cardsPerRow(width)
-  const rows = Math.ceil(n / perRow)
-  return rows * 72 + (rows - 1) * 8 + 16 <= height
-}
-
-/**
- * How tall each compact card is: the rows share the cell's height, 72px at least and 128px at most, so three cards in
- * a tall 1920 cell are a band across it rather than a strip floating in the middle (and never a 170px slab).
- */
-export function cardHeightFor(n: number, width: number, height: number): number | undefined {
-  if (width <= 0 || height <= 0) return undefined
-  const rows = Math.ceil(n / cardsPerRow(width))
-  return Math.max(72, Math.min(128, Math.floor((height - 16 - (rows - 1) * 8) / rows)))
 }
 
 /** The element's content size, measured (undefined until the first layout, so tests and server rendering keep the cards). */

@@ -61,10 +61,9 @@ export const FactsCard: FC<ViewProps> = ({ widget, frames }) => {
   const hero = heroFact(facts, fields)
   const rest = facts.filter((f) => f !== hero)
   return (
-    <div data-view="facts" data-count={facts.length} className="facts-card flex h-full w-full flex-col overflow-x-hidden overflow-y-auto p-3">
-      {/* The hero anchors the top and the grid the foot when the cell is taller than the card (a 1920 row), so the card
-          reads as one block filling its cell rather than a strip floating in the middle; centred when there is one part. */}
-      <div className={clsx('flex flex-col gap-2.5', hero && rest.length > 0 ? 'flex-auto justify-between' : 'my-auto min-h-0')}>
+    <div data-view="facts" data-count={facts.length} className="facts-card flex w-full flex-col overflow-x-hidden p-3">
+      {/* Round 2: hero, 8px, the fields, and the card ends there; the grid sizes the track to this content. */}
+      <div className="flex flex-col gap-2">
         {hero && (
           <div data-fact={hero.column} data-hero="" className="flex min-w-0 flex-col">
             <div className="truncate text-xs leading-4 text-fg-3" title={hero.label}>

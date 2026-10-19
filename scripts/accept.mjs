@@ -145,7 +145,11 @@ const measure = () => {
     const subtitle = sec?.querySelector('[data-subtitle]')?.textContent?.trim() ?? ''
     const view = body?.querySelector('[data-view]')
     const kind = view?.getAttribute('data-view') ?? (body?.querySelector('[aria-busy="true"]') ? 'loading' : /Could not load/.test(body?.textContent ?? '') ? 'error' : /No data/.test(body?.textContent ?? '') ? 'empty' : 'none')
-    const bodyRect = body ? near(body) : { height: 0, top: 0, bottom: 0, width: 0 }
+    // The body is measured from the header to the frame's foot, not the body element: a content-sized card (round 2)
+    // has a body as tall as its content, and blank space under it inside the frame still counts against the fill.
+    const secRect = sec ? near(sec) : null
+    const headRect = header ? near(header) : null
+    const bodyRect = body && secRect && headRect ? { top: headRect.bottom, bottom: secRect.bottom - 1, height: secRect.bottom - 1 - headRect.bottom, width: secRect.width } : { height: 0, top: 0, bottom: 0, width: 0 }
     // Content height: the union of the content's boxes inside the body, clipped to the body.
     let contentTop = Infinity
     let contentBottom = -Infinity
