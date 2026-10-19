@@ -4,6 +4,7 @@ import { columnIndex, type Frame, type Size } from '@terminal/core'
 import { useWidth } from './use-width'
 import { EMPTY_CELL, EmptyState, formatCell } from '@terminal/ui'
 import type { ViewProps } from './types'
+import { primaryFrame } from './fields'
 
 /** One contract's quoted fields, nulls where the source had none. */
 export type Contract = {
@@ -157,8 +158,9 @@ const ATM_SHADOW = 'shadow-[inset_0_1px_0_var(--color-accent),inset_0_-1px_0_var
  * are shaded (calls below the price, puts above), and the body scrolls with the strike nearest the
  * price centred on first paint.
  */
-export const ChainView: FC<ViewProps> = ({ widget, frame }) => {
-  const chain = useMemo(() => buildChain(frame), [frame])
+export const ChainView: FC<ViewProps> = ({ widget, frames }) => {
+  const frame = primaryFrame(widget, frames)
+  const chain = useMemo(() => (frame ? buildChain(frame) : buildChain({ columns: [], rows: [], meta: { connector: '', fetchedAt: 0, ttl: 0 } })), [frame])
   const [rootRef, measured] = useWidth()
   const width = measured ?? hintWidth(widget.size)
   const columns = sideColumns(width)

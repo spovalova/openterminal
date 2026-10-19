@@ -1,0 +1,79 @@
+/**
+ * The field config pipeline for a widget (PLAN.md section 17, "the widget model"): for every dataset,
+ * `mergeFieldConfig(detectShape(columns, rows), annotations, overrides)`, where the annotations are the frame's
+ * stamped `meta.fields` (v2) or the v1 kind tables (`legacyFieldConfig`), and the overrides the widget's `fields`.
+ * Every view reads its spec through `expandPreset` / `controlFor` over this; nothing reads a kind past this file.
+ */
+import {
+  DEFAULT_DATASET,
+  controlFor,
+  detectShape,
+  expandPreset,
+  isWidgetV2,
+  mergeFieldConfig,
+  migrateView,
+  type AnyWidget,
+  type Control,
+  type DatasetFields,
+  type DatasetsFieldConfig,
+  type Frame,
+  type Kind,
+  type Pane,
+  type ViewV2,
+} from '@terminal/core'
+import { MACRO_AMOUNTS, legacyFieldConfig } from './legacy'
+
+/**
+ * The v2 view of a widget: its own preset, or the v1 view migrated. A v1 candle chart drew a volume histogram
+ * under the candles, so its `price` preset keeps `volume: true` (the migration in core maps the schema; the look
+ * is the renderer's to preserve).
+ */
+export function viewOf(widget: AnyWidget): ViewV2 {
+  if (isWidgetV2(widget)) return widget.view
+  const view = migrateView(widget.view, widget.query)
+  if (view.preset === 'price' && view.candle && widget.query.kind === 'ohlcv') return { ...view, volume: true }
+  return view
+}
+
+/** The v1 kind behind a widget, when it has one (a v1 widget, or a v2 widget migrated from one). */
+export function kindOf(widget: AnyWidget): Kind | undefined {
+  return widget.query?.kind
+}
+
+/** Field config for one frame of a widget: shape roles under the annotations under the widget's overrides. */
+export function datasetFields(widget: AnyWidget, frame: Frame): DatasetFields {
+  const shape = detectShape(frame.columns, frame.rows.slice(0, 500))
+  const kind = kindOf(widget)
+  const annotations = frame.meta.fields ?? (kind ? legacyFieldConfig(kind, frame.columns) : {})
+  // A v1 macro frame's `value` is a rate for every series but the dollar amounts (M2): the unit the kind never carried.
+  if (!frame.meta.fields && kind === 'macro') {
+    const amounts = shape.groups.length > 0 && shape.groups.every((g) => MACRO_AMOUNTS.has(g))
+    annotations.value = amounts ? { unit: 'usd', format: 'compact', label: 'Value' } : { unit: 'percent', format: 'percent', label: 'Rate' }
+  }
+  const overrides = isWidgetV2(widget) ? (widget.fields ?? {}) : {}
+  return { shape, fields: mergeFieldConfig(shape, annotations, overrides) }
+}
+
+/** Field config for every dataset that has landed. */
+export function datasetsFor(widget: AnyWidget, frames: Record<string, Frame>): DatasetsFieldConfig {
+  const out: DatasetsFieldConfig = {}
+  for (const [name, frame] of Object.entries(frames)) out[name] = datasetFields(widget, frame)
+  return out
+}
+
+/** The renderer's spec for a widget over its frames, or undefined before the primary frame has landed. */
+export function controlOf(widget: AnyWidget, frames: Record<string, Frame>): Control | undefined {
+  return controlFor(viewOf(widget), datasetsFor(widget, frames))
+}
+
+/** The panes a widget's view expands to over the frames that have landed. */
+export function expandView(widget: AnyWidget, frames: Record<string, Frame>): Pane[] {
+  return expandPreset(viewOf(widget), datasetsFor(widget, frames))
+}
+
+/** The frame a view draws first: the one the view names, else `main`, else the first. */
+export function primaryFrame(widget: AnyWidget, frames: Record<string, Frame>): Frame | undefined {
+  const view = viewOf(widget)
+  if (view.data && frames[view.data]) return frames[view.data]
+  return frames[DEFAULT_DATASET] ?? Object.values(frames)[0]
+}

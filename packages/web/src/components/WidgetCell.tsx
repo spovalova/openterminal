@@ -1,33 +1,35 @@
 import { useState } from 'react'
 import { Dialog, WidgetFrame } from '@terminal/ui'
-import { KINDS, type Frame, type Widget } from '@terminal/core'
+import type { AnyWidget, Widget } from '@terminal/core'
 import { useActions } from '../actions'
 import { widgetDomId } from '../chips'
 import { useApp } from '../state'
-import { subtitleFor } from '../subtitle'
+import { errorFor, framesComplete, framesFor } from '../state/frames'
+import { subtitleForWidget } from '../subtitle'
 import { viewFor } from '../views'
 import { WidgetEditor } from './WidgetEditor'
 
-/** A frame has the columns of the widget's kind (the registry guarantees it for the widget's own frame). */
-export function frameMatches(widget: Widget, frame: Frame): boolean {
-  const expected = KINDS[widget.query.kind].columns
-  return frame.columns.length === expected.length && frame.columns.every((c, i) => c.name === expected[i]!.name)
-}
+export { frameMatches } from '../state/frames'
 
-/** One grid cell: a WidgetFrame around the view for the widget's frame; skeleton until the frame lands. */
-export function WidgetCell({ widget, workspaceId }: { widget: Widget; workspaceId: string }) {
+/**
+ * One grid cell: a WidgetFrame around the view for the widget's frames; skeleton until the primary frame lands.
+ * Frames are read by workspace, widget and dataset (state/frames.ts), so a frame left by another workspace's
+ * widget with the same id is never this widget's.
+ */
+export function WidgetCell({ widget, workspaceId }: { widget: AnyWidget; workspaceId: string }) {
   const { state } = useApp()
   const { refreshWidget } = useActions()
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
 
-  // Frames are keyed by widget id, and ids (w1, w2, …) repeat across workspaces: a frame left by another
-  // workspace's widget with the same id is not this widget's until its own lands, so it is treated as loading.
-  const stored = state.frames[widget.id]
-  const frame = stored && frameMatches(widget, stored) ? stored : undefined
-  const error = state.frameErrors[widget.id]
-  const View = viewFor(widget.view)
-  const subtitle = subtitleFor(widget, frame)
+  const frames = framesFor(state.frames, workspaceId, widget)
+  const landed = Object.keys(frames).length > 0
+  const error = errorFor(state.frameErrors, workspaceId, widget)
+  const View = viewFor(widget)
+  const subtitle = subtitleForWidget(widget, frames)
+  const primary = frames.main ?? Object.values(frames)[0]
+  // Render once the primary frame is here; a secondary dataset (events, levels) draws when it lands.
+  const ready = landed && (framesComplete(widget, frames) || !!primary)
 
   return (
     <div id={widgetDomId(widget.id)} className="widget-cell h-full w-full rounded">
@@ -35,21 +37,22 @@ export function WidgetCell({ widget, workspaceId }: { widget: Widget; workspaceI
         title={widget.title}
         subtitle={subtitle}
         size={widget.size}
-        loading={!frame && !error}
-        error={error}
-        empty={!!frame && frame.rows.length === 0}
+        loading={!ready && !error}
+        error={ready ? undefined : error}
+        empty={ready && !!primary && primary.rows.length === 0}
         onEdit={() => setEditing(true)}
         onRefresh={() => refreshWidget(widget.id, workspaceId)}
         onExpand={() => setExpanded(true)}
       >
-        {frame && <View widget={widget} frame={frame} />}
+        {ready && <View widget={widget} frames={frames} />}
       </WidgetFrame>
 
       <Dialog open={expanded} onClose={() => setExpanded(false)} title={subtitle ? `${widget.title} · ${subtitle}` : widget.title} size="wide">
-        <div className="h-[70vh] w-full min-h-0">{frame ? <View widget={widget} frame={frame} /> : <div className="text-fg-2">{error ?? 'Loading…'}</div>}</div>
+        <div className="h-[70vh] w-full min-h-0">{ready ? <View widget={widget} frames={frames} /> : <div className="text-fg-2">{error ?? 'Loading…'}</div>}</div>
       </Dialog>
 
-      <WidgetEditor open={editing} onClose={() => setEditing(false)} workspaceId={workspaceId} widget={widget} />
+      {/* The editor is v1's form over kinds until (e)'s three-tab editor lands; a v2 widget has no kind form yet. */}
+      {'query' in widget && widget.query && <WidgetEditor open={editing} onClose={() => setEditing(false)} workspaceId={workspaceId} widget={widget as Widget} />}
     </div>
   )
 }

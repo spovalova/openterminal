@@ -1,71 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type FC } from 'react'
 import clsx from 'clsx'
-import { columnIndex, numericColumns, statColumn, type Frame, type Kind, type StatKind } from '@terminal/core'
+import { columnIndex, type Frame, type Kind, type StatControl } from '@terminal/core'
 import { EMPTY_CELL, EmptyState, direction, formatCell, type CellFormat } from '@terminal/ui'
 import type { ViewProps } from './types'
-import { formatsFor } from './TableView'
+import { cellFormat } from './TableView'
+import { controlOf, kindOf, primaryFrame } from './fields'
+import { STAT_SECONDARY, columnLabel, formatsFor } from './legacy'
 
-/** Human labels for the columns a stat is likely to show; anything else is the column name with spaces. */
-const COLUMN_LABEL: Record<string, string> = {
-  price: 'price',
-  change_pct: 'day change',
-  volume: 'volume',
-  extended_price: 'extended price',
-  market_cap: 'market cap',
-  pe: 'P/E',
-  forward_pe: 'forward P/E',
-  peg: 'PEG',
-  ev_ebitda: 'EV/EBITDA',
-  ps: 'P/S',
-  pb: 'P/B',
-  gross_margin: 'gross margin',
-  operating_margin: 'operating margin',
-  profit_margin: 'profit margin',
-  revenue_growth: 'revenue growth',
-  earnings_growth: 'earnings growth',
-  roe: 'ROE',
-  debt_to_equity: 'debt to equity',
-  dividend_yield: 'dividend yield',
-  iv30: 'IV30',
-  iv30_high: 'IV30 high',
-  iv30_low: 'IV30 low',
-  iv_rank: 'IV rank',
-  hv30: 'HV30',
-  hv30_high: 'HV30 high',
-  hv30_low: 'HV30 low',
-  year_high: '52w high',
-  year_low: '52w low',
-  analysts: 'analysts',
-  target_low: 'low target',
-  target_consensus: 'consensus target',
-  target_high: 'high target',
-  upside_pct: 'upside',
-  eps_estimate_q: 'EPS est. (Q)',
-  eps_estimate_y: 'EPS est. (Y)',
-  eps_growth_y: 'EPS growth',
-  employees: 'employees',
-  beta: 'beta',
-  short_interest: 'shares short',
-  avg_volume: 'avg volume',
-  days_to_cover: 'days to cover',
-}
-
-export function columnLabel(column: string): string {
-  return COLUMN_LABEL[column] ?? column.replace(/_/g, ' ')
-}
-
-/**
- * The line under the number, per kind: a signed move where the kind has one, else the column a trader
- * reads next to the key column. Skipped when it is the column already on display.
- */
-const SECONDARY: Record<StatKind, { column: string; label?: string }> = {
-  quote: { column: 'change_pct' },
-  metrics: { column: 'forward_pe', label: 'forward' },
-  volatility: { column: 'iv_rank', label: 'IV rank' },
-  estimates: { column: 'upside_pct', label: 'upside' },
-  profile: { column: 'sector' },
-  short_interest: { column: 'change_pct', label: 'vs prior report' },
-}
+export { columnLabel }
 
 export type Stat = {
   symbol: string
@@ -83,15 +25,18 @@ function num(v: unknown): number | null {
 }
 
 /**
- * One stat per symbol, in frame order, from the first row of each symbol (the newest, for kinds with
- * history such as short_interest). `column` is the view's column or the kind's key column.
+ * One stat per group, in frame order, from the first row of each group (the newest, for kinds with history such
+ * as short_interest). `column` is the control's column; the line under the number is the control's `change`
+ * column (or the kind's secondary column for a v1 kind), formatted by the field config.
  */
-export function statRows(frame: Frame, kind: Kind, column: string): Stat[] {
-  const iSym = columnIndex(frame, 'symbol')
+export function statRows(frame: Frame, kind: Kind | undefined, column: string, control?: Pick<StatControl, 'change' | 'format' | 'group'> & { formats?: Record<string, CellFormat> }): Stat[] {
+  const group = control?.group ?? 'symbol'
+  const iSym = columnIndex(frame, group)
   const iVal = columnIndex(frame, column)
-  const formats = formatsFor(kind, frame.columns)
-  const format: CellFormat = formats[column] ?? 'price'
-  const secondary = (SECONDARY as Partial<Record<Kind, { column: string; label?: string }>>)[kind]
+  const formats: Record<string, CellFormat> = { ...(kind ? formatsFor(kind, frame.columns) : {}), ...(control?.formats ?? {}) }
+  const format: CellFormat = control?.format ? cellFormat(control.format) : (formats[column] ?? 'price')
+  const legacy = kind ? (STAT_SECONDARY as Partial<Record<Kind, { column: string; label?: string }>>)[kind] : undefined
+  const secondary = control?.change ? { column: control.change } : legacy
   const iSec = secondary && secondary.column !== column ? columnIndex(frame, secondary.column) : -1
   const iState = kind === 'quote' ? columnIndex(frame, 'market_state') : -1
   const iExt = kind === 'quote' ? columnIndex(frame, 'extended_price') : -1
@@ -107,7 +52,7 @@ export function statRows(frame: Frame, kind: Kind, column: string): Stat[] {
     let sec: Stat['secondary'] = null
     if (iSec >= 0 && secondary) {
       const v = row[iSec]
-      const f = formats[secondary.column] ?? 'text'
+      const f = formats[secondary.column] ?? (typeof v === 'number' && /pct|percent|change/.test(secondary.column) ? 'change' : 'text')
       const text = formatCell(v, f)
       if (text !== EMPTY_CELL) sec = { text, dir: f === 'change' ? direction(v) : null, ...(secondary.label ? { label: secondary.label } : {}) }
     }
@@ -157,21 +102,24 @@ function useTicks(stats: Stat[]): Record<string, Tick> {
 }
 
 /**
- * `stat` view: the kind's key column as one big number per symbol, the symbol as its label, and a
- * change line under it (quote: the day change, plus the extended-hours price outside the regular
- * session). One symbol fills the widget; several become a row of compact cards.
+ * `stat` preset: the control's column (the key field, else the first measure) as one big number per group, the
+ * group as its label, and a change line under it (quote: the day change, plus the extended-hours price outside
+ * the regular session). One group fills the widget; several become a row of compact cards.
  */
-export const StatView: FC<ViewProps> = ({ widget, frame }) => {
-  const kind = widget.query.kind
-  const column = statColumn(kind, widget.view) ?? numericColumns(kind)[0] ?? ''
-  const stats = useMemo(() => statRows(frame, kind, column), [frame, kind, column])
+export const StatView: FC<ViewProps> = ({ widget, frames }) => {
+  const kind = kindOf(widget)
+  const control = controlOf(widget, frames)
+  const stat = control?.kind === 'stat' ? control : undefined
+  const frame = stat ? frames[stat.data] : primaryFrame(widget, frames)
+  const column = stat?.column ?? ''
+  const stats = useMemo(() => (frame && stat ? statRows(frame, kind, column, stat) : []), [frame, stat, kind, column])
   const ticks = useTicks(stats)
 
   if (stats.length === 0) {
     return <EmptyState title="No data" hint="The query returned no rows for these symbols." />
   }
 
-  const label = columnLabel(column)
+  const label = stat?.label && stat.label !== column ? stat.label : columnLabel(column)
   if (stats.length === 1) {
     const s = stats[0]!
     return (
@@ -196,9 +144,11 @@ const dirClass = (dir: 'up' | 'down' | null) => (dir === 'up' ? 'text-up' : dir 
 const StatBody: FC<{ stat: Stat; label: string; tick: Tick | undefined; hero?: boolean }> = ({ stat, label, tick, hero }) => (
   <>
     <div className={clsx('flex min-w-0 items-baseline gap-1.5 truncate text-xs leading-4 text-fg-3', hero && 'mb-1')}>
-      <span data-field="symbol" className="num font-semibold text-fg">
-        {stat.symbol}
-      </span>
+      {stat.symbol !== '*' && (
+        <span data-field="symbol" className="num font-semibold text-fg">
+          {stat.symbol}
+        </span>
+      )}
       <span className="truncate">{label}</span>
     </div>
     <div className="min-w-0 truncate">

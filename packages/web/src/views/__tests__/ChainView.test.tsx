@@ -5,7 +5,7 @@ import type { Frame, Widget } from '@terminal/core'
 
 import { ChainView, buildChain, hintWidth, inTheMoney, sideColumns } from '../ChainView'
 import { TableView } from '../TableView'
-import { SeriesView } from '../SeriesView'
+import { ChartView } from '../ChartView'
 import { viewFor } from '../view-for'
 import { fixture } from '../fixtures'
 
@@ -54,7 +54,7 @@ describe('buildChain', () => {
 describe('ChainView', () => {
   it('renders one row per strike with calls left, strike centre, puts right, and the header line', () => {
     const { widget, frame } = fixture('options')
-    render(<ChainView widget={widget} frame={frame} />)
+    render(<ChainView widget={widget} frames={{ main: frame }} />)
     const rows = bodyRows()
     expect(rows).toHaveLength(20)
     expect(rows.map(strikeOf)).toEqual([...rows.map(strikeOf)].sort((a, b) => a - b))
@@ -75,7 +75,7 @@ describe('ChainView', () => {
 
   it('shades ITM cells (calls below the price, puts above) and marks the row nearest the price', () => {
     const { widget, frame } = fixture('options')
-    render(<ChainView widget={widget} frame={frame} />)
+    render(<ChainView widget={widget} frames={{ main: frame }} />)
     for (const tr of bodyRows()) {
       const strike = strikeOf(tr)
       const calls = Array.from(tr.querySelectorAll('td[data-side="call"]'))
@@ -92,7 +92,7 @@ describe('ChainView', () => {
 
   it('formats cells: prices with two decimals, OI as integers, IV with one decimal and a percent sign', () => {
     const { widget, frame } = fixture('options')
-    render(<ChainView widget={widget} frame={frame} />)
+    render(<ChainView widget={widget} frames={{ main: frame }} />)
     const atm = document.querySelector('[data-view="chain"] tbody tr[data-atm]')!
     const put = buildChain(frame).rows.find((r) => r.strike === 182.5)!.put!
     const puts = Array.from(atm.querySelectorAll('td[data-side="put"]')).map((td) => td.textContent)
@@ -104,7 +104,7 @@ describe('ChainView', () => {
 
   it('an unmeasured sm widget assumes a narrow view and drops volume and delta on both sides', () => {
     const { widget, frame } = fixture('options')
-    render(<ChainView widget={{ ...widget, size: 'sm' }} frame={frame} />)
+    render(<ChainView widget={{ ...widget, size: 'sm' }} frames={{ main: frame }} />)
     expect(headerLabels()).toEqual(['IV', 'OI', 'Last', 'Ask', 'Bid', 'Bid', 'Ask', 'Last', 'OI', 'IV'])
     expect(bodyRows()[0]!.querySelectorAll('td')).toHaveLength(11)
     expect(document.querySelector('[data-view="chain"]')!.getAttribute('data-size')).toBe('sm')
@@ -115,8 +115,8 @@ describe('ChainView', () => {
   it('hides a side that has no contracts (type: call)', () => {
     const { widget, frame } = fixture('options')
     const calls: Frame = { ...frame, rows: frame.rows.filter((r) => r[2] === 'call') }
-    const w: Widget = { ...widget, query: { kind: 'options', params: { ...widget.query.params, type: 'call' } } } as Widget
-    render(<ChainView widget={w} frame={calls} />)
+    const w: Widget = { ...widget, query: { kind: 'options', params: { ...(widget as Widget).query.params, type: 'call' } } } as Widget
+    render(<ChainView widget={w} frames={{ main: calls }} />)
     expect(screen.queryByText('Puts')).toBeNull()
     expect(screen.getByText('Calls')).toBeTruthy()
     expect(bodyRows()).toHaveLength(20)
@@ -125,7 +125,7 @@ describe('ChainView', () => {
 
   it('renders an empty state for a frame with no rows', () => {
     const { widget, frame } = fixture('options')
-    render(<ChainView widget={widget} frame={{ ...frame, rows: [] }} />)
+    render(<ChainView widget={widget} frames={{ main: { ...frame, rows: [] } }} />)
     expect(screen.getByText('No contracts')).toBeTruthy()
     expect(document.querySelector('[data-view="chain"]')).toBeNull()
   })
@@ -133,6 +133,6 @@ describe('ChainView', () => {
   it('viewFor picks ChainView for chain views and keeps the others', () => {
     expect(viewFor({ type: 'chain' })).toBe(ChainView)
     expect(viewFor({ type: 'table' })).toBe(TableView)
-    expect(viewFor({ type: 'series' })).toBe(SeriesView)
+    expect(viewFor({ type: 'series' })).toBe(ChartView)
   })
 })

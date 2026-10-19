@@ -89,7 +89,7 @@ describe('StatView', () => {
 
   it('renders one symbol as a hero number with the symbol as its label and the change under it', () => {
     const { widget: w, frame: f } = fixture('stat-quote')
-    render(<StatView widget={w} frame={f} />)
+    render(<StatView widget={w} frames={{ main: f }} />)
     const root = document.querySelector('[data-view="stat"]')!
     expect(root.getAttribute('data-count')).toBe('1')
     expect(root.getAttribute('data-column')).toBe('price')
@@ -104,7 +104,7 @@ describe('StatView', () => {
 
   it('renders several symbols as a row of cards, in frame order', () => {
     const { widget: w, frame: f } = fixture('stat-quotes')
-    render(<StatView widget={w} frame={f} />)
+    render(<StatView widget={w} frames={{ main: f }} />)
     expect(document.querySelector('[data-view="stat"]')!.getAttribute('data-count')).toBe('4')
     expect(Array.from(document.querySelectorAll('[data-symbol]')).map((el) => el.getAttribute('data-symbol'))).toEqual(['MU', 'SNDK', 'WDC', 'STX'])
     expect(value('WDC')!.textContent).toBe('112.30')
@@ -114,7 +114,7 @@ describe('StatView', () => {
 
   it('honours the view column', () => {
     const { widget: w, frame: f } = fixture('stat-metrics')
-    render(<StatView widget={w} frame={f} />)
+    render(<StatView widget={w} frames={{ main: f }} />)
     expect(document.querySelector('[data-view="stat"]')!.getAttribute('data-column')).toBe('forward_pe')
     expect(value()!.textContent).toBe('16.13')
     expect(screen.getByText('forward P/E')).toBeTruthy()
@@ -123,20 +123,20 @@ describe('StatView', () => {
   it('ticks the number once when a refreshed frame changes it, with the direction', async () => {
     const w = widget('quote', { symbols: ['NVDA'] })
     const at = (price: number) => frame('quote', [['NVDA', price, 1, 1, 'REGULAR', null, null]])
-    const { rerender } = render(<StatView widget={w} frame={at(100)} />)
+    const { rerender } = render(<StatView widget={w} frames={{ main: at(100) }} />)
     expect(value()!.getAttribute('data-tick')).toBeNull()
-    await act(async () => rerender(<StatView widget={w} frame={at(101)} />))
+    await act(async () => rerender(<StatView widget={w} frames={{ main: at(101) }} />))
     expect(value()!.textContent).toBe('101.00')
     expect(value()!.getAttribute('data-tick')).toBe('up')
     // the same value again: nothing new to highlight
-    await act(async () => rerender(<StatView widget={w} frame={at(101)} />))
+    await act(async () => rerender(<StatView widget={w} frames={{ main: at(101) }} />))
     expect(value()!.getAttribute('data-tick')).toBe('up')
-    await act(async () => rerender(<StatView widget={w} frame={at(99.5)} />))
+    await act(async () => rerender(<StatView widget={w} frames={{ main: at(99.5) }} />))
     expect(value()!.getAttribute('data-tick')).toBe('down')
   })
 
   it('shows the empty state when the frame has no rows', () => {
-    render(<StatView widget={widget('quote', { symbols: ['NVDA'] })} frame={frame('quote', [])} />)
+    render(<StatView widget={widget('quote', { symbols: ['NVDA'] })} frames={{ main: frame('quote', []) }} />)
     expect(document.querySelector('[data-view="stat"]')).toBeNull()
     expect(screen.getByText('No data')).toBeTruthy()
   })

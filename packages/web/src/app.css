@@ -48,7 +48,24 @@ body,
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
   gap: 8px;
-  align-content: start;
+  /* cards share the body's height (quote tiles), so a row of four fills its cell */
+  align-content: stretch;
+}
+
+/*
+ * The facts card (a one-row frame): label over value, wrapped to the width, about 180px per fact so a dozen
+ * facts take three rows in a wide cell. Centred when it does not scroll; a card with six facts or fewer sets
+ * its values a step larger, like a row of stats.
+ */
+.facts-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px 16px;
+  align-content: center;
+}
+.facts-card[data-few] [data-field="value"] {
+  font-size: var(--text-xl);
+  line-height: var(--text-xl--line-height);
 }
 
 /* Sidebar overlays the grid below 1100px. */

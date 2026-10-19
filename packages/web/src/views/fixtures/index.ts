@@ -4,9 +4,14 @@
  * (options on the chain view, macro on the series view, the rest on tables).
  * Columns come straight from `KINDS` so they always match the catalog.
  */
-import { KINDS, parseWidget, type Frame, type Kind, type Widget, type WidgetInput } from '@terminal/core'
+import { KINDS, parseWidget, type AnyWidget, type Frame, type Kind, type Widget, type WidgetInput } from '@terminal/core'
+import { V2_FIXTURES, type FixtureV2 } from './v2'
 
-export type Fixture = { id: string; note: string; widget: Widget; frame: Frame }
+/** A widget with its frames per dataset; `frame` is the primary (`main`) one, kept for the v1 fixtures and their tests. */
+export type Fixture = { id: string; note: string; widget: AnyWidget; frames: Record<string, Frame>; frame: Frame }
+/** A v1 fixture: a kind query with one frame. */
+export type FixtureV1 = { id: string; note: string; widget: Widget; frame: Frame }
+export type { FixtureV2 }
 
 /** 2026-10-16 09:30 ET, the morning every fixture was "recorded". */
 export const FETCHED_AT = Date.UTC(2026, 9, 16, 13, 30)
@@ -50,7 +55,7 @@ function widget(w: WidgetInput): Widget {
 
 // ---- A. "What's happening with memory?" ------------------------------------------------------
 
-const A1: Fixture = {
+const A1: FixtureV1 = {
   id: 'A1',
   note: 'ohlcv 1d 3mo basket · series, normalize · lg',
   widget: widget({
@@ -68,7 +73,7 @@ const A1: Fixture = {
   ]),
 }
 
-const A2: Fixture = {
+const A2: FixtureV1 = {
   id: 'A2',
   note: 'ohlcv 1d 6mo MU · series, candle · md',
   widget: widget({
@@ -88,7 +93,7 @@ const A2: Fixture = {
   ]),
 }
 
-const A3: Fixture = {
+const A3: FixtureV1 = {
   id: 'A3',
   note: 'quote basket · table · md',
   widget: widget({
@@ -106,7 +111,7 @@ const A3: Fixture = {
   ]),
 }
 
-const A4: Fixture = {
+const A4: FixtureV1 = {
   id: 'A4',
   note: 'earnings basket next 60 days · table · sm',
   widget: widget({
@@ -124,7 +129,7 @@ const A4: Fixture = {
   ]),
 }
 
-const A5: Fixture = {
+const A5: FixtureV1 = {
   id: 'A5',
   note: 'news basket · table · md',
   widget: widget({
@@ -145,7 +150,7 @@ const A5: Fixture = {
 
 // ---- B. "Is NVDA's drop today news or just the market?" --------------------------------------
 
-const B1: Fixture = {
+const B1: FixtureV1 = {
   id: 'B1',
   note: 'ohlcv 5m 1d NVDA, SPY, SMH · series, normalize · lg',
   widget: widget({
@@ -162,7 +167,7 @@ const B1: Fixture = {
   ]),
 }
 
-const B2: Fixture = {
+const B2: FixtureV1 = {
   id: 'B2',
   note: 'ohlcv 5m 1d NVDA · series, candle · md',
   widget: widget({
@@ -175,7 +180,7 @@ const B2: Fixture = {
   frame: ohlcv([['NVDA', INTRADAY, [184.2, 183.1, 181.9, 180.4, 179.2, 178.6, 178.9, 177.8], 2_900_000]]),
 }
 
-const B3: Fixture = {
+const B3: FixtureV1 = {
   id: 'B3',
   note: 'quote NVDA + peers + SPY + SMH · table · md',
   widget: widget({
@@ -195,7 +200,7 @@ const B3: Fixture = {
   ]),
 }
 
-const B4: Fixture = {
+const B4: FixtureV1 = {
   id: 'B4',
   note: 'news NVDA 24h · table · md',
   widget: widget({
@@ -215,7 +220,7 @@ const B4: Fixture = {
 
 // ---- C. "Morning check on my watchlist" -----------------------------------------------------
 
-const C1: Fixture = {
+const C1: FixtureV1 = {
   id: 'C1',
   note: 'quote watchlist + SPY + QQQ · table · lg',
   widget: widget({
@@ -235,7 +240,7 @@ const C1: Fixture = {
   ]),
 }
 
-const C2: Fixture = {
+const C2: FixtureV1 = {
   id: 'C2',
   note: 'earnings watchlist today · table · sm',
   widget: widget({
@@ -248,7 +253,7 @@ const C2: Fixture = {
   frame: frame('earnings', [['TSLA', '2026-10-16', 'amc', 0.52]]),
 }
 
-const C3: Fixture = {
+const C3: FixtureV1 = {
   id: 'C3',
   note: 'news watchlist overnight · table · md',
   widget: widget({
@@ -266,7 +271,7 @@ const C3: Fixture = {
   ]),
 }
 
-const C4: Fixture = {
+const C4: FixtureV1 = {
   id: 'C4',
   note: 'ohlcv 1d 5d SPY, QQQ · series · md',
   widget: widget({
@@ -284,7 +289,7 @@ const C4: Fixture = {
 
 // ---- extra: search, so every kind has a table fixture ---------------------------------------
 
-const SEARCH: Fixture = {
+const SEARCH: FixtureV1 = {
   id: 'search',
   note: 'search (not a section 5 widget; agent-only kind) · table',
   widget: widget({
@@ -350,7 +355,7 @@ function chain(symbol: string, spot: number, expiration: string, dte: number, st
 const r2 = (n: number) => Math.round(n * 100) / 100
 const round4 = (n: number) => Math.round(n * 10_000) / 10_000
 
-const OPTIONS: Fixture = {
+const OPTIONS: FixtureV1 = {
   id: 'options',
   note: 'options NVDA, 10 strikes each side, one expiration · chain · lg',
   widget: widget({
@@ -363,7 +368,7 @@ const OPTIONS: Fixture = {
   frame: frame('options', chain('NVDA', 182.43, '2026-10-23', 7, 2.5, 10)),
 }
 
-const OPTIONS_SM: Fixture = {
+const OPTIONS_SM: FixtureV1 = {
   id: 'options-sm',
   note: 'the same chain at sm (volume and delta dropped) · chain · sm',
   widget: widget({
@@ -391,7 +396,7 @@ function steps(start: number, cuts: number[]): number[] {
   return WEEKS.map((_, i) => r2(start - 0.25 * cuts.filter((c) => c <= i).length))
 }
 
-const MACRO: Fixture = {
+const MACRO: FixtureV1 = {
   id: 'macro',
   note: 'macro treasury_10y, treasury_2y, fed_funds, 1y · series · lg',
   widget: widget({
@@ -408,7 +413,7 @@ const MACRO: Fixture = {
   ]),
 }
 
-const FINANCIALS: Fixture = {
+const FINANCIALS: FixtureV1 = {
   id: 'financials',
   note: 'financials NVDA quarterly, 4 periods · table · md',
   widget: widget({
@@ -426,7 +431,7 @@ const FINANCIALS: Fixture = {
   ]),
 }
 
-const INSIDERS: Fixture = {
+const INSIDERS: FixtureV1 = {
   id: 'insiders',
   note: 'insiders NVDA, latest 6 · table · md',
   widget: widget({
@@ -446,7 +451,7 @@ const INSIDERS: Fixture = {
   ]),
 }
 
-const CALENDAR: Fixture = {
+const CALENDAR: FixtureV1 = {
   id: 'calendar',
   note: 'calendar US, next week · table · md',
   widget: widget({
@@ -470,7 +475,7 @@ const CALENDAR: Fixture = {
   ]),
 }
 
-const MOVERS: Fixture = {
+const MOVERS: FixtureV1 = {
   id: 'movers',
   note: 'movers gainers, top 10 · table · sm',
   widget: widget({
@@ -494,7 +499,7 @@ const MOVERS: Fixture = {
   ]),
 }
 
-const VOLATILITY: Fixture = {
+const VOLATILITY: FixtureV1 = {
   id: 'volatility',
   note: 'volatility NVDA, AMD, TSLA, SPY · table · md',
   widget: widget({
@@ -512,7 +517,7 @@ const VOLATILITY: Fixture = {
   ]),
 }
 
-const PROFILE: Fixture = {
+const PROFILE: FixtureV1 = {
   id: 'profile',
   note: 'profile NVDA, AMD (long description truncates) · table · md',
   widget: widget({
@@ -550,7 +555,7 @@ const PROFILE: Fixture = {
 
 // ---- stat view: one headline number per symbol ----------------------------------------------
 
-const STAT_QUOTE: Fixture = {
+const STAT_QUOTE: FixtureV1 = {
   id: 'stat-quote',
   note: 'quote NVDA after hours · stat · sm',
   widget: widget({
@@ -563,7 +568,7 @@ const STAT_QUOTE: Fixture = {
   frame: frame('quote', [['NVDA', 177.8, -3.48, 98_200_000, 'POST', 178.42, 0.35]]),
 }
 
-const STAT_QUOTES: Fixture = {
+const STAT_QUOTES: FixtureV1 = {
   id: 'stat-quotes',
   note: 'quote basket in the regular session · stat, four cards · md',
   widget: widget({
@@ -581,7 +586,7 @@ const STAT_QUOTES: Fixture = {
   ]),
 }
 
-const STAT_METRICS: Fixture = {
+const STAT_METRICS: FixtureV1 = {
   id: 'stat-metrics',
   note: 'metrics RDDT, forward P/E picked with `column` · stat · sm',
   widget: widget({
@@ -594,7 +599,7 @@ const STAT_METRICS: Fixture = {
   frame: frame('metrics', [['RDDT', 30_000_000_000, 36.31, 16.13, 0.78, 34.03, 9.82, 9.14, 91.44, 28.79, 31.35, 61.1, 106.2, 24.1, 0.02, null]]),
 }
 
-const STAT_VOL: Fixture = {
+const STAT_VOL: FixtureV1 = {
   id: 'stat-volatility',
   note: 'volatility NVDA, the key column (iv30) with IV rank under it · stat · sm',
   widget: widget({
@@ -607,7 +612,7 @@ const STAT_VOL: Fixture = {
   frame: frame('volatility', [['NVDA', 44.8, 71.2, 31.5, 33.5, 38.1, 92.4, 24.6, 212.19, 86.62]]),
 }
 
-export const FIXTURES: Fixture[] = [
+export const V1_FIXTURES: FixtureV1[] = [
   A1,
   A2,
   A3,
@@ -636,6 +641,9 @@ export const FIXTURES: Fixture[] = [
   STAT_METRICS,
   STAT_VOL,
 ]
+
+/** Every fixture: the v1 kinds with their frame under `main`, then one per v2 preset. */
+export const FIXTURES: Fixture[] = [...V1_FIXTURES.map((f) => ({ ...f, frames: { main: f.frame } })), ...V2_FIXTURES]
 
 export function fixture(id: string): Fixture {
   const f = FIXTURES.find((x) => x.id === id)

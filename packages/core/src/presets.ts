@@ -204,7 +204,8 @@ export function expandPreset(view: ViewV2, datasets: DatasetsFieldConfig): Pane[
       })
       const scale = scaleFor(ds, ys[0])
       const xType = ds.fields[x]?.role === 'time' || ds.shape.time === x ? 'time' : ds.shape.numeric.includes(x) ? 'number' : 'category'
-      return [{ height: 1, x: xType, layers, ...(scale ? { scales: { left: scale } } : {}), legend: true, lastValue: xType === 'time' }]
+      // The last-value badge stays on a numeric axis too: it marks the curve's long end, and every chart carries one (section 17 checklist).
+      return [{ height: 1, x: xType, layers, ...(scale ? { scales: { left: scale } } : {}), legend: true, lastValue: true }]
     }
     case 'indicator':
       return indicatorPanes(view, name, ds)

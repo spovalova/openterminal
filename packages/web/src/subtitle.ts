@@ -3,7 +3,7 @@
  * frame once it has landed) and written once per kind. "NVDA · 5m · today", "4 symbols · 1d · 3mo,
  * rebased", "NVDA · Oct 23, 2026 · 7 DTE · underlying 182.43". Never typed by the agent or the user.
  */
-import { columnIndex, type Frame, type Widget } from '@terminal/core'
+import { columnIndex, describeQuery, isWidgetV2, type AnyWidget, type Frame, type Widget } from '@terminal/core'
 import { formatCell } from '@terminal/ui'
 
 /** Short labels for the macro series, shared with the series legend. */
@@ -237,5 +237,19 @@ export function subtitleFor(widget: Widget, frame?: Frame, now: number = Date.no
       break
     }
   }
+  return parts.filter(Boolean).join(SEP)
+}
+
+/**
+ * The sub-header for any widget. A v1 widget (or a v2 widget migrated from one, which keeps its `query`) uses the
+ * per-kind rule above over its `main` frame. A native v2 widget describes its datasets (`describeQuery`) and the
+ * primary frame's row count; the route summary from the catalog replaces this when (e)'s Data tab lands.
+ */
+export function subtitleForWidget(widget: AnyWidget, frames: Record<string, Frame> = {}, now: number = Date.now()): string {
+  const main = frames.main ?? Object.values(frames)[0]
+  if (!isWidgetV2(widget)) return subtitleFor(widget, main, now)
+  if (widget.query) return subtitleFor({ ...widget, query: widget.query, view: { type: 'table' } }, main, now)
+  const parts = Object.entries(widget.data).map(([name, q]) => (name === 'main' || Object.keys(widget.data).length === 1 ? describeQuery(q) : `${name}: ${describeQuery(q)}`))
+  if (main) parts.push(count(main.rows.length, 'row'))
   return parts.filter(Boolean).join(SEP)
 }
