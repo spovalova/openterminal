@@ -119,5 +119,5 @@ export const TRANSFORM_EXAMPLE = {
     'm["pe"] = m.close / m.eps_ttm',
     'result = m[["symbol", "time", "close", "eps_ttm", "pe"]]',
   ].join('\n'),
-  columns: { pe: { unit: 'ratio', label: 'P/E (TTM)' }, eps_ttm: { unit: 'usd', label: 'EPS (TTM)' } },
+  columns: { pe: { unit: 'ratio', label: 'P/E (TTM)', key: true }, eps_ttm: { unit: 'usd', label: 'EPS (TTM)' } },
 } as const

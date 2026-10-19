@@ -143,7 +143,10 @@ export function seriesDetails(frame: Frame, column: string, format: CellFormat):
  * annotated numeric column (label and format from the field config) so a transform's stat shows its companions too.
  */
 export function detailRows(frame: Frame, column: string, change: string | undefined, fields: Record<string, { label?: string; format?: string; hidden?: boolean }> = {}, max = 6): Detail[] {
-  const row = frame.rows[0]
+  // Over a time series the companions come from the newest row, like the headline ("Close 145.89" from two years ago
+  // sat under today's P/E).
+  const it = frame.columns.findIndex((c) => c.type === 'time')
+  const row = it < 0 ? frame.rows[0] : frame.rows.reduce<unknown[] | undefined>((best, r) => (best === undefined || (r[it] as number) > (best[it] as number) ? r : best), undefined)
   if (!row) return []
   const out: Detail[] = []
   const used = new Set<string>([column, ...(change ? [change] : [])])
@@ -239,6 +242,7 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
   const ticks = useTicks(stats)
   const [sizeRef, size] = useSize()
   const dense = stats.length > 1 && size != null && !cardsFit(stats.length, size.width, size.height)
+  const cardHeight = size && !dense ? cardHeightFor(stats.length, size.width, size.height) : undefined
 
   if (stats.length === 0) {
     return <EmptyState title="No data" hint="The query returned no rows for these symbols." />
@@ -298,7 +302,7 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
     <div ref={sizeRef} data-view="stat" data-column={column} data-count={stats.length} className="flex h-full w-full flex-col overflow-x-hidden overflow-y-auto p-2">
       <div className="stat-cards my-auto">
         {stats.map((s) => (
-          <div key={s.symbol} data-symbol={s.symbol} className="stat-card flex min-w-0 flex-col justify-center overflow-hidden rounded-md border border-border bg-surface-2/50 px-3 py-2">
+          <div key={s.symbol} data-symbol={s.symbol} className="stat-card flex min-w-0 flex-col justify-center overflow-hidden rounded-md border border-border bg-surface-2/50 px-3 py-2" style={cardHeight ? { height: cardHeight } : undefined}>
             <StatBody stat={s} label={label} tick={ticks[s.symbol]} />
           </div>
         ))}
@@ -313,6 +317,17 @@ export function cardsFit(n: number, width: number, height: number): boolean {
   const perRow = Math.max(1, Math.floor((width - 16 + 8) / (136 + 8)))
   const rows = Math.ceil(n / perRow)
   return rows * 72 + (rows - 1) * 8 + 16 <= height
+}
+
+/**
+ * How tall each compact card is: the rows share the cell's height, 72px at least and 128px at most, so three cards in
+ * a tall 1920 cell are a band across it rather than a strip floating in the middle (and never a 170px slab).
+ */
+export function cardHeightFor(n: number, width: number, height: number): number | undefined {
+  if (width <= 0 || height <= 0) return undefined
+  const perRow = Math.max(1, Math.floor((width - 16 + 8) / (136 + 8)))
+  const rows = Math.ceil(n / perRow)
+  return Math.max(72, Math.min(128, Math.floor((height - 16 - (rows - 1) * 8) / rows)))
 }
 
 /** The element's content size, measured (undefined until the first layout, so tests and server rendering keep the cards). */

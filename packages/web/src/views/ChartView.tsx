@@ -325,6 +325,13 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
         localization: { ...(base as { localization?: object }).localization, timeFormatter: label },
         timeScale: { ...base.timeScale, tickMarkFormatter: label, rightOffset: 0.6 },
       } as never) as unknown as Chart
+      // The price-based horizontal scale ignores tickMarkFormatter and prints `toFixed`; its behaviour object is the
+      // only place to put "3M" and "10Y" on the axis and under the crosshair.
+      const behaviour = (chart as unknown as { horzBehaviour?: () => { formatTickmark?: unknown; formatHorzItem?: unknown } }).horzBehaviour?.()
+      if (behaviour) {
+        behaviour.formatTickmark = (item: { time: number }) => label(item.time)
+        behaviour.formatHorzItem = (item: number) => label(item)
+      }
     }
     chartRef.current = chart
 
@@ -531,7 +538,9 @@ type LegendProps = {
  * green (change 7). Above the plot (one or two rows) or in a column beside it for the price pane; inset in the
  * top-left for indicator panes. Marker kinds get a chip with their letter and display name.
  */
-const Legend: FC<LegendProps> = ({ placement, top, title, rows, hover, percentUnits, markerKinds, categorical }) => (
+const Legend: FC<LegendProps> = ({ placement, top, title, rows, hover, percentUnits, markerKinds, categorical }) => {
+  const compact = placement === 'top' && rows.length > 4
+  return (
   <div
     data-legend=""
     data-placement={placement}
@@ -540,7 +549,10 @@ const Legend: FC<LegendProps> = ({ placement, top, title, rows, hover, percentUn
     className={clsx(
       'text-xs leading-4',
       placement === 'inset' && 'pointer-events-none absolute left-2 z-10 flex max-w-[calc(100%-64px)] flex-wrap items-center gap-x-1 gap-y-0.5',
-      placement === 'top' && 'flex max-h-[38px] shrink-0 flex-wrap items-center gap-x-3 gap-y-0.5 overflow-hidden px-3 pt-1.5 pb-1',
+      placement === 'top' && 'flex shrink-0 flex-wrap items-center gap-x-3 gap-y-0.5 overflow-hidden px-3 pt-1.5 pb-1',
+      // Two rows at most; past four series the chips drop the last value (the badges carry it) and may take a third row
+      // rather than hide a series (the seventh Mag 7 line had no chip).
+      placement === 'top' && (compact ? 'max-h-[56px] gap-x-2' : 'max-h-[38px]'),
       placement === 'side' && 'flex w-[168px] shrink-0 flex-col gap-0.5 overflow-y-auto border-l border-border py-2 pr-2 pl-2',
     )}
     style={placement === 'inset' ? { top: (top ?? 0) + 6 } : undefined}
@@ -557,9 +569,11 @@ const Legend: FC<LegendProps> = ({ placement, top, title, rows, hover, percentUn
         <div key={row.id} role="listitem" data-symbol={row.group} title={row.label === row.group ? undefined : row.group} className={clsx('flex min-w-0 items-center gap-1.5 whitespace-nowrap', placement === 'inset' && 'rounded-sm bg-surface/80 px-1.5 py-px')}>
           <span aria-hidden="true" className="inline-block h-0.5 w-2.5 shrink-0 rounded-xs" style={{ background: row.color }} />
           <span className="num truncate font-semibold text-fg">{row.label}</span>
-          <span data-field="last" className="num text-fg-2">
-            {text.last}
-          </span>
+          {!compact && (
+            <span data-field="last" className="num text-fg-2">
+              {text.last}
+            </span>
+          )}
           {!categorical && (
             <span data-field="change" className="num" style={{ color: row.color, opacity: 0.85 }}>
               {text.change}
@@ -577,7 +591,8 @@ const Legend: FC<LegendProps> = ({ placement, top, title, rows, hover, percentUn
       </div>
     ))}
   </div>
-)
+  )
+}
 
 /** The events under the crosshair: label and detail per marker, beside the pointer. */
 const MarkerTooltip: FC<{ markers: MarkerSpec[]; x: number; y: number }> = ({ markers, x, y }) => (

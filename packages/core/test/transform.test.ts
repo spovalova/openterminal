@@ -34,7 +34,7 @@ describe('transform contract', () => {
   it('ships the P/E worked example as a valid transform query', () => {
     expect(() => TransformQuerySchema.parse(TRANSFORM_EXAMPLE)).not.toThrow()
     expect(TRANSFORM_EXAMPLE.code).toContain('merge_asof')
-    expect(TRANSFORM_EXAMPLE.columns.pe).toEqual({ unit: 'ratio', label: 'P/E (TTM)' })
+    expect(TRANSFORM_EXAMPLE.columns.pe).toEqual({ unit: 'ratio', label: 'P/E (TTM)', key: true })
   })
   it('the engine interface is implementable with a plain object', async () => {
     const engine: TransformEngine = {

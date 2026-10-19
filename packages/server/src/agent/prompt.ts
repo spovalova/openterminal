@@ -146,7 +146,7 @@ function renderTransforms(): string {
     'Worked example, "P/E over time for NVDA" (close over trailing-twelve-month EPS as of each trading day):',
     `transform(${JSON.stringify({ inputs: ex.inputs, columns: ex.columns })}) with code:`,
     ex.code,
-    'The result has a time column and a numeric `pe`, so a `price` widget draws it as a line (events: the eps_history dataset marks the report dates) and a `stat` with column "pe" shows the latest value. The reply says "P/E (TTM) is 42.1, derived from closes and reported EPS" with the figure from the transform preview.',
+    'The result has a time column and a numeric `pe`, so a `price` widget draws it as a line (the `key: true` on `pe` makes it the plotted measure over the close it carries; events: the eps_history dataset marks the report dates) and a `stat` with column "pe" shows the latest value. Do not add a separate price chart over the same range beside it: the two read as the same line. The reply says "P/E (TTM) is 42.1, derived from closes and reported EPS" with the figure from the transform preview.',
     'Also use a transform to steer a preview: the tail of a long frame, the rows inside a date range, the top-N by a column, a pivot of one symbol\'s financials into metrics by period.',
   ].join('\n')
 }

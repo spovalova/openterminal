@@ -138,7 +138,10 @@ export function primaryDataset(view: { data?: string }, datasets: DatasetsFieldC
 /** The y field of a dataset for a price-like chart: close, else the key field, else the first measure. */
 export function measureOf(ds: DatasetFields, prefer: readonly string[] = ['close', 'price', 'value', 'rate']): string | undefined {
   const measures = ds.shape.numeric.filter((n) => n !== ds.shape.x && !ds.fields[n]?.hidden)
-  return prefer.find((p) => measures.includes(p)) ?? keyField(ds.fields, measures) ?? measures[0]
+  // A field the dataset declares as its key wins (a transform's `pe` over the `close` it carries along; taste round:
+  // the "P/E (TTM)" widget drew the price), then the usual names, then the first measure.
+  const declared = measures.find((m) => ds.fields[m]?.key === true && !/^(close|price|value|rate)$/.test(m))
+  return declared ?? prefer.find((p) => measures.includes(p)) ?? keyField(ds.fields, measures) ?? measures[0]
 }
 
 function scaleFor(ds: DatasetFields, y: string | undefined): Scale | undefined {

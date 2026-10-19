@@ -109,7 +109,7 @@ describe('buildSystemPrompt (v2)', () => {
     expect(p).toContain('ot.prev_close(df, value="close", group="symbol")')
     expect(p).toContain('m = pd.merge_asof(p, e[["symbol", "time", "eps_ttm"]], on="time", by="symbol")')
     expect(p).toContain(JSON.stringify(TRANSFORM_EXAMPLE.inputs))
-    expect(p).toContain('"pe":{"unit":"ratio","label":"P/E (TTM)"}')
+    expect(p).toContain('"pe":{"unit":"ratio","label":"P/E (TTM)","key":true}')
     expect(p).toContain('E. "P/E over time for NVDA" (derived)')
     expect(p).toContain('"view":{"preset":"stat","column":"pe"}')
   })

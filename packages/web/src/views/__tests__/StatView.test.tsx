@@ -3,7 +3,7 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { type Frame, type WidgetV2 } from '@terminal/core'
 
-import { StatView, cardsFit, columnLabel, orderStats, statRows, symbolOrder } from '../StatView'
+import { StatView, cardHeightFor, cardsFit, columnLabel, orderStats, statRows, symbolOrder } from '../StatView'
 import { viewFor } from '../view-for'
 import { fixture } from '../fixtures'
 
@@ -168,5 +168,13 @@ describe('cardsFit (change 2: five cards in a short cell become one line per sym
     expect(cardsFit(5, 340, 190)).toBe(false)
     expect(cardsFit(7, 1000, 190)).toBe(true)
     expect(cardsFit(5, 0, 0)).toBe(true) // unmeasured: cards
+  })
+})
+
+describe('cardHeightFor (compact cards share a tall cell)', () => {
+  it('fills a tall row up to 128px and keeps 72px in a short one', () => {
+    expect(cardHeightFor(3, 480, 250)).toBe(128)
+    expect(cardHeightFor(4, 340, 190)).toBe(83)
+    expect(cardHeightFor(2, 340, 80)).toBe(72)
   })
 })

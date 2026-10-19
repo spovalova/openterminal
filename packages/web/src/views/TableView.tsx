@@ -113,6 +113,8 @@ function metricKey(text: string): string {
   return text
     .toLowerCase()
     .replace(/p\/e/g, 'pe')
+    .replace(/p\/s/g, 'ps')
+    .replace(/p\/b/g, 'pb')
     .replace(/ev\s*\/\s*revenue/g, 'ev_revenue')
     .replace(/ev\s*\/\s*ebitda/g, 'ev_ebitda')
     .replace(/debt\s*\/\s*equity/g, 'debt_to_equity')
@@ -133,8 +135,8 @@ export function rowExtremesFor(frame: Pick<Frame, 'columns' | 'rows'>, metricCol
   for (const row of frame.rows) {
     const key = metricKey(String(row[m] ?? ''))
     if (!key || !markable(key, undefined) || ABSOLUTE.test(key) && !COMPARATIVE.test(key)) continue
-    const lower = LOWER_IS_BETTER.test(key) || /(^|_)(pe|debt)/.test(key)
-    const multiple = MULTIPLE.test(key) || /(^|_)pe($|_)/.test(key)
+    const lower = LOWER_IS_BETTER.test(key) || /(^|_)(pe|ps|pb|ev_revenue|ev_ebitda|debt)($|_)/.test(key)
+    const multiple = MULTIPLE.test(key) || /(^|_)(pe|ps|pb|ev_revenue|ev_ebitda)($|_)/.test(key)
     let hi: string | undefined
     let lo: string | undefined
     let hv = -Infinity
