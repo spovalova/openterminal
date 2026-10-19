@@ -46,7 +46,16 @@ if (!cases.length) {
 if (outDir) mkdirSync(outDir, { recursive: true })
 
 const pad = (ms) => String(ms).padStart(6)
-const describe = (w) => `${w.id}:${w.query.kind}/${w.view.type}${w.view.candle ? '+candle' : ''}${w.view.normalize ? '+norm' : ''}/${w.size}`
+/** One token per widget: v1 `w1:ohlcv/series+candle/md`, v2 `w1:recipe ohlcv(+events)/price+candle/md`. */
+const describe = (w) => {
+  if (w.query && w.view?.type) return `${w.id}:${w.query.kind}/${w.view.type}${w.view.candle ? '+candle' : ''}${w.view.normalize ? '+norm' : ''}/${w.size}`
+  const names = Object.keys(w.data ?? {})
+  const main = w.data?.[w.view?.data ?? 'main'] ?? w.data?.[names[0]]
+  const q = !main ? '?' : main.recipe ? `recipe ${main.recipe}` : main.route ? `${main.connector} ${main.route}` : main.code ? `transform(${Object.keys(main.inputs ?? {}).join(',')})` : main.kind ?? '?'
+  const extra = names.filter((n) => n !== (w.view?.data ?? 'main'))
+  const opts = Object.entries(w.view ?? {}).filter(([k, v]) => k !== 'preset' && k !== 'data' && v === true).map(([k]) => `+${k}`).join('')
+  return `${w.id ?? '?'}:${q}${extra.length ? `(+${extra.join(',')})` : ''}/${w.view?.preset ?? '?'}${opts}/${w.size}`
+}
 const fmt = (v) => (v === null || v === undefined ? '·' : typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toFixed(2)) : String(v).slice(0, 48))
 const iso = (ms) => new Date(ms).toISOString().slice(0, 16).replace('T', ' ')
 
@@ -55,10 +64,13 @@ function verify(widget, frame) {
   const cols = frame.columns.map((c) => c.name)
   const col = (name) => cols.indexOf(name)
   const rows = frame.rows
-  const lines = [`${widget.id} ${widget.query.kind} ${JSON.stringify(widget.query.params)} → ${rows.length} rows (${frame.meta.connector})`]
-  if (widget.query.kind === 'ohlcv' || widget.query.kind === 'macro') {
-    const key = widget.query.kind === 'ohlcv' ? 'symbol' : 'series'
-    const value = widget.query.kind === 'ohlcv' ? 'close' : 'value'
+  // v2 widgets hold datasets; the main one names the kind through its recipe (or route) for the lines below.
+  const main = widget.query ?? widget.data?.[widget.view?.data ?? 'main'] ?? Object.values(widget.data ?? {})[0] ?? {}
+  const kind = main.kind ?? main.recipe ?? main.route ?? 'transform'
+  const lines = [`${widget.id} ${kind} ${JSON.stringify(main.params ?? Object.keys(main.inputs ?? {}))} → ${rows.length} rows (${frame.meta.connector})`]
+  if (kind === 'ohlcv' || kind === 'macro' || (col('time') >= 0 && col('close') >= 0)) {
+    const key = col('symbol') >= 0 ? 'symbol' : 'series'
+    const value = col('close') >= 0 ? 'close' : 'value'
     const k = col(key), t = col('time'), v = col(value)
     const by = new Map()
     for (const r of rows) {
@@ -74,7 +86,7 @@ function verify(widget, frame) {
     }
     return lines
   }
-  const head = widget.query.kind === 'quote' ? rows.length : widget.query.kind === 'options' ? 12 : 8
+  const head = kind === 'quote' ? rows.length : kind === 'options' ? 12 : 8
   lines.push(`  ${cols.join(' | ')}`)
   for (const r of rows.slice(0, head)) lines.push(`  ${r.map((v, i) => (frame.columns[i].type === 'time' && typeof v === 'number' ? iso(v) : fmt(v))).join(' | ')}`)
   if (rows.length > head) lines.push(`  … ${rows.length - head} more`)
@@ -90,6 +102,7 @@ async function runCase({ name, prompts }) {
   const log = []
   const frames = new Map()
   let widgets = []
+  let lastSet = []
   const t0 = Date.now()
   let i = 0
   let ok = true
@@ -101,8 +114,13 @@ async function runCase({ name, prompts }) {
     console.log('VERIFY (what the reply may quote, per widget):')
     for (const w of widgets) {
       const f = frames.get(w.id)
-      if (!f) { console.log(`${w.id} ${w.query.kind}: no frame`); continue }
+      if (!f) { console.log(`${w.id} ${describe(w)}: no frame`); continue }
       for (const line of verify(w, f)) console.log(line)
+    }
+    if (widgets.length === 0 && lastSet.length > 0) {
+      // No `widgets` message arrived (the v2 widget set is dropped by the server until the protocol carries
+      // AnyWidgetSchema); the set the agent applied is in the set_workspace step's args.
+      console.log(`(no widgets message; the set_workspace step carried ${lastSet.length} widgets: ${lastSet.map(describe).join(' ')})`)
     }
     console.log('')
   }
@@ -117,13 +135,20 @@ async function runCase({ name, prompts }) {
       const m = JSON.parse(String(ev.data))
       const at = Date.now() - t0
       log.push({ at, ...m })
-      if (m.t === 'step') console.log(`${pad(at)}ms step ${m.step.summary}${m.step.error ? ' ERROR ' + m.step.error : ''} (${m.step.ms}ms)`)
+      if (m.t === 'step') {
+        console.log(`${pad(at)}ms step ${m.step.summary}${m.step.error ? ' ERROR ' + m.step.error : ''} (${m.step.ms}ms)`)
+        if (m.step.tool === 'set_workspace' && !m.step.error && Array.isArray(m.step.args?.widgets)) lastSet = m.step.args.widgets.map((w, i) => ({ id: `w${i + 1}`, ...w }))
+      }
       else if (m.t === 'widgets') { widgets = m.widgets; frames.clear(); console.log(`${pad(at)}ms widgets name=${m.name ?? ''} ${m.widgets.map(describe).join(' ')}`) }
       else if (m.t === 'frame') { frames.set(m.widgetId, m.frame); console.log(`${pad(at)}ms frame ${m.widgetId} ${m.frame.rows.length} rows (${m.frame.meta.connector})`) }
       else if (m.t === 'frameError') console.log(`${pad(at)}ms frameError ${m.widgetId}: ${m.error}`)
       else if (m.t !== 'delta') console.log(`${pad(at)}ms ${m.t}${m.error ? ' ' + m.error : ''}`)
       if (m.t === 'done' || m.t === 'failed') {
         console.log(`\nREPLY ${i + 1} (${at}ms):\n${m.message?.text ?? '(failed)'}\n`)
+        if (m.message?.verification) {
+          const v = m.message.verification
+          console.log(`VERIFICATION: ${v.ok ? 'ok' : 'FAILED'} · ${v.matched}/${v.checked} figures matched${v.unmatched.length ? ` · not in any preview: ${v.unmatched.map((u) => u.text).join(', ')}` : ''}\n`)
+        }
         if (m.t === 'failed') ok = false
         // Frames can arrive after `done`; give them a moment before printing the verification block.
         setTimeout(() => {

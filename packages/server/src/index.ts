@@ -40,7 +40,7 @@ export {
   type WorkspacePatch,
   type CatalogCacheRow,
   type LivenessRow,
-  type RunLogRow,
+  type RunLogRow as StoreRunLogRow,
   type FrameCacheRow,
 } from './store/index.js'
 export { SqliteCache, type SqliteCacheOptions } from './cache-sqlite.js'
@@ -61,3 +61,5 @@ export {
 export { Executor, Poller, errorMessage, nextExpiry, withProviderOverrides, PROVIDER_OVERRIDES_KEY, type Emit, type RunOptions, type PollerOptions, type Frames, type DatasetResult, type ProviderOverrides } from './executor.js'
 export { createStubAgentRunner, stubWidgets, STUB_SYMBOLS, STUB_REPLY, STUB_WORKSPACE_NAME, type StubAgentOptions } from './stub-agent.js'
 export { createAgentRunner, type LlmConfig as AgentLlmConfig } from './agent/index.js'
+export { MemoryRunLog, JsonFileRunLog, RunLogRowSchema, runCost, type RunLog, type RunLogRow, type RunLogQuery, type ModelPricing } from './runlog.js'
+export { verifyReply, extractNumbers, maskNonFigures, candidateValues, matchMention, verificationOf, BARE_INTEGER_MIN, type PreviewRecord, type NumberMention, type Match, type VerificationReport } from './verify.js'

@@ -1,9 +1,9 @@
-// Wires config → registry → store → agent → HTTP + WebSocket, and serves. Entry point for `pnpm start`.
+// Wires config → store → registry → agent → HTTP + WebSocket, and serves. Entry point for `pnpm start`.
 import { existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { serve, type ServerType } from '@hono/node-server'
-import type { AgentRunner, Registry } from '@terminal/core'
+import { ConnectorRegistry, type AgentRunner, type Registry } from '@terminal/core'
 import { builtinAnnotations, builtinRecipes, loadAnnotationsFile } from '@terminal/core/node'
 import { createAgentRunner } from './agent/index.js'
 import { createApp, type App } from './app.js'
@@ -11,8 +11,10 @@ import { SqliteCache } from './cache-sqlite.js'
 import { loadConfig, resolvedLlm, terminalHome, workspacesDir, type Config } from './config.js'
 import { buildRegistry } from './connectors.js'
 import { loadUserRecipes, type ProbeFn } from './routes-data.js'
+import { RunLogRowSchema, type RunLog, type RunLogRow } from './runlog.js'
 import { openStore, type MigrationReport, type Store } from './store/index.js'
 import { createStubAgentRunner } from './stub-agent.js'
+import { createTransformEngine, type ServerTransformEngine } from './transform/index.js'
 
 export const DEFAULT_PORT = 4242
 
@@ -56,6 +58,21 @@ export type RunningServer = {
 const here = dirname(fileURLToPath(import.meta.url))
 export const DEFAULT_WEB_DIST = resolve(here, '../../web/dist')
 
+/** (c)'s `RunLog` over (e)'s store: rows go to the `runs` table, extra fields kept whole. */
+export function storeRunLog(store: Store): RunLog {
+  return {
+    async append(row: RunLogRow) {
+      store.appendRun(RunLogRowSchema.parse(row))
+    },
+    async list(opts = {}) {
+      return store.listRuns(opts).flatMap((r) => {
+        const parsed = RunLogRowSchema.safeParse(r)
+        return parsed.success ? [parsed.data] : []
+      })
+    },
+  }
+}
+
 export async function startServer(opts: StartOptions = {}): Promise<RunningServer> {
   const env = opts.env ?? process.env
   const log = opts.log ?? ((msg: string) => console.error(`[server] ${msg}`))
@@ -98,7 +115,7 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
     agent = opts.agent
     log('agent: injected')
   } else if (llm) {
-    agent = createAgentRunner({ registry, llm, log })
+    agent = createAgentRunner({ registry, llm, log, runLog: storeRunLog(store) })
     real = true
     log(`agent: ${llm.provider} ${llm.model}`)
   } else {
@@ -124,6 +141,14 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
     const s = serve({ fetch: app.fetch, port, hostname }, () => resolveServer(s))
   })
   injectWebSocket(server)
+  // The transform engine (phase 1 (b)): one Pyodide worker, warmed after listen so the first prompt does not pay the
+  // cold start. A server started with an injected registry (tests) runs without one.
+  let transform: ServerTransformEngine | undefined
+  if (!opts.registry && registry instanceof ConnectorRegistry) {
+    transform = createTransformEngine({ log })
+    registry.setTransformEngine(transform)
+    void transform.warmup().catch((err: unknown) => log(`transform engine warmup failed: ${err instanceof Error ? err.message : String(err)}`))
+  }
   const address = server.address()
   const boundPort = typeof address === 'object' && address ? address.port : port
   const url = `http://${hostname === '0.0.0.0' ? 'localhost' : hostname}:${boundPort}`
@@ -140,8 +165,9 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
     llm: real,
     storeKind,
     ...(migration ? { migration } : {}),
-    close: () =>
-      new Promise<void>((resolveClose, reject) => {
+    close: async () => {
+      await transform?.close()
+      await new Promise<void>((resolveClose, reject) => {
         for (const client of wss.clients) client.terminate()
         wss.close()
         server.close((err) => {
@@ -149,7 +175,8 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
           if (err) reject(err)
           else resolveClose()
         })
-      }),
+      })
+    },
   }
 }
 

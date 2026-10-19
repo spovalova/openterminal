@@ -10,7 +10,7 @@ import { AnyWidgetSchema, FrameSchema, MessageSchema, RecipeSchema, WorkspaceSch
 import { z } from 'zod'
 import { ID_RE, type CatalogCacheRow, type LivenessRow, type RunLogRow, type Store, type WorkspaceInit, type WorkspacePatch } from './types.js'
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS workspaces (
@@ -59,7 +59,8 @@ CREATE TABLE IF NOT EXISTS runs (
   steps TEXT NOT NULL,
   tokens TEXT,
   cost REAL,
-  verification TEXT
+  verification TEXT,
+  extra TEXT
 );
 CREATE INDEX IF NOT EXISTS runs_by_workspace ON runs(workspace_id, started_at);
 CREATE TABLE IF NOT EXISTS frames (
@@ -98,6 +99,14 @@ export class SqliteStore implements Store {
     this.db.exec('PRAGMA foreign_keys = ON')
     this.db.exec(SCHEMA)
     const { user_version } = this.db.prepare('PRAGMA user_version').get() as { user_version: number }
+    if (user_version > 0 && user_version < 2) {
+      // v1 → v2: run log rows keep the fields the agent adds beyond the fixed columns
+      try {
+        this.db.exec('ALTER TABLE runs ADD COLUMN extra TEXT')
+      } catch {
+        /* already there */
+      }
+    }
     if (user_version < SCHEMA_VERSION) this.db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`)
   }
 
@@ -305,16 +314,18 @@ export class SqliteStore implements Store {
   // ------------------------------------------------------------------------------------------ run log
 
   appendRun(row: RunLogRow): void {
-    this.stmt('INSERT OR REPLACE INTO runs (id, workspace_id, started_at, ms, model, steps, tokens, cost, verification) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
-      row.id,
-      row.workspaceId,
-      row.startedAt,
-      row.ms,
-      row.model,
-      JSON.stringify(row.steps),
-      row.tokens ? JSON.stringify(row.tokens) : null,
-      row.cost ?? null,
-      row.verification === undefined ? null : JSON.stringify(row.verification),
+    const { id, workspaceId, startedAt, ms, model, steps, tokens, cost, verification, ...extra } = row
+    this.stmt('INSERT OR REPLACE INTO runs (id, workspace_id, started_at, ms, model, steps, tokens, cost, verification, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
+      id,
+      workspaceId,
+      startedAt,
+      ms,
+      model,
+      JSON.stringify(steps),
+      tokens ? JSON.stringify(tokens) : null,
+      cost ?? null,
+      verification === undefined ? null : JSON.stringify(verification),
+      Object.keys(extra).length ? JSON.stringify(extra) : null,
     )
   }
 
@@ -324,9 +335,9 @@ export class SqliteStore implements Store {
       opts.workspaceId
         ? this.stmt('SELECT * FROM runs WHERE workspace_id = ? ORDER BY started_at DESC LIMIT ?').all(opts.workspaceId, limit)
         : this.stmt('SELECT * FROM runs ORDER BY started_at DESC LIMIT ?').all(limit)
-    ) as { id: string; workspace_id: string; started_at: number; ms: number; model: string; steps: string; tokens: string | null; cost: number | null; verification: string | null }[]
+    ) as { id: string; workspace_id: string; started_at: number; ms: number; model: string; steps: string; tokens: string | null; cost: number | null; verification: string | null; extra: string | null }[]
     return rows.map((r) => {
-      const out: RunLogRow = { id: r.id, workspaceId: r.workspace_id, startedAt: r.started_at, ms: r.ms, model: r.model, steps: JSON.parse(r.steps) }
+      const out: RunLogRow = { ...(r.extra ? (JSON.parse(r.extra) as Record<string, unknown>) : {}), id: r.id, workspaceId: r.workspace_id, startedAt: r.started_at, ms: r.ms, model: r.model, steps: JSON.parse(r.steps) }
       if (r.tokens !== null) out.tokens = JSON.parse(r.tokens)
       if (r.cost !== null) out.cost = r.cost
       if (r.verification !== null) out.verification = JSON.parse(r.verification)

@@ -19,9 +19,11 @@ export type RunLogRow = {
   ms: number
   model: string
   steps: Step[]
-  tokens?: { input: number; output: number } | Record<string, number>
+  tokens?: Record<string, number | undefined>
   cost?: number
   verification?: unknown
+  /** (c)'s extra fields (`prompt`, `turns`, `continued`, `error`) travel whole. */
+  [extra: string]: unknown
 }
 
 export type FrameCacheRow = { key: string; frame: Frame; expiresAt: number }

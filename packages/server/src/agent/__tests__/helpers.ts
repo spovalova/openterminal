@@ -2,7 +2,7 @@
 // No network, no real LLM.
 import { MockLanguageModelV4, convertArrayToReadableStream } from 'ai/test'
 import { z } from 'zod'
-import { ConnectorRegistry, createWorkspace, defineConnector, toFrame, type ServerMsg, type Workspace } from '@terminal/core'
+import { ConnectorRegistry, KINDS, createWorkspace, defineConnector, parseRecipes, toFrame, zodToJsonSchemaObject, type Kind, type Recipe, type ServerMsg, type Workspace } from '@terminal/core'
 
 // Spec types, derived from the mock so this file needs no direct dependency on @ai-sdk/provider.
 type CallOptions = Parameters<MockLanguageModelV4['doStream']>[0]
@@ -107,9 +107,29 @@ export function createFakeRegistry(opts: FakeConnectorOptions = {}) {
       },
     },
   })
-  const registry = new ConnectorRegistry()
+  const registry = new ConnectorRegistry({ recipes: recipesForKinds('fake', connector.kinds) })
   registry.register(connector, {})
   return { registry, calls }
+}
+
+/**
+ * One recipe per kind of a v1 connector, routed to that connector's kind route with every param passed through, so
+ * `{ recipe: 'quote', params }` resolves without the real recipes.yml (whose routes name openbb, yahoo and finnhub).
+ */
+export function recipesForKinds(connector: string, kinds: readonly Kind[]): Recipe[] {
+  return parseRecipes(
+    kinds.map((kind) => {
+      const params = zodToJsonSchemaObject(KINDS[kind].params)
+      const names = Object.keys(params.properties ?? {})
+      const view =
+        kind === 'ohlcv' ? { preset: 'price' }
+        : kind === 'macro' ? { preset: 'compare', normalize: false }
+        : kind === 'options' ? { preset: 'chain' }
+        : kind === 'quote' ? { preset: 'stat' }
+        : { preset: 'table' }
+      return { name: kind, title: kind, summary: KINDS[kind].description, params, view, routes: [{ connector, route: kind, params: Object.fromEntries(names.map((n) => [n, `{${n}}`])) }] }
+    }),
+  )
 }
 
 // ---------- scripted model ----------

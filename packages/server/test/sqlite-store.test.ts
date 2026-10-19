@@ -113,10 +113,11 @@ describe('SqliteStore', () => {
     expect(store.getLiveness('other')).toEqual([])
 
     store.appendRun({ id: 'r1', workspaceId: 'ws1', startedAt: 10, ms: 1200, model: 'test', steps: [{ tool: 'query', args: {}, summary: 'quote', ms: 3 }], tokens: { input: 1, output: 2 }, cost: 0.01, verification: { ok: true } })
-    store.appendRun({ id: 'r2', workspaceId: 'ws2', startedAt: 20, ms: 100, model: 'test', steps: [] })
+    store.appendRun({ id: 'r2', workspaceId: 'ws2', startedAt: 20, ms: 100, model: 'test', steps: [], prompt: 'why?', error: 'cancelled', turns: [{ finishReason: 'stop', textChars: 3, toolCalls: 0 }] })
     expect(store.listRuns().map((r) => r.id)).toEqual(['r2', 'r1'])
     expect(store.listRuns({ workspaceId: 'ws1' })[0]).toMatchObject({ id: 'r1', tokens: { input: 1, output: 2 }, cost: 0.01, verification: { ok: true } })
     expect(store.listRuns({ workspaceId: 'ws2' })[0]).not.toHaveProperty('tokens')
+    expect(store.listRuns({ workspaceId: 'ws2' })[0]).toMatchObject({ prompt: 'why?', error: 'cancelled', turns: [{ finishReason: 'stop', textChars: 3, toolCalls: 0 }] })
 
     expect(store.getSetting('providers')).toBeUndefined()
     store.setSetting('providers', { 'openbb:equity/price/quote': 'yfinance' })
