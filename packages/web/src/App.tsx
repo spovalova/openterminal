@@ -11,6 +11,7 @@ import { isModKey, isTyping, MOD } from './platform'
 import { TerminalSocket } from './socket'
 import { SocketContext } from './socketContext'
 import { AppContext, initialState, layoutFor, reducer, workspaceState, type AppState } from './state'
+import { hasAnyFrame } from './state/frames'
 import { withViewTransition } from './transition'
 
 const ACTIVE_KEY = 'terminal.activeWorkspace'
@@ -28,8 +29,11 @@ export function App() {
     () =>
       new TerminalSocket({
         onStatus: (status) => dispatch({ type: 'socket', status }),
-        onMessage: (msg) => {
+        onMessage: (raw) => {
           const s = stateRef.current
+          // A v1 server pushes frames only for the focused workspace and without a workspaceId: stamp the active one,
+          // so frames key by workspace even before the server says so (PLAN.md section 17, feature 8).
+          const msg = (raw.t === 'frame' || raw.t === 'frameError') && !raw.workspaceId && s.activeId ? { ...raw, workspaceId: s.activeId } : raw
           if (msg.t === 'started' && msg.workspaceId === s.activeId) {
             const workspace = s.workspaces.find((w) => w.id === msg.workspaceId)
             if (layoutFor(workspace, workspaceState(s, msg.workspaceId)) === 'empty') {
@@ -98,12 +102,13 @@ export function App() {
     }
     if (activeWs.status === 'streaming') return
     const s = stateRef.current
+    const workspaceId = activeWorkspace?.id
     for (const widget of activeWorkspace?.widgets ?? []) {
-      if (s.frames[widget.id] || s.frameErrors[widget.id]) continue
+      if (hasAnyFrame(s.frames, workspaceId, widget.id) || hasAnyFrame(s.frameErrors, workspaceId, widget.id)) continue
       void api
         .widgetFrame(widget.id)
-        .then((frame) => dispatch({ type: 'frameLoaded', widgetId: widget.id, frame }))
-        .catch(() => socket.refresh(widget.id, activeWorkspace?.id))
+        .then((frame) => dispatch({ type: 'frameLoaded', widgetId: widget.id, frame, ...(workspaceId ? { workspaceId } : {}) }))
+        .catch(() => socket.refresh(widget.id, workspaceId))
     }
   }, [state.activeId, widgetKey, socket])
 

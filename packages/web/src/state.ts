@@ -1,8 +1,9 @@
-// App state: workspaces, the active tab, per-workspace run status, frames by widget id. Reducers for every ServerMsg.
+// App state: workspaces, the active tab, per-workspace run status, frames keyed by workspace, widget and dataset. Reducers for every ServerMsg.
 import { createContext, useContext, type Dispatch } from 'react'
 import type { Frame, Message, ServerMsg, Step, Workspace } from '@terminal/core'
 import type { Health } from './api'
 import type { SocketStatus } from './socket'
+import { dropWidgetFrames, putFrame, putFrameError, type FrameErrors, type FrameEvent, type FrameStore } from './state/frames'
 
 export type Status = 'empty' | 'active' | 'streaming' | 'error'
 
@@ -25,8 +26,9 @@ export type AppState = {
   workspaces: Workspace[]
   activeId: string | null
   ws: Record<string, WorkspaceState>
-  frames: Record<string, Frame>
-  frameErrors: Record<string, string>
+  /** Frames by `frameKey({ workspaceId, widgetId, dataset })`; a v1 server's frames land under the bare key (no workspace). */
+  frames: FrameStore
+  frameErrors: FrameErrors
   socket: SocketStatus
   health: Health | null
   sidebarOpen: boolean
@@ -39,8 +41,8 @@ export type Action =
   | { type: 'removeWorkspace'; id: string }
   | { type: 'activate'; id: string | null }
   | { type: 'promptSent'; workspaceId: string; text: string }
-  | { type: 'frameLoaded'; widgetId: string; frame: Frame }
-  | { type: 'frameFailed'; widgetId: string; error: string }
+  | { type: 'frameLoaded'; widgetId: string; frame: Frame; workspaceId?: string; dataset?: string }
+  | { type: 'frameFailed'; widgetId: string; error: string; workspaceId?: string; dataset?: string }
   | { type: 'socket'; status: SocketStatus }
   | { type: 'health'; health: Health }
   | { type: 'sidebar'; open?: boolean }
@@ -107,11 +109,11 @@ export function reducer(state: AppState, action: Action): AppState {
       const workspaces = state.workspaces.filter((w) => w.id !== action.id)
       const ws = { ...state.ws }
       delete ws[action.id]
-      const frames = { ...state.frames }
-      const frameErrors = { ...state.frameErrors }
+      let frames = state.frames
+      let frameErrors = state.frameErrors
       for (const widget of removed?.widgets ?? []) {
-        delete frames[widget.id]
-        delete frameErrors[widget.id]
+        frames = dropWidgetFrames(frames, action.id, widget.id)
+        frameErrors = dropWidgetFrames(frameErrors, action.id, widget.id)
       }
       const activeId = state.activeId === action.id ? (workspaces[0]?.id ?? null) : state.activeId
       return { ...state, workspaces, ws, frames, frameErrors, activeId }
@@ -131,9 +133,9 @@ export function reducer(state: AppState, action: Action): AppState {
       })
     }
     case 'frameLoaded':
-      return setFrame(state, action.widgetId, action.frame)
+      return setFrame(state, action, action.frame)
     case 'frameFailed':
-      return { ...state, frameErrors: { ...state.frameErrors, [action.widgetId]: action.error } }
+      return { ...state, frameErrors: putFrameError(state.frameErrors, action, action.error) }
     case 'socket':
       return { ...state, socket: action.status }
     case 'health':
@@ -154,10 +156,8 @@ function patchWs(state: AppState, id: string, ws: WorkspaceState): AppState {
   return { ...state, ws: { ...state.ws, [id]: ws } }
 }
 
-function setFrame(state: AppState, widgetId: string, frame: Frame): AppState {
-  const frameErrors = { ...state.frameErrors }
-  delete frameErrors[widgetId]
-  return { ...state, frames: { ...state.frames, [widgetId]: frame }, frameErrors }
+function setFrame(state: AppState, ref: FrameEvent, frame: Frame): AppState {
+  return { ...state, ...putFrame(state.frames, state.frameErrors, ref, frame) }
 }
 
 function onServer(state: AppState, msg: ServerMsg, now: number): AppState {
@@ -182,12 +182,12 @@ function onServer(state: AppState, msg: ServerMsg, now: number): AppState {
       // A prompt overwrites the workspace: the new set replaces the old one.
       const existing = state.workspaces.find((w) => w.id === msg.workspaceId)
       const keep = new Set(msg.widgets.map((w) => w.id))
-      const frames = { ...state.frames }
-      const frameErrors = { ...state.frameErrors }
+      let frames = state.frames
+      let frameErrors = state.frameErrors
       for (const widget of existing?.widgets ?? []) {
         if (keep.has(widget.id)) continue
-        delete frames[widget.id]
-        delete frameErrors[widget.id]
+        frames = dropWidgetFrames(frames, msg.workspaceId, widget.id)
+        frameErrors = dropWidgetFrames(frameErrors, msg.workspaceId, widget.id)
       }
       const workspaces = existing
         ? state.workspaces.map((w) => (w.id === msg.workspaceId ? { ...w, widgets: msg.widgets, name: msg.name ?? w.name, updatedAt: now } : w))
@@ -195,9 +195,9 @@ function onServer(state: AppState, msg: ServerMsg, now: number): AppState {
       return { ...state, workspaces, frames, frameErrors }
     }
     case 'frame':
-      return setFrame(state, msg.widgetId, msg.frame)
+      return setFrame(state, msg, msg.frame)
     case 'frameError':
-      return { ...state, frameErrors: { ...state.frameErrors, [msg.widgetId]: msg.error } }
+      return { ...state, frameErrors: putFrameError(state.frameErrors, msg, msg.error) }
     case 'delta': {
       const prev = workspaceState(state, msg.workspaceId)
       return patchWs(state, msg.workspaceId, { ...prev, streamingText: prev.streamingText + msg.text })
