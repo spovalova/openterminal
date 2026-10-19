@@ -29,11 +29,11 @@ export const Steps: FC<StepsProps> = ({ steps, durationMs, defaultOpen, classNam
           <li key={i} className="flex min-w-0 items-start gap-2 py-0.5">
             <span className={clsx('w-[88px] shrink-0 truncate font-mono text-fg-3', s.tool === 'set_workspace' && 'text-accent')}>{s.tool}</span>
             <span className="min-w-0 flex-1">
-              <span className={clsx('block truncate', s.error ? 'text-down' : 'text-fg-2')} title={s.summary}>
+              <span className={clsx('line-clamp-2 block break-words', s.error ? 'text-down' : 'text-fg-2')} title={s.summary}>
                 {s.summary}
               </span>
               {s.error && (
-                <span className="block truncate font-mono text-fg-3" title={s.error}>
+                <span className="line-clamp-3 block font-mono break-all text-fg-3" title={s.error}>
                   {s.error}
                 </span>
               )}

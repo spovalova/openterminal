@@ -55,6 +55,16 @@ describe('maskNonFigures', () => {
   })
 })
 
+describe('maskNonFigures (index and basket names)', () => {
+  it('blanks the number in S&P 500, Russell 2000, Nasdaq 100 and Mag 7 so it is not a figure to verify (phase 2b: the S&P reply failed on "500")', () => {
+    const text = 'The S&P 500 fell 1.97% last week while the Russell 2000 lost 3% and the Mag 7 held; Nasdaq-100 futures point to 500 more points.'
+    expect(extractNumbers(text).map((n) => n.text)).toEqual(['1.97%', '3%', '500'])
+    // Indicator names too (the backtest reply failed on "SMA 200" twice).
+    const ind = 'The 50/200 SMA cross lagged: SMA 50 is 768.50 against an SMA 200 of 725.01, RSI 14 at 37.8 and MACD 12/26/9 at -14.10.'
+    expect(extractNumbers(ind).map((n) => n.text)).toEqual(['768.50', '725.01', '37.8', '-14.10'])
+  })
+})
+
 describe('extractNumbers', () => {
   it('reads percents, dollars, multiples, scaled suffixes and plain decimals, and skips small bare counts', () => {
     const got = extractNumbers('CRWV fell 11.9% to $61.39 on 95M shares, 3 of 7 names red; P/E 42.1x; OI 3,574 at the 350 puts; spread 45 bps.')

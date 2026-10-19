@@ -188,7 +188,7 @@ export type ExpandOptions = { now?: Date | number }
 /** Validate params against the recipe and expand every dataset's route templates. Throws ZodError on bad params. */
 export function expandRecipe(r: Recipe, rawParams: Record<string, unknown>, opts: ExpandOptions = {}): ExpandedRecipe {
   const params = recipeParamsSchema(r).parse(rawParams) as Record<string, unknown>
-  const ctx: FilterCtx = { now: opts.now ?? Date.now() }
+  const ctx: FilterCtx = { now: opts.now ?? Date.now(), params }
   const data: Record<string, ExpandedDataset> = {}
   for (const [name, ds] of Object.entries(recipeDatasets(r))) {
     if ('routes' in ds) {
@@ -265,7 +265,8 @@ function whenMatches(when: RecipeRoute['when'], params: Record<string, unknown>)
   return true
 }
 
-type FilterCtx = { now: Date | number }
+/** What a template filter can see: the clock, and the recipe's validated params (`prefer:<param>` reads another param). */
+type FilterCtx = { now: Date | number; params?: Record<string, unknown> }
 
 /** Template filters: `{param|filter}` or `{param|filter:arg}`. */
 export const FILTERS: Record<string, (v: unknown, arg: string | undefined, ctx: FilterCtx) => unknown> = {
@@ -296,6 +297,11 @@ export const FILTERS: Record<string, (v: unknown, arg: string | undefined, ctx: 
   times: (v, a) => (typeof v === 'number' ? v * Number(a ?? 1) : v),
   /** A fixed value regardless of the param: `{range|const:1mo}`. */
   const: (_v, a) => a,
+  /** The named recipe param when it is set, else the value so far: `{range|start_date|prefer:start}` lets an exact date override a range. */
+  prefer: (v, a, ctx) => {
+    const other = a ? ctx.params?.[a] : undefined
+    return other !== undefined && other !== null && other !== '' ? other : v
+  },
 }
 
 function applyFilters(value: unknown, filters: string, ctx: FilterCtx): unknown {

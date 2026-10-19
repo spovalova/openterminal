@@ -361,16 +361,18 @@
 .data-table td:last-child {
   padding-right: 12px;
 }
-@container widget (width < 320px) { .data-table [data-rank="3"] { display: none; } }
-@container widget (width < 380px) { .data-table [data-rank="4"] { display: none; } }
-@container widget (width < 440px) { .data-table [data-rank="5"] { display: none; } }
-@container widget (width < 500px) { .data-table [data-rank="6"] { display: none; } }
-@container widget (width < 560px) { .data-table [data-rank="7"] { display: none; } }
-@container widget (width < 620px) { .data-table [data-rank="8"] { display: none; } }
-@container widget (width < 700px) { .data-table [data-rank="9"] { display: none; } }
-@container widget (width < 780px) { .data-table [data-rank="10"] { display: none; } }
-@container widget (width < 860px) { .data-table [data-rank="11"] { display: none; } }
-@container widget (width < 940px) { .data-table [data-rank="12"] { display: none; } }
-@container widget (width < 1020px) { .data-table [data-rank="13"] { display: none; } }
-@container widget (width < 1100px) { .data-table [data-rank="14"] { display: none; } }
-@container widget (width < 1200px) { .data-table [data-rank="15"] { display: none; } }
+/* Three rank-0 columns need about 260px (a 72px symbol and two 90px numbers); each further column about 90px at the
+   phase 2 widths (price 84, change 96, date 104), so the thresholds step by 90 from 350. */
+@container widget (width < 350px) { .data-table [data-rank="3"] { display: none; } }
+@container widget (width < 440px) { .data-table [data-rank="4"] { display: none; } }
+@container widget (width < 530px) { .data-table [data-rank="5"] { display: none; } }
+@container widget (width < 620px) { .data-table [data-rank="6"] { display: none; } }
+@container widget (width < 710px) { .data-table [data-rank="7"] { display: none; } }
+@container widget (width < 800px) { .data-table [data-rank="8"] { display: none; } }
+@container widget (width < 890px) { .data-table [data-rank="9"] { display: none; } }
+@container widget (width < 980px) { .data-table [data-rank="10"] { display: none; } }
+@container widget (width < 1070px) { .data-table [data-rank="11"] { display: none; } }
+@container widget (width < 1160px) { .data-table [data-rank="12"] { display: none; } }
+@container widget (width < 1250px) { .data-table [data-rank="13"] { display: none; } }
+@container widget (width < 1340px) { .data-table [data-rank="14"] { display: none; } }
+@container widget (width < 1430px) { .data-table [data-rank="15"] { display: none; } }

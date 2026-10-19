@@ -42,6 +42,9 @@ export function maskNonFigures(text: string): string {
   const blank = (s: string) => ' '.repeat(s.length)
   return text
     .replace(/\[\[widget:[^\]\s]+\]\]/g, blank) // chips
+    .replace(/\b(?:S&P|SP|Nasdaq|NASDAQ|Russell|Dow|FTSE|Nikkei|DAX|CAC|Hang Seng|Stoxx|STOXX|Euro Stoxx|Magnificent|Mag)[ -]?\d{1,4}\b/g, blank) // index and basket names: S&P 500, Russell 2000, Mag 7
+    .replace(/\b(?:SMA|EMA|DMA|WMA|RSI|MACD|ATR|ADX|CCI|Bollinger|BB)[ -]?\d{1,3}(?:\s?\/\s?\d{1,3})*(?:[ -]day)?\b/g, blank) // indicator names: SMA 50/200, RSI 14, MACD 12/26/9
+    .replace(/\b\d{1,3}(?:\/\d{1,3})+\s?(?:SMA|EMA|DMA|cross(?:over)?|MACD)\b/gi, blank) // 50/200 SMA cross
     .replace(/\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?)?/g, blank) // ISO dates and datetimes
     .replace(/(?<!\d)\d{1,2}\/\d{1,2}(?:\/\d{2,4})?(?!\d)/g, blank) // 10/16, 10/16/2026
     .replace(/(?<!\d)\d{1,2}:\d{2}(?::\d{2})?\s?(?:am|pm|AM|PM|ET|UTC)?/g, blank) // times

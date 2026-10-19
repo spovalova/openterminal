@@ -24,7 +24,7 @@ describe('DataTable never scrolls sideways', () => {
   it('gives numeric, date and time columns a fixed width and lets text share the rest', () => {
     // A YYYY-MM-DD in the mono stack needs 84px plus padding: date and time are 104 (phase 2, the "2026-10…" defect).
     expect(columnWidth('price', 'price')).toBe(84)
-    expect(columnWidth('change_pct', 'change')).toBe(80)
+    expect(columnWidth('change_pct', 'change')).toBe(96)
     expect(columnWidth('time', 'time')).toBe(104)
     expect(columnWidth('date', 'date')).toBe(104)
     expect(columnWidth('symbol', 'text')).toBe(72)

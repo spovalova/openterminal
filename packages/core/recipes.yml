@@ -73,6 +73,7 @@ recipes:
         symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50, description: Ticker symbols }
         interval: { type: string, enum: [1m, 5m, 15m, 1h, 1d, 1w], default: 1d }
         range: { type: string, enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y], default: 3mo }
+        start: { type: string, format: date, description: "Start date (YYYY-MM-DD) for a window the ranges do not cover, e.g. 2020-01-01 for \"since 2020\"; overrides range" }
       required: [symbols]
     view: { preset: price, volume: false }
     size: lg
@@ -83,12 +84,12 @@ recipes:
       - connector: openbb
         route: equity/price/historical
         provider: yfinance
-        params: { symbol: "{symbols}", start_date: "{range|start_date}", interval: "{interval|openbb_interval}" }
+        params: { symbol: "{symbols}", start_date: "{range|start_date|prefer:start}", interval: "{interval|openbb_interval}" }
         rename: { date: time }
         note: single-symbol rows carry no symbol field; v1 added it and sorted by symbol then time.
       - connector: yahoo
         route: chart
-        params: { symbol: "{symbols}", period1: "{range|start_date}", interval: "{interval|yahoo_interval}", includePrePost: false }
+        params: { symbol: "{symbols}", period1: "{range|start_date|prefer:start}", interval: "{interval|yahoo_interval}", includePrePost: false }
         rename: { date: time }
 
   - name: news
@@ -102,15 +103,28 @@ recipes:
       required: [symbols]
     view: { preset: table, columns: [date, title, publisher, url], sort: { column: date, dir: desc } }
     size: md
-    routes:
-      - connector: openbb
-        route: news/company
-        provider: nasdaq
-        params: { symbol: "{symbols}", limit: "{limit}" }
-        note: rows carry a comma-separated `symbols`; v1 attributed each row to the first requested symbol it listed and deduped by url.
-      - connector: finnhub
-        route: company-news
-        params: { symbol: "{symbols|first}", from: "{limit|days_ago:7}", to: "{limit|today}" }
+    # `main` keeps the newest `limit` rows whichever route answered: finnhub's company-news is every headline of the
+    # window (248 for one symbol in a week) and ignores the limit (phase 2b; v1 cut the list in the handler).
+    data:
+      raw:
+        routes:
+          - connector: openbb
+            route: news/company
+            provider: nasdaq
+            params: { symbol: "{symbols}", limit: "{limit}" }
+            note: rows carry a comma-separated `symbols`; v1 attributed each row to the first requested symbol it listed and deduped by url.
+          - connector: finnhub
+            route: company-news
+            params: { symbol: "{symbols|first}", from: "{limit|days_ago:7}", to: "{limit|today}" }
+      main:
+        inputs: [raw, params]
+        code: |
+          n = int(params.at[0, "limit"]) if "limit" in params.columns else 20
+          t = next((c for c in ("date", "datetime", "time", "published") if c in raw.columns), None)
+          df = raw.sort_values(t, ascending=False) if t else raw
+          if "url" in df.columns:
+              df = df.drop_duplicates(subset=["url"])
+          result = df.head(n)
 
   - name: earnings
     title: "Earnings {from} to {to}"
@@ -442,12 +456,25 @@ recipes:
     view: { preset: stat, column: iv30 }
     size: sm
     ttl: 600000
-    routes:
-      - connector: openbb
-        route: equity/price/quote
-        provider: cboe
-        params: { symbol: "{symbols}" }
-        note: cboe's quote carries iv30, iv30_annual_high/low, hv30_annual_high/low (fractions, annotated); v1 added iv_rank from the range.
+    # `main` adds iv_rank (where iv30 sits in its one-year range, 0 to 100) as v1 did (phase 2b).
+    data:
+      raw:
+        routes:
+          - connector: openbb
+            route: equity/price/quote
+            provider: cboe
+            params: { symbol: "{symbols}" }
+            note: cboe's quote carries iv30, iv30_annual_high/low, hv30_annual_high/low (fractions, annotated); main adds iv_rank from the range.
+      main:
+        inputs: [raw, params]
+        code: |
+          df = raw.copy()
+          if {"iv30", "iv30_annual_high", "iv30_annual_low"} <= set(df.columns):
+              span = df["iv30_annual_high"] - df["iv30_annual_low"]
+              df["iv_rank"] = ((df["iv30"] - df["iv30_annual_low"]) / span.where(span != 0) * 100).round(1)
+          result = df
+        columns:
+          iv_rank: { unit: percent, label: IV rank, priority: 2 }
 
   # ------------------------------------------------------------------------------------------------- market-wide
   - name: calendar
@@ -627,6 +654,7 @@ recipes:
         symbol: { type: string, default: "^GSPC", minLength: 1 }
         interval: { type: string, enum: [1m, 5m, 15m, 1h, 1d, 1w], default: 1d }
         range: { type: string, enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y], default: 3mo }
+        start: { type: string, format: date, description: "Start date (YYYY-MM-DD); overrides range" }
     view: { preset: price }
     size: lg
     tags: [index]
@@ -634,21 +662,25 @@ recipes:
       - connector: openbb
         route: index/price/historical
         provider: yfinance
-        params: { symbol: "{symbol}", start_date: "{range|start_date}", interval: "{interval|openbb_interval}" }
+        params: { symbol: "{symbol}", start_date: "{range|start_date|prefer:start}", interval: "{interval|openbb_interval}" }
         rename: { date: time }
       - connector: yahoo
         route: chart
-        params: { symbol: "{symbol}", period1: "{range|start_date}", interval: "{interval|yahoo_interval}", includePrePost: false }
+        params: { symbol: "{symbol}", period1: "{range|start_date|prefer:start}", interval: "{interval|yahoo_interval}", includePrePost: false }
         rename: { date: time }
 
   - name: screener
-    title: "Screener: {preset}"
-    summary: "Yahoo's stock screener presets (day_gainers, most_actives, undervalued_large_caps, growth_technology_stocks, …) with a price floor; filter further with a transform."
+    title: "Screener: {sector} {preset}"
+    summary: "The whole market screened on yfinance: a sector (technology, healthcare, financial-services, energy, …), an industry, a market-cap floor or ceiling in dollars and a price floor, or a preset (day_gainers, most_actives, undervalued_large_caps, …). No P/E filter on the route: cut on trailingPE with a transform."
     params:
       type: object
       properties:
-        preset: { type: string, default: most_actives, description: A yfinance screener preset }
-        limit: { type: integer, minimum: 1, maximum: 250, default: 50 }
+        sector: { type: string, description: "A yfinance sector slug: technology, healthcare, financial-services, consumer-cyclical, communication-services, industrials, consumer-defensive, energy, utilities, real-estate, basic-materials" }
+        industry: { type: string, description: A yfinance industry slug (semiconductors, software-infrastructure, …) }
+        mktcap_min: { type: integer, minimum: 0, description: Market cap floor in dollars (10000000000 is $10B) }
+        mktcap_max: { type: integer, minimum: 0, description: Market cap ceiling in dollars }
+        preset: { type: string, description: A yfinance screener preset (day_gainers, most_actives, undervalued_large_caps, growth_technology_stocks); leave empty when filtering by sector or cap }
+        limit: { type: integer, minimum: 1, maximum: 250, default: 250 }
         price_min: { type: number, minimum: 0, default: 5 }
     view: { preset: table }
     size: lg
@@ -658,4 +690,5 @@ recipes:
       - connector: openbb
         route: equity/screener
         provider: yfinance
-        params: { preset: "{preset}", limit: "{limit}", price_min: "{price_min}" }
+        params: { preset: "{preset}", sector: "{sector}", industry: "{industry}", mktcap_min: "{mktcap_min}", mktcap_max: "{mktcap_max}", limit: "{limit}", price_min: "{price_min}" }
+        note: with no sector, cap or preset yfinance screens the whole market by price; rows carry trailingPE, pe_forward, eps_ttm, market_cap, percent_change but no sector column.

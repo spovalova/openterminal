@@ -74,7 +74,7 @@ describe('field config', () => {
     expect(defaultFormat({ unit: 'days' }, 'number')).toBe('integer')
     expect(defaultFormat({}, 'time')).toBe('time')
     expect(defaultFormat({ format: 'link' }, 'string')).toBe('link')
-    expect(defaultFormat({}, 'number')).toBe('text')
+    expect(defaultFormat({}, 'number')).toBe('ratio') // an unannotated number reads as a number with two decimals, never the raw float (phase 2b)
     const fields = { symbol: { role: 'group' as const }, a: { role: 'measure' as const }, b: { role: 'measure' as const, key: true } }
     expect(keyField(fields)).toBe('b')
     expect(keyField({ symbol: { role: 'group' }, a: { role: 'measure' } })).toBe('a')

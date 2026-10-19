@@ -211,6 +211,20 @@ annotations:
 
   # ---------------------------------------------------------------- openbb: market-wide
   "openbb:equity/screener:price": { unit: usd, format: price, label: Price, priority: 2 }
+  # yfinance's screener rows (phase 2b): the trailing multiple is `trailingPE`, the forward one `pe_forward`.
+  "openbb:equity/screener:trailingPE": { unit: ratio, format: ratio, label: P/E, priority: 2, key: true }
+  "openbb:equity/screener:pe_forward": { unit: ratio, format: ratio, label: Fwd P/E, priority: 3 }
+  "openbb:equity/screener:eps_ttm": { unit: usd, format: price, label: EPS (TTM), priority: 5 }
+  "openbb:equity/screener:eps_forward": { unit: usd, format: price, label: EPS fwd, priority: 6 }
+  "openbb:equity/screener:longName": { label: Name, priority: 4 }
+  "openbb:equity/screener:year_high": { unit: usd, format: price, label: 52w high, priority: 7 }
+  "openbb:equity/screener:year_low": { unit: usd, format: price, label: 52w low, priority: 7 }
+  "openbb:equity/screener:ma50": { unit: usd, format: price, label: 50d avg, priority: 8 }
+  "openbb:equity/screener:ma200": { unit: usd, format: price, label: 200d avg, priority: 8 }
+  "openbb:equity/screener:earnings_date": { label: Reports, priority: 6 }
+  "openbb:equity/screener:exchange_timezone": { hidden: true }
+  "openbb:equity/screener:currency": { hidden: true }
+  "openbb:equity/screener:quoteType": { hidden: true }
   "openbb:equity/screener:change_percent": { unit: fraction, format: change, label: "Chg %", priority: 2 }
   "openbb:equity/screener:percent_change": { unit: fraction, format: change, label: "Chg %", priority: 2 }
   "openbb:equity/screener:pe_ratio": { unit: ratio, format: ratio, label: P/E, priority: 4 }

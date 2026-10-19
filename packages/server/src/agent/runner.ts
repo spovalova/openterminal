@@ -2,6 +2,7 @@ import { streamText, stepCountIs, type LanguageModel, type ModelMessage, type Te
 import { nanoid } from 'nanoid'
 import { TOOL_NAMES, type AgentRunner, type Catalog, type Message, type Registry, type ServerMsg, type Step, type Verification, type WidgetV2 } from '@terminal/core'
 import { runCost, type ModelPricing, type RunLog, type RunLogRow } from '../runlog.js'
+import { plainProse } from '../plain.js'
 import { verificationOf, verifyReply } from '../verify.js'
 import { PreviewMemory } from './previews.js'
 import { buildSystemPrompt } from './prompt.js'
@@ -271,7 +272,8 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
 
       if (!widgets) log('[agent] model finished without set_workspace; keeping current widgets')
 
-      const reply = text.trim()
+      // Rule 8 enforced by the server the way rule 4 is by verification: the stored reply is plain prose (plain.ts).
+      const reply = plainProse(text)
       const report = verifyReply(reply, memory.records())
       const verification: Verification = verificationOf(report)
       if (!verification.ok) log(`[agent] verification: ${verification.unmatched.length} of ${verification.checked} figures not in any preview: ${verification.unmatched.map((u) => u.text).join(', ')}`)

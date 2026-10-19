@@ -40,7 +40,7 @@ const LONG_TEXT = 80
  */
 // A YYYY-MM-DD in the mono stack at the table's size is 84px plus the cell padding, so date and time take 104
 // (the bench v2 "2026-10…" defect); the number widths leave room for a two-word header.
-const COLUMN_WIDTH: Partial<Record<CellFormat, number>> = { price: 84, change: 80, integer: 88, compact: 80, percent: 76, date: 104, time: 104, link: 56 }
+const COLUMN_WIDTH: Partial<Record<CellFormat, number>> = { price: 84, change: 96, integer: 88, compact: 80, percent: 88, date: 104, time: 104, link: 112 }
 const SYMBOL_WIDTH = 72
 
 export function columnWidth(name: string, format: CellFormat, header?: string): number | undefined {

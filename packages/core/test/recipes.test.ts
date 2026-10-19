@@ -137,7 +137,13 @@ describe('recipe helpers', () => {
       { name: 'symbols', type: 'string[]', required: true, description: 'Ticker symbols' },
       { name: 'interval', type: 'string', required: false, enum: ['1m', '5m', '15m', '1h', '1d', '1w'], default: '1d' },
       { name: 'range', type: 'string', required: false, enum: ['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y'], default: '3mo' },
+      { name: 'start', type: 'date', required: false, description: 'Start date (YYYY-MM-DD) for a window the ranges do not cover, e.g. 2020-01-01 for "since 2020"; overrides range' },
     ])
+    // `start` overrides the range on both routes through the `prefer` filter.
+    const since = expandRecipe(by('ohlcv'), { symbols: ['SPY'], start: '2020-01-01' })
+    expect(since.routes[0]!.params.start_date).toBe('2020-01-01')
+    expect(since.routes[1]!.params.period1).toBe('2020-01-01')
+    expect(expandRecipe(by('ohlcv'), { symbols: ['SPY'], range: '1y' }, { now: Date.UTC(2026, 9, 20, 15) }).routes[0]!.params.start_date).toBe('2025-10-20')
     expect(recipeDescriptor(by('quote'))).toMatchObject({ connector: 'recipe', route: 'quote', providers: [], fields: [] })
   })
   it('validates recipes: unknown params in templates, unknown filters, bad transform inputs, duplicates', () => {
@@ -151,7 +157,7 @@ describe('recipe helpers', () => {
     expect(() => parseRecipes([{ name: 'noroutes', title: 't', params: {}, view: { preset: 'table' } }])).toThrow(/needs `routes`/)
   })
   it('options, earnings and macro are data graphs whose main transform reads the reserved `params` input (one expiration, the requested symbols, one series)', () => {
-    for (const name of ['options', 'earnings', 'macro']) {
+    for (const name of ['options', 'earnings', 'macro', 'news', 'volatility']) {
       const ds = recipeDatasets(by(name))
       expect(Object.keys(ds), name).toEqual(['raw', 'main'])
       const main = ds.main!
@@ -206,7 +212,7 @@ describe('recipe helpers', () => {
   })
   it('writes the prompt lines', () => {
     const lines = recipeSummaryLines([by('ohlcv'), by('quote')])
-    expect(lines[0]).toBe('ohlcv(symbols[], interval?=1m|5m|15m|1h|1d|1w, range?=1d|5d|1mo|3mo|6mo|1y|…) · Price bars per symbol over a range at an interval, long format with a symbol column. · view price')
+    expect(lines[0]).toMatch(/^ohlcv\(symbols\[\], interval\?=1m\|5m\|15m\|1h\|1d\|1w, range\?=1d\|5d\|1mo\|3mo\|6mo\|1y\|…, start\?[^)]*\) · Price bars per symbol over a range at an interval, long format with a symbol column\. · view price$/)
     expect(lines[1]).toMatch(/^quote\(symbols\[\]\)/)
   })
 })
