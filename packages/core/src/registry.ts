@@ -261,7 +261,9 @@ export class ConnectorRegistry implements Registry {
     else if (isRecipeQuery(q)) frame = await this.runRecipe(q, opts)
     else if (isRouteQuery(q)) frame = await this.runRoute(q, opts)
     else throw new RegistryError('unrecognised query shape')
-    this.cache?.set(q, frame)
+    // An empty frame is not cached: a provider hiccup (yfinance consensus answering [] once) would otherwise stand for
+    // the route's whole TTL, and an empty window (no earnings this week) is cheap to ask again.
+    if (frame.rows.length > 0) this.cache?.set(q, frame)
     return frame
   }
 

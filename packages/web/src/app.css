@@ -35,7 +35,8 @@ body,
  * their number a step smaller.
  */
 .stat-hero {
-  font-size: clamp(28px, 13cqw, 56px);
+  /* one symbol per cell: the number is the widget (section 17 fill rule: a card fills 60% of its body) */
+  font-size: clamp(32px, 15cqw, 64px);
   line-height: 1.05;
   letter-spacing: -0.05em;
 }

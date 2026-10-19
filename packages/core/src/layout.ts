@@ -104,6 +104,46 @@ export function isShortContent(widget: LayoutWidget): boolean {
  */
 export function packLayout(widgets: readonly LayoutWidget[], columns: number): Placement[] {
   const cols = Math.max(1, Math.floor(columns))
+  const base = widgets.map((w) => effectiveSpan(w, cols, widgets.length))
+  // Some span sets cannot tile: a hero, a tall one-column chart beside it, another tall chart and a stat leave the
+  // stat alone in a band it can only fill by growing taller. The packer then tries the same set with one or more of
+  // the tall charts back at their size's own span (an md chart as 2x1) and keeps the layout that stretches no short
+  // widget taller, then the fewest rows, then the fewest charts flattened, then the fewest stretches.
+  const tall = widgets.map((w, i) => (w.contentHint?.kind === 'chart' && base[i]!.demoted ? i : -1)).filter((i) => i >= 0).slice(0, 6)
+  const short = widgets.map(isShortContent)
+  let best: Placement[] | undefined
+  let bestCost: number[] = []
+  for (let mask = 0; mask < 1 << tall.length; mask++) {
+    const spans = base.map((s, i) => {
+      const k = tall.indexOf(i)
+      if (k < 0 || !((mask >> k) & 1)) return s
+      const b = spanFor(widgets[i]!.size, cols)
+      return { cols: b.cols, rows: b.rows, demoted: false }
+    })
+    const out = packOnce(widgets, spans, cols)
+    const rows = out.reduce((n, p) => Math.max(n, p.row + p.rows), 0)
+    const tallerShort = out.filter((p, i) => short[i] && p.rows > spans[i]!.rows).length
+    const flattened = tall.filter((_i, k) => (mask >> k) & 1).length
+    const stretched = out.filter((p) => p.stretched).length
+    const cost = [tallerShort, rows, flattened, stretched]
+    if (!best || lexLess(cost, bestCost)) {
+      best = out
+      bestCost = cost
+    }
+  }
+  return best ?? []
+}
+
+/** Lexicographic less-than over equal-length number tuples. */
+function lexLess(a: readonly number[], b: readonly number[]): boolean {
+  for (let i = 0; i < a.length; i++) {
+    if (a[i]! !== b[i]!) return a[i]! < b[i]!
+  }
+  return false
+}
+
+/** One packing with the spans given (see `packLayout`, which chooses between span sets). */
+function packOnce(widgets: readonly LayoutWidget[], spans: readonly { cols: number; rows: number; demoted: boolean }[], cols: number): Placement[] {
   const grid: number[][] = [] // grid[row][col] = widget index, -1 when empty
   const rowAt = (r: number) => {
     while (grid.length <= r) grid.push(new Array<number>(cols).fill(-1))
@@ -121,7 +161,6 @@ export function packLayout(widgets: readonly LayoutWidget[], columns: number): P
   const clear = (r: number, c: number, h: number, w: number) => {
     for (let y = r; y < r + h; y++) for (let x = c; x < c + w; x++) grid[y]![x] = -1
   }
-  const spans = widgets.map((w) => effectiveSpan(w, cols, widgets.length))
   const short = widgets.map(isShortContent)
   const out: Placement[] = []
 

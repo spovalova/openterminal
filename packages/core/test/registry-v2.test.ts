@@ -298,6 +298,25 @@ describe('ConnectorRegistry.run (v2)', () => {
     expect(none.rows).toHaveLength(0)
     expect(none.meta.connector).toBe('blank')
   })
+  it('does not cache an empty frame (a provider hiccup must not stand for the whole TTL)', async () => {
+    let calls = 0
+    const flaky = defineConnector({
+      name: 'acme',
+      config: z.object({}),
+      descriptors: () => [quoteDescriptor],
+      call: async (_route, params) => {
+        calls += 1
+        return inferFrame(calls === 1 ? [] : (params.symbol as string[]).map((s) => ({ symbol: s, last_price: 1, change_percent: 0 })), { connector: 'acme' }, { descriptor: quoteDescriptor })
+      },
+    })
+    const r = new ConnectorRegistry({ annotations, cache: new MemoryCache() })
+    r.register(flaky, {})
+    const q = { connector: 'acme', route: 'equity/price/quote', params: { symbol: ['NVDA'] } }
+    expect((await r.run(q)).rows).toHaveLength(0)
+    expect((await r.run(q)).rows).toHaveLength(1) // asked again, not served from the cache
+    expect((await r.run(q)).rows).toHaveLength(1)
+    expect(calls).toBe(2)
+  })
   it('applies a recipe’s ttl and field overrides', async () => {
     const r = new ConnectorRegistry({
       recipes: [{ name: 'q', title: 'q', params: { type: 'object', properties: { symbols: { type: 'array', items: { type: 'string' } } }, required: ['symbols'] }, view: { preset: 'table' }, ttl: 5, fields: { last_price: { label: 'Last' } }, routes: [{ connector: 'acme', route: 'equity/price/quote', params: { symbol: '{symbols}' } }] }],

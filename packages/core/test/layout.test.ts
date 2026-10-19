@@ -122,6 +122,15 @@ describe('packLayout prefers stretching a chart over a short table (phase 2, fro
     ])
     expect(p[1]!.rows).toBe(1)
   })
+  it('flattens a tall chart back to its size when that is the only way to keep a stat one row (the curve case: hero, two md charts, a stat)', () => {
+    const widgets = [hint('lg', { kind: 'chart', rows: 1248 }), hint('md', { kind: 'chart', rows: 11 }), hint('md', { kind: 'chart', rows: 1248 }), hint('sm', { kind: 'stat', rows: 1 })]
+    const p = packLayout(widgets, 3)
+    expect(hasHoles(p, 3)).toBe(false)
+    expect(p[3]!.rows).toBe(1)
+    expect(p.reduce((n, x) => Math.max(n, x.row + x.rows), 0)).toBe(3)
+    // One chart kept its two rows beside the hero; the other took its md span (2x1) so the stat completes the band.
+    expect(p.filter((x, i) => i > 0 && i < 3 && x.rows === 2)).toHaveLength(1)
+  })
   it('never stretches a stat, a facts card or a short table taller when any other neighbour can grow, over random hinted sets', () => {
     const kinds: ContentHint[] = [{ kind: 'chart', rows: 50 }, { kind: 'table', rows: 3 }, { kind: 'table', rows: 20 }, { kind: 'stat', rows: 2 }, { kind: 'facts', rows: 1 }, { kind: 'chain', rows: 40 }]
     const all: Size[] = ['lg', 'md', 'sm']

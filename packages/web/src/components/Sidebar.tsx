@@ -67,6 +67,29 @@ function MessageView({ message, workspace, durationMs }: { message: Message; wor
     <div className="flex flex-col gap-2">
       {steps.length > 0 && <Steps steps={steps} durationMs={ms} />}
       <Reply text={message.text} widgets={workspace.widgets} />
+      {message.verification && <VerificationLine verification={message.verification} />}
+    </div>
+  )
+}
+
+/**
+ * The server's reply verification (PLAN.md section 17, "Reply verification on the server"): every figure in the reply
+ * matched against the run's previews. One quiet line when all matched; the unmatched figures named when not, so a
+ * number the model wrote without a preview behind it is visible to the reader.
+ */
+function VerificationLine({ verification }: { verification: NonNullable<Message['verification']> }) {
+  if (verification.checked === 0) return null
+  if (verification.ok) {
+    return (
+      <div data-verification="ok" className="text-xs text-fg-3">
+        {verification.checked === 1 ? '1 figure' : `${verification.checked} figures`} verified against the data
+      </div>
+    )
+  }
+  return (
+    <div data-verification="unmatched" className="text-xs text-down">
+      Not in any frame: <span className="num">{verification.unmatched.map((u) => u.text).join(', ')}</span>
+      <span className="text-fg-3"> · {verification.matched} of {verification.checked} verified</span>
     </div>
   )
 }

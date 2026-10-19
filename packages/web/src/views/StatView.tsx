@@ -194,12 +194,12 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
     // so a quote or volatility stat reads like a quote card rather than one number in a blank cell (section 17 fill rule).
     const details = frame ? detailRows(frame, column, stat?.change, frame.meta.fields ?? {}) : []
     return (
-      <div data-view="stat" data-column={column} data-count={1} className="flex h-full w-full flex-col justify-center gap-3 overflow-hidden p-3">
+      <div data-view="stat" data-column={column} data-count={1} className="flex h-full w-full flex-col justify-center gap-4 overflow-hidden p-3">
         <div>
           <StatBody stat={s} label={label} tick={ticks[s.symbol]} hero />
         </div>
         {details.length > 0 && (
-          <div data-details="" className="grid grid-cols-2 gap-x-4 gap-y-1.5 border-t border-border/60 pt-2 text-xs leading-4 @[420px]/widget:grid-cols-3">
+          <div data-details="" className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border/60 pt-3 text-xs leading-5 @[420px]/widget:grid-cols-3">
             {details.map((d) => (
               <div key={d.label} className="flex min-w-0 items-baseline justify-between gap-2">
                 <span className="truncate text-fg-3">{d.label}</span>
