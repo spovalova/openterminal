@@ -42,7 +42,8 @@ body,
   letter-spacing: -0.05em;
 }
 .stat-card-value {
-  font-size: clamp(18px, 4.5cqw, 28px);
+  /* a four-digit price with separators ("1,299.30") must fit a 136px card: 3.8cqw of the widget, 24px at most */
+  font-size: clamp(16px, 3.8cqw, 24px);
   line-height: 1.15;
   letter-spacing: -0.04em;
 }
@@ -71,12 +72,23 @@ body,
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 10px 16px;
-  /* centred when it fits; `safe` keeps the first facts reachable when the card scrolls */
-  align-content: safe center;
+  /* the rows share the cell's height when the facts fit (an eight-fact card in a tall 1920 row sat centred at half the
+     cell); when they do not, rows are their content height and the card scrolls */
+  align-content: stretch;
+  grid-auto-rows: minmax(min-content, 1fr);
+}
+.facts-card > [data-fact] {
+  justify-content: center;
 }
 .facts-card[data-few] {
-  /* a handful of facts (a count, a median, a universe) spreads out and scales with the cell's height */
+  /* a handful of facts (a count, a median, a universe) spreads out and scales with the cell's height; the rows share the
+     height so four facts in two columns fill a 1920 row rather than sitting at its top */
   gap: clamp(10px, 4cqh, 28px) 24px;
+  align-content: stretch;
+  grid-auto-rows: 1fr;
+}
+.facts-card[data-few] > [data-fact] {
+  justify-content: center;
 }
 .facts-card[data-few] [data-field="value"] {
   font-size: clamp(var(--text-xl), 9cqh, 44px);

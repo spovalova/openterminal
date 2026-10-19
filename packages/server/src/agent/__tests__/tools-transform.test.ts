@@ -81,6 +81,6 @@ describe('transform tool', () => {
     expect(transformSummary({ inputs: { price: {} } }, 1)).toBe('transform(price) · 1 row')
     expect(transformSummary({ inputs: { price: {} } }, undefined, true)).toBe('transform(price) · failed')
     expect(TRANSFORM_TOOL_DESCRIPTION).toMatch(/assign `result`/)
-    expect(TRANSFORM_TOOL_DESCRIPTION).toMatch(/pandas, numpy, scipy, math, datetime, statistics, ot/)
+    expect(TRANSFORM_TOOL_DESCRIPTION).toMatch(/pandas, numpy, scipy, math, datetime, statistics, time, re, json, collections, itertools, functools, ot/)
   })
 })

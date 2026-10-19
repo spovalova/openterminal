@@ -1,4 +1,4 @@
-import { useMemo, useState, type FC } from 'react'
+import { useCallback, useMemo, useState, type FC } from 'react'
 import clsx from 'clsx'
 import type { Column } from '@terminal/core'
 import { direction, formatCell, inferFormats, isNumericFormat, sortRows, type CellFormat, type SortDir } from '../format.js'
@@ -46,9 +46,11 @@ const SYMBOL_WIDTH = 72
 export function columnWidth(name: string, format: CellFormat, header?: string): number | undefined {
   const base = name === 'symbol' || name === 'etf' ? SYMBOL_WIDTH : COLUMN_WIDTH[format]
   if (base === undefined) return undefined
-  // A fixed column is at least as wide as its header's longest word, so "Correlation" is never broken mid-word.
+  // A fixed column is at least as wide as its header's longest word plus the sort arrow and padding, so "Correlation"
+  // and "Peak weekly close" are never broken mid-word or pushed past the cell. Measured in the browser: "weekly" is
+  // 64px in the header's 12px medium face, about 11px a character.
   const longest = header ? Math.max(...header.split(/\s+/).map((w) => w.length)) : 0
-  return Math.max(base, longest * 7 + 20)
+  return Math.max(base, longest * 11 + 32)
 }
 
 function label(name: string, labels?: Record<string, string>): string {
@@ -60,11 +62,52 @@ function label(name: string, labels?: Record<string, string>): string {
  * descending. The table sorts its rows itself from `sort` (controlled) or its
  * own state; `onSort(column)` is called on every header click either way.
  */
+/** What a text column needs before the fixed ones take the rest (a headline, a name). */
+const TEXT_COLUMN_MIN = 120
+
+/**
+ * The columns that fit a container of `width` px: every column when the width is unknown (server rendering, tests),
+ * else the lowest-priority columns are dropped, highest rank first, until the fixed widths plus a minimum per text
+ * column fit. The container queries in styles.css approximate this per rank; the measurement is exact, so a
+ * `table-layout: fixed` table never has its columns shrunk below their widths (which cut a six-letter header in two).
+ */
+export function columnsThatFit(columns: readonly Column[], width: number | undefined, fmts: Record<string, CellFormat>, priority?: Record<string, number>, labels?: Record<string, string>): Column[] {
+  if (!width || width <= 0) return [...columns]
+  const need = (c: Column) => columnWidth(c.name, fmts[c.name] ?? 'text', label(c.name, labels)) ?? TEXT_COLUMN_MIN
+  const total = (cols: readonly Column[]) => cols.reduce((n, c) => n + need(c), 0)
+  const visible = [...columns]
+  while (visible.length > 1 && total(visible) > width) {
+    // The highest rank goes first; among equal ranks the last column in display order.
+    let drop = -1
+    let rank = -1
+    visible.forEach((c, i) => {
+      const r = priority?.[c.name] ?? 0
+      if (r >= rank) {
+        rank = r
+        drop = i
+      }
+    })
+    if (rank <= 0) break // only rank-0 columns left: they always show, the table scrolls rather than loses them
+    visible.splice(drop, 1)
+  }
+  return visible
+}
+
 export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, onSort, labels, priority, stickyHeader = true, className, now, highlightRow, cellMark }) => {
   const [internal, setInternal] = useState<{ column: string; dir: SortDir } | undefined>(undefined)
   const active = sort ?? internal
   const fmts = useMemo(() => ({ ...inferFormats(columns), ...formats }), [columns, formats])
   const nowMs = now ?? Date.now()
+  const [width, setWidth] = useState<number | undefined>(undefined)
+  const wrap = useCallback((el: HTMLDivElement | null) => {
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const update = () => setWidth(el.clientWidth)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+  }, [])
+  const visible = useMemo(() => columnsThatFit(columns, width, fmts, priority, labels), [columns, width, fmts, priority, labels])
+  const indexOf = useMemo(() => new Map(columns.map((c, i) => [c.name, i])), [columns])
 
   const sorted = useMemo(() => {
     if (!active) return rows
@@ -80,13 +123,13 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
   }
 
   return (
-    <div className={clsx('data-table h-full w-full overflow-x-hidden overflow-y-auto', className)}>
+    <div ref={wrap} className={clsx('data-table h-full w-full overflow-x-hidden overflow-y-auto', className)}>
       {/* `h-full`: a table shorter than its cell shares the height between its rows (an 11-row hero in a two-row cell, a
           4-row table in a tall 1920 row) instead of leaving the bottom blank; a longer table scrolls as before. */}
       <table className="h-full w-full table-fixed border-collapse text-sm">
         <thead className={clsx(stickyHeader && 'sticky top-0 z-10')}>
           <tr className="bg-surface">
-            {columns.map((c) => {
+            {visible.map((c) => {
               const f = fmts[c.name] ?? 'text'
               const numeric = isNumericFormat(f)
               const isActive = active?.column === c.name
@@ -110,7 +153,7 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                     )}
                   >
                     {/* Two lines at most, wrapped at words: a header is never cut mid-word (section 17 checklist). */}
-                    <span className="line-clamp-2 break-normal whitespace-normal">{label(c.name, labels)}</span>
+                    <span className="line-clamp-2 min-w-0 flex-1 break-normal whitespace-normal">{label(c.name, labels)}</span>
                     <span aria-hidden className={clsx('text-[9px] leading-none', isActive ? 'text-accent' : 'opacity-0')}>
                       {active?.dir === 'desc' && isActive ? '▼' : '▲'}
                     </span>
@@ -125,9 +168,9 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
             const highlighted = highlightRow?.(row) ?? false
             return (
             <tr key={ri} data-highlight={highlighted ? '' : undefined} className={clsx('hover:bg-surface-2', highlighted && 'bg-accent/10 hover:bg-accent/15')}>
-              {columns.map((c, ci) => {
+              {visible.map((c) => {
                 const f = fmts[c.name] ?? 'text'
-                const v = row[ci]
+                const v = row[indexOf.get(c.name)!]
                 const text = formatCell(v, f, nowMs)
                 const dir = f === 'change' ? direction(v) : null
                 const mark = cellMark?.(row, c.name)

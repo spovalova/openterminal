@@ -367,7 +367,7 @@ describe('guards', () => {
     'a forbidden import is a traceback before the script runs',
     async () => {
       const out = await py('import os\nresult = df')
-      expect(out).toMatchObject({ error: expect.stringMatching(/ImportError: import of 'os' is not allowed in a transform; allowed: datetime, math, numpy, ot, pandas, scipy, statistics/) })
+      expect(out).toMatchObject({ error: expect.stringMatching(/ImportError: import of 'os' is not allowed in a transform; allowed: collections, datetime, functools, itertools, json, math, numpy, ot, pandas, re, scipy, statistics, time/) })
       expect((out as { traceback: string }).traceback).toMatch(/ImportError/)
       const from = await py('from subprocess import run\nresult = df')
       expect(isTransformError(from) && from.error).toMatch(/subprocess/)

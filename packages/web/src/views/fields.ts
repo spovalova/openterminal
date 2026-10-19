@@ -59,9 +59,14 @@ export function datasetFields(widget: AnyWidget, frame: Frame): DatasetFields {
   // anything else as a number with two decimals (core's default); the values decide, since nobody annotated them.
   for (const c of frame.columns) {
     const f = fields[c.name]
-    if (c.type !== 'number' || !f || f.unit || f.format) continue
+    if (c.type !== 'number' || !f) continue
     const sample = frame.rows.slice(0, 200).map((r) => r[frame.columns.indexOf(c)]).filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
-    if (sample.length > 0 && sample.every((v) => Number.isInteger(v))) fields[c.name] = { ...f, format: 'integer' }
+    if (sample.length === 0) continue
+    const big = Math.max(...sample.map(Math.abs)) >= 1e6
+    // Dollar amounts and unannotated numbers in the millions and billions (a transform's revenue or market cap, an
+    // institution's share count) read compact ("41.5B"), never as a 14-digit cell; percents, changes and integers keep theirs.
+    if (big && (f.format === undefined || f.format === 'price' || f.format === 'ratio')) fields[c.name] = { ...f, format: 'compact' }
+    else if (!f.unit && !f.format && sample.every((v) => Number.isInteger(v))) fields[c.name] = { ...f, format: 'integer' }
   }
   return { shape, fields }
 }
