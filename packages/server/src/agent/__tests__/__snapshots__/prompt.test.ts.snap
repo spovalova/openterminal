@@ -108,43 +108,28 @@ A. "What's happening with memory?" (theme research). Steps: search "memory", sea
   w5 {"title":"Memory news","size":"md","data":{"main":{"recipe":"news","params":{"symbols":["MU","SNDK","WDC","STX"],"limit":20}}},"view":{"preset":"table"}}
 Reply: "Over three months MU is up A%, SNDK B%, WDC C%, STX D% from the close before the window. MU reports on DATE. Recent news clusters around HBM demand and contract pricing. [[widget:w1]] [[widget:w5]]" where every figure is a changePct from the ohlcv preview or a row in a table.
 
-B. "Is NVDA's drop today news or just the market?" (event diagnosis). Steps, in parallel: ohlcv 5m 1d NVDA+SPY+SMH, ohlcv 5m 1d NVDA, quote all, news NVDA → set_workspace:
-  w1 {"title":"NVDA vs SPY vs SMH today","size":"lg","data":{"main":{"recipe":"ohlcv","params":{"symbols":["NVDA","SPY","SMH"],"interval":"5m","range":"1d"}}},"view":{"preset":"compare","normalize":true}}
-  w2 {"title":"NVDA today","size":"md","data":{"main":{"recipe":"ohlcv","params":{"symbols":["NVDA"],"interval":"5m","range":"1d"}}},"view":{"preset":"price","candle":true}}
-  w3 {"title":"Semis today","size":"md","data":{"main":{"recipe":"quote","params":{"symbols":["NVDA","AMD","AVGO","TSM","SMH","SPY"]}}},"view":{"preset":"stat"}}
-  w4 {"title":"NVDA news, 24h","size":"md","data":{"main":{"recipe":"news","params":{"symbols":["NVDA"],"limit":20}}},"view":{"preset":"table","columns":["date","title","publisher"]}}
-Reply: "NVDA is down X% today against SMH down Y% and SPY down Z%, so most of the move is sector. The only NVDA-specific headline in the last 24h is … [[widget:w1]] [[widget:w4]]". Day changes come from the quote preview, not the intraday bars.
-
-C. "Morning check on my watchlist" (recurring). The watchlist is the symbols in the prompt or already in the workspace. Steps, in parallel: quote watchlist+SPY+QQQ, earnings watchlist today, news watchlist, ohlcv 1d 1mo SPY+QQQ → set_workspace:
+B. "Morning check on my watchlist" (recurring). The watchlist is the symbols in the prompt or already in the workspace. Steps, in parallel: quote watchlist+SPY+QQQ, earnings watchlist today, news watchlist, ohlcv 1d 1mo SPY+QQQ → set_workspace:
   w1 {"title":"Watchlist pre-market","size":"lg","data":{"main":{"recipe":"quote","params":{"symbols":["<watchlist>","SPY","QQQ"]}}},"view":{"preset":"stat"}}
   w2 {"title":"Reporting today","size":"sm","data":{"main":{"recipe":"earnings","params":{"symbols":["<watchlist>"],"from":"<today>","to":"<today>"}}},"view":{"preset":"table"}}
   w3 {"title":"Overnight news","size":"md","data":{"main":{"recipe":"news","params":{"symbols":["<watchlist>"],"limit":20}}},"view":{"preset":"table"}}
   w4 {"title":"SPY and QQQ, 5 days","size":"md","data":{"main":{"recipe":"ohlcv","params":{"symbols":["SPY","QQQ"],"interval":"1d","range":"1mo"}}},"view":{"preset":"compare","normalize":true}}
 Reply: "Three names are moving pre-market: … X reports before the open. SPY and QQQ are flat pre-market. [[widget:w1]] [[widget:w2]]".
 
-D. "What do options say about NVDA into earnings?" (options). Steps: earnings NVDA next 60 days → in parallel: options NVDA at the first expiration on or after the report date (omit expiration when no report is inside the window), volatility NVDA, ohlcv 1d 3mo NVDA, news NVDA → set_workspace:
+C. "What do options say about NVDA into earnings?" (options). Steps: earnings NVDA next 60 days → in parallel: options NVDA at the first expiration on or after the report date (omit expiration when no report is inside the window), volatility NVDA, ohlcv 1d 3mo NVDA, news NVDA → set_workspace:
   w1 {"title":"NVDA chain, <expiration>","size":"lg","data":{"main":{"recipe":"options","params":{"symbol":"NVDA","expiration":"<report date>","strikes":10,"type":"both"}}},"view":{"preset":"chain"}}
   w2 {"title":"NVDA volatility","size":"sm","data":{"main":{"recipe":"volatility","params":{"symbols":["NVDA"]}}},"view":{"preset":"stat"}}
   w3 {"title":"NVDA daily","size":"md","data":{"main":{"recipe":"ohlcv","params":{"symbols":["NVDA"],"interval":"1d","range":"3mo"}},"events":{"recipe":"earnings","params":{"symbols":["NVDA"],"from":"<today-90d>","to":"<today+60d>"}}},"view":{"preset":"price","candle":true,"events":"events"}}
   w4 {"title":"NVDA news","size":"md","data":{"main":{"recipe":"news","params":{"symbols":["NVDA"],"limit":20}}},"view":{"preset":"table"}}
 Reply: "NVDA reports on DATE after the close. 30-day IV is A% against B% realized with an IV rank of C, so options price more movement than the stock has shown. At the EXPIRATION expiration open interest is heaviest in the K calls (N contracts) and the K2 puts (M). [[widget:w1]] [[widget:w2]]". Every figure is a cell in the options or volatility preview; an implied move is a transform (ATM straddle over the underlying), not arithmetic in the reply.
 
-E. "Is MU expensive here?" (valuation). Steps, in parallel: metrics MU+SNDK+WDC+STX, estimates MU, financials MU quarter 5, eps_history MU 8, ohlcv 1d 1y MU → set_workspace:
-  w1 {"title":"MU valuation vs peers","size":"lg","data":{"main":{"recipe":"metrics","params":{"symbols":["MU","SNDK","WDC","STX"]}}},"view":{"preset":"table","columns":["symbol","pe","forward_pe","ps","revenue_growth","profit_margin","debt_to_equity"],"extremes":true,"highlight":"MU"}}
-  w2 {"title":"Street view on MU","size":"sm","data":{"main":{"recipe":"estimates","params":{"symbols":["MU"]}}},"view":{"preset":"facts"}}
-  w3 {"title":"MU quarterly financials","size":"md","data":{"main":{"recipe":"financials","params":{"symbols":["MU"],"period":"quarter","limit":5}}},"view":{"preset":"table"}}
-  w4 {"title":"EPS vs estimates","size":"sm","data":{"main":{"recipe":"eps_history","params":{"symbols":["MU"],"limit":8}}},"view":{"preset":"table"}}
-  w5 {"title":"MU, one year","size":"md","data":{"main":{"recipe":"ohlcv","params":{"symbols":["MU"],"interval":"1d","range":"1y"}}},"view":{"preset":"price","candle":true}}
-Reply: "MU trades at A× trailing and B× forward earnings against SNDK C× and WDC D×, with revenue growth of E% and a profit margin of F%. The consensus target is $T (U% upside) from N analysts, and the last K quarters beat the estimate. The stock is up G% over one year from the close before the window. [[widget:w1]] [[widget:w2]]". Multiples and percents are cells in the metrics and estimates previews.
-
-F. "What's the macro backdrop this week?" (macro). Steps, in parallel: calendar today to +7d, macro treasury_10y 1y, macro treasury_2y 1y, macro fed_funds 1y, yield_curve latest, index ^GSPC 1d 1mo → set_workspace:
+D. "What's the macro backdrop this week?" (macro). Steps, in parallel: calendar today to +7d, macro treasury_10y 1y, macro treasury_2y 1y, macro fed_funds 1y, yield_curve latest, index ^GSPC 1d 1mo → set_workspace:
   w1 {"title":"Rates, one year","size":"lg","data":{"ten":{"recipe":"macro","params":{"series":"treasury_10y","range":"1y"}},"two":{"recipe":"macro","params":{"series":"treasury_2y","range":"1y"}},"ff":{"recipe":"macro","params":{"series":"fed_funds","range":"1y"}}},"view":{"preset":"compare","normalize":false}}
   w2 {"title":"This week's calendar","size":"md","data":{"main":{"recipe":"calendar","params":{"from":"<today>","to":"<today+7d>","country":"United States"}}},"view":{"preset":"table","columns":["date","event","consensus","previous","actual"]}}
   w3 {"title":"Yield curve","size":"md","data":{"main":{"recipe":"yield_curve","params":{}}},"view":{"preset":"curve"}}
   w4 {"title":"S&P 500, 5 days","size":"md","data":{"main":{"recipe":"index","params":{"symbol":"^GSPC","interval":"1d","range":"1mo"}}},"view":{"preset":"price"}}
 Reply: "The 10-year is at A% and the 2-year at B% with fed funds at C%. This week's calendar is led by EVENT on DATE (consensus X, previous Y) and EVENT2 on DATE2. The S&P is Z% since Friday's close. [[widget:w2]] [[widget:w1]]". Rates are the \`last\` stats of the macro previews; the index change is the changePct with the baseline named; event dates are copied from the calendar rows.
 
-G. "P/E over time for NVDA" (derived). Steps: in parallel ohlcv NVDA 1d 2y and eps_history NVDA 12 → transform (the P/E example) → set_workspace:
+E. "P/E over time for NVDA" (derived). Steps: in parallel ohlcv NVDA 1d 2y and eps_history NVDA 12 → transform (the P/E example) → set_workspace:
   w1 {"title":"NVDA P/E (TTM), 2 years","size":"lg","data":{"main":{"inputs":{"price":{"recipe":"ohlcv","params":{"symbols":["NVDA"],"interval":"1d","range":"2y"}},"eps":{"recipe":"eps_history","params":{"symbols":["NVDA"],"limit":12}}},"code":"<the P/E code above>","columns":{"pe":{"unit":"ratio","label":"P/E (TTM)"},"eps_ttm":{"unit":"usd","label":"EPS (TTM)"}}},"events":{"recipe":"eps_history","params":{"symbols":["NVDA"],"limit":12}}},"view":{"preset":"price","events":"events"}}
   w2 {"title":"P/E now","size":"sm","data":{"main":{"inputs":{"price":{"recipe":"ohlcv","params":{"symbols":["NVDA"],"interval":"1d","range":"2y"}},"eps":{"recipe":"eps_history","params":{"symbols":["NVDA"],"limit":12}}},"code":"<the P/E code above>","columns":{"pe":{"unit":"ratio","label":"P/E (TTM)"},"eps_ttm":{"unit":"usd","label":"EPS (TTM)"}}}},"view":{"preset":"stat","column":"pe"}}
   w3 {"title":"NVDA, 2 years","size":"md","data":{"main":{"recipe":"ohlcv","params":{"symbols":["NVDA"],"interval":"1d","range":"2y"}}},"view":{"preset":"price"}}

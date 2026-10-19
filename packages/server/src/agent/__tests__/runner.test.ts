@@ -160,6 +160,17 @@ describe('use case A: theme research (v2 recipes and presets)', () => {
     expect(system).toContain('Connectors, in routing order: fake (7 routes in the catalog).')
     expect(system).toContain('- quote(symbols[]) ·')
 
+    // Prompt caching: the system message carries the Anthropic cache breakpoint on every turn, and each turn's last
+    // message (the newest tool results) carries the second one, so the conversation prefix is a cache read next turn.
+    for (const [turn, call] of model.doStreamCalls.entries()) {
+      const sys = call.prompt.find((m) => m.role === 'system')!
+      expect(sys.providerOptions, `turn ${turn} system`).toEqual({ anthropic: { cacheControl: { type: 'ephemeral' } } })
+      const last = call.prompt.at(-1)!
+      expect(last.providerOptions, `turn ${turn} last message (${last.role})`).toMatchObject({ anthropic: { cacheControl: { type: 'ephemeral' } } })
+      const marked = call.prompt.filter((m) => m.role !== 'system' && (m.providerOptions as { anthropic?: unknown } | undefined)?.anthropic)
+      expect(marked, `turn ${turn}: one breakpoint in the conversation`).toHaveLength(1)
+    }
+
     // The run log row carries the steps, the verification and the mock's token counts.
     expect(runLog.rows).toHaveLength(1)
     expect(runLog.rows[0]).toMatchObject({ workspaceId: 'ws1', model: 'mock-model-id', prompt: 'prompt', verification: { ok: true, checked: 4 } })
