@@ -11,7 +11,7 @@ import { isModKey, isTyping, MOD } from './platform'
 import { TerminalSocket } from './socket'
 import { SocketContext } from './socketContext'
 import { AppContext, initialState, layoutFor, reducer, workspaceState, type AppState } from './state'
-import { hasAnyFrame } from './state/frames'
+import { frameMatches, hasAnyFrame } from './state/frames'
 import { withViewTransition } from './transition'
 
 const ACTIVE_KEY = 'terminal.activeWorkspace'
@@ -101,16 +101,23 @@ export function App() {
       /* storage unavailable */
     }
     if (activeWs.status === 'streaming') return
+    // Focus makes the server push every frame of this workspace, scoped by workspace. The HTTP route looks a widget up
+    // by id alone, and ids repeat across workspaces, so it is only the fallback while the socket is down, and a frame
+    // whose columns are not this widget's kind is dropped in favour of a scoped refresh.
+    if (state.socket === 'open') return
     const s = stateRef.current
     const workspaceId = activeWorkspace?.id
     for (const widget of activeWorkspace?.widgets ?? []) {
       if (hasAnyFrame(s.frames, workspaceId, widget.id) || hasAnyFrame(s.frameErrors, workspaceId, widget.id)) continue
       void api
         .widgetFrame(widget.id)
-        .then((frame) => dispatch({ type: 'frameLoaded', widgetId: widget.id, frame, ...(workspaceId ? { workspaceId } : {}) }))
+        .then((frame) => {
+          if (frameMatches(widget, frame)) dispatch({ type: 'frameLoaded', widgetId: widget.id, frame, ...(workspaceId ? { workspaceId } : {}) })
+          else socket.refresh(widget.id, workspaceId)
+        })
         .catch(() => socket.refresh(widget.id, workspaceId))
     }
-  }, [state.activeId, widgetKey, socket])
+  }, [state.activeId, state.socket, widgetKey, socket])
 
   // Keyboard: ⌘K or `/` opens the palette, ⌘\ toggles the sidebar, Escape closes overlays.
   useEffect(() => {

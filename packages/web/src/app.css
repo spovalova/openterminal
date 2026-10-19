@@ -61,7 +61,8 @@ body,
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 10px 16px;
-  align-content: center;
+  /* centred when it fits; `safe` keeps the first facts reachable when the card scrolls */
+  align-content: safe center;
 }
 .facts-card[data-few] [data-field="value"] {
   font-size: var(--text-xl);
