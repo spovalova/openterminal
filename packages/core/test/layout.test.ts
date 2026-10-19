@@ -28,20 +28,24 @@ describe('effectiveSpan (size by content)', () => {
     expect(effectiveSpan(hint('lg', { kind: 'table', rows: 7 }), 3, 5)).toEqual({ cols: 2, rows: 2, demoted: false })
     expect(effectiveSpan(hint('lg', { kind: 'table' }), 3, 5)).toEqual({ cols: 2, rows: 2, demoted: false })
   })
-  it('makes a stat and a facts card one row tall whatever the size', () => {
+  it('makes a stat and a facts card one row tall whatever the size, and never the full width of a grid (change 1)', () => {
     expect(effectiveSpan(hint('lg', { kind: 'stat', rows: 1 }), 3, 4)).toEqual({ cols: 2, rows: 1, demoted: true })
     expect(effectiveSpan(hint('lg', { kind: 'facts', rows: 1 }), 3, 4)).toEqual({ cols: 2, rows: 1, demoted: true })
     expect(effectiveSpan(hint('sm', { kind: 'stat' }), 3, 4)).toEqual({ cols: 1, rows: 1, demoted: false })
+    expect(effectiveSpan(hint('md', { kind: 'stat' }), 2, 4)).toEqual({ cols: 1, rows: 1, demoted: true }) // two columns: one, not both
+    expect(effectiveSpan(hint('md', { kind: 'facts' }), 1, 4)).toEqual({ cols: 1, rows: 1, demoted: false })
   })
-  it('makes charts two rows tall unless there are more than six widgets, and a tall md chart one column wide in a three-column grid of four or more', () => {
-    expect(effectiveSpan(hint('md', { kind: 'chart' }), 3, 6)).toEqual({ cols: 1, rows: 2, demoted: true })
-    expect(effectiveSpan(hint('md', { kind: 'chart' }), 3, 3)).toEqual({ cols: 1, rows: 2, demoted: true })
-    expect(effectiveSpan(hint('md', { kind: 'chart' }), 3, 2)).toEqual({ cols: 2, rows: 2, demoted: true }) // two widgets: the band has room
-    expect(effectiveSpan(hint('md', { kind: 'chart' }), 2, 6)).toEqual({ cols: 2, rows: 2, demoted: true }) // two columns: full width anyway
-    expect(effectiveSpan(hint('sm', { kind: 'chart' }), 3, 3)).toEqual({ cols: 1, rows: 2, demoted: true })
-    expect(effectiveSpan(hint('md', { kind: 'chart' }), 3, 7)).toEqual({ cols: 2, rows: 1, demoted: false })
-    expect(effectiveSpan(hint('lg', { kind: 'chart' }), 3, 7)).toEqual({ cols: 2, rows: 2, demoted: false })
-    expect(effectiveSpan(hint('lg', { kind: 'chart' }), 3, 6)).toEqual({ cols: 2, rows: 2, demoted: false }) // the hero keeps 2x2
+  it('never makes a chart taller than it is wide: the lg hero is 2x2, an md chart one cell in three columns, an sm chart one cell (change 1)', () => {
+    expect(effectiveSpan(hint('lg', { kind: 'chart' }), 3, 6)).toEqual({ cols: 2, rows: 2, demoted: false })
+    expect(effectiveSpan(hint('md', { kind: 'chart' }), 3, 6)).toEqual({ cols: 1, rows: 1, demoted: true })
+    expect(effectiveSpan(hint('md', { kind: 'chart' }), 3, 2)).toEqual({ cols: 1, rows: 1, demoted: true })
+    expect(effectiveSpan(hint('md', { kind: 'chart' }), 2, 6)).toEqual({ cols: 2, rows: 1, demoted: false }) // two columns: the md span as is
+    expect(effectiveSpan(hint('sm', { kind: 'chart' }), 3, 3)).toEqual({ cols: 1, rows: 1, demoted: false })
+    expect(effectiveSpan(hint('lg', { kind: 'chart' }), 1, 3)).toEqual({ cols: 1, rows: 1, demoted: true }) // one column: never 1x2
+    for (const size of ['lg', 'md', 'sm'] as Size[]) for (const columns of [1, 2, 3]) {
+      const span = effectiveSpan(hint(size, { kind: 'chart' }), columns, 5)
+      expect(span.rows).toBeLessThanOrEqual(span.cols)
+    }
   })
   it('leaves the chain alone and clamps columns to the grid', () => {
     expect(effectiveSpan(hint('lg', { kind: 'chain', rows: 40 }), 3, 5)).toEqual({ cols: 2, rows: 2, demoted: false })
@@ -68,14 +72,14 @@ describe('packLayout prefers stretching a chart over a short table (phase 2, fro
     const widgets = [hint('lg', { kind: 'chart', rows: 60 }), hint('sm', { kind: 'table', rows: 3 }), hint('md', { kind: 'chart', rows: 60 }), hint('md', { kind: 'table', rows: 12 })]
     const p = packLayout(widgets, 3)
     expect(hasHoles(p, 3)).toBe(false)
-    // The md chart is one column wide in this grid, so it fills the cell under the table beside the hero: nothing stretches.
+    // The md chart is one cell in this grid (change 1), so it fills the cell under the table beside the hero; the news table takes the row under.
     expect(cells(p)).toEqual([
       [0, 0, 2, 2],
       [2, 0, 1, 1],
-      [2, 1, 1, 2],
-      [0, 2, 2, 1],
+      [2, 1, 1, 1],
+      [0, 2, 3, 1],
     ])
-    expect(p.every((x) => !x.stretched)).toBe(true)
+    expect(p.slice(0, 3).every((x) => !x.stretched)).toBe(true)
   })
   it('the same set with a two-column-wide md chart (two columns in the grid): the hero grows across and the table keeps one row', () => {
     const widgets = [hint('lg', { kind: 'chart', rows: 60 }), hint('sm', { kind: 'table', rows: 3 }), hint('md', { kind: 'chart', rows: 60 }), hint('md', { kind: 'table', rows: 12 })]
@@ -112,24 +116,63 @@ describe('packLayout prefers stretching a chart over a short table (phase 2, fro
     expect(p[4]!.rows).toBe(1)
     expect(p[1]!.rows).toBe(1)
   })
-  it('a long table, a stat and a chart (the cheap-tech case): the stat keeps one row and the one-column chart sits under it; the long table grows down', () => {
+  it('a long table, a stat and a chart (the cheap-tech case): the stat keeps one row and the one-cell chart sits under it beside the table', () => {
     const p = packLayout([hint('lg', { kind: 'table', rows: 43 }), hint('sm', { kind: 'stat', rows: 1 }), hint('md', { kind: 'chart', rows: 11 })], 3)
     expect(hasHoles(p, 3)).toBe(false)
     expect(cells(p)).toEqual([
-      [0, 0, 2, 3],
+      [0, 0, 2, 2],
       [2, 0, 1, 1],
-      [2, 1, 1, 2],
+      [2, 1, 1, 1],
     ])
     expect(p[1]!.rows).toBe(1)
   })
-  it('flattens a tall chart back to its size when that is the only way to keep a stat one row (the curve case: hero, two md charts, a stat)', () => {
+  it('the curve case (hero, two md charts, a stat): the stat shares the column beside the hero with one chart and the other chart takes the row under, so the stat is never full width', () => {
     const widgets = [hint('lg', { kind: 'chart', rows: 1248 }), hint('md', { kind: 'chart', rows: 11 }), hint('md', { kind: 'chart', rows: 1248 }), hint('sm', { kind: 'stat', rows: 1 })]
     const p = packLayout(widgets, 3)
     expect(hasHoles(p, 3)).toBe(false)
     expect(p[3]!.rows).toBe(1)
+    expect(p[3]!.cols).toBe(1)
     expect(p.reduce((n, x) => Math.max(n, x.row + x.rows), 0)).toBe(3)
-    // One chart kept its two rows beside the hero; the other took its md span (2x1) so the stat completes the band.
-    expect(p.filter((x, i) => i > 0 && i < 3 && x.rows === 2)).toHaveLength(1)
+    expect(cells(p)).toEqual([
+      [0, 0, 2, 2],
+      [0, 2, 3, 1],
+      [2, 0, 1, 1],
+      [2, 1, 1, 1],
+    ])
+  })
+  it('change 1: no chart is ever portrait and no stat or facts card is full width when any other layout fills the grid', () => {
+    // The neoclouds case: hero compare, the compare table (the answer), a quote row, news. The table and the stat share
+    // the column beside the hero; the news table takes the row under; nothing is portrait.
+    const neo = [hint('lg', { kind: 'chart', rows: 500 }), hint('md', { kind: 'table', rows: 19 }), hint('md', { kind: 'stat', rows: 4 }), hint('md', { kind: 'table', rows: 20 })]
+    const p = packLayout(neo, 3)
+    expect(hasHoles(p, 3)).toBe(false)
+    expect(cells(p)).toEqual([
+      [0, 0, 2, 2],
+      [2, 0, 1, 1],
+      [2, 1, 1, 1],
+      [0, 2, 3, 1],
+    ])
+    // The crwv case: hero, two md charts, a quote, two tables: three rows, every chart one cell or the 2x2 hero.
+    const crwv = [hint('lg', { kind: 'chart', rows: 100 }), hint('md', { kind: 'chart', rows: 20 }), hint('md', { kind: 'chart', rows: 60 }), hint('sm', { kind: 'stat', rows: 1 }), hint('md', { kind: 'table', rows: 12 }), hint('md', { kind: 'table', rows: 20 })]
+    const q = packLayout(crwv, 3)
+    expect(hasHoles(q, 3)).toBe(false)
+    expect(q.reduce((n, x) => Math.max(n, x.row + x.rows), 0)).toBe(3)
+    for (const x of q) expect(x.rows).toBeLessThanOrEqual(x.cols)
+    expect(q[3]!.cols).toBe(1)
+    // The morning case: a seven-symbol quote row, a chart and a news table tile one band.
+    const morning = [hint('lg', { kind: 'stat', rows: 7 }), hint('md', { kind: 'chart', rows: 20 }), hint('md', { kind: 'table', rows: 20 })]
+    expect(cells(packLayout(morning, 3))).toEqual([
+      [0, 0, 1, 1],
+      [1, 0, 1, 1],
+      [2, 0, 1, 1],
+    ])
+  })
+  it('a dense placement that strands a short widget at every slot takes the first such slot, never a fresh row past the limit', () => {
+    // A hero and a two-column stat: the stat goes right under the hero (both grow across), not four rows down.
+    const p = packLayout([hint('lg', { kind: 'chart', rows: 100 }), hint('md', { kind: 'stat', rows: 5 })], 3)
+    expect(hasHoles(p, 3)).toBe(false)
+    expect(p.reduce((n, x) => Math.max(n, x.row + x.rows), 0)).toBe(3)
+    expect(p[0]!.rows).toBe(2)
   })
   it('never stretches a stat, a facts card or a short table taller when any other neighbour can grow, over random hinted sets', () => {
     const kinds: ContentHint[] = [{ kind: 'chart', rows: 50 }, { kind: 'table', rows: 3 }, { kind: 'table', rows: 20 }, { kind: 'stat', rows: 2 }, { kind: 'facts', rows: 1 }, { kind: 'chain', rows: 40 }]
@@ -253,6 +296,13 @@ describe('rowHeightFor', () => {
     expect(rowHeightFor(2, 740, 52)).toBe(340)
     expect(rowHeightFor(3, 740, 52)).toBe(MIN_ROW_HEIGHT)
     expect(rowHeightFor(6, 740, 52)).toBe(MIN_ROW_HEIGHT)
+    expect(rowHeightFor(2, 1400, 52)).toBe(670)
+  })
+  it('caps the row at two thirds of the column width when it knows it (change 1): 1440 with the panel open gets the minimum, 1920 gets 332', () => {
+    expect(rowHeightFor(2, 790, 52, 342)).toBe(MIN_ROW_HEIGHT)
+    expect(rowHeightFor(3, 790, 52, 342)).toBe(MIN_ROW_HEIGHT)
+    expect(rowHeightFor(2, 970, 52, 503)).toBe(332)
+    expect(rowHeightFor(3, 970, 52, 503)).toBe(300)
     expect(rowHeightFor(2, 1400, 52)).toBe(670)
   })
   it('falls back to the minimum before the pane is measured', () => {
