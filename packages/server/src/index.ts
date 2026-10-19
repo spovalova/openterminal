@@ -23,8 +23,42 @@ export {
   type LoadConfigOptions,
 } from './config.js'
 export { BUILTIN_CONNECTORS, builtinConnector, buildRegistry, connectorNeedsKey, describeConnectors, type ConnectorInfo, type BuildRegistryOptions } from './connectors.js'
-export { WorkspaceStore, type WorkspaceInit, type WorkspacePatch } from './store.js'
-export { Executor, Poller, errorMessage, type Emit, type RunOptions, type PollerOptions } from './executor.js'
+export {
+  WorkspaceStore,
+  SqliteStore,
+  openStore,
+  databasePath,
+  migrateJsonStore,
+  migrateWorkspaceDoc,
+  DB_FILE,
+  MIGRATION_KEY,
+  SCHEMA_VERSION,
+  type Store,
+  type OpenedStore,
+  type MigrationReport,
+  type WorkspaceInit,
+  type WorkspacePatch,
+  type CatalogCacheRow,
+  type LivenessRow,
+  type RunLogRow as StoreRunLogRow,
+  type FrameCacheRow,
+} from './store/index.js'
+export { SqliteCache, type SqliteCacheOptions } from './cache-sqlite.js'
+export {
+  createDataRoutes,
+  exportDocument,
+  recipeNamesIn,
+  loadUserRecipes,
+  recipesPath,
+  WorkspaceExportSchema,
+  EXPORT_FORMAT,
+  EXPORT_VERSION,
+  TICKER_DEFAULT,
+  type ProbeFn,
+  type DataRouteDeps,
+  type WorkspaceExport,
+} from './routes-data.js'
+export { Executor, Poller, errorMessage, nextExpiry, withProviderOverrides, PROVIDER_OVERRIDES_KEY, type Emit, type RunOptions, type PollerOptions, type Frames, type DatasetResult, type ProviderOverrides } from './executor.js'
 export { createStubAgentRunner, stubWidgets, STUB_SYMBOLS, STUB_REPLY, STUB_WORKSPACE_NAME, type StubAgentOptions } from './stub-agent.js'
 export { createAgentRunner, type LlmConfig as AgentLlmConfig } from './agent/index.js'
 export { MemoryRunLog, JsonFileRunLog, RunLogRowSchema, runCost, type RunLog, type RunLogRow, type RunLogQuery, type ModelPricing } from './runlog.js'

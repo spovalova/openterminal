@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { Button, Kbd } from '@terminal/ui'
 import { api } from './api'
-import { ConnectorsPage } from './components/ConnectorsPage'
 import { EmptyView } from './components/EmptyView'
 import { Grid } from './components/Grid'
+import { MarketStrip } from './components/MarketStrip'
 import { Palette } from './components/Palette'
 import { Sidebar } from './components/Sidebar'
 import { TabBar } from './components/TabBar'
+import { TickerStrip } from './components/TickerStrip'
+import { DataPage } from './pages/Data'
 import { isModKey, isTyping, MOD } from './platform'
 import { TerminalSocket } from './socket'
 import { SocketContext } from './socketContext'
@@ -14,13 +16,16 @@ import { AppContext, initialState, layoutFor, reducer, workspaceState, type AppS
 import { withViewTransition } from './transition'
 
 const ACTIVE_KEY = 'terminal.activeWorkspace'
+/** `#data` opens the Data page; `#connectors` (the v1 name) still works. */
+const DATA_HASHES = new Set(['#data', '#connectors'])
+const isDataHash = () => typeof location !== 'undefined' && DATA_HASHES.has(location.hash)
 
 export function App() {
   const [state, dispatch] = useReducer(reducer, initialState)
   const stateRef = useRef<AppState>(state)
   stateRef.current = state
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const [connectorsOpen, setConnectorsOpen] = useState(() => typeof location !== 'undefined' && location.hash === '#connectors')
+  const [dataOpen, setDataOpen] = useState(isDataHash)
 
   // One socket for the app's lifetime. `started` on the active Empty workspace runs inside a view transition
   // so the PromptBox slides from the center to the sidebar.
@@ -127,7 +132,7 @@ export function App() {
       }
       if (e.key === 'Escape') {
         setPaletteOpen(false)
-        setConnectorsOpen(false)
+        if (document.querySelector('dialog[open]') === null) closeData()
       }
     }
     window.addEventListener('keydown', onKey)
@@ -135,10 +140,19 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    const onHash = () => setConnectorsOpen(location.hash === '#connectors')
+    const onHash = () => setDataOpen(isDataHash())
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
+
+  const openData = () => {
+    setDataOpen(true)
+    if (!isDataHash()) history.replaceState(null, '', `${location.pathname}${location.search}#data`)
+  }
+  const closeData = () => {
+    setDataOpen(false)
+    if (isDataHash()) history.replaceState(null, '', location.pathname + location.search)
+  }
 
   const layout = layoutFor(activeWorkspace, activeWs)
 
@@ -147,8 +161,13 @@ export function App() {
       <SocketContext.Provider value={socket}>
         <div className="flex h-full flex-col bg-bg text-fg">
           <TabBar />
+          <TickerStrip />
           <main className="relative flex min-h-0 flex-1">
-            {!state.loaded ? (
+            {dataOpen ? (
+              <div className="min-w-0 flex-1">
+                <DataPage onClose={closeData} workspace={activeWorkspace} />
+              </div>
+            ) : !state.loaded ? (
               <div className="flex flex-1 items-center justify-center text-fg-2">Loading…</div>
             ) : !activeWorkspace ? (
               <div className="flex flex-1 items-center justify-center text-fg-2">Creating a workspace…</div>
@@ -187,25 +206,20 @@ export function App() {
                   · {state.health.kinds.length} kinds{state.health.llm ? '' : ' · no LLM key'}
                 </span>
               )}
+              <span className="text-fg-3">·</span>
+              <MarketStrip />
             </div>
             <div className="flex items-center gap-3">
               <span>
                 <Kbd>{MOD}</Kbd> <Kbd>K</Kbd> palette · <Kbd>{MOD}</Kbd> <Kbd>\</Kbd> sidebar
               </span>
-              <Button size="sm" variant="ghost" onClick={() => setConnectorsOpen(true)}>
-                Connectors
+              <Button size="sm" variant="ghost" onClick={() => (dataOpen ? closeData() : openData())} aria-pressed={dataOpen}>
+                Data
               </Button>
             </div>
           </footer>
         </div>
-        <Palette open={paletteOpen} onClose={() => setPaletteOpen(false)} onConnectors={() => setConnectorsOpen(true)} />
-        <ConnectorsPage
-          open={connectorsOpen}
-          onClose={() => {
-            setConnectorsOpen(false)
-            if (location.hash === '#connectors') history.replaceState(null, '', location.pathname + location.search)
-          }}
-        />
+        <Palette open={paletteOpen} onClose={() => setPaletteOpen(false)} onConnectors={openData} />
       </SocketContext.Provider>
     </AppContext.Provider>
   )

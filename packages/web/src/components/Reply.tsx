@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import Markdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Chip } from '@terminal/ui'
-import { WIDGET_CHIP_RE, type Widget } from '@terminal/core'
+import { WIDGET_CHIP_RE, type AnyWidget } from '@terminal/core'
 import { highlightWidget } from '../chips'
 
 /** Link target that marks a chip; never a real URL, so the default URL sanitiser lets it through. */
@@ -21,7 +21,7 @@ export function chipsToLinks(text: string): string {
  * The agent's reply as markdown (GFM: bold, lists, inline code, tables, strikethrough). Raw HTML is shown
  * as text, never rendered. `[[widget:<id>]]` tokens become chips that scroll to and flash the widget.
  */
-export function Reply({ text, widgets, streaming = false }: { text: string; widgets: Widget[]; streaming?: boolean }) {
+export function Reply({ text, widgets, streaming = false }: { text: string; widgets: AnyWidget[]; streaming?: boolean }) {
   const source = useMemo(() => chipsToLinks(text), [text])
   const components = useMemo<Components>(
     () => ({

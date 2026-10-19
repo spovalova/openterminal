@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { WidgetSchema } from './widget.js'
+import { AnyWidgetSchema } from './widget.js'
 
 /** Agent tools: `query` and `set_workspace` (v1), plus `find_route` and `transform` (v2, PLAN.md section 17). */
 export const TOOL_NAMES = ['query', 'set_workspace', 'find_route', 'transform'] as const
@@ -37,10 +37,11 @@ export const MessageSchema = z.object({
 })
 export type Message = z.infer<typeof MessageSchema>
 
+/** Widgets are v1 or v2 during the coexistence (PLAN.md section 17, phase 1 (e)): the SQLite store holds both. */
 export const WorkspaceSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(60),
-  widgets: z.array(WidgetSchema),
+  widgets: z.array(AnyWidgetSchema),
   messages: z.array(MessageSchema),
   createdAt: z.number(),
   updatedAt: z.number(),
