@@ -30,7 +30,9 @@ describe('DataTable never scrolls sideways', () => {
     expect(columnWidth('symbol', 'text')).toBe(72)
     expect(columnWidth('headline', 'text')).toBeUndefined()
     const html = renderToString(createElement(DataTable, { columns, rows, formats: { price: 'price', time: 'time' } }))
-    expect(html).toMatch(/<th[^>]*style="width:84px"[^>]*>/)
+    // The rendered header is at least its longest word at 11px a character plus the arrow and padding: "price" is 87.
+    expect(html).toMatch(/<th[^>]*style="width:87px"[^>]*>/)
+    expect(columnWidth('peak_weekly_close', 'price', 'Peak weekly close')).toBe(98)
   })
 
   it('marks column priority with data-rank on header and body cells so container queries can hide them', () => {

@@ -45,7 +45,13 @@ export const TRANSFORM_LIMITS = {
 } as const
 
 /** Modules a transform may import. Anything else is a traceback before the script runs. */
-export const TRANSFORM_ALLOWED_IMPORTS = ['pandas', 'numpy', 'scipy', 'math', 'datetime', 'statistics', 'ot'] as const
+/**
+ * The scientific stack, the `ot` helpers and the pure-computation parts of the standard library. `time`, `re`, `json`,
+ * `collections`, `itertools` and `functools` were added in phase 2c: the model imports `time` in one run of six and
+ * lost a tool call each time to the refusal; none of them reaches the filesystem or the network (the worker has no
+ * network and no mounted filesystem, and the CPU budget bounds `time.sleep`).
+ */
+export const TRANSFORM_ALLOWED_IMPORTS = ['pandas', 'numpy', 'scipy', 'math', 'datetime', 'statistics', 'time', 're', 'json', 'collections', 'itertools', 'functools', 'ot'] as const
 
 /** The error string for inputs over the cap, or undefined. The engine and the registry both check before running. */
 export function checkTransformInputs(inputs: Record<string, Frame>): string | undefined {
