@@ -95,6 +95,18 @@ Other v1.2 behaviour:
 - `insiders` action: sec `Disposition` is `sell` (a bona fide gift is `other`); an `Acquisition` by open-market purchase is `buy`, by grant or award `grant`, anything else (option exercise, conversion) `other`. value is shares × price.
 - `macro` cpi_yoy and unemployment are always oecd `united_states` monthly series, whatever `providers.macro` says; the other series use `providers.macro` (default federal_reserve, fred works with a key).
 
+## v2 routes (PLAN.md section 17)
+
+Beside the 22 kinds the connector exposes every GET route of the local API as a v2 route:
+
+- `descriptors()` fetches `${baseUrl}/openapi.json`, generates one descriptor per route whose response is a results envelope (834 on OpenBB 5.0.0), and caches them in `~/.terminal/catalog/openbb.json` (`TERMINAL_HOME` overrides the directory) keyed by the document's version and a fingerprint of its paths and models. When the API is down the cached file is served, or nothing; the breaker above applies.
+- `call(route, params, ctx)` is `GET /api/v1/<route>` with the validated params (arrays joined by commas, `provider` passed through, params the chosen provider does not take dropped) and the `results` list through core's `inferFrame` with the route's descriptor. Single-symbol rows that carry no `symbol` get it from the params. Provider values are returned as they are: fractions stay fractions and the annotations (`packages/core/annotations.yml`) say what each field is.
+- `pnpm probe` calls every route once with sample params and records liveness; `docs/notes/openbb-probe.md` part 3 has the numbers.
+
+```ts
+await registry.run({ connector: 'openbb', route: 'fixedincome/corporate/bond_prices', params: { provider: 'finra', issuer_name: 'coreweave' } })
+```
+
 ## Develop
 
 ```sh

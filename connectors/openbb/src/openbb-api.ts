@@ -112,6 +112,14 @@ export const resetBreaker = (): void => {
   downUntil = 0
 }
 export const isDown = (now: number = Date.now()): boolean => now < downUntil
+/** Trip the breaker after a connection failure seen outside `get` (the openapi.json fetch in descriptors.ts). */
+export const markDown = (now: number = Date.now()): void => {
+  downUntil = now + BREAKER_MS
+}
+/** Clear the breaker after any successful round trip. */
+export const markUp = (): void => {
+  downUntil = 0
+}
 
 export type GetOptions = { now?: () => number; bypassBreaker?: boolean; timeoutMs?: number }
 
