@@ -1,4 +1,4 @@
-import { GRID_GAP, columnsFor, isShortContent, minHeight, naturalHeight, packLayout, trackHeights, type ContentHint, type Workspace } from '@openterminal/core'
+import { GRID_GAP, columnsFor, isShortContent, minHeight, naturalHeight, packLayout, placementHeight, trackHeights, type ContentHint, type Workspace } from '@openterminal/core'
 import { Button, EmptyState } from '@openterminal/ui'
 import { useCallback, useLayoutEffect, useMemo, useState } from 'react'
 import { useApp, type WorkspaceState } from '../state'
@@ -89,6 +89,13 @@ export function Grid({ workspace, ws }: { workspace: Workspace; ws: WorkspaceSta
     return { short: short[i]!, natural: measured ?? estimate, min: measured ?? minHeight(hints[i], width) }
   })
   const tracks = trackHeights(layout, items, available, GRID_GAP)
+  // A card or short table whose track is taller than its content (a taller neighbour shares the track) fills its cell:
+  // a table's rows breathe up to 36px and a card's lines up to 8px more, the rest stays under the content. Its natural
+  // height is no longer measured there (it would grow with the spacing), the last measurement stands.
+  const slackOf = (i: number) => {
+    const measured = short[i] ? naturals[workspace.widgets[i]!.id] : undefined
+    return measured !== undefined ? placementHeight(layout[i]!, tracks, GRID_GAP) - measured : 0
+  }
   const rows = tracks.length
 
   return (
@@ -111,7 +118,7 @@ export function Grid({ workspace, ws }: { workspace: Workspace; ws: WorkspaceSta
               data-hint={JSON.stringify(hints[i])}
               data-natural={items[i]!.natural}
             >
-              <WidgetCell widget={widget} workspaceId={workspace.id} fit={short[i] ? 'content' : 'fill'} onNatural={onNatural} />
+              <WidgetCell widget={widget} workspaceId={workspace.id} fit={short[i] && slackOf(i) <= 24 ? 'content' : 'fill'} slack={short[i] ? Math.max(0, slackOf(i)) : 0} onNatural={onNatural} />
             </div>
           )
         })}

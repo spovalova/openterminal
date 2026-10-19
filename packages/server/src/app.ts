@@ -11,6 +11,7 @@ import {
   MessageSchema,
   ServerMsgSchema,
   buildSnapshot,
+  heldFrames,
   canonicalKey,
   releaseSnapshot,
   snapshotCurrent,
@@ -111,6 +112,7 @@ export function createApp(deps: AppDeps) {
     const id = c.req.param('id')
     inflight.get(id)?.controller.abort()
     const removed = await store.delete(id)
+    if (removed) store.setSetting(snapshotKey(id), undefined)
     return removed ? c.body(null, 204) : c.json({ error: 'workspace not found' }, 404)
   })
 
@@ -129,6 +131,11 @@ export function createApp(deps: AppDeps) {
     if (!widget) return c.json({ error: 'widget not found' }, 404)
     const bypassCache = c.req.query('refresh') === '1'
     const dataset = c.req.query('dataset') || undefined
+    // The reply's held frame when the snapshot holds this widget (taste round 2, change 5): the HTTP fallback a page
+    // uses before its socket opens must not overwrite the held frames with live ones.
+    const held = workspaceId && !bypassCache ? heldFrames(readSnapshot(workspaceId), widget, now()) : undefined
+    const heldFrame = held ? (held[dataset ?? 'main'] ?? Object.values(held)[0]) : undefined
+    if (heldFrame) return c.json(heldFrame)
     try {
       return c.json(await executor.frameFor(widget, { bypassCache, ...(dataset ? { dataset } : {}) }))
     } catch (err) {

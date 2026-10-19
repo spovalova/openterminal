@@ -64,7 +64,7 @@ export const FactsCard: FC<ViewProps> = ({ widget, frames }) => {
   return (
     <div data-view="facts" data-count={facts.length} className="facts-card flex w-full flex-col overflow-x-hidden p-3">
       {/* Round 2: hero, 8px, the fields, and the card ends there; the grid sizes the track to this content. */}
-      <div className="flex flex-col gap-2">
+      <div className="card-stack">
         {hero && (
           <div data-fact={hero.column} data-hero="" className="flex min-w-0 flex-col">
             <div className="truncate text-xs leading-4 text-fg-3" title={hero.label}>

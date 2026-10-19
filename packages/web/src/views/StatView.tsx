@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FC } from 'react'
 import clsx from 'clsx'
-import { DENSE_LINE_HEIGHT, STAT_CARD_HEIGHT, cardsPerRow, columnIndex, denseStat, type Frame, type StatControl } from '@openterminal/core'
+import { DENSE_LINE_HEIGHT, cardsPerRow, columnIndex, denseStat, type Frame, type StatControl } from '@openterminal/core'
 import { EMPTY_CELL, EmptyState, direction, formatCell, type CellFormat } from '@openterminal/ui'
 import type { ViewProps } from './types'
 import { cellFormat } from './TableView'
@@ -289,7 +289,7 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
     return (
       // Round 2: the card is as tall as its content (hero, 8px, the fields), the grid ends its track there.
       <div data-view="stat" data-column={column} data-count={1} className="flex w-full flex-col overflow-hidden p-3">
-        <div className="flex flex-col gap-2">
+        <div className="card-stack">
           <div>
             <StatBody stat={s} label={label} tick={ticks[s.symbol]} hero />
           </div>
@@ -327,7 +327,7 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
         {balancedRows(stats, size ? cardsPerRow(size.width) : stats.length).map((row) => (
           <div key={row[0]!.symbol} className="stat-card-row">
             {row.map((s) => (
-              <div key={s.symbol} data-symbol={s.symbol} className="stat-card flex min-w-0 flex-col justify-center overflow-hidden rounded-md border border-border bg-surface-2/50 px-3 py-2" style={{ height: STAT_CARD_HEIGHT }}>
+              <div key={s.symbol} data-symbol={s.symbol} className="stat-card flex min-w-0 flex-col justify-center overflow-hidden rounded-md border border-border bg-surface-2/50 px-3 py-2">
                 <StatBody stat={s} label={label} tick={ticks[s.symbol]} />
               </div>
             ))}

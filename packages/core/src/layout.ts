@@ -361,9 +361,16 @@ export function packLayout(widgets: readonly LayoutWidget[], columns: number, op
   const index = widgets.map((_w, i) => i)
   const head = index.slice(0, 1)
   const rest = index.slice(1)
-  const orders = [index, [...head, ...rest.filter((i) => short[i]), ...rest.filter((i) => !short[i])], [...head, ...rest.filter((i) => !short[i]), ...rest.filter((i) => short[i])]].filter(
-    (o, k, all) => all.findIndex((x) => x.join() === o.join()) === k,
-  )
+  // And the last k short widgets moved to the end, k = 1 … all: the first cards stay beside the hero and the rest
+  // make a band under it after the tables (amd-rsi: RSI and MACD beside the chart, the quote and the next report under).
+  const shortRest = rest.filter((i) => short[i])
+  const tails = shortRest.map((_s, k) => shortRest.slice(shortRest.length - k - 1))
+  const orders = [
+    index,
+    [...head, ...shortRest, ...rest.filter((i) => !short[i])],
+    [...head, ...rest.filter((i) => !short[i]), ...shortRest],
+    ...tails.map((tail) => [...head, ...rest.filter((i) => !tail.includes(i)), ...tail]),
+  ].filter((o, k, all) => all.findIndex((x) => x.join() === o.join()) === k)
   let best: Placement[] | undefined
   let bestCost: number[] = []
   // With the page's size known the strand rule is one candidate among others: the px cost judges a card grown taller.

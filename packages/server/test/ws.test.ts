@@ -139,6 +139,9 @@ describe('websocket', () => {
     expect(held.t === 'frame' && held.frame.meta.heldAt).toBe(at)
     await second.next((m) => m.t === 'frame' && m.widgetId === 'memory-news')
     expect(calls.length).toBe(before)
+    // The HTTP fallback a page uses before its socket opens serves the held frame too, never a live one over it.
+    const viaHttp = (await (await fetch(`${running.url}/api/widgets/memory-snapshot/frame?workspace=${id}`)).json()) as { meta: { heldAt?: number } }
+    expect(viaHttp.meta.heldAt).toBe(at)
     // "Live data" releases every widget: fresh frames, not held.
     second.ws.send(JSON.stringify({ t: 'live', workspaceId: id }))
     const live = await second.next((m) => m.t === 'frame' && m.widgetId === 'memory-snapshot' && m.frame.meta.heldAt === undefined)

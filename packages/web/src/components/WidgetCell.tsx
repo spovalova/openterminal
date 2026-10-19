@@ -20,7 +20,7 @@ import { VirtualTable } from './VirtualTable'
  * the view's content and the cell reports that natural height (header, body and border) through `onNatural`, so the
  * grid ends the track there and gives the rest of the page to the charts and tables beside it.
  */
-export function WidgetCell({ widget, workspaceId, fit = 'fill', onNatural }: { widget: AnyWidget; workspaceId: string; fit?: 'fill' | 'content'; onNatural?: (id: string, px: number) => void }) {
+export function WidgetCell({ widget, workspaceId, fit = 'fill', slack = 0, onNatural }: { widget: AnyWidget; workspaceId: string; fit?: 'fill' | 'content'; /** px the cell is taller than the card's content: its lines breathe up to 8px more (Grid). */ slack?: number; onNatural?: (id: string, px: number) => void }) {
   const { state } = useApp()
   const { refreshWidget } = useActions()
   const [expanded, setExpanded] = useState(false)
@@ -42,6 +42,9 @@ export function WidgetCell({ widget, workspaceId, fit = 'fill', onNatural }: { w
     const body = el.querySelector<HTMLElement>('section > [data-body]')
     if (!header || !body) return
     const report = () => {
+      // Only a content-sized body measures the content: a resize reported after the frame switched to fill (a cell
+      // taller than the card) would be the cell, and the track would never shrink back.
+      if (body.getAttribute('data-fit') !== 'content') return
       const px = Math.ceil(header.offsetHeight + body.offsetHeight + 2)
       if (px > 2) onNatural(widget.id, px)
     }
@@ -53,7 +56,7 @@ export function WidgetCell({ widget, workspaceId, fit = 'fill', onNatural }: { w
   }, [fit, onNatural, ready, widget.id])
 
   return (
-    <div ref={cellRef} id={widgetDomId(widget.id)} className="widget-cell h-full w-full rounded">
+    <div ref={cellRef} id={widgetDomId(widget.id)} className="widget-cell h-full w-full rounded" style={slack > 0 ? ({ '--card-slack': `${Math.round(slack)}px` } as React.CSSProperties) : undefined}>
       <WidgetFrame
         title={widget.title}
         subtitle={subtitle}
@@ -66,7 +69,7 @@ export function WidgetCell({ widget, workspaceId, fit = 'fill', onNatural }: { w
           heldAt !== undefined ? (
             // Taste round 2 (one snapshot): the frame the reply was verified against, held; the refresh button goes live.
             <span data-held="" className="whitespace-nowrap text-fg-3" title="The data the reply was written from. Refresh for live data.">
-              as of {asOfLabel(heldAt)}
+              as of {asOfLabel(heldAt).replace(/ ET$/, '')}
             </span>
           ) : undefined
           // (No "2 datasets" here: an internal count, round 2 change 8; the sub-header names the markers instead.)

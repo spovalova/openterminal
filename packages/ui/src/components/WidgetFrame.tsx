@@ -100,15 +100,19 @@ export const WidgetFrame: FC<WidgetFrameProps> = ({
     >
       <header className="flex shrink-0 items-start gap-2 border-b border-border py-2 pr-2 pl-3">
         <div className="flex min-w-0 flex-1 flex-col">
-          <h3 className="truncate text-sm leading-4 font-medium text-fg" title={title}>
-            {title}
-          </h3>
+          {/* The meta sits on the title's line, so the sub-header keeps the header's full width (round 2: an "as of"
+              tag beside it wrapped "TSLA · 15 headlines · last 3 days" to two lines). */}
+          <div className="flex min-w-0 items-baseline gap-2">
+            <h3 className="min-w-0 flex-1 truncate text-sm leading-4 font-medium text-fg" title={title}>
+              {title}
+            </h3>
+            {meta && <div className="flex shrink-0 items-center gap-2 text-xs leading-4 text-fg-2">{meta}</div>}
+          </div>
           {/* Wraps to two lines at word boundaries in a narrow cell rather than cutting mid-word (section 17 checklist). */}
           <div className="line-clamp-2 text-xs leading-4 break-words text-fg-3" data-subtitle="" title={subtitle}>
             {subtitle ?? ' '}
           </div>
         </div>
-        {meta && <div className="flex min-w-0 shrink items-center gap-2 pt-px text-xs text-fg-2">{meta}</div>}
         {actions && (
           <div className="widget-actions -mt-0.5 flex shrink-0 items-center gap-px">
             {onEdit && (

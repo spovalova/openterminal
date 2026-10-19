@@ -178,6 +178,9 @@ export function textWidths(columns: readonly Column[], rows: readonly unknown[][
  */
 /** What a text column needs before the fixed ones take the rest (a headline, a name). */
 const TEXT_COLUMN_MIN = 120
+/** The tallest a row grows to when the table has room (round 2), and the header row it is measured under. */
+const ROW_MAX = 36
+const HEAD_HEIGHT = 32
 
 /**
  * The columns that fit a container of `width` px: every column when the width is unknown (server rendering, tests),
@@ -232,13 +235,21 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
   const fmts = useMemo(() => uniformFormats(columns, rows, { ...inferFormats(columns), ...formats }), [columns, rows, formats])
   const nowMs = now ?? Date.now()
   const [width, setWidth] = useState<number | undefined>(undefined)
+  const [height, setHeight] = useState<number | undefined>(undefined)
   const wrap = useCallback((el: HTMLDivElement | null) => {
     if (!el || typeof ResizeObserver === 'undefined') return
-    const update = () => setWidth(el.clientWidth)
+    const update = () => {
+      setWidth(el.clientWidth)
+      // Inside a content-sized frame (data-fit="content") the height is the table's own: never stretch from it.
+      setHeight(el.closest('[data-fit="content"]') ? undefined : el.clientHeight)
+    }
     update()
     const ro = new ResizeObserver(update)
     ro.observe(el)
   }, [])
+  // A table given more height than its rows need lets them breathe up to 36px (taste round 2): the 28px rows of a
+  // short table in a tall cell left half the cell blank, and stretched to 58px they read as cell borders.
+  const rowHeight = height && rows.length > 0 ? Math.max(28, Math.min(ROW_MAX, Math.floor((height - HEAD_HEIGHT) / rows.length))) : 28
   const allHeaders = useMemo(() => headerLabels(columns, fmts, labels), [columns, fmts, labels])
   // Every column at its content width (change 5): numbers at their longest formatted value, short text at its longest value.
   const sized = useMemo(() => ({ ...numberWidths(columns, rows, fmts, allHeaders, nowMs), ...textWidths(columns, rows, fmts, allHeaders) }), [columns, rows, fmts, allHeaders, nowMs])
@@ -319,7 +330,7 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
           {sorted.map((row, ri) => {
             const highlighted = highlightRow?.(row) ?? false
             return (
-            <tr key={ri} data-highlight={highlighted ? '' : undefined} className={clsx('hover:bg-surface-2', highlighted && 'bg-accent/10 hover:bg-accent/15')}>
+            <tr key={ri} data-highlight={highlighted ? '' : undefined} style={rowHeight > 28 ? { height: rowHeight } : undefined} className={clsx('hover:bg-surface-2', highlighted && 'bg-accent/10 hover:bg-accent/15')}>
               {visible.map((c) => {
                 const f = fmts[c.name] ?? 'text'
                 const v = row[indexOf.get(c.name)!]

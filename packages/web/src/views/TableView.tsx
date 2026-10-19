@@ -292,7 +292,7 @@ const RowCards: FC<{ rootRef?: (el: HTMLElement | null) => void; frame: Frame; r
       {rows.map((row, ri) => {
         const headText = String(row[columnIndex(frame, head)] ?? '')
         return (
-          <div key={ri} data-row={ri} className="flex min-w-0 flex-col gap-1.5 rounded-md border border-border bg-surface-2/50 px-3 py-2.5">
+          <div key={ri} data-row={ri} className="flex min-w-0 flex-col gap-1.5 rounded-md border border-border bg-surface-2/50 px-3">
             <div className="num truncate text-sm font-semibold text-fg" title={headText}>
               {headText || '—'}
             </div>
