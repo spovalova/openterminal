@@ -5,7 +5,7 @@ import { useApp, type WorkspaceState } from '../state'
 import { framesFor } from '../state/frames'
 import { contentHintFor } from '../views'
 import { WidgetCell } from './WidgetCell'
-import { WidgetEditor } from './WidgetEditor'
+import { Editor } from './Editor'
 
 /** Vertical padding of the pane plus the "+ Widget" strip under the grid. */
 const CHROME_HEIGHT = 16 + 36
@@ -62,7 +62,7 @@ export function Grid({ workspace, ws }: { workspace: Workspace; ws: WorkspaceSta
             }
           />
         )}
-        <WidgetEditor open={adding} onClose={() => setAdding(false)} workspaceId={workspace.id} />
+        <Editor open={adding} onClose={() => setAdding(false)} workspaceId={workspace.id} />
       </div>
     )
   }
@@ -102,7 +102,7 @@ export function Grid({ workspace, ws }: { workspace: Workspace; ws: WorkspaceSta
           + Widget
         </Button>
       </div>
-      <WidgetEditor open={adding} onClose={() => setAdding(false)} workspaceId={workspace.id} />
+      <Editor open={adding} onClose={() => setAdding(false)} workspaceId={workspace.id} />
     </div>
   )
 }

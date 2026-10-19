@@ -52,8 +52,8 @@ export function Palette({ open, onClose, onConnectors }: { open: boolean; onClos
             ))}
           </Command.Group>
           <Command.Group heading="Settings">
-            <Command.Item value="connectors keys" onSelect={() => run(onConnectors)}>
-              Connectors
+            <Command.Item value="data connectors keys recipes catalog" onSelect={() => run(onConnectors)}>
+              Data: connectors, catalog, recipes
             </Command.Item>
           </Command.Group>
         </Command.List>

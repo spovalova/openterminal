@@ -2,6 +2,7 @@ import { useMemo, useState, type FC } from 'react'
 import { columnIndex, controlFor, type Column, type Format, type Frame, type TableControl } from '@terminal/core'
 import { DataTable, EmptyState, type CellFormat } from '@terminal/ui'
 import type { ViewProps } from './types'
+import { VirtualTable } from '../components/VirtualTable'
 import { FactsCard } from './FactsCard'
 import { controlOf, datasetsFor, kindOf, primaryFrame, viewOf } from './fields'
 import { EMPTY_HINT, KIND_PRIORITY, defaultSortFor, formatsFor, type SortSpec } from './legacy'
@@ -135,22 +136,21 @@ export const TableView: FC<ViewProps> = ({ widget, frames }) => {
   const highlightRow = hi && hiIndex >= 0 ? (row: unknown[]) => String(row[hiIndex]) === String(hi.value) : undefined
   const cellMark = extremes ? (row: unknown[], column: string) => extremes.get(row)?.[column] : undefined
 
+  const common = { columns: projected.columns, rows: limited, formats, labels: table.labels, priority: ranksFor(table.columns), sort, onSort }
   return (
-    <div data-view="table" data-rows={frame.rows.length} className="h-full w-full overflow-hidden">
-      <DataTable
-        columns={projected.columns}
-        rows={limited}
-        formats={formats}
-        labels={table.labels}
-        priority={ranksFor(table.columns)}
-        sort={sort}
-        onSort={onSort}
-        {...(highlightRow ? { highlightRow } : {})}
-        {...(cellMark ? { cellMark } : {})}
-      />
+    <div data-view="table" data-rows={frame.rows.length} data-virtual={limited.length > VIRTUAL_ROWS ? '' : undefined} className="h-full w-full overflow-hidden">
+      {limited.length > VIRTUAL_ROWS ? (
+        // Screener and transform outputs in the thousands of rows: (e)'s windowed table, same API without the marks.
+        <VirtualTable {...common} />
+      ) : (
+        <DataTable {...common} {...(highlightRow ? { highlightRow } : {})} {...(cellMark ? { cellMark } : {})} />
+      )}
     </div>
   )
 }
+
+/** Above this many rows the table windows its rows (VirtualTable); below it every row renders with highlight and marks. */
+export const VIRTUAL_ROWS = 150
 
 /** The table control for a widget: its own when it is a table view, else the frame as a plain table (the table is the floor and always renders). */
 export function tableControlOf(widget: ViewProps['widget'], frames: Record<string, Frame>): TableControl | undefined {

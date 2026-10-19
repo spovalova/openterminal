@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { WorkspaceStore } from '../src/store.js'
+import { WorkspaceStore } from '../src/store/index.js'
 import { stubWidgets } from '../src/stub-agent.js'
 
 let home: string
@@ -31,7 +31,7 @@ describe('WorkspaceStore', () => {
 
     const found = await store.findWidget('memory-news')
     expect(found?.workspace.id).toBe(ws.id)
-    expect(found?.widget.query.kind).toBe('news')
+    expect((found?.widget as { query?: { kind: string } } | undefined)?.query?.kind).toBe('news')
 
     const second = await store.create({ name: 'Other' })
     expect((await store.list()).map((w) => w.id)).toEqual([ws.id, second.id])

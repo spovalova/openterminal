@@ -1,58 +1,170 @@
-// Print a frame from the registry without the app: `pnpm query ohlcv AAPL 1d 3mo`.
+// Print a frame from the registry without the app.
 //
-// Generic form, any kind:   pnpm query <kind> key=value key=a,b …   (comma lists become arrays, numbers become numbers)
-// Legacy positional forms:  search <terms…> | quote <symbols…> | ohlcv <symbols…> <interval> <range> | news <symbols…> [limit] | earnings <symbols…> <from> <to>
-// Params are validated by core's parseQuery; `pnpm query --help` lists every kind with its params.
+//   pnpm query <connector> <route> key=value …     v2: one route of one connector, params validated against its descriptor
+//   pnpm query <recipe> key=value …                v2: a recipe (built-in or ~/.terminal/recipes.yml), e.g. `pnpm query ohlcv symbols=NVDA range=1y`
+//   pnpm query <kind> key=value …                  v1: a kind (until phase 3); comma lists become arrays, numbers become numbers
+//   legacy positional forms:  search <terms…> | quote <symbols…> | ohlcv <symbols…> <interval> <range> | news <symbols…> [limit] | earnings <symbols…> <from> <to>
+//
 // Connectors come from ~/.terminal/config.yml (TERMINAL_HOME overrides the directory) when it exists, else yahoo only.
+// `pnpm query --help` lists every recipe and kind with its params; `pnpm query <connector> --routes [filter]` lists a connector's routes.
 import { existsSync } from 'node:fs'
-import { ConnectorRegistry, KINDS, KIND_NAMES, MemoryCache, parseQuery, type Kind, type KindDef, type Query } from '@terminal/core'
+import {
+  ConnectorRegistry,
+  KINDS,
+  KIND_NAMES,
+  MemoryCache,
+  describeDescriptor,
+  parseQuery,
+  recipeParams,
+  recipeSummaryLines,
+  type AnyQuery,
+  type Kind,
+  type KindDef,
+  type Query,
+  type Recipe,
+} from '@terminal/core'
+import { builtinAnnotations, builtinRecipes } from '@terminal/core/node'
 import yahoo from '@terminal/connector-yahoo'
 import { renderParams } from '../packages/server/src/agent/prompt.js'
 import { configPath, loadConfig, terminalHome } from '../packages/server/src/config.js'
-import { buildRegistry } from '../packages/server/src/connectors.js'
+import { BUILTIN_CONNECTORS, buildRegistry } from '../packages/server/src/connectors.js'
+import { loadUserRecipes } from '../packages/server/src/routes-data.js'
 
 const LEGACY = new Set<string>(['search', 'quote', 'ohlcv', 'news', 'earnings'])
+const log = (m: string) => console.error(m)
+const home = terminalHome()
+
+// ---------- registry (built first: the usage text and the route lookups need the recipes and the descriptors) ----------
+
+const recipes: Recipe[] = [...builtinRecipes(), ...loadUserRecipes(home, log)]
+let registry: ConnectorRegistry
+if (existsSync(configPath(home))) {
+  log(`connectors from ${configPath(home)}`)
+  registry = buildRegistry(loadConfig({ home }), { cache: new MemoryCache(), log, recipes, annotations: builtinAnnotations() })
+} else {
+  log('no config.yml; using yahoo only')
+  registry = new ConnectorRegistry({ cache: new MemoryCache(), log, recipes, annotations: builtinAnnotations() })
+  registry.register(yahoo, {})
+}
+const connectorNames = new Set([...registry.connectors().map((c) => c.name), ...Object.keys(BUILTIN_CONNECTORS)])
+const recipeByName = new Map(recipes.map((r) => [r.name, r]))
 
 function usage(): string {
   const lines = [
     'usage:',
-    '  pnpm query <kind> key=value [key=a,b …]     any kind; comma lists become arrays, numbers become numbers',
-    '  pnpm query search <terms…>',
-    '  pnpm query quote <symbols…>',
-    '  pnpm query ohlcv <symbols…> <interval> <range>',
-    '  pnpm query news <symbols…> [limit]',
-    '  pnpm query earnings <symbols…> <from> <to>',
+    '  pnpm query <connector> <route> key=value …   one route (pnpm query openbb equity/price/quote symbol=NVDA provider=yfinance)',
+    '  pnpm query <connector> --routes [filter]     list a connector\'s routes',
+    '  pnpm query <recipe> key=value …              a recipe (pnpm query ohlcv symbols=NVDA,AMD range=1y)',
+    '  pnpm query <kind> key=value …                a v1 kind, exact v1 path (pnpm query options symbol=NVDA strikes=5)',
+    '  pnpm query search <terms…> | quote <symbols…> | ohlcv <symbols…> <interval> <range> | news <symbols…> [limit] | earnings <symbols…> <from> <to>',
     '',
-    'examples:',
-    '  pnpm query options symbol=NVDA strikes=5',
-    '  pnpm query macro series=treasury_10y,treasury_2y range=2y',
-    '  pnpm query calendar from=2026-10-19 to=2026-10-23',
-    '  pnpm query movers list=losers limit=10',
+    `connectors: ${[...connectorNames].join(', ')}`,
     '',
-    'kinds:',
+    'recipes:',
+    ...recipeSummaryLines(recipes).map((l) => `  ${l}`),
+    '',
+    'kinds (v1):',
   ]
   for (const kind of KIND_NAMES) lines.push(`  ${kind.padEnd(15)} ${renderParams((KINDS[kind] as KindDef).params)}`)
   return lines.join('\n')
 }
 
 const argv = process.argv.slice(2)
-if (argv.length === 0 || argv.includes('--help') || argv.includes('-h')) {
+if (argv.length === 0 || argv[0] === '--help' || argv[0] === '-h') {
   console.error(usage())
   process.exit(argv.length === 0 ? 2 : 0)
 }
-const [kindArg, ...rest] = argv
-if (!(KIND_NAMES as readonly string[]).includes(kindArg!)) {
-  console.error(`unknown kind "${kindArg}". Kinds: ${KIND_NAMES.join(', ')}.\nRun \`pnpm query --help\` for the params of each.`)
-  process.exit(2)
-}
-const kind = kindArg as Kind
+const [first, ...rest] = argv as [string, ...string[]]
 
-// ---------- argument parsing ----------
+// ---------- key=value parsing ----------
+
+const scalar = (s: string): unknown => (/^-?\d+(\.\d+)?$/.test(s) ? Number(s) : s === 'true' ? true : s === 'false' ? false : s)
+
+/** `key=value` pairs → an object; comma lists become arrays of strings (descriptors and recipe schemas coerce the rest). */
+function keyValues(args: string[], what: string): Record<string, unknown> {
+  const params: Record<string, unknown> = {}
+  for (const arg of args) {
+    const eq = arg.indexOf('=')
+    if (eq <= 0) {
+      console.error(`expected key=value, got "${arg}" (${what})`)
+      process.exit(2)
+    }
+    const key = arg.slice(0, eq)
+    const value = arg.slice(eq + 1)
+    params[key] = value.includes(',') ? value.split(',').map((s) => s.trim()).filter(Boolean) : value
+  }
+  return params
+}
+
+async function print(query: AnyQuery): Promise<void> {
+  try {
+    const frame = await registry.run(query)
+    const lineage = frame.meta.lineage
+    const via = lineage?.route ? ` via ${lineage.connector} ${lineage.route}${lineage.provider ? ` (${lineage.provider})` : ''}` : ''
+    console.error(`${frame.rows.length} rows from ${frame.meta.connector}${via} (ttl ${frame.meta.ttl}ms)`)
+    const units = frame.meta.fields ? Object.entries(frame.meta.fields).filter(([, f]) => f.unit).map(([n, f]) => `${n}:${f.unit}`) : []
+    if (units.length) console.error(`units: ${units.join(' ')}`)
+    console.log(frame.columns.map((c) => c.name).join('\t'))
+    for (const row of frame.rows) console.log(row.map((v) => (v instanceof Date ? v.toISOString() : v === null || v === undefined ? '' : String(v))).join('\t'))
+  } catch (err) {
+    console.error(`query failed: ${err instanceof Error ? err.message : String(err)}`)
+    process.exit(1)
+  }
+}
+
+// ---------- v2: connector route ----------
+
+if (connectorNames.has(first) && !(KIND_NAMES as readonly string[]).includes(first)) {
+  const [route, ...kv] = rest
+  if (!route) {
+    console.error(`usage: pnpm query ${first} <route> key=value …  (or --routes [filter])`)
+    process.exit(2)
+  }
+  if (route === '--routes') {
+    const filter = kv[0]?.toLowerCase()
+    const all = await registry.descriptorsOf(first)
+    const shown = filter ? all.filter((d) => d.route.toLowerCase().includes(filter) || d.summary.toLowerCase().includes(filter)) : all
+    for (const d of shown) console.log(describeDescriptor(d))
+    console.error(`${shown.length} of ${all.length} routes on ${first}`)
+    process.exit(0)
+  }
+  const descriptor = await registry.descriptorFor(first, route)
+  if (!descriptor) {
+    console.error(`${first} has no route "${route}". Run \`pnpm query ${first} --routes ${route.split('/').pop() ?? ''}\` to search.`)
+    process.exit(2)
+  }
+  const params = keyValues(kv, describeDescriptor(descriptor))
+  // typed descriptor params: a number param typed as "5" stays a string here; parseParams coerces it
+  await print({ connector: first, route, params })
+  process.exit(0)
+}
+
+// ---------- v2: recipe (names that are not v1 kinds, or kinds asked for with key=value when the v1 kind is gone) ----------
+
+const isKind = (KIND_NAMES as readonly string[]).includes(first)
+if (!isKind) {
+  const recipe = recipeByName.get(first)
+  if (!recipe) {
+    console.error(`unknown connector, recipe or kind "${first}".\nconnectors: ${[...connectorNames].join(', ')}\nrecipes: ${recipes.map((r) => r.name).join(', ')}\nRun \`pnpm query --help\` for the params of each.`)
+    process.exit(2)
+  }
+  const params = keyValues(rest, `${recipe.name}(${recipeParams(recipe).map((p) => `${p.name}${p.required ? '' : '?'}`).join(', ')})`)
+  for (const [k, v] of Object.entries(params)) {
+    const p = recipeParams(recipe).find((x) => x.name === k)
+    if (p && (p.type === 'number' || p.type === 'integer') && typeof v === 'string') params[k] = scalar(v)
+    if (p && p.type === 'string[]' && typeof v === 'string') params[k] = [v]
+  }
+  await print({ recipe: recipe.name, params })
+  process.exit(0)
+}
+
+// ---------- v1 kind path (exactly as before) ----------
+
+const kind = first as Kind
 
 type Def = { type: string; innerType?: { def: Def } }
 type Field = { def: Def; safeParse(v: unknown): { success: boolean } }
 
-/** True when the param is an array (through optional/default wrappers). */
 function isArrayField(field: Field): boolean {
   let d: Def | undefined = field.def
   while (d) {
@@ -62,13 +174,10 @@ function isArrayField(field: Field): boolean {
   return false
 }
 
-/** Coerce one `key=value` to what the kind's param schema accepts: a number, a string, or an array of either. */
 function coerce(field: Field, raw: string): unknown {
-  const scalar = (s: string): unknown => (/^-?\d+(\.\d+)?$/.test(s) ? Number(s) : s === 'true' ? true : s === 'false' ? false : s)
   if (isArrayField(field)) {
     const parts = raw.split(',').map((s) => s.trim()).filter((s) => s.length > 0)
     const coerced = parts.map(scalar)
-    // Prefer what validates; otherwise the natural coercion, so parseQuery reports the real problem (range, enum).
     return field.safeParse(coerced).success || !field.safeParse(parts).success ? coerced : parts
   }
   const n = scalar(raw)
@@ -133,27 +242,4 @@ try {
   console.error(`invalid ${kind} params ${JSON.stringify(params)}:\n${detail}\nexpected: ${renderParams((KINDS[kind] as KindDef).params)}`)
   process.exit(2)
 }
-
-// ---------- registry ----------
-
-const log = (m: string) => console.error(m)
-const home = terminalHome()
-let registry: ConnectorRegistry
-if (existsSync(configPath(home))) {
-  log(`connectors from ${configPath(home)}`)
-  registry = buildRegistry(loadConfig({ home }), { cache: new MemoryCache(), log })
-} else {
-  log('no config.yml; using yahoo only')
-  registry = new ConnectorRegistry({ cache: new MemoryCache(), log })
-  registry.register(yahoo, {})
-}
-
-try {
-  const frame = await registry.run(query)
-  console.error(`${frame.rows.length} rows from ${frame.meta.connector} (ttl ${frame.meta.ttl}ms)`)
-  console.log(frame.columns.map((c) => c.name).join('\t'))
-  for (const row of frame.rows) console.log(row.map((v) => (v instanceof Date ? v.toISOString() : String(v))).join('\t'))
-} catch (err) {
-  console.error(`${kind} failed: ${err instanceof Error ? err.message : String(err)}`)
-  process.exit(1)
-}
+await print(query)

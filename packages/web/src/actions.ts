@@ -1,6 +1,6 @@
 // The handful of user actions that touch the API, the socket, and the store together.
-import type { Widget } from '@terminal/core'
-import { api } from './api'
+import type { AnyWidget } from '@terminal/core'
+import { api, type WorkspaceExport } from './api'
 import { tickerPrompt } from './platform'
 import { useSocket } from './socketContext'
 import { useApp, workspaceState } from './state'
@@ -64,7 +64,7 @@ export function useActions() {
   }
 
   /** Replace (or append) one widget, persist via PATCH, then refresh it. */
-  const saveWidget = async (workspaceId: string, widget: Widget): Promise<void> => {
+  const saveWidget = async (workspaceId: string, widget: AnyWidget): Promise<void> => {
     const workspace = state.workspaces.find((w) => w.id === workspaceId)
     if (!workspace) return
     const exists = workspace.widgets.some((w) => w.id === widget.id)
@@ -81,5 +81,35 @@ export function useActions() {
     dispatch({ type: 'workspace', workspace: saved })
   }
 
-  return { newWorkspace, deleteWorkspace, renameWorkspace, submitPrompt, retry, cancel, refreshWidget, openTicker, saveWidget, removeWidget }
+  /** Export: the server's document, offered as a download named after the workspace. */
+  const exportWorkspace = async (id: string): Promise<WorkspaceExport> => {
+    const doc = await api.exportWorkspace(id)
+    const name = `${doc.name.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'workspace'}.openterminal.json`
+    downloadJson(doc, name)
+    return doc
+  }
+
+  /** Import: a new workspace (and any user recipes it carries) from an export document; becomes the active tab. */
+  const importWorkspace = async (doc: unknown): Promise<string> => {
+    const { workspace } = await api.importWorkspace(doc)
+    dispatch({ type: 'workspace', workspace })
+    dispatch({ type: 'activate', id: workspace.id })
+    return workspace.id
+  }
+
+  return { newWorkspace, deleteWorkspace, renameWorkspace, submitPrompt, retry, cancel, refreshWidget, openTicker, saveWidget, removeWidget, exportWorkspace, importWorkspace }
+}
+
+/** Trigger a browser download of a JSON document. */
+export function downloadJson(doc: unknown, filename: string): void {
+  if (typeof document === 'undefined' || typeof URL.createObjectURL !== 'function') return
+  const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1_000)
 }
