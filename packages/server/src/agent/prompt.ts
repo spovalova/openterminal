@@ -191,13 +191,6 @@ function renderExamples(): string {
     w('Upcoming earnings', 'sm', { main: r('earnings', { symbols: MEMORY, from: '<today>', to: '<today+60d>' }) }, { preset: 'table' }),
     w('Memory news', 'md', { main: r('news', { symbols: MEMORY, limit: 20 }) }, { preset: 'table' }),
   ])
-  const SEMIS = ['NVDA', 'AMD', 'AVGO', 'TSM', 'SMH', 'SPY']
-  const b = compactWidgets([
-    w('NVDA vs SPY vs SMH today', 'lg', { main: r('ohlcv', { symbols: ['NVDA', 'SPY', 'SMH'], interval: '5m', range: '1d' }) }, { preset: 'compare', normalize: true }),
-    w('NVDA today', 'md', { main: r('ohlcv', { symbols: ['NVDA'], interval: '5m', range: '1d' }) }, { preset: 'price', candle: true }),
-    w('Semis today', 'md', { main: r('quote', { symbols: SEMIS }) }, { preset: 'stat' }),
-    w('NVDA news, 24h', 'md', { main: r('news', { symbols: ['NVDA'], limit: 20 }) }, { preset: 'table', columns: ['date', 'title', 'publisher'] }),
-  ])
   const c = compactWidgets([
     w('Watchlist pre-market', 'lg', { main: r('quote', { symbols: ['<watchlist>', 'SPY', 'QQQ'] }) }, { preset: 'stat' }),
     w('Reporting today', 'sm', { main: r('earnings', { symbols: ['<watchlist>'], from: '<today>', to: '<today>' }) }, { preset: 'table' }),
@@ -209,13 +202,6 @@ function renderExamples(): string {
     w('NVDA volatility', 'sm', { main: r('volatility', { symbols: ['NVDA'] }) }, { preset: 'stat' }),
     w('NVDA daily', 'md', { main: r('ohlcv', { symbols: ['NVDA'], interval: '1d', range: '3mo' }), events: r('earnings', { symbols: ['NVDA'], from: '<today-90d>', to: '<today+60d>' }) }, { preset: 'price', candle: true, events: 'events' }),
     w('NVDA news', 'md', { main: r('news', { symbols: ['NVDA'], limit: 20 }) }, { preset: 'table' }),
-  ])
-  const e = compactWidgets([
-    w('MU valuation vs peers', 'lg', { main: r('metrics', { symbols: MEMORY }) }, { preset: 'table', columns: ['symbol', 'pe', 'forward_pe', 'ps', 'revenue_growth', 'profit_margin', 'debt_to_equity'], extremes: true, highlight: 'MU' }),
-    w('Street view on MU', 'sm', { main: r('estimates', { symbols: ['MU'] }) }, { preset: 'facts' }),
-    w('MU quarterly financials', 'md', { main: r('financials', { symbols: ['MU'], period: 'quarter', limit: 5 }) }, { preset: 'table' }),
-    w('EPS vs estimates', 'sm', { main: r('eps_history', { symbols: ['MU'], limit: 8 }) }, { preset: 'table' }),
-    w('MU, one year', 'md', { main: r('ohlcv', { symbols: ['MU'], interval: '1d', range: '1y' }) }, { preset: 'price', candle: true }),
   ])
   const f = compactWidgets([
     w('Rates, one year', 'lg', { ten: r('macro', { series: 'treasury_10y', range: '1y' }), two: r('macro', { series: 'treasury_2y', range: '1y' }), ff: r('macro', { series: 'fed_funds', range: '1y' }) }, { preset: 'compare', normalize: false }),
@@ -236,27 +222,19 @@ function renderExamples(): string {
     a,
     'Reply: "Over three months MU is up A%, SNDK B%, WDC C%, STX D% from the close before the window. MU reports on DATE. Recent news clusters around HBM demand and contract pricing. [[widget:w1]] [[widget:w5]]" where every figure is a changePct from the ohlcv preview or a row in a table.',
     '',
-    'B. "Is NVDA\'s drop today news or just the market?" (event diagnosis). Steps, in parallel: ohlcv 5m 1d NVDA+SPY+SMH, ohlcv 5m 1d NVDA, quote all, news NVDA → set_workspace:',
-    b,
-    'Reply: "NVDA is down X% today against SMH down Y% and SPY down Z%, so most of the move is sector. The only NVDA-specific headline in the last 24h is … [[widget:w1]] [[widget:w4]]". Day changes come from the quote preview, not the intraday bars.',
-    '',
-    'C. "Morning check on my watchlist" (recurring). The watchlist is the symbols in the prompt or already in the workspace. Steps, in parallel: quote watchlist+SPY+QQQ, earnings watchlist today, news watchlist, ohlcv 1d 1mo SPY+QQQ → set_workspace:',
+    'B. "Morning check on my watchlist" (recurring). The watchlist is the symbols in the prompt or already in the workspace. Steps, in parallel: quote watchlist+SPY+QQQ, earnings watchlist today, news watchlist, ohlcv 1d 1mo SPY+QQQ → set_workspace:',
     c,
     'Reply: "Three names are moving pre-market: … X reports before the open. SPY and QQQ are flat pre-market. [[widget:w1]] [[widget:w2]]".',
     '',
-    'D. "What do options say about NVDA into earnings?" (options). Steps: earnings NVDA next 60 days → in parallel: options NVDA at the first expiration on or after the report date (omit expiration when no report is inside the window), volatility NVDA, ohlcv 1d 3mo NVDA, news NVDA → set_workspace:',
+    'C. "What do options say about NVDA into earnings?" (options). Steps: earnings NVDA next 60 days → in parallel: options NVDA at the first expiration on or after the report date (omit expiration when no report is inside the window), volatility NVDA, ohlcv 1d 3mo NVDA, news NVDA → set_workspace:',
     d,
     'Reply: "NVDA reports on DATE after the close. 30-day IV is A% against B% realized with an IV rank of C, so options price more movement than the stock has shown. At the EXPIRATION expiration open interest is heaviest in the K calls (N contracts) and the K2 puts (M). [[widget:w1]] [[widget:w2]]". Every figure is a cell in the options or volatility preview; an implied move is a transform (ATM straddle over the underlying), not arithmetic in the reply.',
     '',
-    'E. "Is MU expensive here?" (valuation). Steps, in parallel: metrics MU+SNDK+WDC+STX, estimates MU, financials MU quarter 5, eps_history MU 8, ohlcv 1d 1y MU → set_workspace:',
-    e,
-    'Reply: "MU trades at A× trailing and B× forward earnings against SNDK C× and WDC D×, with revenue growth of E% and a profit margin of F%. The consensus target is $T (U% upside) from N analysts, and the last K quarters beat the estimate. The stock is up G% over one year from the close before the window. [[widget:w1]] [[widget:w2]]". Multiples and percents are cells in the metrics and estimates previews.',
-    '',
-    'F. "What\'s the macro backdrop this week?" (macro). Steps, in parallel: calendar today to +7d, macro treasury_10y 1y, macro treasury_2y 1y, macro fed_funds 1y, yield_curve latest, index ^GSPC 1d 1mo → set_workspace:',
+    'D. "What\'s the macro backdrop this week?" (macro). Steps, in parallel: calendar today to +7d, macro treasury_10y 1y, macro treasury_2y 1y, macro fed_funds 1y, yield_curve latest, index ^GSPC 1d 1mo → set_workspace:',
     f,
     'Reply: "The 10-year is at A% and the 2-year at B% with fed funds at C%. This week\'s calendar is led by EVENT on DATE (consensus X, previous Y) and EVENT2 on DATE2. The S&P is Z% since Friday\'s close. [[widget:w2]] [[widget:w1]]". Rates are the `last` stats of the macro previews; the index change is the changePct with the baseline named; event dates are copied from the calendar rows.',
     '',
-    'G. "P/E over time for NVDA" (derived). Steps: in parallel ohlcv NVDA 1d 2y and eps_history NVDA 12 → transform (the P/E example) → set_workspace:',
+    'E. "P/E over time for NVDA" (derived). Steps: in parallel ohlcv NVDA 1d 2y and eps_history NVDA 12 → transform (the P/E example) → set_workspace:',
     g,
     'Reply: "NVDA trades at A× trailing earnings today, derived from the close and the last four reported quarters; the multiple ranged from B× to C× over two years and last peaked at D× on DATE. [[widget:w1]] [[widget:w2]]". A, B, C and D are the `pe` stats (last, min, max) and a row of the transform preview.',
   ].join('\n')

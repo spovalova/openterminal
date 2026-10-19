@@ -38,6 +38,23 @@ export const REPLY_NUDGE = 'Write the reply now, in two to four plain sentences,
  */
 export const HELD_TEXT_CHARS = 120
 
+/** Anthropic prompt-cache breakpoint (ignored by other providers). The default 5-minute TTL covers a run's turns and a bench's back-to-back prompts. */
+export const CACHE_SYSTEM = { anthropic: { cacheControl: { type: 'ephemeral' as const } } }
+
+/**
+ * The messages with a cache breakpoint on the last one, so the conversation so far (the previous turns' tool results)
+ * is a cache read on the next turn; earlier breakpoints are dropped first because Anthropic allows four per request
+ * and the system message holds one. Provider options of other providers on a message are kept.
+ */
+export function withCacheBreakpoint(messages: readonly ModelMessage[]): ModelMessage[] {
+  if (messages.length === 0) return []
+  return messages.map((m, i) => {
+    const others = Object.fromEntries(Object.entries(m.providerOptions ?? {}).filter(([k]) => k !== 'anthropic'))
+    const providerOptions = i === messages.length - 1 ? { ...others, ...CACHE_SYSTEM } : others
+    return Object.keys(providerOptions).length > 0 ? ({ ...m, providerOptions } as ModelMessage) : m.providerOptions ? ({ ...m, providerOptions: undefined } as ModelMessage) : m
+  })
+}
+
 /** Thrown (rejected) by run() when the signal aborts. `name` is 'AbortError' like fetch. */
 export class AgentAbortError extends Error {
   override readonly name = 'AbortError'
@@ -124,15 +141,25 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
         log(`[agent] turn ${turns.length}: ${turn.finishReason}, ${turn.textChars} chars, ${turn.toolCalls} tool calls${turn.reasoningTokens ? `, ${turn.reasoningTokens} reasoning tokens` : ''}${warnings.length ? `, warnings: ${warnings.join('; ')}` : ''}`)
       }
 
+      // Prompt caching (Anthropic): the system prompt (about 8k tokens, identical across the turns of a run and across
+      // runs on the same recipes) carries a cache breakpoint, which also covers the tool definitions ahead of it in the
+      // provider's prefix order; and each step marks its last message, so the growing conversation (tool results of
+      // 60k tokens and more by the last turn) is read from the cache on the next turn rather than re-sent. Other
+      // providers ignore `providerOptions.anthropic`. Measured 2026-10-19: a twelve-prompt round cost 1.1M input tokens
+      // with nothing cached; the key ran dry twice.
+      const systemMessage = { role: 'system' as const, content: system, providerOptions: CACHE_SYSTEM }
       const result = streamText({
         model: deps.model,
-        system,
+        system: systemMessage,
         messages: [{ role: 'user', content: prompt }],
         tools,
         abortSignal: signal,
         stopWhen: stepCountIs(MAX_STEPS),
         // Once the budget is spent the model gets no tools, so its next turn is the reply.
-        prepareStep: () => (budget.used >= budget.max ? { activeTools: [], toolChoice: 'none' } : undefined),
+        prepareStep: ({ messages }) => ({
+          ...(budget.used >= budget.max ? { activeTools: [], toolChoice: 'none' as const } : {}),
+          messages: withCacheBreakpoint(messages),
+        }),
         onError: ({ error }) => log(`[agent] model error: ${errorMessage(error)}`),
         onStepFinish,
         onToolExecutionStart: ({ toolCall }) => {
@@ -247,8 +274,8 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
           const history = (await result.finalStep).response.messages as ModelMessage[]
           const more = streamText({
             model: deps.model,
-            system,
-            messages: [{ role: 'user', content: prompt }, ...history, { role: 'user', content: REPLY_NUDGE }],
+            system: systemMessage,
+            messages: withCacheBreakpoint([{ role: 'user', content: prompt }, ...history, { role: 'user', content: REPLY_NUDGE }]),
             abortSignal: signal,
             onError: ({ error }) => log(`[agent] model error: ${errorMessage(error)}`),
             onStepFinish,
