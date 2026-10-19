@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FC } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FC } from 'react'
 import clsx from 'clsx'
 import {
   AreaSeries,
@@ -24,11 +24,12 @@ import {
 import { isWidgetV2 } from '@terminal/core'
 import { DOWN_COLOR, EmptyState, UP_COLOR, chartTheme, levelColor, zeroLineColor } from '@terminal/ui'
 import type { ViewProps } from './types'
-import { direction, withAlpha } from './format'
+import { withAlpha } from './format'
 import { datasetsFor, expandView, kindOf, viewOf } from './fields'
 import { legendLabel } from './series-data'
+import { useWidth } from './use-width'
 import { BandPrimitive } from './chart/band-primitive'
-import { buildChart, horzKey, legendValues, type ChartSpec, type HorzItem, type MarkerSpec, type SeriesSpec } from './chart/data'
+import { buildChart, formatValue, horzKey, legendValues, markerKindLabel, type ChartSpec, type HorzItem, type MarkerSpec, type SeriesSpec } from './chart/data'
 
 type Chart = IChartApiBase<HorzItem>
 type Series = ISeriesApi<SeriesType, HorzItem>
@@ -42,15 +43,29 @@ function legendSeries(spec: ChartSpec, pane: number): SeriesSpec[] {
   return drawn.length > 0 ? drawn : own
 }
 
-/** Up to four series per pane carry their last value on the axis; past that only the first, so the badges stay legible. */
-const LAST_VALUE_MAX = 4
+/** Up to six series per pane carry their last value on the axis (stacked when they would collide); past that only the first six. */
+const LAST_VALUE_MAX = 6
+/** A last-value badge is this tall; two closer than this stack. */
+const BADGE_HEIGHT = 16
+/** Past this many series the legend moves to a column beside the plot when the widget is wide enough to spare it. */
+const SIDE_LEGEND_MIN_SERIES = 5
+const SIDE_LEGEND_MIN_WIDTH = 640
+
+/** Axis labels (change 13): index levels and share counts as "7,659" and "95,394,231", millions and billions compact. */
+function compactAxis(v: number): string {
+  const abs = Math.abs(v)
+  const sign = v < 0 ? '-' : ''
+  if (abs >= 1e9) return `${sign}${(abs / 1e9).toFixed(abs >= 1e10 ? 1 : 2)}B`
+  if (abs >= 1e6) return `${sign}${(abs / 1e6).toFixed(abs >= 1e7 ? 1 : 2)}M`
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(v)
+}
 
 function priceFormatFor(s: SeriesSpec): PriceFormat {
   switch (s.format) {
     case 'percent':
       return { type: 'custom', formatter: (v: number) => `${v.toFixed(2)}%`, minMove: 0.01 }
     case 'compact':
-      return { type: 'volume', precision: 2, minMove: 1 }
+      return { type: 'custom', formatter: compactAxis, minMove: 1 }
     case 'integer':
       return { type: 'price', precision: 0, minMove: 1 }
     case 'ratio':
@@ -60,13 +75,35 @@ function priceFormatFor(s: SeriesSpec): PriceFormat {
   }
 }
 
+type Badge = { id: string; color: string; text: string; top: number; side: 'right' | 'left' }
+type AxisBox = { right: { left: number; width: number }; left: { left: number; width: number } }
+
+/** Stack badges that would overlap (change 4): sorted by y, each at least BADGE_HEIGHT under the one above, the group kept inside the pane. */
+export function stackBadges<T extends { top: number }>(badges: T[], paneTop: number, paneHeight: number): T[] {
+  const sorted = [...badges].sort((a, b) => a.top - b.top)
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i]!.top < sorted[i - 1]!.top + BADGE_HEIGHT) sorted[i] = { ...sorted[i]!, top: sorted[i - 1]!.top + BADGE_HEIGHT }
+  }
+  const bottom = paneTop + paneHeight - BADGE_HEIGHT / 2
+  const last = sorted[sorted.length - 1]
+  if (last && last.top > bottom) {
+    const shift = last.top - bottom
+    for (let i = 0; i < sorted.length; i++) sorted[i] = { ...sorted[i]!, top: sorted[i]!.top - shift }
+  }
+  const minTop = paneTop + BADGE_HEIGHT / 2
+  for (let i = 0; i < sorted.length; i++) if (sorted[i]!.top < minTop) sorted[i] = { ...sorted[i]!, top: minTop }
+  return sorted
+}
+
 /**
  * The chart renderer: a preset's panes and layers on lightweight-charts 5 (PLAN.md section 17). Panes stack with
  * relative heights (`addPane`, stretch factors); a layer's `scale` picks the axis (`priceScaleId`); markers are
  * series markers with a letter per kind; levels are price lines; bands a primitive; volume and signed bars are
  * histograms; a numeric x goes through the yield-curve chart (maturities in months) or the options chart.
- * The legend sits as chips in each pane's top-left and follows the crosshair; last values sit on the axis in
- * the series colour. Candles and the indexed-to-100 scale (v1 `candle` and `normalize`) render as before.
+ * The price pane's legend sits above the plot (one or two rows, or a column beside it past four series in a wide
+ * widget) so no line passes behind a chip; the indicator panes keep their title chip inset. Last values are HTML
+ * badges on the axis in the series colour, stacked when they would collide, covering the tick under them
+ * (taste round, change 4). Candles and the indexed-to-100 scale (v1 `candle` and `normalize`) render as before.
  */
 export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
   const view = viewOf(widget)
@@ -94,10 +131,17 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
 
   const hostRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<Chart | null>(null)
-  const seriesRef = useRef<Series[]>([])
+  const seriesRef = useRef<{ api: Series; spec: SeriesSpec }[]>([])
   const pluginsRef = useRef<ISeriesMarkersPluginApi<HorzItem>[]>([])
+  const specRef = useRef(spec)
+  specRef.current = spec
+  const percentRef = useRef(percentUnits)
+  percentRef.current = percentUnits
   const [tops, setTops] = useState<number[]>([])
   const [hover, setHover] = useState<{ key: number; x: number; y: number } | null>(null)
+  const [badges, setBadges] = useState<Badge[]>([])
+  const [axes, setAxes] = useState<AxisBox>({ right: { left: 0, width: 0 }, left: { left: 0, width: 0 } })
+  const [rootRef, rootWidth] = useWidth()
   const theme = chartTheme as DeepPartial<ChartOptions>
 
   const measurePanes = (chart: Chart, count: number) => {
@@ -114,12 +158,84 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
     setTops((prev) => (prev.length === next.length && prev.every((v, i) => v === next[i]) ? prev : next))
   }
 
+  /** Where every last-value badge sits: the series' last value through its own price scale, stacked per pane and side. */
+  const layoutBadges = useCallback(() => {
+    const chart = chartRef.current
+    if (!chart) return
+    const current = specRef.current
+    const paneTop: number[] = []
+    const paneHeight: number[] = []
+    let top = 0
+    for (let i = 0; i < current.panes.length; i++) {
+      paneTop.push(top)
+      let h: number
+      try {
+        h = chart.paneSize(i).height
+      } catch {
+        h = 0
+      }
+      paneHeight.push(h)
+      top += h + 1
+    }
+    const plotWidth = chart.timeScale().width()
+    const widthOf = (side: 'right' | 'left') => {
+      try {
+        return chart.priceScale(side).width()
+      } catch {
+        return 0
+      }
+    }
+    const leftWidth = widthOf('left')
+    setAxes({ right: { left: leftWidth + plotWidth, width: widthOf('right') }, left: { left: 0, width: leftWidth } })
+    const groups = new Map<string, Badge[]>()
+    const count = new Map<number, number>()
+    for (const { api, spec: s } of seriesRef.current) {
+      if (!s.lastValue || s.kind === 'histogram' || s.last == null) continue
+      const n = count.get(s.pane) ?? 0
+      if (n >= LAST_VALUE_MAX) continue
+      count.set(s.pane, n + 1)
+      let y: number | null
+      try {
+        y = api.priceToCoordinate(s.last)
+      } catch {
+        y = null
+      }
+      if (y == null || !Number.isFinite(y)) continue
+      const text = percentRef.current.has(s.id) ? `${s.last.toFixed(2)}%` : formatValue(s.last, s.format, s.precision)
+      let color = s.color
+      if (s.kind === 'candle') {
+        const bars = s.data as { open: number; close: number }[]
+        const last = bars[bars.length - 1]
+        color = last && last.close < last.open ? DOWN_COLOR : UP_COLOR
+      }
+      const key = `${s.pane}:${s.side}`
+      const list = groups.get(key) ?? []
+      list.push({ id: s.id, color, text, top: (paneTop[s.pane] ?? 0) + y, side: s.side })
+      groups.set(key, list)
+    }
+    const out: Badge[] = []
+    for (const [key, list] of groups) {
+      const pane = Number(key.split(':')[0])
+      out.push(...stackBadges(list, paneTop[pane] ?? 0, paneHeight[pane] ?? 0))
+    }
+    setBadges((prev) => (prev.length === out.length && prev.every((b, i) => b.id === out[i]!.id && b.top === out[i]!.top && b.text === out[i]!.text && b.color === out[i]!.color) ? prev : out))
+  }, [])
+  const scheduleBadges = useCallback(() => {
+    if (typeof requestAnimationFrame === 'undefined') {
+      layoutBadges()
+      return
+    }
+    // The chart paints on its own animation frame: measure after it has.
+    requestAnimationFrame(() => requestAnimationFrame(layoutBadges))
+  }, [layoutBadges])
+
   // Create the chart once per structure (x kind, intraday, pane list); dispose on unmount.
   useEffect(() => {
     const el = hostRef.current
     if (!el || empty) return
     const base = {
       ...theme,
+      layout: { ...theme.layout, attributionLogo: false },
       autoSize: false,
       width: el.clientWidth || 300,
       height: el.clientHeight || 200,
@@ -152,6 +268,9 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
       setHover({ key: horzKey(param.time), x: param.point.x, y: param.point.y })
     }
     chart.subscribeCrosshairMove(onMove)
+    const onRange = () => scheduleBadges()
+    const ts = chart.timeScale() as { subscribeVisibleLogicalRangeChange?: (h: () => void) => void; unsubscribeVisibleLogicalRangeChange?: (h: () => void) => void }
+    ts.subscribeVisibleLogicalRangeChange?.(onRange)
 
     let observer: ResizeObserver | undefined
     if (typeof ResizeObserver !== 'undefined') {
@@ -162,6 +281,7 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
           // Widgets always show the whole range: refit after a resize (the grid cell or the expand dialog changing size).
           chart.timeScale().fitContent()
           measurePanes(chart, chart.panes().length)
+          scheduleBadges()
         }
       })
       observer.observe(el)
@@ -170,6 +290,7 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
       fontsCancelled = true
       observer?.disconnect()
       chart.unsubscribeCrosshairMove(onMove)
+      ts.unsubscribeVisibleLogicalRangeChange?.(onRange)
       seriesRef.current = []
       pluginsRef.current = []
       chartRef.current = null
@@ -184,20 +305,17 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
     if (!chart) return
     for (const p of pluginsRef.current) p.detach()
     pluginsRef.current = []
-    for (const s of seriesRef.current) chart.removeSeries(s)
+    for (const s of seriesRef.current) chart.removeSeries(s.api)
     seriesRef.current = []
     while (chart.panes().length < spec.panes.length) chart.addPane(true)
 
-    const lastValueCount = new Map<number, number>()
     for (const s of spec.series) {
-      const n = lastValueCount.get(s.pane) ?? 0
-      const lastValueVisible = s.lastValue && n < LAST_VALUE_MAX && s.kind !== 'histogram'
-      if (lastValueVisible) lastValueCount.set(s.pane, n + 1)
       const common = {
         priceScaleId: s.side,
         priceFormat: priceFormatFor(s),
         priceLineVisible: false,
-        lastValueVisible,
+        // The badges are drawn by the view (stacked, covering the tick under them), not by the library.
+        lastValueVisible: false,
         ...(s.range ? { autoscaleInfoProvider: () => ({ priceRange: { minValue: s.range![0], maxValue: s.range![1] } }) } : {}),
       }
       let series: Series
@@ -226,7 +344,7 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
         pluginsRef.current.push(plugin)
       }
       if (s.bands.length > 0) series.attachPrimitive(new BandPrimitive(s.bands))
-      seriesRef.current.push(series)
+      seriesRef.current.push({ api: series, spec: s })
     }
     // Pane heights and scales.
     const panes = chart.panes()
@@ -239,7 +357,7 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
           chart.priceScale(side, p.index).applyOptions({
             visible: used && (scale?.visible ?? true),
             mode: scale?.indexed ? PriceScaleMode.IndexedTo100 : PriceScaleMode.Normal,
-            scaleMargins: { top: 0.14, bottom: 0.08 },
+            scaleMargins: { top: 0.12, bottom: 0.08 },
           })
         } catch {
           /* a pane without that scale */
@@ -249,7 +367,13 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
     for (let i = chart.panes().length - 1; i >= spec.panes.length; i--) chart.removePane(i)
     chart.timeScale().fitContent()
     measurePanes(chart, spec.panes.length)
-  }, [spec])
+    scheduleBadges()
+  }, [spec, scheduleBadges])
+
+  // Pane tops moved (a resize, a new pane): the badges follow.
+  useEffect(() => {
+    scheduleBadges()
+  }, [tops, scheduleBadges])
 
   if (empty) {
     if (kind === 'macro') return <EmptyState title="No observations" hint="The query returned no values for this range." />
@@ -260,28 +384,52 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
   const lastValueTotal = Math.min(LAST_VALUE_MAX * spec.panes.length, spec.series.filter((s) => s.lastValue && s.kind !== 'histogram').length)
   const hoverMarkers: MarkerSpec[] = hover ? spec.series.flatMap((s) => s.markers.filter((m) => horzKey(m.time) === hover.key)) : []
   const preset = view.preset
+  const mainRows = legendSeries(spec, 0)
+  const mainPane = spec.panes[0]
+  const side = mainRows.length >= SIDE_LEGEND_MIN_SERIES && (rootWidth ?? 0) >= SIDE_LEGEND_MIN_WIDTH
+  const mainLegend =
+    mainRows.length > 0 || mainPane?.title ? (
+      <Legend placement={side ? 'side' : 'top'} title={mainPane?.title} rows={mainRows} hover={hover?.key ?? null} percentUnits={percentUnits} markerKinds={spec.markerKinds} categorical={spec.x !== 'time'} />
+    ) : null
 
   return (
-    <div data-view="chart" data-preset={preset} data-x={spec.x} data-panes={spec.panes.length} data-last-value={lastValueTotal} data-kind={kind} data-mode={isWidgetV2(widget) ? undefined : legacyMode(widget)} style={rootStyle}>
+    <div
+      ref={rootRef}
+      data-view="chart"
+      data-preset={preset}
+      data-x={spec.x}
+      data-panes={spec.panes.length}
+      data-last-value={lastValueTotal}
+      data-legend-placement={side ? 'side' : 'top'}
+      data-kind={kind}
+      data-mode={isWidgetV2(widget) ? undefined : legacyMode(widget)}
+      style={side ? rootRowStyle : rootStyle}
+    >
+      {!side && mainLegend}
       <div style={plotStyle}>
         <div ref={hostRef} style={hostStyle} />
-        {spec.panes.map((p) => {
+        {spec.panes.slice(1).map((p) => {
           const rows = legendSeries(spec, p.index)
           if (rows.length === 0 && !p.title) return null
+          return <Legend key={p.index} placement="inset" top={tops[p.index] ?? 0} title={p.title} rows={rows} hover={hover?.key ?? null} percentUnits={percentUnits} markerKinds={[]} categorical={spec.x !== 'time'} />
+        })}
+        {badges.map((b) => {
+          const box = axes[b.side]
+          if (box.width <= 0) return null
           return (
-            <Legend
-              key={p.index}
-              top={tops[p.index] ?? 0}
-              title={p.title}
-              rows={rows}
-              hover={hover?.key ?? null}
-              percentUnits={percentUnits}
-              markerKinds={p.index === 0 ? spec.markerKinds : []}
-            />
+            <div
+              key={b.id}
+              data-badge=""
+              className="num pointer-events-none absolute z-10 flex items-center justify-center overflow-hidden text-[11px] leading-none font-medium text-bg"
+              style={{ left: box.left + 1, width: box.width - 1, top: Math.round(b.top - BADGE_HEIGHT / 2), height: BADGE_HEIGHT, background: b.color }}
+            >
+              {b.text}
+            </div>
           )
         })}
         {hoverMarkers.length > 0 && hover && <MarkerTooltip markers={hoverMarkers} x={hover.x} y={hover.y} />}
       </div>
+      {side && mainLegend}
     </div>
   )
 }
@@ -292,57 +440,72 @@ function legacyMode(widget: ViewProps['widget']): string | undefined {
 }
 
 const rootStyle: CSSProperties = { display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minHeight: 160 }
-const plotStyle: CSSProperties = { position: 'relative', flex: '1 1 0', minHeight: 0 }
+const rootRowStyle: CSSProperties = { display: 'flex', flexDirection: 'row', width: '100%', height: '100%', minHeight: 160 }
+const plotStyle: CSSProperties = { position: 'relative', flex: '1 1 0', minHeight: 0, minWidth: 0 }
 const hostStyle: CSSProperties = { position: 'absolute', inset: 0 }
 
+type LegendProps = {
+  placement: 'top' | 'side' | 'inset'
+  top?: number
+  title: string | undefined
+  rows: SeriesSpec[]
+  hover: number | null
+  percentUnits: Set<string>
+  markerKinds: ChartSpec['markerKinds']
+  /** A categorical or numeric x (a curve, strikes): the chips carry no change figure, a snapshot has no move. */
+  categorical: boolean
+}
+
 /**
- * Legend chips in a pane's top-left (the Instinct reference): one per line with its colour, label (the widget's
- * `labels` override, else the symbol; the symbol stays as the row's title), last value and change over the
- * range, exactly the preview's numbers; under the crosshair the chips show the hovered bar instead. Marker
- * kinds get a chip with their letter. Pointer events pass through to the chart.
+ * Legend chips: one per line with its colour, label (the widget's `labels` override, else the symbol; the symbol
+ * stays as the row's title), last value and change over the range, exactly the preview's numbers; under the
+ * crosshair the chips show the hovered bar instead. The change is set in a tint of the series colour, not red or
+ * green (change 7). Above the plot (one or two rows) or in a column beside it for the price pane; inset in the
+ * top-left for indicator panes. Marker kinds get a chip with their letter and display name.
  */
-const Legend: FC<{ top: number; title: string | undefined; rows: SeriesSpec[]; hover: number | null; percentUnits: Set<string>; markerKinds: ChartSpec['markerKinds'] }> = ({ top, title, rows, hover, percentUnits, markerKinds }) => (
+const Legend: FC<LegendProps> = ({ placement, top, title, rows, hover, percentUnits, markerKinds, categorical }) => (
   <div
     data-legend=""
+    data-placement={placement}
     role="list"
     aria-label={title ? `${title} legend` : 'Series legend'}
-    className="pointer-events-none absolute left-2 z-10 flex max-w-[calc(100%-64px)] flex-wrap items-center gap-x-1 gap-y-0.5 text-xs leading-4"
-    style={{ top: top + 6 }}
+    className={clsx(
+      'text-xs leading-4',
+      placement === 'inset' && 'pointer-events-none absolute left-2 z-10 flex max-w-[calc(100%-64px)] flex-wrap items-center gap-x-1 gap-y-0.5',
+      placement === 'top' && 'flex max-h-[38px] shrink-0 flex-wrap items-center gap-x-3 gap-y-0.5 overflow-hidden px-3 pt-1.5 pb-1',
+      placement === 'side' && 'flex w-[168px] shrink-0 flex-col gap-0.5 overflow-y-auto border-l border-border py-2 pr-2 pl-2',
+    )}
+    style={placement === 'inset' ? { top: (top ?? 0) + 6 } : undefined}
   >
     {title && (
-      <span data-pane-title="" className="rounded-sm bg-surface/80 px-1.5 py-px font-medium text-fg-2">
+      <span data-pane-title="" className={clsx('rounded-sm px-1.5 py-px font-medium text-fg-2', placement === 'inset' && 'bg-surface/80')}>
         {title}
       </span>
     )}
     {rows.map((row) => {
       const hovered = hover != null ? row.byTime.get(hover) : undefined
       const text = legendValues(row, percentUnits.has(row.id), hovered ?? null)
-      const dir = direction(text.changeValue)
       return (
-        <div
-          key={row.id}
-          role="listitem"
-          data-symbol={row.group}
-          title={row.label === row.group ? undefined : row.group}
-          className="flex items-center gap-1.5 rounded-sm bg-surface/80 px-1.5 py-px whitespace-nowrap"
-        >
-          <span aria-hidden="true" className="inline-block h-0.5 w-2.5 rounded-xs" style={{ background: row.color }} />
-          <span className="num font-semibold text-fg">{row.label}</span>
+        <div key={row.id} role="listitem" data-symbol={row.group} title={row.label === row.group ? undefined : row.group} className={clsx('flex min-w-0 items-center gap-1.5 whitespace-nowrap', placement === 'inset' && 'rounded-sm bg-surface/80 px-1.5 py-px')}>
+          <span aria-hidden="true" className="inline-block h-0.5 w-2.5 shrink-0 rounded-xs" style={{ background: row.color }} />
+          <span className="num truncate font-semibold text-fg">{row.label}</span>
           <span data-field="last" className="num text-fg-2">
             {text.last}
           </span>
-          <span data-field="change" className="num" style={{ color: dir === 'up' ? UP_COLOR : dir === 'down' ? DOWN_COLOR : undefined, opacity: dir === 'flat' ? 0.7 : 1 }}>
-            {text.change}
-          </span>
+          {!categorical && (
+            <span data-field="change" className="num" style={{ color: row.color, opacity: 0.85 }}>
+              {text.change}
+            </span>
+          )}
         </div>
       )
     })}
     {markerKinds.map((m) => (
-      <div key={m.kind} role="listitem" data-marker-kind={m.kind} className="flex items-center gap-1 rounded-sm bg-surface/80 px-1.5 py-px whitespace-nowrap text-fg-2">
+      <div key={m.kind} role="listitem" data-marker-kind={m.kind} className={clsx('flex items-center gap-1 whitespace-nowrap text-fg-2', placement === 'inset' && 'rounded-sm bg-surface/80 px-1.5 py-px')}>
         <span aria-hidden="true" className="num inline-flex h-3.5 w-3.5 items-center justify-center rounded-full text-[9px] font-semibold text-bg" style={{ background: m.color }}>
           {m.letter}
         </span>
-        <span>{m.kind}</span>
+        <span>{markerKindLabel(m.kind)}</span>
       </div>
     ))}
   </div>

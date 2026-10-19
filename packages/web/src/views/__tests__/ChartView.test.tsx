@@ -41,7 +41,7 @@ afterEach(cleanup)
 
 const legendItems = () => within(screen.getByRole('list', { name: 'Series legend' })).getAllByRole('listitem').filter((el) => el.hasAttribute('data-symbol'))
 
-describe('ChartView legend (chips in the plot\'s top-left)', () => {
+describe('ChartView legend (chips above the plot, change 4)', () => {
   it('shows last close and change over the range exactly as preview() computes them (A1)', () => {
     const { widget, frame } = fixture('A1')
     render(<ChartView widget={widget} frames={one(frame)} />)
@@ -54,7 +54,11 @@ describe('ChartView legend (chips in the plot\'s top-left)', () => {
       expect(item.querySelector('[data-field="last"]')!.textContent).toBe(formatPrice(close.last))
       expect(item.querySelector('[data-field="change"]')!.textContent).toBe(formatPercent(close.changePct))
     }
-    expect(document.querySelector('[data-legend]')!.className).toContain('absolute')
+    // The price pane's legend sits above the plot, in flow, never over the lines (change 4).
+    const legend = document.querySelector('[data-legend]')!
+    expect(legend.getAttribute('data-placement')).toBe('top')
+    expect(legend.className).not.toContain('absolute')
+    expect(document.querySelector('[data-view="chart"]')!.getAttribute('data-legend-placement')).toBe('top')
   })
 
   it('shows the widget\'s legend labels in place of the symbol, keeping the symbol on the row (A1)', () => {
@@ -69,15 +73,17 @@ describe('ChartView legend (chips in the plot\'s top-left)', () => {
     expect(legendLabel('fed_funds', 'macro', { fed_funds: 'Policy rate' })).toBe('Policy rate')
   })
 
-  it('colours the change by direction', () => {
+  it('sets the change in a tint of the series colour, never red or green (change 7)', () => {
     const { widget, frame } = fixture('B1') // every symbol is down on the day
     render(<ChartView widget={widget} frames={one(frame)} />)
-    const changes = legendItems().map((el) => el.querySelector('[data-field="change"]') as HTMLElement)
-    expect(changes.length).toBe(3)
-    for (const el of changes) expect(el.style.color).toBe(hexToRgb(DOWN))
-    cleanup()
-    render(<ChartView widget={fixture('A1').widget} frames={one(fixture('A1').frame)} />)
-    for (const el of legendItems().map((el) => el.querySelector('[data-field="change"]') as HTMLElement)) expect(el.style.color).toBe(hexToRgb(UP))
+    const items = legendItems()
+    expect(items.length).toBe(3)
+    const [chart] = mock().charts
+    items.forEach((item, i) => {
+      const el = item.querySelector('[data-field="change"]') as HTMLElement
+      expect(el.style.color).toBe(hexToRgb((chart!.series[i]!.options as { color: string }).color))
+      expect(el.style.color).not.toBe(hexToRgb(DOWN))
+    })
   })
 })
 
@@ -91,7 +97,8 @@ describe('ChartView v1 modes, preserved', () => {
     expect(chart!.chart.scales['right:0']!.mode).toBe(0)
     expect(chart!.series.map((s) => (s.definition as { type: string }).type)).toEqual(['Line', 'Line'])
     expect(chart!.series.map((s) => (s.options as { color: string }).color)).toEqual(['#4c8dff', '#ff9f43'])
-    expect(chart!.series.every((s) => (s.options as { lastValueVisible: boolean }).lastValueVisible)).toBe(true)
+    // The library's own badges are off; the view draws stacked HTML badges on the axis (change 4) and reports the count.
+    expect(chart!.series.every((s) => (s.options as { lastValueVisible: boolean }).lastValueVisible === false)).toBe(true)
     expect(chart!.series.every((s) => (s.options as { priceScaleId: string }).priceScaleId === 'right')).toBe(true)
     const data = chart!.series[0]!.stub.setData.mock.calls[0]![0] as { time: unknown; value: number }[]
     expect(data.map((d) => d.value)).toEqual(frame.rows.filter((r) => r[0] === 'SPY').map((r) => r[5]))
@@ -122,7 +129,7 @@ describe('ChartView v1 modes, preserved', () => {
     expect(candleOpts.upColor).toBe(UP)
     expect(candleOpts.downColor).toBe(DOWN)
     const volOpts = chart!.series[1]!.options as { priceFormat: { type: string }; lastValueVisible: boolean }
-    expect(volOpts.priceFormat.type).toBe('volume')
+    expect(volOpts.priceFormat.type).toBe('custom') // compact axis: 95,394,231 and 12.5M, never 7.66K (change 13)
     expect(volOpts.lastValueVisible).toBe(false)
     const candles = chart!.series[0]!.stub.setData.mock.calls[0]![0] as { open: number; close: number }[]
     expect(candles.map((c) => c.close)).toEqual(frame.rows.map((r) => r[5]))
@@ -245,7 +252,7 @@ describe('ChartView over macro frames', () => {
       expect(item.querySelector('[data-field="change"]')!.textContent).toBe(`${bp > 0 ? '+' : ''}${bp} bp`)
     }
     const ff = items[2]!.querySelector('[data-field="change"]') as HTMLElement
-    expect(ff.style.color).toBe(hexToRgb(DOWN)) // the fed funds path fell
+    expect(ff.style.color).toBe(hexToRgb((mock().charts[0]!.series[2]!.options as { color: string }).color)) // the series tint, not red (change 7)
   })
 
   it('legendValues: percent units move in bp, compact amounts and prices in percent', () => {
@@ -280,7 +287,7 @@ describe('ChartView v2 presets', () => {
     expect(chart!.series[0]!.stub.attachPrimitive).toHaveBeenCalledTimes(1)
     const chip = document.querySelector('[data-marker-kind="earnings"]')!
     expect(chip.textContent).toContain('E')
-    expect(chip.textContent).toContain('earnings')
+    expect(chip.textContent).toContain('Earnings') // the display name, not the recipe id (change 11)
     expect(legendItems().map((el) => el.getAttribute('data-symbol'))).toEqual(['NVDA'])
     expect(document.querySelector('[data-view="chart"]')!.getAttribute('data-last-value')).toBe('1')
   })

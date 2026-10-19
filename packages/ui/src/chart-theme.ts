@@ -92,6 +92,7 @@ export const candleSeriesDefaults = {
  */
 export const markerPalette: Record<string, { color: string; letter: string }> = {
   earnings: { color: '#d95926', letter: 'E' },
+  eps_history: { color: '#d95926', letter: 'E' },
   dividend: { color: '#199e70', letter: 'D' },
   dividends: { color: '#199e70', letter: 'D' },
   news: { color: '#d55181', letter: 'N' },
@@ -99,6 +100,9 @@ export const markerPalette: Record<string, { color: string; letter: string }> = 
   insiders: { color: '#c98500', letter: 'I' },
   macro: { color: tokens.color.accent, letter: 'M' },
   split: { color: '#3987e5', letter: 'S' },
+  calendar: { color: tokens.color.accent, letter: 'M' },
+  buy: { color: tokens.color.up, letter: 'B' },
+  sell: { color: tokens.color.down, letter: 'S' },
   custom: { color: tokens.color.fg2, letter: '•' },
 }
 /** The marker look for a kind value: a known kind, else `custom` with the kind's initial as the letter. */

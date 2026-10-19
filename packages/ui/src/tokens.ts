@@ -34,11 +34,11 @@ export const tokens = {
 export type Tokens = typeof tokens
 
 /**
- * Categorical palette for multi-symbol series. Fixed order; assign by index of
- * the symbol in the query, never cycle. Validated on tokens.color.surface
- * (worst adjacent CVD ΔE 8.4, normal-vision 19.3, contrast ≥ 3:1).
+ * Categorical palette for multi-symbol series: blue, orange, teal, amber, violet, magenta, cyan. Fixed order; assign
+ * by index of the symbol in the query, never cycle; seven hues with no repeated green or orange (taste round, change
+ * 4). Validated on tokens.color.surface (worst adjacent CVD ΔE 8.4, normal-vision 19.7, contrast ≥ 3:1).
  */
-export const seriesPalette: string[] = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300']
+export const seriesPalette: string[] = ['#3987e5', '#d95926', '#199e70', '#c98500', '#9085e9', '#d55181', '#1fa0bd']
 
 export const UP_COLOR = tokens.color.up
 export const DOWN_COLOR = tokens.color.down

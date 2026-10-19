@@ -4,7 +4,7 @@
  * and bands, with the legend rows and the x-axis kind. The renderer (ChartView) only walks the result; it
  * never knows what the data means (PLAN.md section 17, "layers").
  */
-import { columnIndex, type DatasetsFieldConfig, type Frame, type Layer, type Pane, type Scale } from '@terminal/core'
+import { columnIndex, fieldLabel, type DatasetsFieldConfig, type Frame, type Layer, type Pane, type Scale } from '@terminal/core'
 import { DOWN_COLOR, UP_COLOR, markerStyle, seriesPalette } from '@terminal/ui'
 import type { BusinessDay, Time, UTCTimestamp } from 'lightweight-charts'
 import { withAlpha } from '../format'
@@ -565,4 +565,25 @@ export function formatValue(v: number, format: PriceFormatKind, precision = 2): 
     default:
       return grouped(precision).format(v)
   }
+}
+
+/** Display names for marker kinds in the legend chip and the tooltip (change 11): a recipe id never shows as typed. */
+const MARKER_KIND_LABELS: Record<string, string> = {
+  earnings: 'Earnings',
+  eps_history: 'Earnings',
+  news: 'News',
+  dividend: 'Dividends',
+  dividends: 'Dividends',
+  insider: 'Insiders',
+  insiders: 'Insiders',
+  macro: 'Macro',
+  calendar: 'Releases',
+  events: 'Events',
+  split: 'Splits',
+  buy: 'Buy',
+  sell: 'Sell',
+  custom: 'Events',
+}
+export function markerKindLabel(kind: string): string {
+  return MARKER_KIND_LABELS[kind.toLowerCase()] ?? fieldLabel(kind)
 }
