@@ -35,7 +35,7 @@ import ot
 NY = "America/New_York"
 SCRIPT = "<transform>"
 
-ALLOWED_IMPORTS = {"pandas", "numpy", "scipy", "math", "datetime", "statistics", "ot"}
+ALLOWED_IMPORTS = {"pandas", "numpy", "scipy", "math", "datetime", "statistics", "time", "re", "json", "collections", "itertools", "functools", "ot"}
 # Names the script may not use: the ways around the import check and the exec sandbox.
 FORBIDDEN_NAMES = {"__import__", "__builtins__", "__loader__", "__spec__", "importlib", "__subclasses__", "__globals__", "__class__"}
 # Builtins removed from the script's namespace (library code keeps the real builtins module).
