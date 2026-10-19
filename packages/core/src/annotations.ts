@@ -6,7 +6,7 @@ import type { Frame } from './frame.js'
 /**
  * Annotations (PLAN.md section 17): hand-written facts about one field of one route: unit, label, format,
  * priority, key. The residue of kinds, grown by the bench. `packages/core/annotations.yml` is the seed;
- * `~/.terminal/annotations.yml` may add to it. Matching is by connector, route glob and field; a more specific
+ * `~/.openterminal/annotations.yml` may add to it. Matching is by connector, route glob and field; a more specific
  * rule wins field by field, so `*:*:volume` sets the format and `openbb:equity/price/quote:volume` can add a label.
  *
  * `applyAnnotations` converts units to the product's conventions (fractions become percent) and stamps the frame's

@@ -26,7 +26,7 @@ export function stubWidgets(now: Date = new Date()): WidgetV2[] {
 export const STUB_REPLY =
   'No LLM key is configured, so this is a canned workspace for "What\'s happening with memory?": ' +
   'MU, SNDK, WDC, and STX over three months, MU daily, a basket snapshot, upcoming earnings, and news. ' +
-  'Add an LLM key to ~/.terminal/config.yml to get real answers. [[widget:memory-3mo]] [[widget:memory-news]]'
+  'Add an LLM key to ~/.openterminal/config.yml to get real answers. [[widget:memory-3mo]] [[widget:memory-news]]'
 
 export type StubAgentOptions = {
   now?: () => Date

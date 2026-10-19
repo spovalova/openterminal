@@ -1,4 +1,4 @@
-// The store: SQLite (`~/.terminal/terminal.db`) with the one-time migration from the JSON directory, falling back
+// The store: SQLite (`~/.openterminal/terminal.db`) with the one-time migration from the JSON directory, falling back
 // to the JSON store when SQLite cannot be opened.
 import { join } from 'node:path'
 import { WorkspaceStore } from './json.js'

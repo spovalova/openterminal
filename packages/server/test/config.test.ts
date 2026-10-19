@@ -2,11 +2,11 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { configPath, loadConfig, normalizeConfig, resolvedLlm, saveConnectorConfig, terminalHome, workspacesDir, DEFAULT_MODELS } from '../src/config.js'
+import { configPath, loadConfig, normalizeConfig, resolvedLlm, openterminalHome, saveConnectorConfig, workspacesDir, DEFAULT_MODELS } from '../src/config.js'
 
 let home: string
 beforeEach(() => {
-  home = mkdtempSync(join(tmpdir(), 'terminal-config-'))
+  home = mkdtempSync(join(tmpdir(), 'openterminal-config-'))
 })
 afterEach(() => {
   rmSync(home, { recursive: true, force: true })
@@ -21,9 +21,10 @@ describe('config', () => {
     expect(cfg.llm).toBeUndefined()
   })
 
-  it('honours TERMINAL_HOME', () => {
-    expect(terminalHome({ TERMINAL_HOME: '/x/y' })).toBe('/x/y')
-    expect(terminalHome({})).toMatch(/\.terminal$/)
+  it('honours OPENTERMINAL_HOME, then the deprecated TERMINAL_HOME, else ~/.openterminal', () => {
+    expect(openterminalHome({ OPENTERMINAL_HOME: '/x/new', TERMINAL_HOME: '/x/y' })).toBe('/x/new')
+    expect(openterminalHome({ TERMINAL_HOME: '/x/y' })).toBe('/x/y')
+    expect(openterminalHome({})).toMatch(/\/\.openterminal$/)
   })
 
   it('fills llm from the environment when the file has none', () => {

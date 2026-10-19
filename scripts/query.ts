@@ -1,24 +1,25 @@
 // Print a frame from the registry without the app.
 //
-//   pnpm query <recipe> key=value …                a recipe (built-in or ~/.terminal/recipes.yml), e.g. `pnpm query ohlcv symbols=NVDA range=1y`
+//   pnpm query <recipe> key=value …                a recipe (built-in or ~/.openterminal/recipes.yml), e.g. `pnpm query ohlcv symbols=NVDA range=1y`
 //   pnpm query <connector> <route> key=value …     one route of one connector, params validated against its descriptor
 //   pnpm query <connector> --routes [filter]       list a connector's routes
 //
 // Comma lists become arrays; the recipe schema or the descriptor coerces numbers and booleans. Connectors come from
-// ~/.terminal/config.yml (TERMINAL_HOME overrides the directory) when it exists, else yahoo only. Recipes whose data
+// ~/.openterminal/config.yml (OPENTERMINAL_HOME overrides the directory) when it exists, else yahoo only. Recipes whose data
 // graph has a transform (options, earnings, news, …) start the Pyodide engine, which takes about twenty seconds cold.
 // `pnpm query --help` lists every recipe with its params.
 import { existsSync } from 'node:fs'
 import { ConnectorRegistry, MemoryCache, describeDescriptor, recipeParams, recipeSummaryLines, type AnyQuery, type Recipe } from '@openterminal/core'
 import { builtinAnnotations, builtinRecipes } from '@openterminal/core/node'
 import yahoo from '@openterminal/connector-yahoo'
-import { configPath, loadConfig, terminalHome } from '../packages/server/src/config.js'
+import { configPath, loadConfig } from '../packages/server/src/config.js'
+import { resolveHome } from '../packages/server/src/home.js'
 import { BUILTIN_CONNECTORS, buildRegistry } from '../packages/server/src/connectors.js'
 import { loadUserRecipes } from '../packages/server/src/routes-data.js'
 import { createTransformEngine } from '../packages/server/src/transform/index.js'
 
 const log = (m: string) => console.error(m)
-const home = terminalHome()
+const home = resolveHome(process.env, { log })
 
 // ---------- registry (built first: the usage text and the route lookups need the recipes and the descriptors) ----------
 

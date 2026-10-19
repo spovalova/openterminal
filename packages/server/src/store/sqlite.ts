@@ -1,6 +1,6 @@
 // The v2 store on node:sqlite (Node 22, no native dependency): workspaces with their widgets, user recipes, the
 // catalog cache per connector, liveness rows, the run log, the frame cache and small settings, all in one file
-// (`~/.terminal/terminal.db`). Every method is synchronous underneath; the workspace API stays async so the HTTP
+// (`~/.openterminal/terminal.db`). Every method is synchronous underneath; the workspace API stays async so the HTTP
 // layer is unchanged from the JSON store.
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'

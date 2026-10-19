@@ -1,5 +1,8 @@
-// Node-only helpers: reading the built-in YAML data files. Kept out of index.ts so the web bundle never imports node:fs.
+// Node-only helpers: reading the built-in YAML data files, and where the config directory is. Kept out of index.ts so
+// the web bundle never imports node:fs.
 import { readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
 import { parseAnnotations, type AnnotationRule } from './annotations.js'
@@ -33,4 +36,29 @@ export function builtinRecipes(): Recipe[] {
 /** The built-in annotations (packages/core/annotations.yml), parsed once. */
 export function builtinAnnotations(): AnnotationRule[] {
   return (annotationsMemo ??= loadAnnotationsFile())
+}
+
+/** The config directory's name under the user's home directory. */
+export const HOME_DIR = '.openterminal'
+/** Its name before the product was renamed to Open Terminal (2026-10-19); the server copies it across once. */
+export const LEGACY_HOME_DIR = '.terminal'
+
+export type HomeOverride = { path: string; variable: 'OPENTERMINAL_HOME' | 'TERMINAL_HOME' }
+
+/** The directory the environment names: `OPENTERMINAL_HOME`, else the deprecated `TERMINAL_HOME`; undefined when neither is set. */
+export function homeOverride(env: NodeJS.ProcessEnv = process.env): HomeOverride | undefined {
+  for (const variable of ['OPENTERMINAL_HOME', 'TERMINAL_HOME'] as const) {
+    const path = env[variable]?.trim()
+    if (path) return { path, variable }
+  }
+  return undefined
+}
+
+/**
+ * Where config.yml, the store, the catalog cache and the user's recipes and annotations live: `OPENTERMINAL_HOME`,
+ * else `TERMINAL_HOME` (the variable's name before the rename, still honoured), else `~/.openterminal`. A path only;
+ * the server's `resolveHome` adds the one-time copy from `~/.terminal`.
+ */
+export function openterminalHome(env: NodeJS.ProcessEnv = process.env, userHome: string = homedir()): string {
+  return homeOverride(env)?.path ?? join(userHome, HOME_DIR)
 }

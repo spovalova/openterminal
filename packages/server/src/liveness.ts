@@ -1,13 +1,13 @@
 // Liveness rows (PLAN.md section 17): what the catalog probe records per route, kept across restarts so the
 // agent's `find_route` hides dead routes before the next probe. The row shape agreed with (e) is the
 // `Liveness` block plus the descriptor ref: `{ connector, route, checkedAt, ok, rows?, ms?, error?, sampleColumns? }`.
-// Two implementations: in memory, and a JSON file under TERMINAL_HOME (`catalog/liveness.json`) that (e) replaces
+// Two implementations: in memory, and a JSON file under the home directory (`catalog/liveness.json`) that (e) replaces
 // with the SQLite store behind the same interface.
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { z } from 'zod'
 import { descriptorKey, LivenessSchema, type Catalog, type DescriptorRef, type Liveness } from '@openterminal/core'
-import { terminalHome } from './config.js'
+import { resolveHome } from './home.js'
 
 export const LivenessRowSchema = LivenessSchema.extend({ connector: z.string().min(1), route: z.string().min(1) })
 export type LivenessRow = z.infer<typeof LivenessRowSchema>
@@ -121,8 +121,8 @@ export class FileLivenessStore extends MemoryLivenessStore {
   }
 }
 
-/** The file store for a TERMINAL_HOME: what the script uses when (e)'s store is not open. */
-export function openLivenessStore(home: string = terminalHome(), opts: { log?: (msg: string) => void } = {}): LivenessStore {
+/** The file store for a home directory: what the script uses when (e)'s store is not open. */
+export function openLivenessStore(home: string = resolveHome(), opts: { log?: (msg: string) => void } = {}): LivenessStore {
   return new FileLivenessStore(livenessPath(home), opts)
 }
 

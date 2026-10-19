@@ -73,7 +73,7 @@ export const DataPage: FC<{ onClose: () => void; workspace?: Workspace }> = ({ o
     <div data-page="data" className="flex h-full min-h-0 flex-col overflow-y-auto">
       <div className="flex items-center gap-3 border-b border-border px-4 py-2">
         <h2 className="text-sm font-medium text-fg">Data</h2>
-        <span className="text-xs text-fg-2">Connectors, the route catalog, recipes and the store. Keys stay on this machine in ~/.terminal/config.yml.</span>
+        <span className="text-xs text-fg-2">Connectors, the route catalog, recipes and the store. Keys stay on this machine in ~/.openterminal/config.yml.</span>
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="ghost" onClick={load}>
             Reload
@@ -491,7 +491,7 @@ function StoreSection({ store }: { store: StoreInfo | null }) {
           {m.alreadyDone ? 'JSON workspaces migrated earlier' : 'JSON workspaces migrated on this start'}: {m.workspaces} workspaces, {m.widgets} widgets ({m.v1Widgets} v1 rewritten as recipes){m.backup ? <> · backup at <span className="num">{m.backup}</span></> : ''}
         </div>
       )}
-      <div className="text-fg-3">Recipes you save go to ~/.terminal/recipes.yml; field annotations you add go to ~/.terminal/annotations.yml (read at start).</div>
+      <div className="text-fg-3">Recipes you save go to ~/.openterminal/recipes.yml; field annotations you add go to ~/.openterminal/annotations.yml (read at start).</div>
     </section>
   )
 }

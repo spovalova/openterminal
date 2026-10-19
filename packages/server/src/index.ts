@@ -6,7 +6,7 @@ export {
   normalizeConfig,
   saveConnectorConfig,
   resolvedLlm,
-  terminalHome,
+  openterminalHome,
   configPath,
   workspacesDir,
   ensureHome,
@@ -22,6 +22,7 @@ export {
   type Provider,
   type LoadConfigOptions,
 } from './config.js'
+export { resolveHome, migrateLegacyHome, migratedNote, MIGRATED_NOTE, type HomeMigration, type HomeMigrationOptions, type ResolveHomeOptions } from './home.js'
 export { BUILTIN_CONNECTORS, builtinConnector, buildRegistry, connectorNeedsKey, describeConnectors, type ConnectorInfo, type BuildRegistryOptions } from './connectors.js'
 export {
   WorkspaceStore,

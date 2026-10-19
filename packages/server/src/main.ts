@@ -8,7 +8,8 @@ import { builtinAnnotations, builtinRecipes, loadAnnotationsFile } from '@opente
 import { createAgentRunner } from './agent/index.js'
 import { createApp, type App } from './app.js'
 import { SqliteCache } from './cache-sqlite.js'
-import { loadConfig, resolvedLlm, terminalHome, workspacesDir, type Config } from './config.js'
+import { loadConfig, resolvedLlm, workspacesDir, type Config } from './config.js'
+import { resolveHome } from './home.js'
 import { buildRegistry } from './connectors.js'
 import { applyLiveness, livenessStoreOver } from './liveness.js'
 import { createProbeFn } from './probe.js'
@@ -24,7 +25,7 @@ export type StartOptions = {
   /** Defaults to PORT or 4242. 0 picks a free port. */
   port?: number
   hostname?: string
-  /** Defaults to TERMINAL_HOME or ~/.terminal. */
+  /** Defaults to OPENTERMINAL_HOME (or the deprecated TERMINAL_HOME), else ~/.openterminal after the one-time copy from ~/.terminal. */
   home?: string
   env?: NodeJS.ProcessEnv
   log?: (msg: string) => void
@@ -78,7 +79,9 @@ export function storeRunLog(store: Store): RunLog {
 export async function startServer(opts: StartOptions = {}): Promise<RunningServer> {
   const env = opts.env ?? process.env
   const log = opts.log ?? ((msg: string) => console.error(`[server] ${msg}`))
-  const home = opts.home ?? terminalHome(env)
+  // The home directory first: on the first start after the rename this copies ~/.terminal to ~/.openterminal, and it
+  // has to happen before loadConfig creates the directory and before openStore runs the JSON → SQLite migration.
+  const home = opts.home ?? resolveHome(env, { log })
   const hostname = opts.hostname ?? '127.0.0.1'
   const port = opts.port ?? (Number(env.PORT) || DEFAULT_PORT)
 

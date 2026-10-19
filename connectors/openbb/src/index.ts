@@ -21,7 +21,7 @@ export default defineConnector<Config>({
     return `OpenBB API at ${ctx.config.baseUrl}${providers.length ? ` · ${providers.length} providers (${shown})` : ''}`
   },
 
-  // Every GET route of the local API, generated from its openapi.json and cached under ~/.terminal/catalog.
+  // Every GET route of the local API, generated from its openapi.json and cached under ~/.openterminal/catalog.
   descriptors: (ctx) => descriptorsFor(ctx),
   // `GET /api/v1/<route>?…` with the validated params, the `results` list through inferFrame with the route's descriptor.
   call: (route, params, ctx) => callRoute(route, params, ctx),

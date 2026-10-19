@@ -1,4 +1,4 @@
-// The v1 store: ~/.terminal/workspaces/<id>.json, one file per workspace. Kept behind the `Store` interface for
+// The v1 store: ~/.openterminal/workspaces/<id>.json, one file per workspace. Kept behind the `Store` interface for
 // the one-time migration (`migrate.ts` reads it) and as the fallback when SQLite cannot open; the tables SQLite
 // adds (recipes, catalog, liveness, run log, frames, settings) are in memory here.
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'

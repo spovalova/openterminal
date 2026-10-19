@@ -11,7 +11,7 @@ import type { Range } from './clock.js'
 /**
  * Recipes (PLAN.md section 17): a named, saved query with a title template, a param schema (JSON schema), a
  * preferred preset and size, and ordered route alternatives with param mappings per connector. Data, not code:
- * the built-in ones live in `packages/core/recipes.yml`, user ones in `~/.terminal/recipes.yml`. The 22 kinds
+ * the built-in ones live in `packages/core/recipes.yml`, user ones in `~/.openterminal/recipes.yml`. The 22 kinds
  * are 22 recipes; the prompt lists them as examples and the agent may use any route.
  *
  * Param mappings are templates over the recipe's params: `"{symbols}"` passes the value through (arrays stay

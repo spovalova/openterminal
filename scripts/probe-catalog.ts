@@ -1,5 +1,5 @@
 // Probe every route of the catalog (PLAN.md section 17): one call per route with default params and a sample
-// symbol, eight at a time, liveness recorded on the catalog and in ~/.terminal/catalog/liveness.json.
+// symbol, eight at a time, liveness recorded on the catalog and in ~/.openterminal/catalog/liveness.json.
 //
 //   pnpm probe                              every route of every configured connector (a few minutes for OpenBB)
 //   pnpm probe --connector=openbb --match=equity/*   one connector, routes matching a glob
@@ -9,14 +9,15 @@
 //   pnpm probe --ci                         no network: generate descriptors from the core fixture and check that
 //                                           every one gets sample params that validate
 //
-// Connectors come from ~/.terminal/config.yml (TERMINAL_HOME overrides the directory); liveness rows go to the
+// Connectors come from ~/.openterminal/config.yml (OPENTERMINAL_HOME overrides the directory); liveness rows go to the
 // store the server reads (`<home>/terminal.db`), so the Data page shows them. Nothing here is committed; the summary
 // goes to docs/notes/openbb-probe.md by hand.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { ConnectorRegistry, DescriptorSchema, MemoryCache, descriptorsFromOpenApi, globToRegExp } from '@openterminal/core'
 import { builtinAnnotations, builtinRecipes } from '@openterminal/core/node'
-import { loadConfig, terminalHome, workspacesDir } from '../packages/server/src/config.js'
+import { loadConfig, workspacesDir } from '../packages/server/src/config.js'
+import { resolveHome } from '../packages/server/src/home.js'
 import { builtinConnector } from '../packages/server/src/connectors.js'
 import { applyLiveness, livenessStoreOver } from '../packages/server/src/liveness.js'
 import { PROBE_CONCURRENCY, probeCatalog, renderSummary, sampleParams } from '../packages/server/src/probe.js'
@@ -51,7 +52,7 @@ if (args.has('ci')) {
   process.exit(ok ? 0 : 1)
 }
 
-const home = terminalHome()
+const home = resolveHome(process.env, { log })
 const config = loadConfig({ home })
 const registry = new ConnectorRegistry({ cache: new MemoryCache(), log, recipes: builtinRecipes(), annotations: builtinAnnotations() })
 for (const entry of config.connectors) {

@@ -379,7 +379,7 @@ export const App: FC = () => {
             <EmptyState title="No widgets yet" hint="Ask a question to build this workspace." />
           </div>
           <div className="h-32 w-80 rounded-lg border border-border bg-surface">
-            <EmptyState title="No LLM key" hint={<span>Add one in <span className="text-fg-2">~/.terminal/config.yml</span></span>} />
+            <EmptyState title="No LLM key" hint={<span>Add one in <span className="text-fg-2">~/.openterminal/config.yml</span></span>} />
           </div>
         </Row>
       </Section>

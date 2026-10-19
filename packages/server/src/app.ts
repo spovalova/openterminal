@@ -27,7 +27,7 @@ export type AppDeps = {
   registry: DataRouteDeps['registry']
   store: Store
   agent: AgentRunner
-  /** TERMINAL_HOME, for writing connector config back to config.yml. */
+  /** The home directory (~/.openterminal or OPENTERMINAL_HOME), for writing connector config back to config.yml. */
   home: string
   /** Whether an LLM is configured (reported by /api/health). */
   llm: boolean
