@@ -147,7 +147,7 @@ export function createApp(deps: AppDeps) {
     // Apply live. A connector new to the file is appended, matching its place in the file; an existing one
     // keeps its config but moves to the end of the routing order until restart (the registry has no reorder).
     const info = registry.register(connector, config)
-    const out: ConnectorInfo = { name, kinds: info.kinds, status: info.status, needsKey: connectorNeedsKey(connector), configured: true, ...(info.error ? { error: info.error } : {}) }
+    const out: ConnectorInfo = { name, status: info.status, needsKey: connectorNeedsKey(connector), configured: true, ...(info.error ? { error: info.error } : {}) }
     log(`connector ${name}: config saved · ${info.status}`)
     return c.json(out)
   })

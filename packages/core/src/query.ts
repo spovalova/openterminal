@@ -1,15 +1,13 @@
 import stringify from 'fast-json-stable-stringify'
 import { z } from 'zod'
 import { FieldOverridesSchema } from './fields.js'
-import { QuerySchema as LegacyQuerySchema, type Kind, type Query as LegacyQuery, type QueryInput as LegacyQueryInput } from './kinds.js'
 import { expandRecipe, type Recipe } from './recipes.js'
 
 /**
  * Queries (PLAN.md section 17). A widget's dataset is one of three things:
  * - a route: `{ connector, route, params }`, validated against the connector's descriptor;
- * - a recipe: `{ recipe, params }`, a named saved query with ordered route alternatives (the 22 kinds are recipes);
+ * - a recipe: `{ recipe, params }`, a named saved query with ordered route alternatives (the 22 kinds became recipes);
  * - a transform: `{ inputs, code, columns? }`, Python over the input frames, run by the TransformEngine.
- * The v1 `{ kind, params }` query keeps working beside them as `LegacyQuery` until phase 3 removes kinds.
  */
 
 export const RouteQuerySchema = z.object({
@@ -51,20 +49,14 @@ export const TransformQuerySchema: z.ZodType<TransformQuery, TransformQueryInput
   columns: FieldOverridesSchema.optional(),
 }) as unknown as z.ZodType<TransformQuery, TransformQueryInput>
 
-/** A v2 query: route, recipe or transform. Shapes are disjoint, so the union is tried most-specific first. */
+/** A query: route, recipe or transform. Shapes are disjoint, so the union is tried most-specific first. */
 export const QueryV2Schema: z.ZodType<QueryV2, QueryV2Input> = z.union([TransformQuerySchema, RouteQuerySchema, RecipeQuerySchema]) as unknown as z.ZodType<QueryV2, QueryV2Input>
 
-export { LegacyQuerySchema }
-export type { LegacyQuery, LegacyQueryInput }
+/** Any query a widget or the registry may hold. The name dates from the v1 coexistence; it is the v2 union. */
+export type AnyQuery = QueryV2
+export type AnyQueryInput = QueryV2Input
+export const AnyQuerySchema: z.ZodType<AnyQuery, AnyQueryInput> = QueryV2Schema
 
-/** Any query a widget or the registry may hold: v2 or v1. */
-export type AnyQuery = QueryV2 | LegacyQuery
-export type AnyQueryInput = QueryV2Input | LegacyQueryInput
-export const AnyQuerySchema: z.ZodType<AnyQuery, AnyQueryInput> = z.union([LegacyQuerySchema, QueryV2Schema]) as unknown as z.ZodType<AnyQuery, AnyQueryInput>
-
-export function isLegacyQuery(q: unknown): q is LegacyQuery {
-  return !!q && typeof q === 'object' && typeof (q as { kind?: unknown }).kind === 'string'
-}
 export function isRouteQuery(q: unknown): q is RouteQuery {
   return !!q && typeof q === 'object' && typeof (q as RouteQuery).connector === 'string' && typeof (q as RouteQuery).route === 'string'
 }
@@ -75,18 +67,17 @@ export function isTransformQuery(q: unknown): q is TransformQuery {
   return !!q && typeof q === 'object' && typeof (q as TransformQuery).code === 'string' && !!(q as TransformQuery).inputs
 }
 
-/** Validate any query shape (applies param defaults on the v1 form). Throws ZodError. */
+/** Validate any query shape (applies the `params: {}` default). Throws ZodError. */
 export function parseAnyQuery(input: unknown): AnyQuery {
   return AnyQuerySchema.parse(input)
 }
 
 /**
- * The cache key. Stable across param order; equal to v1's `cacheKey` for kind queries so the persistent cache
- * survives the migration. Route params are sorted; recipe keys are by recipe name (the resolved route frame is
- * cached under its own route key too); transform keys cover the inputs' keys and the code.
+ * The cache key. Stable across param order. Route params are sorted; recipe keys are by recipe name (the resolved
+ * route frame is cached under its own route key too); transform keys cover the inputs' keys and the code. Unchanged
+ * from the v2 keys of the coexistence, so the persistent cache survives phase 3.
  */
 export function canonicalKey(q: AnyQuery): string {
-  if (isLegacyQuery(q)) return `${q.kind}:${stringify(q.params)}`
   if (isTransformQuery(q)) {
     const inputs: Record<string, string> = {}
     for (const [name, sub] of Object.entries(q.inputs)) inputs[name] = canonicalKey(sub)
@@ -105,11 +96,6 @@ export function canonicalParams(params: Record<string, unknown>): Record<string,
     out[k] = v
   }
   return out
-}
-
-/** A v1 kind query as the recipe of the same name: how the store migrates stored widgets. */
-export function legacyToRecipe(q: LegacyQuery | { kind: Kind; params: Record<string, unknown> }): RecipeQuery {
-  return { recipe: q.kind, params: { ...(q.params as Record<string, unknown>) } }
 }
 
 /**
@@ -137,7 +123,6 @@ export function anyQuerySymbols(q: AnyQuery): string[] {
 
 /** One line for steps and logs: "openbb equity/price/quote symbol=NVDA", "recipe ohlcv symbols=MU,SNDK", "transform(price, eps)". */
 export function describeQuery(q: AnyQuery): string {
-  if (isLegacyQuery(q)) return `${q.kind} ${describeParams(q.params as Record<string, unknown>)}`.trim()
   if (isTransformQuery(q)) return `transform(${Object.keys(q.inputs).join(', ')})`
   if (isRecipeQuery(q)) return `recipe ${q.recipe} ${describeParams(q.params)}`.trim()
   return `${q.connector} ${q.route} ${describeParams(q.params)}`.trim()

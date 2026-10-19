@@ -148,7 +148,7 @@ recipes:
 
   - name: earnings
     title: "Earnings {from} to {to}"
-    summary: Earnings dates inside a date window; session is bmo, amc or null. The market-wide calendar, filtered to the symbols by the connector.
+    summary: Earnings dates inside a date window; session is bmo, amc or null. The market-wide calendar, cut to the symbols.
     params:
       type: object
       properties:
@@ -532,7 +532,7 @@ recipes:
   # ------------------------------------------------------------------------------------------------- options
   - name: options
     title: "{symbol} options {expiration}"
-    summary: Option chain for one symbol. The connector keeps one expiration and a strike window around the underlying.
+    summary: Option chain for one symbol at one expiration, a strike window around the underlying.
     params:
       type: object
       properties:

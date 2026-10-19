@@ -1,5 +1,5 @@
 // Built-in connector map and registry wiring. Config order is routing priority.
-import { ConnectorRegistry, MemoryCache, type AnnotationRule, type Cache, type Connector, type Kind, type Recipe, type RegisteredConnector, type Registry, type TransformEngine } from '@terminal/core'
+import { ConnectorRegistry, MemoryCache, type AnnotationRule, type Cache, type Connector, type Recipe, type RegisteredConnector, type Registry, type TransformEngine } from '@terminal/core'
 import { builtinAnnotations, builtinRecipes } from '@terminal/core/node'
 import openbb from '@terminal/connector-openbb'
 import yahoo from '@terminal/connector-yahoo'
@@ -49,7 +49,7 @@ export function buildRegistry(config: Config, opts: BuildRegistryOptions = {}): 
       continue
     }
     const info = registry.register(connector, entry.config ?? {})
-    log(`connector ${info.name}: ${info.status}${info.error ? ` (${info.error})` : ''} · ${info.kinds.join(', ')}`)
+    log(`connector ${info.name}: ${info.status}${info.error ? ` (${info.error})` : ''}`)
   }
   return registry
 }
@@ -57,7 +57,8 @@ export function buildRegistry(config: Config, opts: BuildRegistryOptions = {}): 
 /** What GET /api/connectors returns: every built-in connector, configured or not. */
 export type ConnectorInfo = {
   name: string
-  kinds: Kind[]
+  /** Routes in the catalog, for a registered connector whose descriptors loaded. */
+  routes?: number
   status: RegisteredConnector['status']
   /** True when the connector's config schema requires a key. */
   needsKey: boolean
@@ -78,7 +79,8 @@ export async function describeConnectors(registry: Registry, opts: { timeoutMs?:
   const out: ConnectorInfo[] = []
   for (const r of registered) {
     const c = builtinConnector(r.name)
-    const info: ConnectorInfo = { name: r.name, kinds: r.kinds, status: r.status, needsKey: c ? connectorNeedsKey(c) : false, configured: true, ...(r.error ? { error: r.error } : {}) }
+    const info: ConnectorInfo = { name: r.name, status: r.status, needsKey: c ? connectorNeedsKey(c) : false, configured: true, ...(r.error ? { error: r.error } : {}) }
+    if (r.status === 'ok' && registry.catalog) info.routes = (await registry.catalog()).all().filter((d) => d.connector === r.name).length
     if (r.status === 'ok' && registry.health) {
       const h = await registry.health(r.name, opts)
       if (h.ok) {
@@ -92,7 +94,7 @@ export async function describeConnectors(registry: Registry, opts: { timeoutMs?:
   }
   for (const [name, c] of Object.entries(BUILTIN_CONNECTORS)) {
     if (byName.has(name)) continue
-    out.push({ name, kinds: c.kinds, status: 'missing_config', needsKey: connectorNeedsKey(c), configured: false })
+    out.push({ name, status: 'missing_config', needsKey: connectorNeedsKey(c), configured: false })
   }
   return out
 }

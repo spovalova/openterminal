@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { z } from 'zod'
 import { ConnectorRegistry, WIDGET_CHIP_RE, WidgetV2Schema, type ServerMsg, type WidgetV2 } from '@terminal/core'
 import { MemoryRunLog } from '../../runlog.js'
 import { createRunner, AgentAbortError } from '../runner.js'

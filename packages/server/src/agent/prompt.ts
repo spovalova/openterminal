@@ -243,10 +243,7 @@ function renderExamples(): string {
 // ---------- current workspace ----------
 
 function renderWorkspace(ws: Workspace): string {
-  const widgets = (ws.widgets as AnyWidget[]).map((x) => {
-    const base = { id: x.id, title: x.title, size: x.size }
-    return 'data' in x && x.data ? { ...base, data: x.data, view: x.view } : { ...base, query: (x as { query: unknown }).query, view: x.view }
-  })
+  const widgets = (ws.widgets as AnyWidget[]).map((x) => ({ id: x.id, title: x.title, size: x.size, data: x.data, view: x.view }))
   const messages = ws.messages.slice(-PROMPT_HISTORY).map(compactMessage)
   const lines = ['# Current workspace', `Name: ${JSON.stringify(ws.name)}. Widgets: ${widgets.length}. Earlier messages shown: ${messages.length}.`]
   lines.push(JSON.stringify({ id: ws.id, name: ws.name, widgets, messages }))

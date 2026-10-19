@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildUrl, createLimiter, isoDay, perSymbol, toSession } from '../src/finnhub-api.js'
-import { fakeCtx } from './helpers.js'
+import { buildUrl, createLimiter } from '../src/finnhub-api.js'
 
 describe('buildUrl', () => {
   it('appends the token last and encodes params', () => {
@@ -32,29 +31,5 @@ describe('createLimiter', () => {
     limiter.reset()
     await limiter.acquire()
     expect(waits).toEqual([800])
-  })
-})
-
-describe('perSymbol', () => {
-  it('concatenates rows in symbol order, logs failures, throws only when all fail', async () => {
-    const { ctx, logs } = fakeCtx({})
-    const rows = await perSymbol(ctx, ['A', 'B', 'C'], async (s) => {
-      if (s === 'B') throw new Error('boom')
-      return [s.toLowerCase()]
-    })
-    expect(rows).toEqual(['a', 'c'])
-    expect(logs).toEqual(['skipped B: boom'])
-    await expect(perSymbol(ctx, ['A'], async () => Promise.reject(new Error('boom')))).rejects.toThrow('finnhub: every symbol failed (A: boom)')
-  })
-})
-
-describe('small mappers', () => {
-  it('isoDay is UTC YYYY-MM-DD', () => expect(isoDay(Date.UTC(2026, 9, 16, 23, 59))).toBe('2026-10-16'))
-  it('toSession keeps bmo/amc only', () => {
-    expect(toSession('bmo')).toBe('bmo')
-    expect(toSession('amc')).toBe('amc')
-    expect(toSession('dmh')).toBeNull()
-    expect(toSession('')).toBeNull()
-    expect(toSession(undefined)).toBeNull()
   })
 })

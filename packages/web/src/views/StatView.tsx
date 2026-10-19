@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type FC } from 'react'
 import clsx from 'clsx'
-import { columnIndex, type Frame, type Kind, type StatControl } from '@terminal/core'
+import { columnIndex, type Frame, type StatControl } from '@terminal/core'
 import { EMPTY_CELL, EmptyState, direction, formatCell, type CellFormat } from '@terminal/ui'
 import type { ViewProps } from './types'
 import { cellFormat } from './TableView'
-import { controlOf, kindOf, primaryFrame } from './fields'
-import { STAT_SECONDARY, columnLabel, formatsFor } from './legacy'
+import { controlOf, primaryFrame } from './fields'
+import { columnLabel } from './labels'
 
 export { columnLabel }
 
@@ -25,18 +25,17 @@ function num(v: unknown): number | null {
 }
 
 /**
- * One stat per group, in frame order, from the first row of each group (the newest, for kinds with history such
- * as short_interest). `column` is the control's column; the line under the number is the control's `change`
- * column (or the kind's secondary column for a v1 kind), formatted by the field config.
+ * One stat per group, in frame order, from the newest row of each group (a time series reads newest first; frames
+ * without a time column keep their order). `column` is the control's column; the line under the number is the
+ * control's `change` column, formatted by the field config.
  */
-export function statRows(frame: Frame, kind: Kind | undefined, column: string, control?: Pick<StatControl, 'change' | 'format' | 'group'> & { formats?: Record<string, CellFormat> }): Stat[] {
+export function statRows(frame: Frame, column: string, control?: Pick<StatControl, 'change' | 'format' | 'group'> & { formats?: Record<string, CellFormat> }): Stat[] {
   const group = control?.group ?? 'symbol'
   const iSym = columnIndex(frame, group)
   const iVal = columnIndex(frame, column)
-  const formats: Record<string, CellFormat> = { ...(kind ? formatsFor(kind, frame.columns) : {}), ...(control?.formats ?? {}) }
+  const formats: Record<string, CellFormat> = { ...(control?.formats ?? {}) }
   const format: CellFormat = control?.format ? cellFormat(control.format) : (formats[column] ?? 'price')
-  const legacy = kind ? (STAT_SECONDARY as Partial<Record<Kind, { column: string; label?: string }>>)[kind] : undefined
-  const secondary = control?.change ? { column: control.change } : legacy
+  const secondary = control?.change ? { column: control.change, label: undefined as string | undefined } : undefined
   const iSec = secondary && secondary.column !== column ? columnIndex(frame, secondary.column) : -1
   // The extended-hours print: the v1 quote's `market_state`/`extended_*`, or yahoo's `marketState` with the pre- or
   // post-market price and move (a v2 quote widget has no kind; the columns say what the frame is).
@@ -211,12 +210,11 @@ function useTicks(stats: Stat[]): Record<string, Tick> {
  * the regular session). One group fills the widget; several become a row of compact cards.
  */
 export const StatView: FC<ViewProps> = ({ widget, frames }) => {
-  const kind = kindOf(widget)
   const control = controlOf(widget, frames)
   const stat = control?.kind === 'stat' ? control : undefined
   const frame = stat ? frames[stat.data] : primaryFrame(widget, frames)
   const column = stat?.column ?? ''
-  const stats = useMemo(() => (frame && stat ? statRows(frame, kind, column, stat) : []), [frame, stat, kind, column])
+  const stats = useMemo(() => (frame && stat ? statRows(frame, column, stat) : []), [frame, stat, column])
   const ticks = useTicks(stats)
 
   if (stats.length === 0) {

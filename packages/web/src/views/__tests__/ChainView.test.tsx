@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { Frame, Widget } from '@terminal/core'
+import type { Frame, WidgetV2 } from '@terminal/core'
 
 import { ChainView, buildChain, hintWidth, inTheMoney, sideColumns } from '../ChainView'
 import { TableView } from '../TableView'
@@ -115,7 +115,8 @@ describe('ChainView', () => {
   it('hides a side that has no contracts (type: call)', () => {
     const { widget, frame } = fixture('options')
     const calls: Frame = { ...frame, rows: frame.rows.filter((r) => r[2] === 'call') }
-    const w: Widget = { ...widget, query: { kind: 'options', params: { ...(widget as Widget).query.params, type: 'call' } } } as Widget
+    const main = widget.data.main as { recipe: string; params: Record<string, unknown> }
+    const w: WidgetV2 = { ...widget, data: { main: { recipe: main.recipe, params: { ...main.params, type: 'call' } } } }
     render(<ChainView widget={w} frames={{ main: calls }} />)
     expect(screen.queryByText('Puts')).toBeNull()
     expect(screen.getByText('Calls')).toBeTruthy()
@@ -130,9 +131,9 @@ describe('ChainView', () => {
     expect(document.querySelector('[data-view="chain"]')).toBeNull()
   })
 
-  it('viewFor picks ChainView for chain views and keeps the others', () => {
-    expect(viewFor({ type: 'chain' })).toBe(ChainView)
-    expect(viewFor({ type: 'table' })).toBe(TableView)
-    expect(viewFor({ type: 'series' })).toBe(ChartView)
+  it('viewFor picks ChainView for the chain preset and keeps the others', () => {
+    expect(viewFor({ preset: 'chain' })).toBe(ChainView)
+    expect(viewFor({ preset: 'table' })).toBe(TableView)
+    expect(viewFor({ preset: 'compare' })).toBe(ChartView)
   })
 })

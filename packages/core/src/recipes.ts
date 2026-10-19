@@ -337,6 +337,25 @@ export function recipeSummaryLines(recipes: readonly Recipe[]): string[] {
   })
 }
 
+/**
+ * The recipes as a Markdown table for the README (`scripts/readme-recipes.ts` writes it between the
+ * `<!-- recipes:start -->` and `<!-- recipes:end -->` markers; a core test checks the README has not drifted).
+ * Columns: recipe, params (required first, `?` optional, `[]` lists, enums abbreviated), view, the connectors and
+ * routes it reads, one line of what it answers.
+ */
+export function recipesMarkdownTable(recipes: readonly Recipe[]): string {
+  const cell = (s: string) => s.replace(/\|/g, '\\|')
+  const rows = recipes.map((r) => {
+    const params = recipeParams(r)
+      .map((p) => `${p.name}${p.required ? '' : '?'}${p.enum ? `=${p.enum.slice(0, 4).join('\\|')}${p.enum.length > 4 ? '\\|…' : ''}` : p.type === 'string[]' ? '[]' : ''}`)
+      .join(', ')
+    const routes = [...new Set(Object.values(recipeDatasets(r)).flatMap((ds) => ('routes' in ds ? ds.routes.map((x) => `${x.connector} \`${x.route}\``) : [])))].join(', ')
+    const graph = Object.values(recipeDatasets(r)).some((ds) => 'inputs' in ds) ? ' + transform' : ''
+    return `| \`${r.name}\` | ${params || '—'} | ${r.view.preset} | ${routes}${graph} | ${cell(r.summary ?? r.title)} |`
+  })
+  return ['| Recipe | Params | View | Reads | What it answers |', '|---|---|---|---|---|', ...rows].join('\n')
+}
+
 export function recipeMap(recipes: readonly Recipe[]): Map<string, Recipe> {
   return new Map(recipes.map((r) => [r.name, r]))
 }

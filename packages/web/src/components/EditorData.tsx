@@ -1,9 +1,9 @@
 import { useEffect, useId, useMemo, useState, type FC } from 'react'
 import clsx from 'clsx'
 import { Button } from '@terminal/ui'
-import { describeQuery, isLegacyQuery, isRecipeQuery, isRouteQuery, isTransformQuery, recipeParams, type AnyQuery, type CatalogHit, type Descriptor, type Kind, type Recipe } from '@terminal/core'
+import { describeQuery, isRecipeQuery, isRouteQuery, isTransformQuery, recipeParams, type AnyQuery, type CatalogHit, type Descriptor, type Recipe } from '@terminal/core'
 import { api } from '../api'
-import { KIND_LIST, datasetKind, kindDescription, kindParams, newTransform, nextDatasetName, removeDataset, renameDataset, transformEdges, validDatasetName, type DatasetKind, type EditorDraft } from './editor-model'
+import { datasetKind, newTransform, nextDatasetName, removeDataset, renameDataset, transformEdges, validDatasetName, type DatasetKind, type EditorDraft } from './editor-model'
 import { FramePreview, type PreviewState } from './FramePreview'
 import { Field, ParamsForm, inputCls, labelCls } from './ParamsForm'
 
@@ -17,7 +17,7 @@ export type EditorDataProps = {
   loadDescriptors: (connector: string) => Promise<Descriptor[]>
 }
 
-const KIND_BADGE: Record<DatasetKind, string> = { recipe: 'recipe', route: 'route', transform: 'transform', kind: 'kind (v1)' }
+const KIND_BADGE: Record<DatasetKind, string> = { recipe: 'recipe', route: 'route', transform: 'transform' }
 
 /** The data tab: the graph on the left (one row per dataset, transforms with their inputs), the selected dataset's form and preview on the right. */
 export const EditorData: FC<EditorDataProps> = ({ draft, onChange, previews, runPreview, recipes, connectors, loadDescriptors }) => {
@@ -37,9 +37,7 @@ export const EditorData: FC<EditorDataProps> = ({ draft, onChange, previews, run
         ? { recipe: recipes[0]?.name ?? 'quote', params: {} }
         : kind === 'route'
           ? { connector: connectors[0] ?? 'openbb', route: '', params: {} }
-          : kind === 'kind'
-            ? ({ kind: 'quote', params: { symbols: [] } } as AnyQuery)
-            : newTransform(draft.data, names.filter((n) => !isTransformQuery(draft.data[n]!)))
+          : newTransform(draft.data, names.filter((n) => !isTransformQuery(draft.data[n]!)))
     onChange({ ...draft, data: { ...draft.data, [name]: q } })
     setSelected(name)
   }
@@ -86,9 +84,6 @@ export const EditorData: FC<EditorDataProps> = ({ draft, onChange, previews, run
           </Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => add('transform')}>
             + transform
-          </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => add('kind')} title="A v1 kind query, kept until phase 3">
-            + kind
           </Button>
         </div>
       </div>
@@ -142,8 +137,6 @@ export const EditorData: FC<EditorDataProps> = ({ draft, onChange, previews, run
             <RecipeForm id={`${uid}-r`} query={q} recipes={recipes} onChange={(next) => setQuery(current, next)} />
           ) : isRouteQuery(q) ? (
             <RouteForm id={`${uid}-o`} query={q} connectors={connectors} loadDescriptors={loadDescriptors} onChange={(next) => setQuery(current, next)} />
-          ) : isLegacyQuery(q) ? (
-            <KindForm id={`${uid}-k`} query={q} onChange={(next) => setQuery(current, next)} />
           ) : null}
 
           <div className="flex min-h-0 flex-col gap-1">
@@ -298,27 +291,6 @@ function RouteForm({
       ) : query.route ? (
         <p className="text-xs text-fg-3">{descriptors.length ? `"${query.route}" is not a route of ${query.connector}.` : `Loading ${query.connector}'s routes…`}</p>
       ) : null}
-    </div>
-  )
-}
-
-// ---- v1 kind ----
-
-function KindForm({ id, query, onChange }: { id: string; query: { kind: Kind; params: Record<string, unknown> }; onChange: (q: AnyQuery) => void }) {
-  const params = useMemo(() => kindParams(query.kind), [query.kind])
-  return (
-    <div className="flex flex-col gap-3">
-      <Field id={`${id}-kind`} label="Kind">
-        <select id={`${id}-kind`} className={inputCls} value={query.kind} onChange={(e) => onChange({ kind: e.target.value, params: {} } as AnyQuery)}>
-          {KIND_LIST.map((k) => (
-            <option key={k} value={k}>
-              {k}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <p className="text-xs text-fg-2">{kindDescription(query.kind)}</p>
-      <ParamsForm id={id} params={params} values={query.params} onChange={(params) => onChange({ kind: query.kind, params } as AnyQuery)} />
     </div>
   )
 }

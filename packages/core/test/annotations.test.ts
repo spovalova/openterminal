@@ -149,7 +149,6 @@ describe('the seed file (packages/core/annotations.yml)', () => {
     expect(label('openbb', 'equity/calendar/earnings', 'eps_consensus')).toBe('EPS est.')
     expect(label('yahoo', 'quote', 'change_pct')).toBe('Chg %')
     expect(label('openbb', 'equity/fundamental/metrics', 'enterprise_to_ebitda')).toBe('EV/EBITDA')
-    expect(label('openbb', 'volatility', 'iv30_high')).toBe('IV30 high')
   })
   it('covers every field the recipes name in their view columns: an annotation on the first route, or the main transform’s own `columns`', () => {
     for (const r of builtinRecipes()) {

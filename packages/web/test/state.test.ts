@@ -1,15 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { createWorkspace, frameKey, toFrame, type ServerMsg, type Widget } from '@terminal/core'
+import { createWorkspace, frameKey, type Frame, type ServerMsg, type WidgetV2 } from '@terminal/core'
+
+const quoteFrame = (rows: unknown[][] = []): Frame => ({ columns: [{ name: 'symbol', type: 'string' }, { name: 'price', type: 'number' }], rows, meta: { connector: 'yahoo', fetchedAt: 0, ttl: 10_000 } })
+const barsFrame = (): Frame => ({ columns: [{ name: 'symbol', type: 'string' }, { name: 'time', type: 'time' }, { name: 'close', type: 'number' }], rows: [], meta: { connector: 'yahoo', fetchedAt: 0, ttl: 600_000 } })
 import { initialState, layoutFor, reducer, workspaceState, type Action, type AppState } from '../src/state'
 
-const widget: Widget = {
+const widget: WidgetV2 = {
   id: 'w1',
   title: 'Memory names, 3 months rebased',
   size: 'lg',
-  query: { kind: 'ohlcv', params: { symbols: ['MU', 'SNDK'], interval: '1d', range: '3mo' } },
-  view: { type: 'series', normalize: true },
+  data: { main: { recipe: 'ohlcv', params: { symbols: ['MU', 'SNDK'], interval: '1d', range: '3mo' } } },
+  view: { preset: 'compare', normalize: true },
 }
-const widget2: Widget = { id: 'w2', title: 'Basket snapshot', size: 'md', query: { kind: 'quote', params: { symbols: ['MU'] } }, view: { type: 'table' } }
+const widget2: WidgetV2 = { id: 'w2', title: 'Basket snapshot', size: 'md', data: { main: { recipe: 'quote', params: { symbols: ['MU'] } } }, view: { preset: 'table' } }
 
 function boot(): AppState {
   const ws = createWorkspace({ id: 'ws1', now: 1000 })
@@ -35,7 +38,7 @@ describe('reducer: prompt message sequence', () => {
     expect(workspaceState(s, 'ws1').sending).toBe(false)
     expect(layoutFor(s.workspaces[0], workspaceState(s, 'ws1'))).toBe('active')
 
-    const step = { tool: 'query' as const, args: { kind: 'ohlcv' }, summary: 'ohlcv MU, SNDK 1d 3mo · 126 rows', ms: 420 }
+    const step = { tool: 'query' as const, args: { recipe: 'ohlcv' }, summary: 'recipe ohlcv symbols=MU,SNDK interval=1d range=3mo · 126 rows', ms: 420 }
     s = reducer(s, server({ t: 'step', workspaceId: 'ws1', step }))
     expect(workspaceState(s, 'ws1').steps).toEqual([step])
 
@@ -44,7 +47,7 @@ describe('reducer: prompt message sequence', () => {
     expect(s.workspaces[0]!.name).toBe('Memory')
     expect(s.frames).toEqual({})
 
-    const frame = toFrame('quote', [{ symbol: 'MU', price: 100 }], { connector: 'yahoo' })
+    const frame = quoteFrame([['MU', 100]])
     // v2: frames are keyed by workspace, widget and dataset; a v1 server's frame (no workspaceId) lands under the bare key.
     s = reducer(s, server({ t: 'frame', widgetId: 'w2', frame }))
     expect(s.frames[frameKey({ widgetId: 'w2' })]).toBe(frame)
@@ -74,9 +77,9 @@ describe('reducer: prompt message sequence', () => {
   it('a later widgets message overwrites the set and drops stale frames', () => {
     let s = boot()
     s = reducer(s, server({ t: 'widgets', workspaceId: 'ws1', widgets: [widget, widget2] }))
-    s = reducer(s, server({ t: 'frame', widgetId: 'w1', frame: toFrame('ohlcv', []) }))
-    s = reducer(s, server({ t: 'frame', widgetId: 'w2', frame: toFrame('quote', []) }))
-    const w3: Widget = { ...widget2, id: 'w3' }
+    s = reducer(s, server({ t: 'frame', widgetId: 'w1', frame: barsFrame() }))
+    s = reducer(s, server({ t: 'frame', widgetId: 'w2', frame: quoteFrame() }))
+    const w3: WidgetV2 = { ...widget2, id: 'w3' }
     s = reducer(s, server({ t: 'widgets', workspaceId: 'ws1', widgets: [widget2, w3] }))
     expect(s.workspaces[0]!.widgets.map((w) => w.id)).toEqual(['w2', 'w3'])
     expect(Object.keys(s.frames)).toEqual([frameKey({ widgetId: 'w2' })])
@@ -86,10 +89,10 @@ describe('reducer: prompt message sequence', () => {
     let s = boot()
     s = reducer(s, { type: 'promptSent', workspaceId: 'ws1', text: 'MU' })
     s = reducer(s, server({ t: 'started', workspaceId: 'ws1' }))
-    s = reducer(s, server({ t: 'failed', workspaceId: 'ws1', error: 'no connector answers kind "news"' }))
+    s = reducer(s, server({ t: 'failed', workspaceId: 'ws1', error: 'unknown recipe "news"' }))
     let ws = workspaceState(s, 'ws1')
     expect(ws.status).toBe('error')
-    expect(ws.lastError).toBe('no connector answers kind "news"')
+    expect(ws.lastError).toBe('unknown recipe "news"')
     expect(ws.prompt).toBe('MU')
     expect(layoutFor(s.workspaces[0], ws)).toBe('empty')
 
@@ -105,7 +108,7 @@ describe('reducer: prompt message sequence', () => {
     let s = reducer(initialState, { type: 'workspaces', workspaces: [ws] })
     expect(workspaceState(s, 'ws2').status).toBe('active')
     expect(s.activeId).toBe('ws2')
-    s = reducer(s, { type: 'frameLoaded', widgetId: 'w2', frame: toFrame('quote', []) })
+    s = reducer(s, { type: 'frameLoaded', widgetId: 'w2', frame: quoteFrame() })
     s = reducer(s, { type: 'removeWorkspace', id: 'ws2' })
     expect(s.workspaces).toEqual([])
     expect(s.frames).toEqual({})

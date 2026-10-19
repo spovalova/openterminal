@@ -1,7 +1,7 @@
 // Test helpers for the agent loop: a routes connector with canned frames (and the recipes that route to it) and a
 // scripted mock model. No network, no real LLM.
 import { MockLanguageModelV4, convertArrayToReadableStream } from 'ai/test'
-import { ConnectorRegistry, createWorkspace, type DescriptorParam, type ServerMsg, type Workspace } from '@terminal/core'
+import { ConnectorRegistry, createWorkspace, type ServerMsg, type Workspace } from '@terminal/core'
 import { FAKE_ROUTES, recipesForRoutes, routesConnector, type Call, type FakeRoute, type Row } from '../../../test/fake-connector.js'
 
 // Spec types, derived from the mock so this file needs no direct dependency on @ai-sdk/provider.
@@ -21,7 +21,6 @@ export type FakeConnectorOptions = {
 const S = (name: string) => ({ name, type: 'string' as const })
 const N = (name: string) => ({ name, type: 'number' as const })
 const T = (name: string) => ({ name, type: 'time' as const })
-const symbols: DescriptorParam = { name: 'symbols', type: 'string[]', required: true }
 
 /** The agent tests' routes: the five shared ones with richer rows, plus options (a chain) and macro (series keyed by `series`). */
 export const AGENT_ROUTES: Record<string, FakeRoute> = {

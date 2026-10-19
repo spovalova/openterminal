@@ -29,7 +29,7 @@ export type WorkspacePatch = { name?: string; widgets?: AnyWidget[] }
 
 export type CatalogStats = Record<string, { routes: number; alive: number; dead: number; unknown: number; probedAt?: number }>
 export type CatalogSearch = { query: string; hits: CatalogHit[]; stats: CatalogStats; connectors: string[]; recipes: number }
-export type ConnectorCatalog = { connector: string; status: RegisteredConnector['status']; mode: 'kinds' | 'routes' | 'both'; descriptors: Descriptor[]; stats: CatalogStats[string] }
+export type ConnectorCatalog = { connector: string; status: RegisteredConnector['status']; descriptors: Descriptor[]; stats: CatalogStats[string] }
 export type RecipesResponse = { builtin: Recipe[]; user: Recipe[] }
 export type ProbeResult = { probed: number; alive: number; dead: number; ms: number }
 export type StoreInfo = { location: string; frames: number; kind?: 'sqlite' | 'json' | 'injected'; migration?: { workspaces: number; widgets: number; v1Widgets: number; backup?: string; alreadyDone: boolean; at: number } }

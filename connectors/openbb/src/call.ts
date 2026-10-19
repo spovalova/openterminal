@@ -1,6 +1,6 @@
 // OpenBB `call(route, params, ctx)` (PLAN.md section 17): one GET per route, the `results` list through core's
-// `inferFrame` with the route's descriptor. No unit conversion here: v2 frames carry provider values and the
-// annotations say what they are. The v1 kind handlers in index.ts are untouched and keep their own scaling.
+// `inferFrame` with the route's descriptor. No unit conversion here: frames carry provider values and the
+// annotations say what they are.
 import { inferFrame, type Ctx, type Descriptor, type Frame, type ValidatedParams } from '@terminal/core'
 import { descriptorFor, type LoadOptions } from './descriptors.js'
 import { get, type Config } from './openbb-api.js'
@@ -19,10 +19,10 @@ export function defaultProvider(descriptor: Pick<Descriptor, 'providers'> | unde
   return ROUTE_PROVIDER_PREFERENCE.find((p) => descriptor.providers.includes(p)) ?? descriptor.providers[0]
 }
 
-/** Params with a provider: the caller's, else the route's default. */
-export function withProvider(descriptor: Descriptor | undefined, params: ValidatedParams): ValidatedParams {
+/** Params with a provider: the caller's, else the one config.yml names for the route, else the route's default. */
+export function withProvider(descriptor: Descriptor | undefined, params: ValidatedParams, configured?: string): ValidatedParams {
   if (typeof params.provider === 'string' && params.provider) return params
-  const provider = defaultProvider(descriptor)
+  const provider = (configured && descriptor?.providers.includes(configured) ? configured : undefined) ?? defaultProvider(descriptor)
   return provider ? { provider, ...params } : params
 }
 
@@ -83,7 +83,7 @@ function shapeOf(descriptor: Descriptor | undefined): Pick<Descriptor, 'fields'>
 /** `GET /api/v1/<route>?…` → Frame. `results` that is one object (a few routes) becomes one row. */
 export async function callRoute(route: string, params: ValidatedParams, ctx: Ctx<Config>, opts: LoadOptions = {}): Promise<Frame> {
   const descriptor = await descriptorFor(ctx, route, opts)
-  const sent = applicableParams(descriptor, withProvider(descriptor, params))
+  const sent = applicableParams(descriptor, withProvider(descriptor, params, ctx.config.providers?.[route]))
   const results = await get<unknown>(ctx, `/${route.replace(/^\/+/, '')}`, toQuery(sent))
   const list: unknown[] = Array.isArray(results) ? results : results === null || results === undefined ? [] : [results]
   const rows = list.filter((r): r is Row => !!r && typeof r === 'object' && !Array.isArray(r))

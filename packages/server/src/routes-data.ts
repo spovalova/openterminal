@@ -161,7 +161,7 @@ export function createDataRoutes(deps: DataRouteDeps) {
       })
       .sort((a, b) => a.route.localeCompare(b.route))
     const stats = cat.stats()[name] ?? { routes: 0, alive: 0, dead: 0, unknown: 0 }
-    return c.json({ connector: name, status: registered.status, mode: registered.mode ?? 'kinds', descriptors, stats })
+    return c.json({ connector: name, status: registered.status, descriptors, stats })
   })
 
   // ---- liveness (written by (a)'s probe; readable for the Data page) ----

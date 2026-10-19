@@ -21,7 +21,7 @@ function registryWith(run: Registry['run']): Pick<Registry, 'run'> {
   return { run }
 }
 
-const input: TransformToolInputT = { inputs: { price: { kind: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '2y' } } }, code: 'result = price', columns: { pe: { unit: 'ratio', label: 'P/E (TTM)' } } }
+const input: TransformToolInputT = { inputs: { price: { recipe: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '2y' } } }, code: 'result = price', columns: { pe: { unit: 'ratio', label: 'P/E (TTM)' } } }
 
 describe('transform tool', () => {
   it('runs the query through the registry and returns the preview with lineage and fields', async () => {
@@ -35,7 +35,7 @@ describe('transform tool', () => {
     expect(res.preview.rowCount).toBe(2)
     expect(res.preview.stats.NVDA!.pe).toMatchObject({ first: 40, last: 42 })
     expect(res.note).toMatch(/transform over price: 2 rows/)
-    expect(seen[0]).toMatchObject({ inputs: { price: { kind: 'ohlcv' } }, code: 'result = price', columns: { pe: { unit: 'ratio' } } })
+    expect(seen[0]).toMatchObject({ inputs: { price: { recipe: 'ohlcv' } }, code: 'result = price', columns: { pe: { unit: 'ratio' } } })
     expect(steps).toEqual([{ tool: 'transform', args: seen[0], summary: 'transform(price) · 2 rows', ms: 0 }])
   })
 

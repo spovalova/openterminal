@@ -6,7 +6,6 @@ import {
   ConnectorRegistry,
   MemoryCache,
   defineConnector,
-  toFrame,
   NYSE_EARLY_CLOSES,
   NYSE_HOLIDAYS,
   OT_HELPERS,
@@ -113,18 +112,26 @@ const epsFrame = frame(
   EPS_ROWS.map(([d, a, e]) => ['NVDA', nyMidnight(d), a, e]),
 )
 
-/** A v1 connector answering ohlcv (three daily bars from 2025-10-01) and eps_history (four quarters) from memory. */
-function kindConnector() {
+/** A routes connector answering ohlcv (three daily bars from 2025-10-01) and eps_history (the newest `limit` quarters) from memory. */
+function barsAndEpsConnector() {
+  const symbols = { name: 'symbols', type: 'string[]' as const, required: true }
+  const S = (name: string) => ({ name, type: 'string' as const })
+  const N = (name: string) => ({ name, type: 'number' as const })
+  const descriptors: Descriptor[] = [
+    { connector: 'fake', route: 'ohlcv', summary: 'bars', params: [symbols, { name: 'interval', type: 'string', required: false }, { name: 'range', type: 'string', required: false }], providers: [], fields: [S('symbol'), { name: 'time', type: 'time' }, N('open'), N('high'), N('low'), N('close'), N('volume')] },
+    { connector: 'fake', route: 'eps_history', summary: 'eps', params: [symbols, { name: 'limit', type: 'integer', required: false, default: 8 }], providers: [], fields: [S('symbol'), S('date'), N('eps_actual'), N('eps_estimate'), N('surprise_pct')] },
+  ]
   return defineConnector({
     name: 'fake',
     config: z.object({}),
-    queries: {
-      ohlcv: async (p) =>
-        toFrame(
-          'ohlcv',
-          p.symbols.flatMap((symbol) => tradingDays('2025-10-01', '2025-10-03').map((d, i) => ({ symbol, time: nyMidnight(d) + 16 * 3_600_000, open: 10, high: 11, low: 9, close: 100 + i, volume: 100 }))),
-        ),
-      eps_history: async (p) => toFrame('eps_history', p.symbols.flatMap((symbol) => EPS_ROWS.slice(0, p.limit).map(([date, eps_actual, eps_estimate]) => ({ symbol, date, eps_actual, eps_estimate, surprise_pct: 5 })))),
+    descriptors: () => descriptors,
+    call: async (route, p) => {
+      const list = p.symbols as string[]
+      const rows =
+        route === 'ohlcv'
+          ? list.flatMap((symbol) => tradingDays('2025-10-01', '2025-10-03').map((d, i) => ({ symbol, time: nyMidnight(d) + 16 * 3_600_000, open: 10, high: 11, low: 9, close: 100 + i, volume: 100 })))
+          : list.flatMap((symbol) => EPS_ROWS.slice(0, Number(p.limit ?? 8)).map(([date, eps_actual, eps_estimate]) => ({ symbol, date, eps_actual, eps_estimate, surprise_pct: 5 })))
+      return inferFrame(rows, { connector: 'fake' }, { descriptor: descriptors.find((d) => d.route === route) })
     },
   })
 }
@@ -201,11 +208,11 @@ describe('P/E worked example', () => {
   )
 
   it(
-    'runs through the registry over v1 kind queries and stamps lineage, fields and ttl',
+    'runs through the registry over route queries and stamps lineage, fields and ttl',
     async () => {
       const registry = new ConnectorRegistry({ cache: new MemoryCache(), transform: engine, now: () => NOW })
-      registry.register(kindConnector(), {})
-      // The v1 eps_history has `date` as a string; ot.to_et turns it into the tz-aware time merge_asof needs.
+      registry.register(barsAndEpsConnector(), {})
+      // eps_history's `date` is a string here; ot.to_et turns it into the tz-aware time merge_asof needs.
       const code = [
         'e = eps.assign(time=ot.to_et(eps.date)).sort_values("time")',
         'e["eps_ttm"] = e.groupby("symbol")["eps_actual"].transform(lambda s: s.rolling(4).sum())',
@@ -216,7 +223,7 @@ describe('P/E worked example', () => {
         'result = m[["symbol", "time", "close", "eps_ttm", "pe"]]',
       ].join('\n')
       const frame = await registry.run({
-        inputs: { price: { kind: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '1mo' } }, eps: { kind: 'eps_history', params: { symbols: ['NVDA'], limit: 4 } } },
+        inputs: { price: { connector: 'fake', route: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '1mo' } }, eps: { connector: 'fake', route: 'eps_history', params: { symbols: ['NVDA'], limit: 4 } } },
         code,
         columns: { pe: { unit: 'ratio', label: 'P/E (TTM)' } },
       })
@@ -231,7 +238,7 @@ describe('P/E worked example', () => {
       expect(rows.map((r) => r.pe)).toEqual([null, null, null])
       // With eight reports the TTM as of 2025-10-01 is the four reported by then: 1.05 + 0.81 + 0.89 + 0.81 = 3.56; close 100.
       const eight = await registry.run({
-        inputs: { price: { kind: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '1mo' } }, eps: { kind: 'eps_history', params: { symbols: ['NVDA'], limit: 8 } } },
+        inputs: { price: { connector: 'fake', route: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '1mo' } }, eps: { connector: 'fake', route: 'eps_history', params: { symbols: ['NVDA'], limit: 8 } } },
         code,
       })
       expect(frameToObjects(eight)[0]!.pe).toBeCloseTo(100 / 3.56, 10)
@@ -243,8 +250,8 @@ describe('P/E worked example', () => {
     'a traceback comes back through the registry as TransformFailed with the traceback attached',
     async () => {
       const registry = new ConnectorRegistry({ cache: new MemoryCache(), transform: engine, now: () => NOW })
-      registry.register(kindConnector(), {})
-      const q: AnyQueryInput = { inputs: { price: { kind: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '1mo' } } }, code: 'result = price[["nope"]]' }
+      registry.register(barsAndEpsConnector(), {})
+      const q: AnyQueryInput = { inputs: { price: { connector: 'fake', route: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '1mo' } } }, code: 'result = price[["nope"]]' }
       const err = await registry.run(q).catch((e: unknown) => e)
       expect(err).toBeInstanceOf(TransformFailed)
       expect((err as TransformFailed).message).toMatch(/KeyError/)

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { preview, type Frame, type Widget } from '@terminal/core'
+import { preview, type Frame, type WidgetV2 } from '@terminal/core'
 import { DOWN, UP } from './mocks'
 
 const charts = vi.hoisted(() => ({ current: null as null | ReturnType<typeof import('./mocks')['makeChartsMock']> }))
@@ -59,14 +59,15 @@ describe('ChartView legend (chips in the plot\'s top-left)', () => {
 
   it('shows the widget\'s legend labels in place of the symbol, keeping the symbol on the row (A1)', () => {
     const { widget, frame } = fixture('A1')
-    const labelled = { ...widget, view: { type: 'series' as const, normalize: true, labels: { MU: 'Micron', STX: 'Seagate' } } } as Widget
+    const labelled: WidgetV2 = { ...widget, view: { preset: 'compare', normalize: true, labels: { MU: 'Micron', STX: 'Seagate' } } }
     render(<ChartView widget={labelled} frames={one(frame)} />)
     const items = legendItems()
     expect(items.map((el) => el.getAttribute('data-symbol'))).toEqual(['MU', 'SNDK', 'WDC', 'STX'])
     expect(items.map((el) => el.querySelector('span:nth-child(2)')!.textContent)).toEqual(['Micron', 'SNDK', 'WDC', 'Seagate'])
     expect(items.map((el) => el.getAttribute('title'))).toEqual(['MU', null, null, 'STX'])
-    expect(legendLabel('fed_funds', 'macro')).toBe('Fed funds')
-    expect(legendLabel('fed_funds', 'macro', { fed_funds: 'Policy rate' })).toBe('Policy rate')
+    expect(legendLabel('fed_funds')).toBe('Fed funds')
+    expect(legendLabel('fed_funds', { fed_funds: 'Policy rate' })).toBe('Policy rate')
+    expect(legendLabel('NVDA')).toBe('NVDA')
   })
 
   it('colours the change by direction', () => {
@@ -106,7 +107,6 @@ describe('ChartView v1 modes, preserved', () => {
     expect(chart!.chart.scales['right:0']!.mode).toBe(3)
     expect(chart!.series).toHaveLength(4)
     expect(chart!.series.every((s) => (s.definition as { type: string }).type === 'Line')).toBe(true)
-    expect(document.querySelector('[data-view="chart"]')!.getAttribute('data-mode')).toBe('normalize')
     expect(document.querySelector('[data-view="chart"]')!.getAttribute('data-preset')).toBe('compare')
   })
 
@@ -205,9 +205,9 @@ describe('ChartView lifecycle', () => {
     expect(mock().createChart).not.toHaveBeenCalled()
   })
 
-  it('viewFor picks ChartView for series views, chart presets and chart widgets', () => {
-    expect(viewFor({ type: 'series' })).toBe(ChartView)
-    expect(viewFor({ type: 'series', candle: true })).toBe(ChartView)
+  it('viewFor picks ChartView for the chart presets and chart widgets', () => {
+    expect(viewFor({ preset: 'compare', normalize: true })).toBe(ChartView)
+    expect(viewFor({ preset: 'price', candle: true })).toBe(ChartView)
     expect(viewFor({ preset: 'price' })).toBe(ChartView)
     expect(viewFor({ preset: 'curve' })).toBe(ChartView)
     expect(viewFor(fixture('A1').widget)).toBe(ChartView)
@@ -216,9 +216,9 @@ describe('ChartView lifecycle', () => {
 })
 
 describe('ChartView over macro frames', () => {
-  it('groups by series and plots value, one line per series in palette order, on business days, as a percent scale', () => {
-    const { widget, frame } = fixture('macro')
-    render(<ChartView widget={widget} frames={one(frame)} />)
+  it('groups by series (one macro dataset each) and plots value, one line per series in palette order, on business days, as a percent scale', () => {
+    const { widget, frames, frame } = fixture('macro')
+    render(<ChartView widget={widget} frames={frames} />)
     const [chart] = mock().charts
     expect(chart!.series.map((s) => (s.definition as { type: string }).type)).toEqual(['Line', 'Line', 'Line'])
     expect(chart!.series.map((s) => (s.options as { color: string }).color)).toEqual(['#4c8dff', '#ff9f43', '#2ecc71'])
@@ -226,20 +226,22 @@ describe('ChartView over macro frames', () => {
     expect((chart!.options as { timeScale: { timeVisible: boolean } }).timeScale.timeVisible).toBe(false)
     const data = chart!.series[0]!.stub.setData.mock.calls[0]![0] as { time: unknown; value: number }[]
     expect(data[0]!.time).toEqual({ year: 2025, month: 10, day: 24 })
-    expect(data.map((d) => d.value)).toEqual(frame.rows.filter((r) => r[0] === 'treasury_10y').map((r) => r[2]))
+    expect(data.map((d) => d.value)).toEqual(frame.rows.map((r) => r[1]))
     expect((chart!.series[0]!.options as { priceFormat: { type: string } }).priceFormat.type).toBe('custom')
-    expect(document.querySelector('[data-view="chart"]')!.getAttribute('data-kind')).toBe('macro')
   })
 
   it('legend shows each series as a rate with the move in basis points, from preview stats', () => {
-    const { widget, frame } = fixture('macro')
-    render(<ChartView widget={widget} frames={one(frame)} />)
-    const stats = preview(frame).stats
+    const { widget, frames } = fixture('macro')
+    render(<ChartView widget={widget} frames={frames} />)
+    // one dataset per series: the legend keys each line by its label (10Y, 2Y, Fed funds), the stats come per frame
+    const labels = ['10Y', '2Y', 'Fed funds']
+    const columns = ['year_10', 'year_2', 'rate']
+    const stats = Object.values(frames).map((f, i) => preview(f).stats['*']?.[columns[i]!] ?? Object.values(preview(f).stats)[0]![columns[i]!]!)
     const items = legendItems()
-    expect(items.map((el) => el.getAttribute('data-symbol'))).toEqual(['treasury_10y', 'treasury_2y', 'fed_funds'])
-    expect(items.map((el) => el.querySelector('span:nth-child(2)')!.textContent)).toEqual(['10Y', '2Y', 'Fed funds'])
-    for (const item of items) {
-      const v = stats[item.getAttribute('data-symbol')!]!.value!
+    expect(items.map((el) => el.getAttribute('data-symbol'))).toEqual(labels)
+    expect(items.map((el) => el.querySelector('span:nth-child(2)')!.textContent)).toEqual(labels)
+    for (const [i, item] of items.entries()) {
+      const v = stats[i]!
       expect(item.querySelector('[data-field="last"]')!.textContent).toBe(`${v.last.toFixed(2)}%`)
       const bp = Math.round((v.last - v.first) * 100)
       expect(item.querySelector('[data-field="change"]')!.textContent).toBe(`${bp > 0 ? '+' : ''}${bp} bp`)

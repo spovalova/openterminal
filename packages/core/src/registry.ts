@@ -6,8 +6,7 @@ import { parseParams, type Descriptor } from './descriptor.js'
 import type { FieldConfig } from './fields.js'
 import type { Frame, Lineage } from './frame.js'
 import { MS } from './clock.js'
-import { KINDS, KIND_NAMES, parseQuery, ttlFor, type Kind, type Query, type QueryInput } from './kinds.js'
-import { isLegacyQuery, isRecipeQuery, isRouteQuery, isTransformQuery, QueryV2Schema, type AnyQueryInput, type RecipeQuery, type RouteQuery, type TransformQuery } from './query.js'
+import { isRecipeQuery, isRouteQuery, isTransformQuery, QueryV2Schema, type AnyQueryInput, type RecipeQuery, type RouteQuery, type TransformQuery } from './query.js'
 import { RECIPE_PARAMS_INPUT, expandRecipe, recipeMap, recipeParamsFrame, recipeVersion, renameColumns, type Recipe, type RecipeRouteQuery } from './recipes.js'
 import { checkTransformInputs, checkTransformOutput, isTransformError, type TransformEngine } from './transform.js'
 import { globToRegExp } from './annotations.js'
@@ -17,13 +16,10 @@ export type ConnectorStatus = 'ok' | 'missing_config' | 'unreachable' | 'error'
 
 export type RegisteredConnector = {
   name: string
-  kinds: Kind[]
   status: ConnectorStatus
   error?: string
   /** One line from the connector's health probe, when it has one and it passed. */
   detail?: string
-  /** v2: how the connector was defined (kinds, routes, or both). */
-  mode?: Connector['mode']
 }
 
 export type HealthResult = { ok: true; detail?: string } | { ok: false; error: string }
@@ -33,19 +29,14 @@ export type RunOptions = { signal?: AbortSignal; bypassCache?: boolean }
 export interface Registry {
   /** Register a connector with its raw config. Registration order is routing priority. */
   register(c: Connector, config: unknown): RegisteredConnector
-  /** Kinds currently answerable by at least one healthy connector. */
-  kinds(): Kind[]
   connectors(): RegisteredConnector[]
-  /**
-   * Run a query: a v1 `{ kind, params }` exactly as before (validate, cache, connectors in order, validate the frame),
-   * or a v2 route, recipe or transform (PLAN.md section 17).
-   */
+  /** Run a route, recipe or transform query (PLAN.md section 17). */
   run(q: AnyQueryInput, opts?: RunOptions): Promise<Frame>
   /** Run a registered connector's health probe (ok when it has none). Unknown or unconfigured connectors are not ok. */
   health?(name: string, opts?: { timeoutMs?: number }): Promise<HealthResult>
-  /** v2: the catalog of every healthy connector's descriptors. */
+  /** The catalog of every healthy connector's descriptors. */
   catalog?(): Promise<Catalog>
-  /** v2: the recipes the registry resolves. */
+  /** The recipes the registry resolves. */
   recipes?(): Recipe[]
 }
 
@@ -76,11 +67,11 @@ export type RegistryOptions = {
   cache?: Cache
   http?: Http
   log?: (msg: string) => void
-  /** v2: recipes to resolve `{ recipe, params }` queries with. */
+  /** Recipes to resolve `{ recipe, params }` queries with. */
   recipes?: readonly Recipe[]
-  /** v2: annotation rules applied to every route frame. */
+  /** Annotation rules applied to every route frame. */
   annotations?: readonly AnnotationRule[]
-  /** v2: the engine that runs transform queries; without one they fail with a clear error. */
+  /** The engine that runs transform queries; without one they fail with a clear error. */
   transform?: TransformEngine
   now?: () => number
 }
@@ -150,9 +141,7 @@ export class ConnectorRegistry implements Registry {
 
   register(c: Connector, config: unknown): RegisteredConnector {
     const parsed = c.config.safeParse(config ?? {})
-    const info: RegisteredConnector = parsed.success
-      ? { name: c.name, kinds: c.kinds, status: 'ok', mode: c.mode ?? 'kinds' }
-      : { name: c.name, kinds: c.kinds, status: 'missing_config', error: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '), mode: c.mode ?? 'kinds' }
+    const info: RegisteredConnector = parsed.success ? { name: c.name, status: 'ok' } : { name: c.name, status: 'missing_config', error: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') }
     const ctx: Ctx<unknown> = {
       http: this.http,
       config: parsed.success ? parsed.data : undefined,
@@ -164,12 +153,6 @@ export class ConnectorRegistry implements Registry {
     else this.entries.push({ connector: c, ctx, info })
     this.catalogMemo = undefined
     return info
-  }
-
-  kinds(): Kind[] {
-    const set = new Set<Kind>()
-    for (const e of this.entries) if (e.info.status === 'ok') e.connector.kinds.forEach((k) => set.add(k))
-    return KIND_NAMES.filter((k) => set.has(k))
   }
 
   connectors(): RegisteredConnector[] {
@@ -215,7 +198,7 @@ export class ConnectorRegistry implements Registry {
     }
   }
 
-  // ------------------------------------------------------------------------------------ v2: catalog
+  // ------------------------------------------------------------------------------------ catalog
 
   /** A connector's descriptors, loaded once per registration (a failure is logged and leaves the connector with none). */
   async descriptorsOf(name: string): Promise<Descriptor[]> {
@@ -249,7 +232,6 @@ export class ConnectorRegistry implements Registry {
   // ------------------------------------------------------------------------------------ run
 
   async run(input: AnyQueryInput, opts: RunOptions = {}): Promise<Frame> {
-    if (isLegacyQuery(input)) return this.runLegacy(input as QueryInput, opts)
     const q = QueryV2Schema.parse(input)
     if (!opts.bypassCache) {
       const hit = this.cache?.get(q)
@@ -268,35 +250,6 @@ export class ConnectorRegistry implements Registry {
     return frame
   }
 
-  /** The v1 kind path, unchanged: validate, cache, try connectors in order, validate the frame's columns against the catalog. */
-  private async runLegacy(input: QueryInput, opts: RunOptions): Promise<Frame> {
-    const q = parseQuery(input)
-    if (!opts.bypassCache) {
-      const hit = this.cache?.get(q)
-      if (hit) return hit
-    }
-    const candidates = this.entries.filter((e) => e.info.status === 'ok' && e.connector.kinds.includes(q.kind))
-    if (candidates.length === 0) throw new RegistryError(`no connector answers kind "${q.kind}"`)
-
-    const causes: { connector: string; error: string }[] = []
-    for (const e of candidates) {
-      const handler = e.connector.queries[q.kind] as ((p: unknown, ctx: Ctx<unknown>) => Promise<Frame>) | undefined
-      if (!handler) continue
-      try {
-        const raw = await handler(q.params, { ...e.ctx, signal: opts.signal })
-        const frame = validateFrame(q, raw, e.connector.name)
-        this.cache?.set(q, frame)
-        return frame
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        causes.push({ connector: e.connector.name, error: msg })
-        this.log(`[${e.connector.name}] ${q.kind} failed: ${msg}`)
-        if (opts.signal?.aborted) break
-      }
-    }
-    throw new RegistryError(`${q.kind} failed on every connector: ${causes.map((c) => `${c.connector}: ${c.error}`).join(' | ')}`, causes)
-  }
-
   /** One route on one connector: params validated against the descriptor, the frame annotated, TTL and lineage stamped. */
   private async runRoute(q: RouteQuery, opts: RunOptions): Promise<Frame> {
     const e = this.entries.find((x) => x.connector.name === q.connector)
@@ -306,14 +259,10 @@ export class ConnectorRegistry implements Registry {
     if (!descriptor) throw new RegistryError(`connector "${q.connector}" has no route "${q.route}"`)
     const params = parseParams(descriptor, q.params)
     const raw = await e.connector.call(q.route, params, { ...e.ctx, signal: opts.signal })
-    // A kind route (a v1 connector's `quote`) is validated against the kind's columns and keeps the kind's TTL; a
-    // connector's own route of the same name is a v2 route like any other.
-    const isKind = (e.connector.kinds as string[]).includes(q.route) && !(await e.connector.ownRoutes(e.ctx)).has(q.route)
-    const checked = isKind ? validateFrame({ kind: q.route as Kind, params: q.params } as Query, raw, e.connector.name) : raw
-    const ttl = isKind ? checked.meta.ttl : ttlForRoute(q.route, params)
+    const ttl = ttlForRoute(q.route, params)
     const lineage: Lineage = { connector: q.connector, route: q.route, params: { ...params } }
     if (typeof params.provider === 'string') lineage.provider = params.provider
-    const stamped: Frame = { ...checked, meta: { ...checked.meta, connector: e.connector.name, fetchedAt: checked.meta?.fetchedAt ?? this.now(), ttl, lineage } }
+    const stamped: Frame = { ...raw, meta: { ...raw.meta, connector: e.connector.name, fetchedAt: raw.meta?.fetchedAt ?? this.now(), ttl, lineage } }
     return applyAnnotations(stamped, { connector: q.connector, route: q.route }, this.annotationRules)
   }
 
@@ -423,29 +372,4 @@ export class ConnectorRegistry implements Registry {
       meta: { ...result.meta, connector: 'transform', fetchedAt: this.now(), ttl: ttls.length ? Math.min(...ttls) : 0, fields, lineage: { code, inputs: lineageInputs } },
     }
   }
-}
-
-/** Validates columns against the catalog exactly (names, types, order), checks every non-null cell's type, and stamps meta. */
-export function validateFrame(q: Query, frame: Frame, connector: string): Frame {
-  const expected = KINDS[q.kind].columns
-  const got = frame.columns
-  const same = got.length === expected.length && got.every((c, i) => c.name === expected[i]!.name && c.type === expected[i]!.type)
-  if (!same) {
-    throw new Error(
-      `frame columns for ${q.kind} do not match catalog. expected [${expected.map((c) => c.name).join(', ')}] got [${got.map((c) => c.name).join(', ')}]`,
-    )
-  }
-  frame.rows.forEach((row, r) => {
-    if (row.length !== expected.length) throw new Error(`row ${r} has ${row.length} cells, expected ${expected.length}`)
-    row.forEach((cell, i) => {
-      if (cell === null || cell === undefined) return
-      const want = expected[i]!.type
-      const ok =
-        want === 'string' ? typeof cell === 'string'
-        : want === 'boolean' ? typeof cell === 'boolean'
-        : typeof cell === 'number' && Number.isFinite(cell) // number and time (epoch ms)
-      if (!ok) throw new Error(`row ${r} column ${expected[i]!.name}: expected ${want}, got ${cell instanceof Date ? 'Date' : typeof cell}`)
-    })
-  })
-  return { ...frame, meta: { connector, fetchedAt: frame.meta?.fetchedAt ?? Date.now(), ttl: ttlFor(q) } }
 }

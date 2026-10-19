@@ -38,7 +38,7 @@ export const FieldConfigSchema = z.object({
   color: z.string().min(1).optional(),
   /** 1 is shown first and survives the narrowest widget; higher numbers are shed first. */
   priority: z.number().int().min(1).max(9).optional(),
-  /** The stat view's headline column; replaces the v1 STAT_KEY_COLUMN table. */
+  /** The stat view's headline column. */
   key: z.boolean().optional(),
   /** One line from the descriptor; shown in tooltips and the preview. */
   description: z.string().optional(),

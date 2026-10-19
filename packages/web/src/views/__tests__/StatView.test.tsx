@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { KINDS, STAT_KEY_COLUMN, STAT_KINDS, numericColumns, parseWidget, statColumn, type Frame, type Kind, type WidgetInput } from '@terminal/core'
+import { type Frame, type WidgetV2 } from '@terminal/core'
 
 import { StatView, columnLabel, statRows } from '../StatView'
 import { viewFor } from '../view-for'
@@ -9,33 +9,19 @@ import { fixture } from '../fixtures'
 
 afterEach(cleanup)
 
-function frame(kind: Kind, rows: unknown[][]): Frame {
-  return { columns: KINDS[kind].columns, rows, meta: { connector: 'fixture', fetchedAt: 0, ttl: 60_000 } }
+/** A frame with the given columns and the stat field config (the key column, its change column, formats). */
+function frame(columns: [string, 'string' | 'number' | 'time'][], rows: unknown[][], fields: Frame['meta']['fields'] = {}): Frame {
+  return { columns: columns.map(([name, type]) => ({ name, type })), rows, meta: { connector: 'fixture', fetchedAt: 0, ttl: 60_000, fields } }
 }
-const widget = (kind: Kind, params: Record<string, unknown>, view: WidgetInput['view'] = { type: 'stat' }) =>
-  parseWidget({ id: 'w', title: 'x', size: 'sm', query: { kind, params } as WidgetInput['query'], view })
+const QUOTE: [string, 'string' | 'number'][] = [['symbol', 'string'], ['price', 'number'], ['change_pct', 'number'], ['volume', 'number'], ['market_state', 'string'], ['extended_price', 'number'], ['extended_change_pct', 'number']]
+const quoteFields = { price: { unit: 'usd' as const, format: 'price' as const, key: true }, change_pct: { unit: 'percent' as const, format: 'change' as const }, extended_price: { unit: 'usd' as const, format: 'price' as const }, extended_change_pct: { unit: 'percent' as const, format: 'change' as const } }
+const quote = (rows: unknown[][]) => frame(QUOTE, rows, quoteFields)
+const widget = (recipe: string, params: Record<string, unknown>, view: WidgetV2['view'] = { preset: 'stat' }): WidgetV2 => ({ id: 'w', title: 'x', size: 'sm', data: { main: { recipe, params } }, view })
 
 const value = (symbol?: string) => (symbol ? document.querySelector(`[data-symbol="${symbol}"] [data-field="value"]`) : document.querySelector('[data-field="value"]'))
 
-describe('the key-column table', () => {
-  it('names a numeric column of each stat kind, and only those kinds take a stat view', () => {
-    expect(STAT_KEY_COLUMN).toEqual({ quote: 'price', metrics: 'pe', volatility: 'iv30', estimates: 'target_consensus', profile: 'market_cap', short_interest: 'days_to_cover' })
-    for (const [kind, column] of Object.entries(STAT_KEY_COLUMN) as [Kind, string][]) {
-      expect(STAT_KINDS.has(kind)).toBe(true)
-      expect(numericColumns(kind), kind).toContain(column)
-      expect(KINDS[kind].columns[0]!.name, kind).toBe('symbol')
-    }
-    expect(STAT_KINDS.has('ohlcv')).toBe(false)
-    expect(STAT_KINDS.has('news')).toBe(false)
-  })
-
-  it('statColumn is the view column when set, else the key column', () => {
-    expect(statColumn('quote', { type: 'stat' })).toBe('price')
-    expect(statColumn('metrics', { type: 'stat', column: 'forward_pe' })).toBe('forward_pe')
-    expect(statColumn('news', { type: 'table' })).toBeUndefined()
-  })
-
-  it('labels the key columns for people', () => {
+describe('column labels', () => {
+  it('labels the common columns for people and falls back to the name with spaces', () => {
     expect(columnLabel('target_consensus')).toBe('consensus target')
     expect(columnLabel('days_to_cover')).toBe('days to cover')
     expect(columnLabel('iv30')).toBe('IV30')
@@ -45,7 +31,8 @@ describe('the key-column table', () => {
 
 describe('statRows', () => {
   it('quote: the price, the signed day change, and the extended-hours line outside the regular session', () => {
-    const rows = statRows(frame('quote', [['NVDA', 177.8, -3.48, 1, 'POST', 178.42, 0.35]]), 'quote', 'price')
+    const control = { change: 'change_pct', format: 'price' as const, formats: { change_pct: 'change' as const, price: 'price' as const } }
+    const rows = statRows(quote([['NVDA', 177.8, -3.48, 1, 'POST', 178.42, 0.35]]), 'price', control)
     expect(rows).toEqual([
       {
         symbol: 'NVDA',
@@ -55,36 +42,41 @@ describe('statRows', () => {
         extended: { state: 'after hours', price: '178.42', change: '+0.35%', dir: 'up' },
       },
     ])
-    const regular = statRows(frame('quote', [['MU', 199.6, 3.29, 1, 'REGULAR', 200, 0.1]]), 'quote', 'price')[0]!
+    const regular = statRows(quote([['MU', 199.6, 3.29, 1, 'REGULAR', 200, 0.1]]), 'price', control)[0]!
     expect(regular.secondary).toEqual({ text: '+3.29%', dir: 'up' })
     expect(regular.extended).toBeNull()
   })
 
-  it('takes the first row per symbol (the newest report for short_interest) and formats by the kind', () => {
-    const f = frame('short_interest', [
-      ['MU', '2026-09-30', 30_000_000, 4.2, 20_000_000, 1.5],
-      ['MU', '2026-09-15', 28_000_000, -1.1, 20_000_000, 1.4],
-      ['WDC', '2026-09-30', 10_000_000, -2.0, 5_000_000, 2.0],
-    ])
-    const rows = statRows(f, 'short_interest', 'days_to_cover')
+  it('takes the first row per symbol (short interest reports arrive newest first) and formats by the control', () => {
+    const f = frame(
+      [['symbol', 'string'], ['date', 'string'], ['short_interest', 'number'], ['change_pct', 'number'], ['avg_volume', 'number'], ['days_to_cover', 'number']],
+      [
+        ['MU', '2026-09-30', 30_000_000, 4.2, 20_000_000, 1.5],
+        ['MU', '2026-09-15', 28_000_000, -1.1, 20_000_000, 1.4],
+        ['WDC', '2026-09-30', 10_000_000, -2.0, 5_000_000, 2.0],
+      ],
+    )
+    const rows = statRows(f, 'days_to_cover', { change: 'change_pct', format: 'ratio', formats: { change_pct: 'change' } })
     expect(rows.map((r) => [r.symbol, r.text, r.secondary?.text, r.secondary?.dir])).toEqual([
       ['MU', '1.50', '+4.20%', 'up'],
       ['WDC', '2.00', '-2.00%', 'down'],
     ])
-    expect(statRows(frame('profile', [['NVDA', 'NVIDIA', 'NASDAQ', 'Technology', 'Semis', 4_400_000_000_000, 1, 1, 'd']]), 'profile', 'market_cap')[0]).toMatchObject({ text: '4.40T', secondary: { text: 'Technology', dir: null } })
-    expect(statRows(frame('volatility', [['NVDA', 44.8, 71.2, 31.5, 33.5, null, 1, 1, 1, 1]]), 'volatility', 'iv30')[0]).toMatchObject({ text: '44.80%', secondary: { text: '33.50', label: 'IV rank' } })
+    const profile = frame([['symbol', 'string'], ['name', 'string'], ['sector', 'string'], ['market_cap', 'number']], [['NVDA', 'NVIDIA', 'Technology', 4_400_000_000_000]])
+    expect(statRows(profile, 'market_cap', { change: 'sector', format: 'compact', formats: { sector: 'text' } })[0]).toMatchObject({ text: '4.40T', secondary: { text: 'Technology', dir: null } })
+    const vol = frame([['symbol', 'string'], ['iv30', 'number'], ['iv_rank', 'number']], [['NVDA', 44.8, 33.5]])
+    expect(statRows(vol, 'iv30', { change: 'iv_rank', format: 'percent', formats: { iv_rank: 'integer' } })[0]).toMatchObject({ text: '44.80%', secondary: { text: '34' } })
   })
 
   it('skips the secondary line when it is the column on display, and shows a dash for a null value', () => {
-    const f = frame('metrics', [['RDDT', 1, null, 16.13, 0.78, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, null]])
-    expect(statRows(f, 'metrics', 'pe')[0]).toMatchObject({ value: null, text: '—', secondary: { text: '16.13', label: 'forward' } })
-    expect(statRows(f, 'metrics', 'forward_pe')[0]).toMatchObject({ value: 16.13, text: '16.13', secondary: null })
+    const f = frame([['symbol', 'string'], ['pe', 'number'], ['forward_pe', 'number']], [['RDDT', null, 16.13]])
+    expect(statRows(f, 'pe', { change: 'forward_pe', format: 'ratio', formats: { forward_pe: 'price' } })[0]).toMatchObject({ value: null, text: '—', secondary: { text: '16.13' } })
+    expect(statRows(f, 'forward_pe', { change: 'forward_pe', format: 'ratio', formats: { forward_pe: 'price' } })[0]).toMatchObject({ value: 16.13, text: '16.13', secondary: null })
   })
 })
 
 describe('StatView', () => {
-  it('is the view for { type: "stat" }', () => {
-    expect(viewFor({ type: 'stat' })).toBe(StatView)
+  it('is the view for the stat preset', () => {
+    expect(viewFor({ preset: 'stat' })).toBe(StatView)
   })
 
   it('renders one symbol as a hero number with the symbol as its label and the change under it', () => {
@@ -117,12 +109,12 @@ describe('StatView', () => {
     render(<StatView widget={w} frames={{ main: f }} />)
     expect(document.querySelector('[data-view="stat"]')!.getAttribute('data-column')).toBe('forward_pe')
     expect(value()!.textContent).toBe('16.13')
-    expect(screen.getByText('forward P/E')).toBeTruthy()
+    expect(screen.getByText('Fwd P/E')).toBeTruthy()
   })
 
   it('ticks the number once when a refreshed frame changes it, with the direction', async () => {
     const w = widget('quote', { symbols: ['NVDA'] })
-    const at = (price: number) => frame('quote', [['NVDA', price, 1, 1, 'REGULAR', null, null]])
+    const at = (price: number) => quote([['NVDA', price, 1, 1, 'REGULAR', null, null]])
     const { rerender } = render(<StatView widget={w} frames={{ main: at(100) }} />)
     expect(value()!.getAttribute('data-tick')).toBeNull()
     await act(async () => rerender(<StatView widget={w} frames={{ main: at(101) }} />))
@@ -136,7 +128,7 @@ describe('StatView', () => {
   })
 
   it('shows the empty state when the frame has no rows', () => {
-    render(<StatView widget={widget('quote', { symbols: ['NVDA'] })} frames={{ main: frame('quote', []) }} />)
+    render(<StatView widget={widget('quote', { symbols: ['NVDA'] })} frames={{ main: quote([]) }} />)
     expect(document.querySelector('[data-view="stat"]')).toBeNull()
     expect(screen.getByText('No data')).toBeTruthy()
   })

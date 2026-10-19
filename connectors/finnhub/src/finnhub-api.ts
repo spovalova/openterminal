@@ -1,5 +1,5 @@
-// Helpers for talking to Finnhub: URL building, rate limiting, 429 retry, per-symbol fan-out.
-// Handlers live in index.ts; nothing here knows about frames.
+// Helpers for talking to Finnhub: URL building, rate limiting, 429 retry. The routes live in call.ts; nothing here
+// knows about frames.
 import { HttpError, type Ctx } from '@terminal/core'
 
 export const BASE_URL = 'https://finnhub.io/api/v1'
@@ -67,26 +67,3 @@ export async function get<T>(ctx: Ctx<Config>, path: string, params: Record<stri
     return once()
   }
 }
-
-/**
- * Run `fn` for every symbol in parallel and concatenate the rows.
- * A failing symbol is logged and skipped; the call only throws when every symbol failed.
- */
-export async function perSymbol<R>(ctx: Ctx<Config>, symbols: string[], fn: (symbol: string) => Promise<R[]>): Promise<R[]> {
-  const results = await Promise.allSettled(symbols.map(fn))
-  const rows: R[] = []
-  const failures: string[] = []
-  results.forEach((r, i) => {
-    if (r.status === 'fulfilled') rows.push(...r.value)
-    else failures.push(`${symbols[i]}: ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`)
-  })
-  failures.forEach((f) => ctx.log(`skipped ${f}`))
-  if (symbols.length > 0 && failures.length === symbols.length) throw new Error(`finnhub: every symbol failed (${failures.join('; ')})`)
-  return rows
-}
-
-/** YYYY-MM-DD in UTC. */
-export const isoDay = (ms: number): string => new Date(ms).toISOString().slice(0, 10)
-
-/** Finnhub `hour` → catalog `session`. */
-export const toSession = (hour: string | undefined): 'bmo' | 'amc' | null => (hour === 'bmo' || hour === 'amc' ? hour : null)

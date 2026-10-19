@@ -151,6 +151,3 @@ export const RECORDED_AT = new Date('2026-10-16T20:40:00.000Z')
 
 /** Sunday 2026-10-18 08:00 ET: the day after the v1.2 fixtures were recorded (Saturday evening ET), used as "today" for option expirations. */
 export const V12_NOW = new Date('2026-10-18T12:00:00.000Z')
-
-/** The v1.2 kinds the connector answers, in catalog order, after the v1 four. */
-export const V12_KINDS = ['profile', 'metrics', 'estimates', 'eps_history', 'dividends', 'insiders', 'institutions', 'short_interest', 'options', 'holdings'] as const

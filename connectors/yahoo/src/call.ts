@@ -1,14 +1,30 @@
 // Yahoo `descriptors()` and `call(route, params, ctx)` (PLAN.md section 17): the five yahoo-finance2 endpoints
-// as routes, answered through core's `inferFrame`. No unit conversion here: v2 frames carry Yahoo's values
-// (fractions where Yahoo sends fractions) and the annotations say what they are. The kind handlers are untouched.
+// as routes, answered through core's `inferFrame`. No unit conversion here: frames carry Yahoo's values
+// (fractions where Yahoo sends fractions) and the annotations say what they are.
 import { readFileSync } from 'node:fs'
 import { inferFrame, parseDescriptors, type CallHandler, type Descriptor, type Frame, type ValidatedParams } from '@terminal/core'
 import type { ChartOptions, ChartResultArray, OptionsResult, QuoteSummaryModules, QuoteSummaryResult, YahooClient } from './client.js'
 import { fanOut, normalizeSymbols } from './fanout.js'
-import { pickExpiration } from './options.js'
 import { nyDate, utcDate } from './time.js'
 
 type Row = Record<string, unknown>
+
+/** Whole days from one YYYY-MM-DD to another. */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000)
+}
+
+/**
+ * The expiration rule over Yahoo's listed dates (00:00Z stamps, ascending): a requested date snaps to the first
+ * listed expiration on or after it; omitted means the nearest at least 7 days out, else the nearest at least 1 day
+ * out. Undefined when nothing qualifies. The `options` recipe applies the same rule to a whole chain in pandas; the
+ * route needs it here because Yahoo serves one expiration per call.
+ */
+export function pickExpiration(listed: Date[], today: string, requested?: string): Date | undefined {
+  const dates = [...listed].sort((a, b) => a.getTime() - b.getTime())
+  if (requested !== undefined) return dates.find((d) => utcDate(d) >= requested)
+  return dates.find((d) => daysBetween(today, utcDate(d)) >= 7) ?? dates.find((d) => daysBetween(today, utcDate(d)) >= 1)
+}
 
 let memo: Descriptor[] | undefined
 /** The five yahoo-finance2 endpoints as descriptors, read once from descriptors.json and validated. */

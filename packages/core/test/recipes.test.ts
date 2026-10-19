@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { KIND_NAMES, RECIPE_PARAMS_INPUT, applyAnnotations, controlFor, datasetFieldsFrom, expandRecipe, parseRecipes, recipeDatasets, recipeDescriptor, recipeParams, recipeParamsFrame, recipeParamsSchema, recipeRouteAlternatives, recipeSummaryLines, renameColumns, renderValue, titleFor, validateRecipe, type Frame, type Recipe } from '../src/index.js'
+import { RECIPE_PARAMS_INPUT, applyAnnotations, controlFor, datasetFieldsFrom, expandRecipe, parseRecipes, recipeDatasets, recipeDescriptor, recipeParams, recipeParamsFrame, recipeParamsSchema, recipeRouteAlternatives, recipeSummaryLines, renameColumns, renderValue, titleFor, validateRecipe, type Frame, type Recipe } from '../src/index.js'
 import { builtinAnnotations, builtinRecipes } from '../src/node.js'
 
 const recipes = builtinRecipes()
 const by = (name: string) => recipes.find((r) => r.name === name)!
 
 describe('recipes.yml', () => {
-  it('parses, has unique names, and carries every one of the 22 kinds', () => {
+  it('parses, has unique names, and carries every one of the 22 v1 kinds as a recipe of the same name', () => {
     const names = recipes.map((r) => r.name)
     expect(new Set(names).size).toBe(names.length)
-    for (const kind of KIND_NAMES) expect(names, kind).toContain(kind)
+    const kinds = ['search', 'quote', 'ohlcv', 'news', 'earnings', 'profile', 'metrics', 'financials', 'estimates', 'eps_history', 'dividends', 'insiders', 'institutions', 'short_interest', 'options', 'volatility', 'calendar', 'ipos', 'movers', 'holdings', 'macro', 'yield_curve']
+    for (const kind of kinds) expect(names, kind).toContain(kind)
     expect(names.length).toBeGreaterThanOrEqual(22)
     for (const r of recipes) expect(validateRecipe(r), r.name).toEqual([])
   })

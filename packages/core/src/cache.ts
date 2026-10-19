@@ -2,8 +2,8 @@ import type { Frame } from './frame.js'
 import { canonicalKey, type AnyQuery } from './query.js'
 
 /**
- * The frame cache. Keyed by `canonicalKey`: `kind:params` for v1 queries (unchanged from v1), `route:…`,
- * `recipe:…` and `transform:…` for v2 ones. The server's persistent cache (phase 1) implements the same interface.
+ * The frame cache. Keyed by `canonicalKey`: `route:…`, `recipe:…` and `transform:…`. The server's persistent cache
+ * (SqliteCache) implements the same interface.
  */
 export interface Cache {
   get(q: AnyQuery): Frame | undefined
@@ -13,7 +13,7 @@ export interface Cache {
   clear(): void
 }
 
-/** The cache key for any query. Equal to v1's `kind:stable(params)` for kind queries. */
+/** The cache key for any query. */
 export function cacheKey(q: AnyQuery): string {
   return canonicalKey(q)
 }
