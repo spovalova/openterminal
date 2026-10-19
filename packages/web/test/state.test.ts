@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createWorkspace, toFrame, type ServerMsg, type Widget } from '@terminal/core'
+import { createWorkspace, frameKey, toFrame, type ServerMsg, type Widget } from '@terminal/core'
 import { initialState, layoutFor, reducer, workspaceState, type Action, type AppState } from '../src/state'
 
 const widget: Widget = {
@@ -45,10 +45,13 @@ describe('reducer: prompt message sequence', () => {
     expect(s.frames).toEqual({})
 
     const frame = toFrame('quote', [{ symbol: 'MU', price: 100 }], { connector: 'yahoo' })
+    // v2: frames are keyed by workspace, widget and dataset; a v1 server's frame (no workspaceId) lands under the bare key.
     s = reducer(s, server({ t: 'frame', widgetId: 'w2', frame }))
-    expect(s.frames.w2).toBe(frame)
+    expect(s.frames[frameKey({ widgetId: 'w2' })]).toBe(frame)
     s = reducer(s, server({ t: 'frameError', widgetId: 'w1', error: 'boom' }))
-    expect(s.frameErrors.w1).toBe('boom')
+    expect(s.frameErrors[frameKey({ widgetId: 'w1' })]).toBe('boom')
+    s = reducer(s, server({ t: 'frame', widgetId: 'w2', workspaceId: 'ws1', dataset: 'events', frame }))
+    expect(s.frames[frameKey({ workspaceId: 'ws1', widgetId: 'w2', dataset: 'events' })]).toBe(frame)
 
     s = reducer(s, server({ t: 'delta', workspaceId: 'ws1', text: 'Over three months ' }))
     s = reducer(s, server({ t: 'delta', workspaceId: 'ws1', text: 'MU is up 12%. [[widget:w1]]' }))
@@ -76,7 +79,7 @@ describe('reducer: prompt message sequence', () => {
     const w3: Widget = { ...widget2, id: 'w3' }
     s = reducer(s, server({ t: 'widgets', workspaceId: 'ws1', widgets: [widget2, w3] }))
     expect(s.workspaces[0]!.widgets.map((w) => w.id)).toEqual(['w2', 'w3'])
-    expect(Object.keys(s.frames)).toEqual(['w2'])
+    expect(Object.keys(s.frames)).toEqual([frameKey({ widgetId: 'w2' })])
   })
 
   it('failed moves to error, keeps the prompt for retry, and promptSent clears it', () => {

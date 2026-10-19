@@ -13,6 +13,7 @@ import { isModKey, isTyping, MOD } from './platform'
 import { TerminalSocket } from './socket'
 import { SocketContext } from './socketContext'
 import { AppContext, initialState, layoutFor, reducer, workspaceState, type AppState } from './state'
+import { frameMatches, hasAnyFrame } from './state/frames'
 import { withViewTransition } from './transition'
 
 const ACTIVE_KEY = 'terminal.activeWorkspace'
@@ -33,8 +34,11 @@ export function App() {
     () =>
       new TerminalSocket({
         onStatus: (status) => dispatch({ type: 'socket', status }),
-        onMessage: (msg) => {
+        onMessage: (raw) => {
           const s = stateRef.current
+          // A v1 server pushes frames only for the focused workspace and without a workspaceId: stamp the active one,
+          // so frames key by workspace even before the server says so (PLAN.md section 17, feature 8).
+          const msg = (raw.t === 'frame' || raw.t === 'frameError') && !raw.workspaceId && s.activeId ? { ...raw, workspaceId: s.activeId } : raw
           if (msg.t === 'started' && msg.workspaceId === s.activeId) {
             const workspace = s.workspaces.find((w) => w.id === msg.workspaceId)
             if (layoutFor(workspace, workspaceState(s, msg.workspaceId)) === 'empty') {
@@ -102,15 +106,23 @@ export function App() {
       /* storage unavailable */
     }
     if (activeWs.status === 'streaming') return
+    // Focus makes the server push every frame of this workspace, scoped by workspace. The HTTP route looks a widget up
+    // by id alone, and ids repeat across workspaces, so it is only the fallback while the socket is down, and a frame
+    // whose columns are not this widget's kind is dropped in favour of a scoped refresh.
+    if (state.socket === 'open') return
     const s = stateRef.current
+    const workspaceId = activeWorkspace?.id
     for (const widget of activeWorkspace?.widgets ?? []) {
-      if (s.frames[widget.id] || s.frameErrors[widget.id]) continue
+      if (hasAnyFrame(s.frames, workspaceId, widget.id) || hasAnyFrame(s.frameErrors, workspaceId, widget.id)) continue
       void api
         .widgetFrame(widget.id)
-        .then((frame) => dispatch({ type: 'frameLoaded', widgetId: widget.id, frame }))
-        .catch(() => socket.refresh(widget.id, activeWorkspace?.id))
+        .then((frame) => {
+          if (frameMatches(widget, frame)) dispatch({ type: 'frameLoaded', widgetId: widget.id, frame, ...(workspaceId ? { workspaceId } : {}) })
+          else socket.refresh(widget.id, workspaceId)
+        })
+        .catch(() => socket.refresh(widget.id, workspaceId))
     }
-  }, [state.activeId, widgetKey, socket])
+  }, [state.activeId, state.socket, widgetKey, socket])
 
   // Keyboard: ⌘K or `/` opens the palette, ⌘\ toggles the sidebar, Escape closes overlays.
   useEffect(() => {

@@ -24,6 +24,10 @@ export type DataTableProps = {
   className?: string
   /** Reference instant for `time` formatting (defaults to now at render). */
   now?: number
+  /** The row to highlight (the table control's `highlight`): an accent wash and `data-highlight`. */
+  highlightRow?: (row: unknown[]) => boolean
+  /** Best and worst marks per cell (compare tables): a faint up or down wash under the cell's own colour. */
+  cellMark?: (row: unknown[], column: string) => 'best' | 'worst' | undefined
 }
 
 /** Strings longer than this are capped at 64ch with an ellipsis and a title tooltip. */
@@ -51,7 +55,7 @@ function label(name: string, labels?: Record<string, string>): string {
  * descending. The table sorts its rows itself from `sort` (controlled) or its
  * own state; `onSort(column)` is called on every header click either way.
  */
-export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, onSort, labels, priority, stickyHeader = true, className, now }) => {
+export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, onSort, labels, priority, stickyHeader = true, className, now, highlightRow, cellMark }) => {
   const [internal, setInternal] = useState<{ column: string; dir: SortDir } | undefined>(undefined)
   const active = sort ?? internal
   const fmts = useMemo(() => ({ ...inferFormats(columns), ...formats }), [columns, formats])
@@ -109,13 +113,16 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
           </tr>
         </thead>
         <tbody>
-          {sorted.map((row, ri) => (
-            <tr key={ri} className="hover:bg-surface-2">
+          {sorted.map((row, ri) => {
+            const highlighted = highlightRow?.(row) ?? false
+            return (
+            <tr key={ri} data-highlight={highlighted ? '' : undefined} className={clsx('hover:bg-surface-2', highlighted && 'bg-accent/10 hover:bg-accent/15')}>
               {columns.map((c, ci) => {
                 const f = fmts[c.name] ?? 'text'
                 const v = row[ci]
                 const text = formatCell(v, f, nowMs)
                 const dir = f === 'change' ? direction(v) : null
+                const mark = cellMark?.(row, c.name)
                 const numeric = isNumericFormat(f)
                 // Numbers, dates, times and tickers are set in the mono stack (the `num` utility); prose stays sans.
                 const mono = numeric || f === 'date' || f === 'time' || c.name === 'symbol' || c.name === 'etf'
@@ -145,6 +152,7 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                   <td
                     key={c.name}
                     data-rank={priority?.[c.name] || undefined}
+                    data-mark={mark}
                     className={clsx(
                       'h-7 truncate border-b border-border/60 px-2 whitespace-nowrap',
                       numeric ? 'text-right' : 'text-left',
@@ -153,6 +161,8 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                       dir === 'down' && 'text-down',
                       text === '—' && 'text-fg-3',
                       c.name === 'symbol' && 'font-medium text-fg',
+                      mark === 'best' && 'bg-up/15 font-semibold',
+                      mark === 'worst' && 'bg-down/15 font-semibold',
                     )}
                     title={typeof v === 'string' && v.length > 12 ? v : undefined}
                   >
@@ -161,7 +171,8 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                 )
               })}
             </tr>
-          ))}
+            )
+          })}
         </tbody>
       </table>
     </div>

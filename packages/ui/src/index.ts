@@ -32,4 +32,18 @@ export {
 } from './format.js'
 
 export { tokens, seriesPalette, seriesColor, UP_COLOR, DOWN_COLOR, type Tokens } from './tokens.js'
-export { chartTheme, lineSeriesDefaults, candleSeriesDefaults } from './chart-theme.js'
+export {
+  chartTheme,
+  lineSeriesDefaults,
+  candleSeriesDefaults,
+  markerPalette,
+  markerStyle,
+  levelColor,
+  bandColor,
+  zeroLineColor,
+  divergingScale,
+  sequentialScale,
+  mixHex,
+  divergingColor,
+  sequentialColor,
+} from './chart-theme.js'

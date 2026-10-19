@@ -1,7 +1,9 @@
 import { columnsFor, packLayout, rowHeightFor, type Workspace } from '@terminal/core'
 import { Button, EmptyState } from '@terminal/ui'
 import { useCallback, useLayoutEffect, useState } from 'react'
-import type { WorkspaceState } from '../state'
+import { useApp, type WorkspaceState } from '../state'
+import { framesFor } from '../state/frames'
+import { contentHintFor } from '../views'
 import { WidgetCell } from './WidgetCell'
 import { Editor } from './Editor'
 
@@ -31,11 +33,14 @@ function usePaneSize(): [(el: HTMLDivElement | null) => void, { width: number; h
 /**
  * CSS grid laid out by `packLayout`: the column count follows the grid's width, every widget gets an
  * explicit position and span, and no cell stays empty (product rule 3). Rows share the pane's height
- * down to MIN_ROW_HEIGHT (core), so one or two rows fill it and more scroll.
+ * down to MIN_ROW_HEIGHT (core), so one or two rows fill it and more scroll. Each widget goes to the
+ * packer with a content hint (its view kind and the primary frame's row count), so a short table, a
+ * stat or a facts card is one row tall and a chart two (PLAN.md section 17, "size by content").
  */
 export function Grid({ workspace, ws }: { workspace: Workspace; ws: WorkspaceState }) {
   const [adding, setAdding] = useState(false)
   const [ref, pane] = usePaneSize()
+  const { state } = useApp()
   const columns = columnsFor(pane.width)
 
   if (workspace.widgets.length === 0) {
@@ -62,7 +67,10 @@ export function Grid({ workspace, ws }: { workspace: Workspace; ws: WorkspaceSta
     )
   }
 
-  const layout = packLayout(workspace.widgets, columns)
+  const layout = packLayout(
+    workspace.widgets.map((widget) => ({ size: widget.size, contentHint: contentHintFor(widget, framesFor(state.frames, workspace.id, widget)) })),
+    columns,
+  )
   const rows = layout.reduce((n, p) => Math.max(n, p.row + p.rows), 0)
   const rowHeight = rowHeightFor(rows, pane.height, CHROME_HEIGHT)
 
@@ -82,6 +90,7 @@ export function Grid({ workspace, ws }: { workspace: Workspace; ws: WorkspaceSta
               style={{ gridColumn: `${p.col + 1} / span ${p.cols}`, gridRow: `${p.row + 1} / span ${p.rows}` }}
               className="min-w-0 min-h-0"
               data-stretched={p.stretched ? '' : undefined}
+              data-demoted={p.demoted ? '' : undefined}
             >
               <WidgetCell widget={widget} workspaceId={workspace.id} />
             </div>

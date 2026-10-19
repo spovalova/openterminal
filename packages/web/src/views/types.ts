@@ -1,4 +1,7 @@
-import type { Frame, Widget } from '@terminal/core'
+import type { AnyWidget, Frame } from '@terminal/core'
 
-/** Props every view receives: the widget (query + view options) and the frame its query produced. */
-export type ViewProps = { widget: Widget; frame: Frame }
+/**
+ * Props every view receives: the widget (v1 `{ query, view }` or v2 `{ data, view: { preset } }`) and one frame
+ * per dataset that has landed. A v1 widget's frame arrives as `{ main }`.
+ */
+export type ViewProps = { widget: AnyWidget; frames: Record<string, Frame> }

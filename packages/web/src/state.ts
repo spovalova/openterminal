@@ -1,10 +1,9 @@
-// App state: workspaces, the active tab, per-workspace run status, frames by widget id. Reducers for every ServerMsg.
-// A v2 widget's extra datasets (PLAN.md section 17) are keyed `<widgetId>/<dataset>`; `main` keeps the bare widget id,
-// so v1 code paths read `frames[widget.id]` unchanged. (d)'s `state/frames.ts` keys by workspace too.
+// App state: workspaces, the active tab, per-workspace run status, frames keyed by workspace, widget and dataset. Reducers for every ServerMsg.
 import { createContext, useContext, type Dispatch } from 'react'
-import { DEFAULT_DATASET, widgetQueries, type AnyWidget, type Frame, type Message, type ServerMsg, type Step, type Workspace } from '@terminal/core'
+import type { Frame, Message, ServerMsg, Step, Workspace } from '@terminal/core'
 import type { Health } from './api'
 import type { SocketStatus } from './socket'
+import { dropWidgetFrames, putFrame, putFrameError, type FrameErrors, type FrameEvent, type FrameStore } from './state/frames'
 
 export type Status = 'empty' | 'active' | 'streaming' | 'error'
 
@@ -27,8 +26,9 @@ export type AppState = {
   workspaces: Workspace[]
   activeId: string | null
   ws: Record<string, WorkspaceState>
-  frames: Record<string, Frame>
-  frameErrors: Record<string, string>
+  /** Frames by `frameKey({ workspaceId, widgetId, dataset })`; a v1 server's frames land under the bare key (no workspace). */
+  frames: FrameStore
+  frameErrors: FrameErrors
   socket: SocketStatus
   health: Health | null
   sidebarOpen: boolean
@@ -41,8 +41,8 @@ export type Action =
   | { type: 'removeWorkspace'; id: string }
   | { type: 'activate'; id: string | null }
   | { type: 'promptSent'; workspaceId: string; text: string }
-  | { type: 'frameLoaded'; widgetId: string; frame: Frame; dataset?: string }
-  | { type: 'frameFailed'; widgetId: string; error: string; dataset?: string }
+  | { type: 'frameLoaded'; widgetId: string; frame: Frame; workspaceId?: string; dataset?: string }
+  | { type: 'frameFailed'; widgetId: string; error: string; workspaceId?: string; dataset?: string }
   | { type: 'socket'; status: SocketStatus }
   | { type: 'health'; health: Health }
   | { type: 'sidebar'; open?: boolean }
@@ -109,9 +109,12 @@ export function reducer(state: AppState, action: Action): AppState {
       const workspaces = state.workspaces.filter((w) => w.id !== action.id)
       const ws = { ...state.ws }
       delete ws[action.id]
-      const frames = { ...state.frames }
-      const frameErrors = { ...state.frameErrors }
-      for (const widget of removed?.widgets ?? []) forgetWidget(frames, frameErrors, widget.id)
+      let frames = state.frames
+      let frameErrors = state.frameErrors
+      for (const widget of removed?.widgets ?? []) {
+        frames = dropWidgetFrames(frames, action.id, widget.id)
+        frameErrors = dropWidgetFrames(frameErrors, action.id, widget.id)
+      }
       const activeId = state.activeId === action.id ? (workspaces[0]?.id ?? null) : state.activeId
       return { ...state, workspaces, ws, frames, frameErrors, activeId }
     }
@@ -130,9 +133,9 @@ export function reducer(state: AppState, action: Action): AppState {
       })
     }
     case 'frameLoaded':
-      return setFrame(state, frameStateKey(action.widgetId, action.dataset), action.frame)
+      return setFrame(state, action, action.frame)
     case 'frameFailed':
-      return { ...state, frameErrors: { ...state.frameErrors, [frameStateKey(action.widgetId, action.dataset)]: action.error } }
+      return { ...state, frameErrors: putFrameError(state.frameErrors, action, action.error) }
     case 'socket':
       return { ...state, socket: action.status }
     case 'health':
@@ -153,40 +156,8 @@ function patchWs(state: AppState, id: string, ws: WorkspaceState): AppState {
   return { ...state, ws: { ...state.ws, [id]: ws } }
 }
 
-/** The `frames` key for a widget's dataset: the widget id for `main`, `<id>/<dataset>` otherwise. */
-export function frameStateKey(widgetId: string, dataset?: string): string {
-  return !dataset || dataset === DEFAULT_DATASET ? widgetId : `${widgetId}/${dataset}`
-}
-
-/** Every frame that has landed for a widget, by dataset name (`{ main }` for a v1 widget). */
-export function framesFor(state: Pick<AppState, 'frames'>, widget: AnyWidget): Record<string, Frame> {
-  const out: Record<string, Frame> = {}
-  for (const name of Object.keys(widgetQueries(widget))) {
-    const f = state.frames[frameStateKey(widget.id, name)]
-    if (f) out[name] = f
-  }
-  return out
-}
-
-/** Per-dataset errors for a widget. */
-export function frameErrorsFor(state: Pick<AppState, 'frameErrors'>, widget: AnyWidget): Record<string, string> {
-  const out: Record<string, string> = {}
-  for (const name of Object.keys(widgetQueries(widget))) {
-    const e = state.frameErrors[frameStateKey(widget.id, name)]
-    if (e) out[name] = e
-  }
-  return out
-}
-
-function setFrame(state: AppState, key: string, frame: Frame): AppState {
-  const frameErrors = { ...state.frameErrors }
-  delete frameErrors[key]
-  return { ...state, frames: { ...state.frames, [key]: frame }, frameErrors }
-}
-
-function forgetWidget(frames: Record<string, Frame>, frameErrors: Record<string, string>, widgetId: string): void {
-  for (const k of Object.keys(frames)) if (k === widgetId || k.startsWith(`${widgetId}/`)) delete frames[k]
-  for (const k of Object.keys(frameErrors)) if (k === widgetId || k.startsWith(`${widgetId}/`)) delete frameErrors[k]
+function setFrame(state: AppState, ref: FrameEvent, frame: Frame): AppState {
+  return { ...state, ...putFrame(state.frames, state.frameErrors, ref, frame) }
 }
 
 function onServer(state: AppState, msg: ServerMsg, now: number): AppState {
@@ -211,11 +182,12 @@ function onServer(state: AppState, msg: ServerMsg, now: number): AppState {
       // A prompt overwrites the workspace: the new set replaces the old one.
       const existing = state.workspaces.find((w) => w.id === msg.workspaceId)
       const keep = new Set(msg.widgets.map((w) => w.id))
-      const frames = { ...state.frames }
-      const frameErrors = { ...state.frameErrors }
+      let frames = state.frames
+      let frameErrors = state.frameErrors
       for (const widget of existing?.widgets ?? []) {
         if (keep.has(widget.id)) continue
-        forgetWidget(frames, frameErrors, widget.id)
+        frames = dropWidgetFrames(frames, msg.workspaceId, widget.id)
+        frameErrors = dropWidgetFrames(frameErrors, msg.workspaceId, widget.id)
       }
       const workspaces = existing
         ? state.workspaces.map((w) => (w.id === msg.workspaceId ? { ...w, widgets: msg.widgets, name: msg.name ?? w.name, updatedAt: now } : w))
@@ -223,9 +195,9 @@ function onServer(state: AppState, msg: ServerMsg, now: number): AppState {
       return { ...state, workspaces, frames, frameErrors }
     }
     case 'frame':
-      return setFrame(state, frameStateKey(msg.widgetId, msg.dataset), msg.frame)
+      return setFrame(state, msg, msg.frame)
     case 'frameError':
-      return { ...state, frameErrors: { ...state.frameErrors, [frameStateKey(msg.widgetId, msg.dataset)]: msg.error } }
+      return { ...state, frameErrors: putFrameError(state.frameErrors, msg, msg.error) }
     case 'delta': {
       const prev = workspaceState(state, msg.workspaceId)
       return patchWs(state, msg.workspaceId, { ...prev, streamingText: prev.streamingText + msg.text })

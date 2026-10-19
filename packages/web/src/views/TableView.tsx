@@ -1,148 +1,28 @@
-import { useState, type FC } from 'react'
-import type { Column, Frame, Kind } from '@terminal/core'
-import { columnIndex } from '@terminal/core'
+import { useMemo, useState, type FC } from 'react'
+import { columnIndex, controlFor, type Column, type Format, type Frame, type TableControl } from '@terminal/core'
 import { DataTable, EmptyState, type CellFormat } from '@terminal/ui'
 import type { ViewProps } from './types'
+import { VirtualTable } from '../components/VirtualTable'
+import { FactsCard } from './FactsCard'
+import { controlOf, datasetsFor, kindOf, primaryFrame, viewOf } from './fields'
+import { EMPTY_HINT, KIND_PRIORITY, defaultSortFor, formatsFor, type SortSpec } from './legacy'
 
-export type SortSpec = { column: string; dir: 'asc' | 'desc' }
+export { defaultSortFor, formatsFor, type SortSpec }
 
-/**
- * Typed cell formats per kind; columns not listed render as text.
- * `change` is for signed moves (coloured up/down), `percent` for levels such as margins, yields, IV
- * and weights, `compact` for large amounts (market cap, statement lines, shares), `integer` for volumes.
- */
-const KIND_FORMATS: Record<Kind, Record<string, CellFormat>> = {
-  search: {},
-  quote: { price: 'price', change_pct: 'change', volume: 'integer', extended_price: 'price', extended_change_pct: 'change' },
-  ohlcv: { time: 'time', open: 'price', high: 'price', low: 'price', close: 'price', volume: 'integer' },
-  news: { time: 'time', url: 'link' },
-  earnings: { date: 'date', eps_estimate: 'price' },
-  profile: { market_cap: 'compact', employees: 'integer', beta: 'price' },
-  metrics: {
-    market_cap: 'compact',
-    pe: 'price',
-    forward_pe: 'price',
-    peg: 'price',
-    ev_ebitda: 'price',
-    ps: 'price',
-    pb: 'price',
-    gross_margin: 'percent',
-    operating_margin: 'percent',
-    profit_margin: 'percent',
-    revenue_growth: 'change',
-    earnings_growth: 'change',
-    roe: 'percent',
-    debt_to_equity: 'price',
-    dividend_yield: 'percent',
-  },
-  financials: {
-    period_ending: 'date',
-    revenue: 'compact',
-    gross_profit: 'compact',
-    operating_income: 'compact',
-    net_income: 'compact',
-    eps: 'price',
-    operating_cash_flow: 'compact',
-    capex: 'compact',
-    free_cash_flow: 'compact',
-    cash: 'compact',
-    debt: 'compact',
-    shares: 'compact',
-  },
-  estimates: { analysts: 'integer', target_low: 'price', target_consensus: 'price', target_high: 'price', upside_pct: 'change', eps_estimate_q: 'price', eps_estimate_y: 'price', eps_growth_y: 'change' },
-  eps_history: { date: 'date', eps_actual: 'price', eps_estimate: 'price', surprise_pct: 'change' },
-  dividends: { ex_date: 'date', amount: 'price' },
-  insiders: { date: 'date', shares: 'compact', price: 'price', value: 'compact', url: 'link' },
-  institutions: { date: 'date', shares: 'compact', change_pct: 'change', value: 'compact' },
-  short_interest: { date: 'date', short_interest: 'compact', change_pct: 'change', avg_volume: 'integer', days_to_cover: 'price' },
-  options: { expiration: 'date', strike: 'price', bid: 'price', ask: 'price', last: 'price', volume: 'integer', open_interest: 'integer', iv: 'percent', delta: 'price', gamma: 'price', theta: 'price', vega: 'price', underlying_price: 'price', dte: 'integer' },
-  volatility: { iv30: 'percent', iv30_high: 'percent', iv30_low: 'percent', iv_rank: 'price', hv30: 'percent', hv30_high: 'percent', hv30_low: 'percent', year_high: 'price', year_low: 'price' },
-  calendar: { time: 'time' },
-  ipos: { date: 'date', price: 'price', offer_amount: 'compact' },
-  movers: { price: 'price', change_pct: 'change', volume: 'integer' },
-  holdings: { weight: 'percent' },
-  macro: { time: 'time', value: 'price' },
-  yield_curve: { date: 'date', years: 'price', rate: 'percent' },
-}
-
-/**
- * Column priority per kind, most important first. The first three always show; each later column needs
- * the widget body to be about 60px wider (ranks map to container-query thresholds in @terminal/ui
- * styles.css). Columns not listed come after the listed ones in frame order. Kinds not listed keep
- * frame order.
- */
-const KIND_PRIORITY: Partial<Record<Kind, string[]>> = {
-  search: ['symbol', 'name', 'exchange', 'query'],
-  quote: ['symbol', 'price', 'change_pct', 'volume', 'market_state', 'extended_price', 'extended_change_pct'],
-  ohlcv: ['symbol', 'time', 'close', 'volume', 'open', 'high', 'low'],
-  news: ['headline', 'time', 'source', 'symbol', 'url'],
-  earnings: ['symbol', 'date', 'eps_estimate', 'session'],
-  profile: ['symbol', 'name', 'sector', 'market_cap', 'industry', 'exchange', 'employees', 'beta', 'description'],
-  metrics: ['symbol', 'pe', 'forward_pe', 'market_cap', 'ps', 'ev_ebitda', 'peg', 'pb', 'gross_margin', 'operating_margin', 'profit_margin', 'revenue_growth', 'earnings_growth', 'roe', 'debt_to_equity', 'dividend_yield'],
-  financials: ['symbol', 'period_ending', 'revenue', 'net_income', 'eps', 'gross_profit', 'operating_income', 'free_cash_flow', 'operating_cash_flow', 'capex', 'cash', 'debt', 'shares'],
-  estimates: ['symbol', 'target_consensus', 'upside_pct', 'recommendation', 'analysts', 'target_low', 'target_high', 'eps_estimate_q', 'eps_estimate_y', 'eps_growth_y'],
-  eps_history: ['symbol', 'date', 'eps_actual', 'eps_estimate', 'surprise_pct'],
-  dividends: ['symbol', 'ex_date', 'amount'],
-  insiders: ['symbol', 'name', 'action', 'date', 'value', 'shares', 'price', 'title', 'url'],
-  institutions: ['symbol', 'holder', 'value', 'change_pct', 'shares', 'date'],
-  short_interest: ['symbol', 'date', 'short_interest', 'days_to_cover', 'change_pct', 'avg_volume'],
-  options: ['strike', 'type', 'bid', 'ask', 'iv', 'open_interest', 'volume', 'last', 'delta', 'expiration', 'dte', 'symbol', 'gamma', 'theta', 'vega', 'underlying_price'],
-  volatility: ['symbol', 'iv30', 'iv_rank', 'hv30', 'iv30_high', 'iv30_low', 'hv30_high', 'hv30_low', 'year_high', 'year_low'],
-  calendar: ['event', 'time', 'actual', 'consensus', 'previous', 'country'],
-  ipos: ['symbol', 'name', 'date', 'price', 'offer_amount', 'exchange', 'status'],
-  movers: ['symbol', 'change_pct', 'price', 'name', 'volume'],
-  holdings: ['symbol', 'weight', 'name', 'etf'],
-  macro: ['series', 'time', 'value'],
-  yield_curve: ['maturity', 'rate', 'date', 'years'],
-}
-
-/** Rank per column for a DataTable: 0 for the first three in priority order, then 3, 4, … in that order. */
-export function priorityFor(kind: Kind, columns: Column[]): Record<string, number> {
-  const listed = KIND_PRIORITY[kind] ?? []
-  const names = columns.map((c) => c.name)
-  const order = [...listed.filter((n) => names.includes(n)), ...names.filter((n) => !listed.includes(n))]
+/** Rank per column for a DataTable: 0 for the first three in display order, then 3, 4, … so narrow widgets shed the tail. */
+export function ranksFor(columns: readonly string[]): Record<string, number> {
   const out: Record<string, number> = {}
-  order.forEach((name, i) => {
+  columns.forEach((name, i) => {
     out[name] = i < 3 ? 0 : Math.min(i, 15)
   })
   return out
 }
 
-/** Default sort per kind; `undefined` keeps the connector's row order. */
-const KIND_DEFAULT_SORT: Record<Kind, SortSpec | undefined> = {
-  search: undefined,
-  quote: { column: 'symbol', dir: 'asc' },
-  ohlcv: { column: 'time', dir: 'desc' },
-  news: { column: 'time', dir: 'desc' },
-  earnings: { column: 'date', dir: 'asc' },
-  profile: { column: 'symbol', dir: 'asc' },
-  metrics: { column: 'symbol', dir: 'asc' },
-  financials: undefined,
-  estimates: { column: 'symbol', dir: 'asc' },
-  eps_history: undefined,
-  dividends: undefined,
-  insiders: { column: 'date', dir: 'desc' },
-  institutions: { column: 'value', dir: 'desc' },
-  short_interest: undefined,
-  options: undefined,
-  volatility: { column: 'symbol', dir: 'asc' },
-  calendar: { column: 'time', dir: 'asc' },
-  ipos: { column: 'date', dir: 'asc' },
-  movers: undefined,
-  holdings: { column: 'weight', dir: 'desc' },
-  macro: { column: 'time', dir: 'desc' },
-  yield_curve: undefined,
-}
-
-/** A format for every column of the frame: the kind's typed formats, text for the rest. */
-export function formatsFor(kind: Kind, columns: Column[]): Record<string, CellFormat> {
-  const out: Record<string, CellFormat> = {}
-  for (const c of columns) out[c.name] = KIND_FORMATS[kind][c.name] ?? 'text'
-  return out
-}
-
-export function defaultSortFor(kind: Kind): SortSpec | undefined {
-  return KIND_DEFAULT_SORT[kind]
+/** v1 compatibility: ranks for a kind's columns in its priority order (the first three always show). */
+export function priorityFor(kind: Parameters<typeof formatsFor>[0], columns: Column[]): Record<string, number> {
+  const listed = KIND_PRIORITY[kind] ?? []
+  const names = columns.map((c) => c.name)
+  return ranksFor([...listed.filter((n) => names.includes(n)), ...names.filter((n) => !listed.includes(n))])
 }
 
 /** Direction a column sorts in when first clicked: newest/largest first for time, date and numbers. */
@@ -178,59 +58,117 @@ export function sortRows(frame: Pick<Frame, 'columns' | 'rows'>, sort: SortSpec 
     .map((x) => x.row)
 }
 
-const EMPTY_HINT: Record<Kind, string> = {
-  search: 'No symbols matched the query.',
-  quote: 'No quotes came back for these symbols.',
-  ohlcv: 'No price bars came back for this range.',
-  news: 'No headlines in this window.',
-  earnings: 'No earnings dates in this window.',
-  profile: 'No profile came back for these symbols.',
-  metrics: 'No metrics came back for these symbols.',
-  financials: 'No statements came back for these symbols.',
-  estimates: 'No analyst estimates for these symbols.',
-  eps_history: 'No reported earnings for these symbols.',
-  dividends: 'No dividends on record for these symbols.',
-  insiders: 'No insider transactions on record.',
-  institutions: 'No institutional holders on record.',
-  short_interest: 'No short interest reports for these symbols.',
-  options: 'No contracts matched this expiration and strike window.',
-  volatility: 'No volatility data for these symbols.',
-  calendar: 'No scheduled releases in this window.',
-  ipos: 'No IPOs in this window.',
-  movers: 'No movers right now.',
-  holdings: 'No holdings reported for this fund.',
-  macro: 'No observations in this range.',
-  yield_curve: 'No curve for this date.',
+/** Core formats as DataTable cell formats (`ratio` renders like a price). */
+export function cellFormat(format: Format): CellFormat {
+  return format === 'ratio' ? 'price' : format
 }
 
-/** `table` view: a DataTable with typed formatting per kind and column sort. */
-export const TableView: FC<ViewProps> = ({ widget, frame }) => {
-  const kind = widget.query.kind
-  const [state, setState] = useState<{ kind: Kind; sort: SortSpec | undefined }>(() => ({ kind, sort: defaultSortFor(kind) }))
-  const sort = state.kind === kind ? state.sort : defaultSortFor(kind)
+/** Columns where a lower value is the better one (multiples, leverage, days to cover); every other numeric column reads higher-is-better. */
+const LOWER_IS_BETTER = /(^|_)(pe|peg|ps|pb|ev_ebitda|debt|debt_to_equity|days_to_cover|cost|expense|short_interest|iv|iv30|hv30)$/
 
-  if (frame.rows.length === 0) {
-    return <EmptyState title="No rows" hint={EMPTY_HINT[kind]} />
+export type Extremes = Map<unknown[], Record<string, 'best' | 'worst'>>
+
+/** The best and worst value per numeric column (compare tables): max and min, swapped where lower is better. */
+export function extremesFor(frame: Pick<Frame, 'columns' | 'rows'>, columns: readonly string[], formats: Record<string, CellFormat>): Extremes {
+  const out: Extremes = new Map()
+  if (frame.rows.length < 2) return out
+  for (const name of columns) {
+    const f = formats[name]
+    if (!f || f === 'text' || f === 'date' || f === 'time' || f === 'link') continue
+    const i = columnIndex(frame, name)
+    if (i < 0) continue
+    let hi: unknown[] | undefined
+    let lo: unknown[] | undefined
+    for (const row of frame.rows) {
+      const v = row[i]
+      if (typeof v !== 'number' || !Number.isFinite(v)) continue
+      if (!hi || v > (hi[i] as number)) hi = row
+      if (!lo || v < (lo[i] as number)) lo = row
+    }
+    if (!hi || !lo || hi === lo) continue
+    const lower = LOWER_IS_BETTER.test(name)
+    const best = lower ? lo : hi
+    const worst = lower ? hi : lo
+    out.set(best, { ...(out.get(best) ?? {}), [name]: 'best' })
+    out.set(worst, { ...(out.get(worst) ?? {}), [name]: 'worst' })
   }
+  return out
+}
 
+/** The frame projected onto the control's columns, in its order. */
+export function projectFrame(frame: Frame, columns: readonly string[]): Frame {
+  const idx = columns.map((c) => columnIndex(frame, c)).filter((i) => i >= 0)
+  return { ...frame, columns: idx.map((i) => frame.columns[i]!), rows: frame.rows.map((row) => idx.map((i) => row[i])) }
+}
+
+/**
+ * `table` preset: a DataTable from the `TableControl` (columns by priority, formats and labels from field config),
+ * sort (the control's, else the kind's default, else the frame's order; click a header to change), the
+ * highlighted row, conditional colour on percent and change columns, and best and worst marks for compare
+ * tables. A one-row frame renders the facts card instead (product rule 8).
+ */
+export const TableView: FC<ViewProps> = ({ widget, frames }) => {
+  const kind = kindOf(widget)
+  const control = tableControlOf(widget, frames)
+  const frame = control ? frames[control.data] : primaryFrame(widget, frames)
+  const [state, setState] = useState<{ key: string; sort: SortSpec | undefined } | null>(null)
+  const table = control?.kind === 'table' ? control : undefined
+  const sortKey = `${widget.id}:${table?.data ?? ''}`
+  const sort = state?.key === sortKey ? state.sort : (table?.sort ?? (kind ? defaultSortFor(kind) : undefined))
+
+  const projected = useMemo(() => (frame && table ? projectFrame(frame, table.columns) : frame), [frame, table])
+  const formats = useMemo(() => formatsOf(table), [table])
+  const extremes = useMemo(() => (projected && table?.extremes ? extremesFor(projected, table.columns, formats) : undefined), [projected, table, formats])
+  const sorted = useMemo(() => (projected ? sortRows(projected, sort) : []), [projected, sort])
+
+  if (!frame || !projected) return <EmptyState title="No data" hint="The frame has not landed." />
+  if (frame.rows.length === 0) return <EmptyState title="No rows" hint={kind ? EMPTY_HINT[kind] : 'The query returned no rows.'} />
+  if (frame.rows.length === 1) return <FactsCard widget={widget} frames={frames} />
+  if (!table) return <EmptyState title="No table" hint="The view has no table control for this frame." />
+
+  const limited = table.limit ? sorted.slice(0, table.limit) : sorted
   const onSort = (column: string) => {
-    const next: SortSpec =
-      sort && sort.column === column
-        ? { column, dir: sort.dir === 'asc' ? 'desc' : 'asc' }
-        : { column, dir: firstDir(frame.columns.find((c) => c.name === column)) }
-    setState({ kind, sort: next })
+    const next: SortSpec = sort && sort.column === column ? { column, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { column, dir: firstDir(projected.columns.find((c) => c.name === column)) }
+    setState({ key: sortKey, sort: next })
   }
+  const hi = table.highlight
+  const hiIndex = hi ? columnIndex(projected, hi.column) : -1
+  const highlightRow = hi && hiIndex >= 0 ? (row: unknown[]) => String(row[hiIndex]) === String(hi.value) : undefined
+  const cellMark = extremes ? (row: unknown[], column: string) => extremes.get(row)?.[column] : undefined
 
+  const common = { columns: projected.columns, rows: limited, formats, labels: table.labels, priority: ranksFor(table.columns), sort, onSort }
   return (
-    <div data-view="table" className="h-full w-full overflow-hidden">
-      <DataTable
-        columns={frame.columns}
-        rows={sortRows(frame, sort)}
-        formats={formatsFor(kind, frame.columns)}
-        priority={priorityFor(kind, frame.columns)}
-        sort={sort}
-        onSort={onSort}
-      />
+    <div data-view="table" data-rows={frame.rows.length} data-virtual={limited.length > VIRTUAL_ROWS ? '' : undefined} className="h-full w-full overflow-hidden">
+      {limited.length > VIRTUAL_ROWS ? (
+        // Screener and transform outputs in the thousands of rows: (e)'s windowed table, same API without the marks.
+        <VirtualTable {...common} />
+      ) : (
+        <DataTable {...common} {...(highlightRow ? { highlightRow } : {})} {...(cellMark ? { cellMark } : {})} />
+      )}
     </div>
   )
+}
+
+/** Above this many rows the table windows its rows (VirtualTable); below it every row renders with highlight and marks. */
+export const VIRTUAL_ROWS = 150
+
+/** The table control for a widget: its own when it is a table view, else the frame as a plain table (the table is the floor and always renders). */
+export function tableControlOf(widget: ViewProps['widget'], frames: Record<string, Frame>): TableControl | undefined {
+  const view = viewOf(widget)
+  const control = view.preset === 'table' ? controlOf(widget, frames) : controlFor({ preset: 'table', ...(view.data ? { data: view.data } : {}) }, datasetsFor(widget, frames))
+  return control?.kind === 'table' ? control : undefined
+}
+
+/** Percent columns that are signed moves rather than levels: coloured when the control colorizes them. */
+const SIGNED = /_pct$|^change|growth|return|surprise|upside|reaction|_chg$/
+
+/** Cell formats from the control: its formats, with colorized percent columns that read as moves rendered as signed changes. */
+function formatsOf(table: TableControl | undefined): Record<string, CellFormat> {
+  const out: Record<string, CellFormat> = {}
+  if (!table) return out
+  for (const c of table.columns) {
+    const f = cellFormat(table.formats[c] ?? 'text')
+    out[c] = f === 'percent' && table.colorize.includes(c) && SIGNED.test(c) ? 'change' : f
+  }
+  return out
 }
