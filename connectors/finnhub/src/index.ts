@@ -1,7 +1,10 @@
 // Finnhub connector: quote, news, earnings. Free key, 60 calls/min. See README.md.
 import { z } from 'zod'
 import { defineConnector, toFrame, MS } from '@terminal/core'
+import { callFinnhub, finnhubDescriptors } from './call.js'
 import { get, perSymbol, isoDay, toSession, type Config, type FinnhubQuote, type FinnhubNewsItem, type FinnhubEarningsCalendar } from './finnhub-api.js'
+
+export { callFinnhub, finnhubDescriptors, secondsToMs, FINNHUB_ROUTES, type FinnhubRoute } from './call.js'
 
 const NEWS_WINDOW_DAYS = 7
 const meta = { connector: 'finnhub' }
@@ -9,6 +12,9 @@ const meta = { connector: 'finnhub' }
 export default defineConnector<Config>({
   name: 'finnhub',
   config: z.object({ apiKey: z.string().min(1) }),
+  // v2 (PLAN.md section 17): quote, company-news and calendar/earnings as routes (descriptors.json) through inferFrame. The kind handlers below stay for v1.
+  descriptors: () => finnhubDescriptors(),
+  call: callFinnhub,
   queries: {
     // GET /quote?symbol=X per symbol. Finnhub has no volume or extended hours here; c === 0 means unknown symbol.
     quote: async ({ symbols }, ctx) => {

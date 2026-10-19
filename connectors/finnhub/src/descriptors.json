@@ -1,0 +1,68 @@
+[
+  {
+    "connector": "finnhub",
+    "route": "quote",
+    "summary": "Latest quote for one symbol",
+    "description": "Finnhub GET /quote: current price with the day's change, high, low, open and previous close. One symbol per call; an unknown symbol answers with every field zero and is reported as an error. No volume, no extended hours. Change percent is already a percent.",
+    "params": [{ "name": "symbol", "type": "string", "required": true, "description": "Ticker symbol" }],
+    "providers": [],
+    "fields": [
+      { "name": "symbol", "type": "string" },
+      { "name": "c", "type": "number", "description": "Current price" },
+      { "name": "d", "type": "number", "description": "Change" },
+      { "name": "dp", "type": "number", "description": "Percent change (percent, not a fraction)" },
+      { "name": "h", "type": "number", "description": "High price of the day" },
+      { "name": "l", "type": "number", "description": "Low price of the day" },
+      { "name": "o", "type": "number", "description": "Open price of the day" },
+      { "name": "pc", "type": "number", "description": "Previous close price" },
+      { "name": "t", "type": "time", "description": "Quote time" }
+    ]
+  },
+  {
+    "connector": "finnhub",
+    "route": "company-news",
+    "summary": "Company news for one symbol inside a date window",
+    "description": "Finnhub GET /company-news: headlines for one symbol between two dates (inclusive), newest first, with source, summary, url and image. One symbol per call.",
+    "params": [
+      { "name": "symbol", "type": "string", "required": true, "description": "Ticker symbol" },
+      { "name": "from", "type": "date", "required": true, "description": "Start date (YYYY-MM-DD)" },
+      { "name": "to", "type": "date", "required": true, "description": "End date (YYYY-MM-DD)" }
+    ],
+    "providers": [],
+    "fields": [
+      { "name": "symbol", "type": "string" },
+      { "name": "datetime", "type": "time", "description": "Published at" },
+      { "name": "headline", "type": "string" },
+      { "name": "source", "type": "string" },
+      { "name": "summary", "type": "string" },
+      { "name": "url", "type": "string" },
+      { "name": "category", "type": "string" },
+      { "name": "related", "type": "string", "description": "Related symbols, comma separated" },
+      { "name": "image", "type": "string" },
+      { "name": "id", "type": "number" }
+    ]
+  },
+  {
+    "connector": "finnhub",
+    "route": "calendar/earnings",
+    "summary": "Earnings calendar inside a date window, optionally for one symbol",
+    "description": "Finnhub GET /calendar/earnings: reports dated between two dates with the session (bmo, amc, dmh), the fiscal quarter and EPS and revenue estimates and actuals. Without a symbol the whole market (the free tier covers US names).",
+    "params": [
+      { "name": "from", "type": "date", "required": true, "description": "Start date (YYYY-MM-DD)" },
+      { "name": "to", "type": "date", "required": true, "description": "End date (YYYY-MM-DD)" },
+      { "name": "symbol", "type": "string", "required": false, "description": "Ticker symbol; omit for the whole market" }
+    ],
+    "providers": [],
+    "fields": [
+      { "name": "symbol", "type": "string" },
+      { "name": "date", "type": "time", "description": "Report date" },
+      { "name": "hour", "type": "string", "description": "bmo, amc, dmh or empty" },
+      { "name": "quarter", "type": "number" },
+      { "name": "year", "type": "number" },
+      { "name": "epsEstimate", "type": "number" },
+      { "name": "epsActual", "type": "number" },
+      { "name": "revenueEstimate", "type": "number" },
+      { "name": "revenueActual", "type": "number" }
+    ]
+  }
+]
