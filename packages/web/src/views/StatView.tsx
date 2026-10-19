@@ -50,7 +50,11 @@ export function statRows(frame: Frame, kind: Kind | undefined, column: string, c
 
   const seen = new Set<string>()
   const out: Stat[] = []
-  for (const row of frame.rows) {
+  // A time series (a macro rate, a derived P/E) reads newest first: the stat is the latest value per group, whatever
+  // order the rows arrived in. Frames without a time column keep their order (quotes, metrics, short interest newest first).
+  const iTime = frame.columns.findIndex((c) => c.type === 'time')
+  const ordered = iTime >= 0 ? [...frame.rows].sort((a, b) => (num(b[iTime]) ?? -Infinity) - (num(a[iTime]) ?? -Infinity)) : frame.rows
+  for (const row of ordered) {
     const symbol = iSym >= 0 ? String(row[iSym] ?? '') : '*'
     if (seen.has(symbol)) continue
     seen.add(symbol)
@@ -58,7 +62,7 @@ export function statRows(frame: Frame, kind: Kind | undefined, column: string, c
     let sec: Stat['secondary'] = null
     if (iSec >= 0 && secondary) {
       const v = row[iSec]
-      const f = formats[secondary.column] ?? (typeof v === 'number' && /pct|percent|change/.test(secondary.column) ? 'change' : 'text')
+      const f = formats[secondary.column] ?? (typeof v === 'number' && /pct|percent|change/i.test(secondary.column) ? 'change' : 'text')
       const text = formatCell(v, f)
       if (text !== EMPTY_CELL) sec = { text, dir: f === 'change' ? direction(v) : null, ...(secondary.label ? { label: secondary.label } : {}) }
     }
@@ -106,6 +110,34 @@ const DETAIL_SLOTS: { label: string; names: readonly string[]; format: CellForma
 ]
 
 export type Detail = { label: string; text: string }
+
+/**
+ * For a stat over a time series (a macro rate, a derived P/E): where the series started in the frame's window, its
+ * high and low, and the change from start to latest, so the headline has its range beside it. Empty for a frame
+ * without a time column or with a single row.
+ */
+export function seriesDetails(frame: Frame, column: string, format: CellFormat): Detail[] {
+  const iTime = frame.columns.findIndex((c) => c.type === 'time')
+  const iVal = columnIndex(frame, column)
+  if (iTime < 0 || iVal < 0) return []
+  const points = frame.rows
+    .map((r) => ({ t: num(r[iTime]), v: num(r[iVal]) }))
+    .filter((p): p is { t: number; v: number } => p.t != null && p.v != null)
+    .sort((a, b) => a.t - b.t)
+  if (points.length < 2) return []
+  const first = points[0]!.v
+  const last = points[points.length - 1]!.v
+  const high = Math.max(...points.map((p) => p.v))
+  const low = Math.min(...points.map((p) => p.v))
+  const change = last - first
+  const changeText = format === 'percent' ? `${change > 0 ? '+' : ''}${(change * 100).toFixed(0)} bp` : first !== 0 ? formatCell((change / Math.abs(first)) * 100, 'change') : formatCell(change, format)
+  return [
+    { label: 'Start', text: formatCell(first, format) },
+    { label: 'High', text: formatCell(high, format) },
+    { label: 'Low', text: formatCell(low, format) },
+    { label: 'Change', text: changeText },
+  ]
+}
 
 /**
  * Up to six details for a single-symbol card (the first row): the known quote fields in slot order, then any other
@@ -192,7 +224,7 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
     const s = stats[0]!
     // One symbol fills the card: the headline, then up to six companion figures (prev close, range, volume, cap),
     // so a quote or volatility stat reads like a quote card rather than one number in a blank cell (section 17 fill rule).
-    const details = frame ? detailRows(frame, column, stat?.change, frame.meta.fields ?? {}) : []
+    const details = frame ? [...seriesDetails(frame, column, stat ? cellFormat(stat.format) : 'price'), ...detailRows(frame, column, stat?.change, frame.meta.fields ?? {})].slice(0, 6) : []
     return (
       <div data-view="stat" data-column={column} data-count={1} className="flex h-full w-full flex-col justify-center gap-4 overflow-hidden p-3">
         <div>
@@ -224,9 +256,13 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
 
 const dirClass = (dir: 'up' | 'down' | null) => (dir === 'up' ? 'text-up' : dir === 'down' ? 'text-down' : 'text-fg-2')
 
+/** The extended-hours label in a compact card: two or three characters so the price and move stay on one line. */
+const EXTENDED_SHORT: Record<string, string> = { 'pre-market': 'pre', 'after hours': 'AH' }
+
 const StatBody: FC<{ stat: Stat; label: string; tick: Tick | undefined; hero?: boolean }> = ({ stat, label, tick, hero }) => (
   <>
-    <div className={clsx('flex min-w-0 items-baseline gap-1.5 truncate text-xs leading-4 text-fg-3', hero && 'mb-1')}>
+    {/* `shrink-0`: in a short card the label and the number never give way to the change line (overflow-hidden flex items otherwise shrink to nothing). */}
+    <div className={clsx('flex min-w-0 shrink-0 items-baseline gap-1.5 truncate text-xs leading-4 text-fg-3', hero && 'mb-1')}>
       {stat.symbol !== '*' && (
         <span data-field="symbol" className="num font-semibold text-fg">
           {stat.symbol}
@@ -234,7 +270,7 @@ const StatBody: FC<{ stat: Stat; label: string; tick: Tick | undefined; hero?: b
       )}
       <span className="truncate">{label}</span>
     </div>
-    <div className="min-w-0 truncate">
+    <div className="min-w-0 shrink-0 truncate">
       <span
         key={tick?.n ?? 0}
         data-field="value"
@@ -254,7 +290,7 @@ const StatBody: FC<{ stat: Stat; label: string; tick: Tick | undefined; hero?: b
         )}
         {stat.extended && (
           <span data-field="extended" className="text-fg-3">
-            {stat.extended.state}{' '}
+            {hero ? stat.extended.state : (EXTENDED_SHORT[stat.extended.state] ?? stat.extended.state)}{' '}
             <span className="whitespace-nowrap">
               <span className="num text-fg-2">{stat.extended.price}</span> <span className={clsx('num', dirClass(stat.extended.dir))}>{stat.extended.change}</span>
             </span>

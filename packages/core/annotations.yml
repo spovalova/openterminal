@@ -350,6 +350,34 @@ annotations:
   "yahoo:quoteSummary:earningsHistory.surprisePercent": { unit: fraction, format: change, label: "Surprise %", priority: 2 }
   "yahoo:quoteSummary:earningsTrend.earningsEstimate.avg": { unit: usd, format: price, label: EPS est., priority: 2 }
   "yahoo:quoteSummary:earningsTrend.earningsEstimate.growth": { unit: fraction, format: change, label: EPS growth, priority: 3 }
+  # The rest of the earningsTrend module (the estimates fallback when yfinance's consensus answers no rows): short
+  # labels for the facts card, the bookkeeping fields hidden.
+  "yahoo:quoteSummary:earningsTrend.period": { label: Period, priority: 1 }
+  "yahoo:quoteSummary:earningsTrend.endDate": { label: Period end, priority: 2 }
+  "yahoo:quoteSummary:earningsTrend.earningsEstimate.low": { unit: usd, format: price, label: EPS est. low, priority: 5 }
+  "yahoo:quoteSummary:earningsTrend.earningsEstimate.high": { unit: usd, format: price, label: EPS est. high, priority: 5 }
+  "yahoo:quoteSummary:earningsTrend.earningsEstimate.yearAgoEps": { unit: usd, format: price, label: EPS year ago, priority: 6 }
+  "yahoo:quoteSummary:earningsTrend.earningsEstimate.numberOfAnalysts": { unit: count, format: integer, label: EPS analysts, priority: 7 }
+  "yahoo:quoteSummary:earningsTrend.earningsEstimate.earningsCurrency": { hidden: true }
+  "yahoo:quoteSummary:earningsTrend.revenueEstimate.avg": { unit: usd, format: compact, label: Revenue est., priority: 2 }
+  "yahoo:quoteSummary:earningsTrend.revenueEstimate.low": { unit: usd, format: compact, label: Revenue est. low, priority: 6 }
+  "yahoo:quoteSummary:earningsTrend.revenueEstimate.high": { unit: usd, format: compact, label: Revenue est. high, priority: 6 }
+  "yahoo:quoteSummary:earningsTrend.revenueEstimate.growth": { unit: fraction, format: change, label: Revenue growth, priority: 3 }
+  "yahoo:quoteSummary:earningsTrend.revenueEstimate.yearAgoRevenue": { unit: usd, format: compact, label: Revenue year ago, priority: 7 }
+  "yahoo:quoteSummary:earningsTrend.revenueEstimate.numberOfAnalysts": { unit: count, format: integer, label: Revenue analysts, priority: 8 }
+  "yahoo:quoteSummary:earningsTrend.revenueEstimate.revenueCurrency": { hidden: true }
+  "yahoo:quoteSummary:earningsTrend.epsTrend.current": { unit: usd, format: price, label: EPS trend now, priority: 6 }
+  "yahoo:quoteSummary:earningsTrend.epsTrend.7daysAgo": { unit: usd, format: price, label: EPS 7d ago, priority: 8 }
+  "yahoo:quoteSummary:earningsTrend.epsTrend.30daysAgo": { unit: usd, format: price, label: EPS 30d ago, priority: 7 }
+  "yahoo:quoteSummary:earningsTrend.epsTrend.60daysAgo": { unit: usd, format: price, label: EPS 60d ago, priority: 8 }
+  "yahoo:quoteSummary:earningsTrend.epsTrend.90daysAgo": { unit: usd, format: price, label: EPS 90d ago, priority: 8 }
+  "yahoo:quoteSummary:earningsTrend.epsRevisions.upLast7days": { unit: count, format: integer, label: Up revisions 7d, priority: 7 }
+  "yahoo:quoteSummary:earningsTrend.epsRevisions.upLast30days": { unit: count, format: integer, label: Up revisions 30d, priority: 6 }
+  "yahoo:quoteSummary:earningsTrend.epsRevisions.downLast7days": { unit: count, format: integer, label: Down revisions 7d, priority: 7 }
+  "yahoo:quoteSummary:earningsTrend.epsRevisions.downLast30days": { unit: count, format: integer, label: Down revisions 30d, priority: 6 }
+  "yahoo:quoteSummary:earningsTrend.maxAge": { hidden: true }
+  "yahoo:quoteSummary:financialData.maxAge": { hidden: true }
+  "yahoo:quoteSummary:financialData.financialCurrency": { hidden: true }
   "yahoo:quoteSummary:insiderTransactions.shares": { unit: shares, format: compact, label: Shares, priority: 3 }
   "yahoo:quoteSummary:insiderTransactions.value": { unit: usd, format: compact, label: Value, priority: 4 }
   "yahoo:quoteSummary:insiderTransactions.filerName": { label: Insider, priority: 2 }
