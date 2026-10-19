@@ -65,6 +65,29 @@ describe('maskNonFigures (index and basket names)', () => {
   })
 })
 
+describe('verifyReply (phase 2b: pivots in billions, data cells that arrive as text)', () => {
+  it('matches "$51.61B" against a preview cell that already holds 51.61 (a pivot with market cap in billions)', () => {
+    const rec: PreviewRecord = { label: 'transform', preview: { columns: [{ name: 'metric', type: 'string' }, { name: 'CRWV', type: 'number' }], rows: [['Market cap ($bn)', 51.61], ['P/E', 12.1]], rowCount: 2, stats: {} } }
+    const r = verifyReply('CoreWeave is worth $51.61B at 12.1x earnings.', [rec])
+    expect(r.ok).toBe(true)
+    expect(r.matches.map((m) => m.scaled)).toEqual(['unscaled', undefined])
+  })
+  it('reads figures from string cells that are one numeric token (the calendar\'s actual and consensus), never from a headline', () => {
+    const rec: PreviewRecord = {
+      label: 'calendar',
+      preview: {
+        columns: [{ name: 'event', type: 'string' }, { name: 'actual', type: 'string' }, { name: 'consensus', type: 'string' }],
+        rows: [['Core CPI YoY', '2.6%', '2.5%'], ['Initial Jobless Claims', '199K', '205K'], ['Housing Starts', '1.300M', '1.275M'], ['Fed cuts rates by 50 bps, says 2027 outlook unchanged', '-', '-']],
+        rowCount: 4,
+        stats: {},
+      },
+    }
+    expect(verifyReply('Core CPI printed 2.6% against 2.5% expected; claims were 199K and housing starts 1.3M.', [rec]).ok).toBe(true)
+    const r = verifyReply('The Fed cut by 50 bps and 2027 is unchanged; CPI was 2.6%.', [rec])
+    expect(r.unmatched.map((u) => u.text)).toEqual(['50 bps'])
+  })
+})
+
 describe('extractNumbers', () => {
   it('reads percents, dollars, multiples, scaled suffixes and plain decimals, and skips small bare counts', () => {
     const got = extractNumbers('CRWV fell 11.9% to $61.39 on 95M shares, 3 of 7 names red; P/E 42.1x; OI 3,574 at the 350 puts; spread 45 bps.')

@@ -25,15 +25,20 @@ export type NumberMention = {
   /** Half a unit of the last written digit: the rounding tolerance. */
   tolerance: number
   index: number
+  /** The suffix multiplier ("$2.1B" is 1e9), so a preview that already holds billions can match the written figure. */
+  scale?: number
 }
 
-export type Match = { mention: NumberMention; value: number; column: string; source: string; scaled?: 'x100' }
+export type Match = { mention: NumberMention; value: number; column: string; source: string; scaled?: 'x100' | 'unscaled' }
 export type VerificationReport = Verification & { matches: Match[] }
 
 /** Integers below this with no decimals, unit or currency sign are counts or ordinals, not data. */
 export const BARE_INTEGER_MIN = 100
 
 const SCALES: Record<string, number> = { k: 1e3, m: 1e6, mn: 1e6, million: 1e6, b: 1e9, bn: 1e9, billion: 1e9, t: 1e12, tn: 1e12, trillion: 1e12 }
+
+/** A string cell that is one numeric token: an optional sign and dollar sign, digits with separators, an optional %, K/M/B/T suffix. */
+const NUMERIC_CELL = /^([-−–+]?)\$?(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?|\.\d+)\s?(%|K|M|B|T|k|bn|mn)?$/
 
 const NUMBER_RE = /(?<![\w.])([-−–+]?)(\$)?(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?|\.\d+)(?:\s?(%|percent|pct|bps|bp|basis points|[x×]|K|M|B|T|k|mn|bn|tn|million|billion|trillion)(?![\w]))?/g
 
@@ -77,7 +82,7 @@ export function extractNumbers(text: string): NumberMention[] {
     if (bare && Math.abs(raw) < BARE_INTEGER_MIN) continue
     const value = (sign === '-' || sign === '−' || sign === '–' ? -raw : raw) * scale
     const tolerance = (0.5 * 10 ** -decimals) * scale
-    out.push({ text: whole.trim(), value, ...(unit ? { unit } : {}), tolerance, index: m.index ?? 0 })
+    out.push({ text: whole.trim(), value, ...(unit ? { unit } : {}), tolerance, index: m.index ?? 0, ...(scale !== 1 ? { scale } : {}) })
   }
   return out
 }
@@ -91,8 +96,27 @@ export function candidateValues(records: readonly PreviewRecord[]): Candidate[] 
     const source = r.label ?? `preview ${ri + 1}`
     const unitOf = (col: string): FieldConfig['unit'] | undefined => r.fields?.[col]?.unit ?? (/(_pct|_percent|percent)$/.test(col) ? 'percent' : undefined)
     r.preview.columns.forEach((c, i) => {
-      if (c.type !== 'number') return
       const unit = unitOf(c.name)
+      if (c.type === 'string') {
+        // A data cell that arrives as text ("2.6%", "199K", "1.300M", "$5.2B" in the nasdaq calendar's actual and
+        // consensus columns) is a figure the reply may quote; a headline is not (it is not one numeric token).
+        for (const row of r.preview.rows) {
+          const v = row[i]
+          if (typeof v !== 'string') continue
+          const t = NUMERIC_CELL.exec(v.trim())
+          if (!t) continue
+          const n = Number(t[2]!.replace(/,/g, ''))
+          if (!Number.isFinite(n)) continue
+          const suffix = t[3]?.toLowerCase()
+          const scale = suffix && suffix in SCALES ? SCALES[suffix]! : 1
+          const signed = t[1] === '-' || t[1] === '−' || t[1] === '–' ? -n : n
+          const cellUnit: FieldConfig['unit'] | undefined = suffix === '%' ? 'percent' : v.trim().startsWith('$') ? 'usd' : unit
+          out.push({ value: signed * scale, column: c.name, ...(cellUnit ? { unit: cellUnit } : {}), source })
+          if (scale !== 1) out.push({ value: signed, column: c.name, ...(cellUnit ? { unit: cellUnit } : {}), source })
+        }
+        return
+      }
+      if (c.type !== 'number') return
       for (const row of r.preview.rows) {
         const v = row[i]
         if (typeof v === 'number' && Number.isFinite(v)) out.push({ value: v, column: c.name, ...(unit ? { unit } : {}), source })
@@ -135,9 +159,12 @@ export function matchMention(mention: NumberMention, candidates: readonly Candid
         break
       case 'usd':
         if ((u === undefined || u === 'usd') && close(mention.value, c.value, mention.tolerance)) return { mention, value: c.value, column: c.column, source: c.source }
+        // "$51.61B" against a preview that already holds billions (a pivot with "Market cap ($bn)" rows): the figure as written.
+        if (mention.scale && (u === undefined || u === 'usd') && close(mention.value / mention.scale, c.value, mention.tolerance / mention.scale)) scaledHit ??= { mention, value: c.value, column: c.column, source: c.source, scaled: 'unscaled' }
         break
       default:
         if (close(mention.value, c.value, mention.tolerance)) return { mention, value: c.value, column: c.column, source: c.source }
+        if (mention.scale && close(mention.value / mention.scale, c.value, mention.tolerance / mention.scale)) scaledHit ??= { mention, value: c.value, column: c.column, source: c.source, scaled: 'unscaled' }
     }
   }
   return scaledHit

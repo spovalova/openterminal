@@ -74,9 +74,13 @@ body,
   /* centred when it fits; `safe` keeps the first facts reachable when the card scrolls */
   align-content: safe center;
 }
+.facts-card[data-few] {
+  /* a handful of facts (a count, a median, a universe) spreads out and scales with the cell's height */
+  gap: clamp(10px, 4cqh, 28px) 24px;
+}
 .facts-card[data-few] [data-field="value"] {
-  font-size: var(--text-xl);
-  line-height: var(--text-xl--line-height);
+  font-size: clamp(var(--text-xl), 9cqh, 44px);
+  line-height: 1.15;
 }
 
 /* Sidebar overlays the grid below 1100px. */

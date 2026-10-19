@@ -81,7 +81,9 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
 
   return (
     <div className={clsx('data-table h-full w-full overflow-x-hidden overflow-y-auto', className)}>
-      <table className="w-full table-fixed border-collapse text-sm">
+      {/* `h-full`: a table shorter than its cell shares the height between its rows (an 11-row hero in a two-row cell, a
+          4-row table in a tall 1920 row) instead of leaving the bottom blank; a longer table scrolls as before. */}
+      <table className="h-full w-full table-fixed border-collapse text-sm">
         <thead className={clsx(stickyHeader && 'sticky top-0 z-10')}>
           <tr className="bg-surface">
             {columns.map((c) => {
