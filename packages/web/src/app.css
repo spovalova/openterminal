@@ -37,7 +37,7 @@ body,
 .stat-hero {
   /* one symbol per cell: the number is the widget (section 17 fill rule: a card fills 60% of its body); scales with the
      cell's width and height so a 470px row at 1920 gets a number to match */
-  font-size: clamp(32px, min(15cqw, 26cqh), 112px);
+  font-size: clamp(32px, min(15cqw, 30cqh), 112px);
   line-height: 1.05;
   letter-spacing: -0.05em;
 }

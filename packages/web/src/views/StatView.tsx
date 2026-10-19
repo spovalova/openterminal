@@ -167,7 +167,11 @@ export function detailRows(frame: Frame, column: string, change: string | undefi
     used.add(c.name)
     out.push({ label: f.label, text: formatCell(v, cellFormat((f.format as Parameters<typeof cellFormat>[0] | undefined) ?? 'price')) })
   }
-  return out
+  // Companions that share the headline's unit come first: under IV30 the IV and HV ranges, under a price the day's range.
+  const unit = (fields[column] as { unit?: string } | undefined)?.unit
+  const slotUnit = (d: Detail) => DETAIL_SLOTS.find((s) => s.label === d.label)?.format
+  const headlineFormat = unit === 'percent' || unit === 'fraction' ? 'percent' : unit === 'shares' || unit === 'count' ? 'compact' : 'price'
+  return out.sort((a, b) => Number((slotUnit(b) ?? headlineFormat) === headlineFormat) - Number((slotUnit(a) ?? headlineFormat) === headlineFormat))
 }
 
 /** The extended-hours print is the pre-market price before the open and the after-hours price after the close (and once the market is closed). */
@@ -226,7 +230,7 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
     // so a quote or volatility stat reads like a quote card rather than one number in a blank cell (section 17 fill rule).
     const details = frame ? [...seriesDetails(frame, column, stat ? cellFormat(stat.format) : 'price'), ...detailRows(frame, column, stat?.change, frame.meta.fields ?? {})].slice(0, 6) : []
     return (
-      <div data-view="stat" data-column={column} data-count={1} className="flex h-full w-full flex-col justify-center gap-4 overflow-hidden p-3">
+      <div data-view="stat" data-column={column} data-count={1} className="flex h-full w-full flex-col justify-center gap-5 overflow-hidden p-3">
         <div>
           <StatBody stat={s} label={label} tick={ticks[s.symbol]} hero />
         </div>

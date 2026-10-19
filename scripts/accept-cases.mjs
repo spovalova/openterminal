@@ -78,8 +78,13 @@ export const CASES = [
 m = metrics.set_index("symbol")
 labels = {"market_cap": "Market cap ($)", "pe_ratio": "P/E", "forward_pe": "Forward P/E", "enterprise_to_revenue": "EV / revenue", "revenue_growth": "Revenue growth %", "gross_margin": "Gross margin %", "operating_margin": "Operating margin %", "profit_margin": "Profit margin %", "debt_to_equity": "Debt / equity %", "return_on_equity": "ROE %", "price_return_1y": "1y return %", "beta": "Beta"}
 keep = [c for c in labels if c in m.columns]
+if "market_cap" in m.columns:
+    m["market_cap"] = m["market_cap"] / 1e9
+    labels["market_cap"] = "Market cap ($bn)"
 tbl = m[keep].T.reset_index().rename(columns={"index": "metric"})
 tbl["metric"] = tbl["metric"].map(labels)
+for c in tbl.columns[1:]:
+    tbl[c] = tbl[c].astype(float).round(2)
 result = tbl
 `,
           ),

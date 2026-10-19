@@ -352,10 +352,13 @@ export function controlFor(view: ViewV2, datasets: DatasetsFieldConfig): Control
       if (!column) return undefined
       // The change line: the named column, the conventional names, else the annotated day change (a percent column
       // with the `change` format: yahoo's regularMarketChangePercent, finnhub's dp), so the stat works on every quote route.
+      // The bare day-change columns belong to a price headline; under IV30 or a P/E the stock's day move would mislead.
+      const priceLike = /price|close|last|value|rate|nav$/i.test(column) || ds.fields[column]?.unit === 'usd'
       const change =
         (view.change && names.includes(view.change) ? view.change : undefined) ??
-        [`${column}_change_pct`, `${column}_change_percent`, 'change_pct', 'change_percent'].find((c) => c !== column && names.includes(c)) ??
-        names.find((c) => c !== column && ds.fields[c]?.format === 'change' && (ds.fields[c]?.unit === 'percent' || ds.fields[c]?.unit === 'fraction') && !/^(pre|post)/i.test(c))
+        [`${column}_change_pct`, `${column}_change_percent`].find((c) => names.includes(c)) ??
+        (priceLike ? ['change_pct', 'change_percent'].find((c) => c !== column && names.includes(c)) : undefined) ??
+        (priceLike ? names.find((c) => c !== column && ds.fields[c]?.format === 'change' && (ds.fields[c]?.unit === 'percent' || ds.fields[c]?.unit === 'fraction') && !/^(pre|post)/i.test(c)) : undefined)
       const c: StatControl = { kind: 'stat', data: name, column, format: defaultFormat(ds.fields[column] ?? {}, typeOf(column)), label: ds.fields[column]?.label ?? column }
       if (ds.shape.group) c.group = ds.shape.group
       if (change) c.change = change
