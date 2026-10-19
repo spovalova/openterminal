@@ -76,7 +76,7 @@ describe('ChartView legend (chips above the plot, change 4)', () => {
     expect(legendLabel('NVDA')).toBe('NVDA')
   })
 
-  it('sets the change in a tint of the series colour, never red or green (change 7)', () => {
+  it('keeps a comparison\'s changes neutral: text never wears the series colour (round 2, change 4)', () => {
     const { widget, frame } = fixture('B1') // every symbol is down on the day
     render(<ChartView widget={widget} frames={one(frame)} />)
     const items = legendItems()
@@ -84,9 +84,22 @@ describe('ChartView legend (chips above the plot, change 4)', () => {
     const [chart] = mock().charts
     items.forEach((item, i) => {
       const el = item.querySelector('[data-field="change"]') as HTMLElement
-      expect(el.style.color).toBe(hexToRgb((chart!.series[i]!.options as { color: string }).color))
-      expect(el.style.color).not.toBe(hexToRgb(DOWN))
+      expect(el.style.color).toBe('')
+      expect(el.className).toContain('text-fg-2')
+      expect(el.className).not.toMatch(/text-(up|down)/)
+      expect((chart!.series[i]!.options as { color: string }).color).toBeTruthy()
     })
+  })
+
+  it('colours one candle series\' move by its sign and draws it with a two-tone glyph, never the up-candle green (round 2, change 4)', () => {
+    const { widget, frame } = fixture('A2') // candles with volume
+    render(<ChartView widget={widget} frames={one(frame)} />)
+    const [item] = legendItems()
+    expect(item!.querySelector('[data-glyph="candle"]')).toBeTruthy()
+    const change = item!.querySelector('[data-field="change"]') as HTMLElement
+    const negative = change.textContent!.startsWith('-')
+    expect(change.className).toContain(negative ? 'text-down' : 'text-up')
+    expect(change.style.color).toBe('')
   })
 })
 
@@ -259,7 +272,8 @@ describe('ChartView over macro frames', () => {
       expect(item.querySelector('[data-field="change"]')!.textContent).toBe(`${bp > 0 ? '+' : ''}${bp} bp`)
     }
     const ff = items[2]!.querySelector('[data-field="change"]') as HTMLElement
-    expect(ff.style.color).toBe(hexToRgb((mock().charts[0]!.series[2]!.options as { color: string }).color)) // the series tint, not red (change 7)
+    expect(ff.className).toContain('text-fg-2') // a rate's move is neutral: never red, never the series colour (round 2)
+    expect(ff.style.color).toBe('')
   })
 
   it('legendValues: percent units move in bp, compact amounts and prices in percent', () => {
@@ -355,8 +369,3 @@ describe('ChartView v2 presets', () => {
     expect(document.querySelector('[data-view="chart"]')!.getAttribute('data-badges')).toBe('badges')
   })
 })
-
-function hexToRgb(hex: string): string {
-  const n = parseInt(hex.slice(1), 16)
-  return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`
-}

@@ -23,6 +23,7 @@ import type { ViewProps } from './types'
 import { withAlpha } from './format'
 import { datasetsFor, expandView, recipeOf, viewOf } from './fields'
 import { legendLabel } from './series-data'
+import { NEUTRAL_READING } from './StatView'
 import { useWidth } from './use-width'
 import { BandPrimitive } from './chart/band-primitive'
 import { buildChart, formatValue, horzKey, legendValues, markerKindLabel, type Bar, type Candle, type ChartSpec, type HorzItem, type MarkerSpec, type Point, type SeriesSpec } from './chart/data'
@@ -739,6 +740,11 @@ type LegendProps = {
   underlying?: number | undefined
 }
 
+/** The text colour of a signed move: up, down, or muted at zero. */
+function changeTone(v: number | null): string {
+  return v == null || v === 0 ? 'text-fg-2' : v > 0 ? 'text-up' : 'text-down'
+}
+
 /** A by-strike bar series' total (OI or volume across the strikes shown). */
 function totalOf(row: SeriesSpec): number {
   return (row.data as { value?: number }[]).reduce((n, d) => n + (typeof d.value === 'number' && Number.isFinite(d.value) ? d.value : 0), 0)
@@ -755,6 +761,10 @@ function totalOf(row: SeriesSpec): number {
  */
 const Legend: FC<LegendProps> = ({ placement, top, title, rows, hover, percentUnits, markerKinds, categorical, mode, rebased, underlying }) => {
   const many = placement === 'top' && rows.length > 4
+  // One price series on the price pane: its move has a side. A comparison, a rate or an indicator: neutral.
+  const only = placement === 'top' && rows.length === 1 ? rows[0]! : undefined
+  const field = only?.id.split(':')[3] ?? ''
+  const signed = !!only && !percentUnits.has(only.id) && (only.kind === 'candle' || (/^(close|adj_close|price|last|last_price|value|nav)$/i.test(field) && !NEUTRAL_READING.test(field)))
   return (
   <div
     data-legend=""
@@ -792,7 +802,15 @@ const Legend: FC<LegendProps> = ({ placement, top, title, rows, hover, percentUn
       }
       return (
         <div key={row.id} role="listitem" data-symbol={row.group} title={row.label === row.group ? undefined : row.group} className={clsx('flex min-w-0 items-center gap-1.5 whitespace-nowrap', placement === 'inset' && 'rounded-sm bg-surface/80 px-1.5 py-px')}>
-          <span aria-hidden="true" className="inline-block h-0.5 w-2.5 shrink-0 rounded-xs" style={{ background: row.color }} />
+          {row.kind === 'candle' ? (
+            // Candles have two colours: a two-tone glyph, never the up-candle green alone (round 2, change 4).
+            <span aria-hidden="true" data-glyph="candle" className="inline-flex h-2.5 w-2.5 shrink-0 items-stretch gap-px">
+              <span className="w-1 rounded-xs" style={{ background: UP_COLOR }} />
+              <span className="w-1 rounded-xs" style={{ background: DOWN_COLOR }} />
+            </span>
+          ) : (
+            <span aria-hidden="true" className="inline-block h-0.5 w-2.5 shrink-0 rounded-xs" style={{ background: row.color }} />
+          )}
           <span className="num truncate font-semibold text-fg">{row.label}</span>
           {last !== null && (
             <span data-field="last" className="num text-fg-2">
@@ -800,7 +818,9 @@ const Legend: FC<LegendProps> = ({ placement, top, title, rows, hover, percentUn
             </span>
           )}
           {change !== null && (
-            <span data-field="change" className="num" style={{ color: row.color, opacity: 0.85 }}>
+            // Text never wears the series colour (round 2, change 4: a red "-28.14%" in up-candle green): one price series
+            // colours its move by sign, a comparison or a rate keeps it neutral (the colour beside it is the identity).
+            <span data-field="change" className={clsx('num', signed ? changeTone(text.changeValue) : 'text-fg-2')}>
               {change}
             </span>
           )}

@@ -30,6 +30,20 @@ describe('column labels', () => {
   })
 })
 
+describe('statRows: a reading that is not a price has a neutral change (round 2, change 4)', () => {
+  it('leaves an IV30 or a yield move uncoloured and keeps a price move signed', () => {
+    const frame = {
+      columns: [{ name: 'symbol', type: 'string' as const }, { name: 'iv30', type: 'number' as const }, { name: 'iv30_change', type: 'number' as const }],
+      rows: [['TSLA', 45.6, -3.9]],
+      meta: { connector: 'openbb', fetchedAt: 0, ttl: 0 },
+    }
+    const [iv] = statRows(frame, 'iv30', { change: 'iv30_change', format: 'percent', formats: { iv30_change: 'change' } })
+    expect(iv!.secondary).toEqual({ text: '-3.90%', dir: null })
+    const [px] = statRows({ ...frame, columns: [frame.columns[0]!, { name: 'price', type: 'number' as const }, { name: 'change_pct', type: 'number' as const }] }, 'price', { change: 'change_pct', format: 'price', formats: { change_pct: 'change' } })
+    expect(px!.secondary?.dir).toBe('down')
+  })
+})
+
 describe('statRows', () => {
   it('quote: the price, the signed day change, and the extended-hours line outside the regular session', () => {
     const control = { change: 'change_pct', format: 'price' as const, formats: { change_pct: 'change' as const, price: 'price' as const } }

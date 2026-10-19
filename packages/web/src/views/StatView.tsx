@@ -21,6 +21,9 @@ export type Stat = {
   extended: { state: string; price: string; change: string; dir: 'up' | 'down' | null } | null
 }
 
+/** Headline columns whose change has no good or bad side: implied and realized volatility, rates and yields, oscillators. */
+export const NEUTRAL_READING = /(^|_)(iv|iv30|iv_rank|hv|hv30|vol|volatility|rate|yield|rsi|macd|spread)(_|$)|^(iv|hv)\d/i
+
 function num(v: unknown): number | null {
   return typeof v === 'number' && Number.isFinite(v) ? v : null
 }
@@ -64,7 +67,9 @@ export function statRows(frame: Frame, column: string, control?: Pick<StatContro
       const v = row[iSec]
       const f = formats[secondary.column] ?? (typeof v === 'number' && /pct|percent|change/i.test(secondary.column) ? 'change' : 'text')
       const text = formatCell(v, f)
-      if (text !== EMPTY_CELL) sec = { text, dir: f === 'change' ? direction(v) : null, ...(secondary.label ? { label: secondary.label } : {}) }
+      // A reading that is not a price (IV, a rate, an oscillator) moves without a side: its change is neutral (round 2,
+      // change 4: falling IV under the volatility hero read as a red loss).
+      if (text !== EMPTY_CELL) sec = { text, dir: f === 'change' && !NEUTRAL_READING.test(column) ? direction(v) : null, ...(secondary.label ? { label: secondary.label } : {}) }
     }
     let extended: Stat['extended'] = null
     if (iState >= 0) {
