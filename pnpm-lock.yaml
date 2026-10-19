@@ -267,6 +267,9 @@ importers:
 
   packages/web:
     dependencies:
+      '@codemirror/commands':
+        specifier: ^6.8.1
+        version: 6.11.1
       '@codemirror/lang-python':
         specifier: ^6.2.1
         version: 6.2.1
