@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { TRANSFORM_EXAMPLE, type AnyWidget, type Frame, type WidgetV2 } from '@terminal/core'
+import { TRANSFORM_EXAMPLE, type AnyWidget, type Frame, type WidgetV2 } from '@openterminal/core'
 import { RECIPES } from './recipes-fixture'
 
 const actions = vi.hoisted(() => ({

@@ -1,5 +1,5 @@
 // One WebSocket per client (PLAN.md 7.4). Reconnects with backoff; every inbound message is parsed with ServerMsgSchema.
-import { ServerMsgSchema, type ClientMsg, type ServerMsg } from '@terminal/core'
+import { ServerMsgSchema, type ClientMsg, type ServerMsg } from '@openterminal/core'
 
 export type SocketStatus = 'connecting' | 'open' | 'closed'
 

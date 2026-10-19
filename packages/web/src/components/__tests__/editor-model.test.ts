@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type AnyWidget, type Frame } from '@terminal/core'
+import { type AnyWidget, type Frame } from '@openterminal/core'
 import {
   datasetKind,
   draftFrom,

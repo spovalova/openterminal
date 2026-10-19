@@ -1,10 +1,10 @@
 import { useId, useMemo, type FC } from 'react'
-import { Button } from '@terminal/ui'
-import { FieldOverridesSchema, controlFor, type FieldOverrides, type PresetName } from '@terminal/core'
+import { Button } from '@openterminal/ui'
+import { FieldOverridesSchema, controlFor, type FieldOverrides, type PresetName } from '@openterminal/core'
 import { datasetsConfigFrom, optionText, optionValue, presetOptions, presetsAvailable, primaryDatasetName, setViewOption, switchPreset, type EditorDraft, type OptionSpec } from './editor-model'
 import { firstIssue } from './EditorTransform'
 import { Field, inputCls, labelCls } from './ParamsForm'
-import type { Frame } from '@terminal/core'
+import type { Frame } from '@openterminal/core'
 import { useState } from 'react'
 
 export type EditorViewProps = {

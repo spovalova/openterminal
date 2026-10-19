@@ -183,7 +183,7 @@ export const App: FC = () => {
   return (
     <div className="mx-auto flex max-w-[1400px] flex-col gap-10 px-4 py-6">
       <header className="flex items-baseline gap-3">
-        <h1 className="text-lg font-medium">@terminal/ui</h1>
+        <h1 className="text-lg font-medium">@openterminal/ui</h1>
         <span className="text-xs text-fg-3">every component, every state, dark only</span>
       </header>
 
@@ -379,7 +379,7 @@ export const App: FC = () => {
             <EmptyState title="No widgets yet" hint="Ask a question to build this workspace." />
           </div>
           <div className="h-32 w-80 rounded-lg border border-border bg-surface">
-            <EmptyState title="No LLM key" hint={<span>Add one in <span className="text-fg-2">~/.terminal/config.yml</span></span>} />
+            <EmptyState title="No LLM key" hint={<span>Add one in <span className="text-fg-2">~/.openterminal/config.yml</span></span>} />
           </div>
         </Row>
       </Section>

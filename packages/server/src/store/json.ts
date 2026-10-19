@@ -1,10 +1,10 @@
-// The v1 store: ~/.terminal/workspaces/<id>.json, one file per workspace. Kept behind the `Store` interface for
+// The v1 store: ~/.openterminal/workspaces/<id>.json, one file per workspace. Kept behind the `Store` interface for
 // the one-time migration (`migrate.ts` reads it) and as the fallback when SQLite cannot open; the tables SQLite
 // adds (recipes, catalog, liveness, run log, frames, settings) are in memory here.
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { nanoid } from 'nanoid'
-import { WorkspaceSchema, createWorkspace, type AnyWidget, type Frame, type Message, type Recipe, type Workspace } from '@terminal/core'
+import { WorkspaceSchema, createWorkspace, type AnyWidget, type Frame, type Message, type Recipe, type Workspace } from '@openterminal/core'
 import { ID_RE, type CatalogCacheRow, type LivenessRow, type RunLogRow, type Store, type WorkspaceInit, type WorkspacePatch } from './types.js'
 
 export type StoreOptions = { log?: (msg: string) => void; now?: () => number; id?: () => string }

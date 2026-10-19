@@ -2,7 +2,7 @@
 // a time (OpenBB serves blocking provider calls on one event loop; eight stalled it and the 8 GB box OOM-killed it,
 // docs/notes/openbb-probe.md part 3), the result recorded as the route's liveness on the catalog and in the
 // liveness store. Run from `scripts/probe-catalog.ts` and, in-process, from (e)'s `POST /api/catalog/probe`.
-import { lastWeek, validateParams, type Catalog, type ConnectorRegistry, type Descriptor, type DescriptorParam, type Frame } from '@terminal/core'
+import { lastWeek, validateParams, type Catalog, type ConnectorRegistry, type Descriptor, type DescriptorParam, type Frame } from '@openterminal/core'
 import { livenessOf, livenessRow, type LivenessRow, type LivenessStore } from './liveness.js'
 
 /**

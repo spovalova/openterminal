@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { nyWallToUtc, type Frame } from '@terminal/core'
+import { nyWallToUtc, type Frame } from '@openterminal/core'
 
 const api = vi.hoisted(() => ({ setting: vi.fn(), setSetting: vi.fn(), query: vi.fn() }))
 vi.mock('../../api', () => ({ api }))

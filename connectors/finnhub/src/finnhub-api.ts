@@ -1,6 +1,6 @@
 // Helpers for talking to Finnhub: URL building, rate limiting, 429 retry. The routes live in call.ts; nothing here
 // knows about frames.
-import { HttpError, type Ctx } from '@terminal/core'
+import { HttpError, type Ctx } from '@openterminal/core'
 
 export const BASE_URL = 'https://finnhub.io/api/v1'
 

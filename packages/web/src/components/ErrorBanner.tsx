@@ -1,4 +1,4 @@
-import { Button } from '@terminal/ui'
+import { Button } from '@openterminal/ui'
 
 export function ErrorBanner({ error, onRetry }: { error: string; onRetry?: () => void }) {
   return (

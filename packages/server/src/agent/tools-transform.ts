@@ -18,7 +18,7 @@ import {
   type Registry,
   type Step,
   type TransformQuery,
-} from '@terminal/core'
+} from '@openterminal/core'
 
 export type TransformToolDeps = {
   registry: Pick<Registry, 'run'>

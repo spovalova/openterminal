@@ -23,7 +23,7 @@ import {
   type Recipe,
   type Registry,
   type ConnectorRegistry,
-} from '@terminal/core'
+} from '@openterminal/core'
 import { PROVIDER_OVERRIDES_KEY, errorMessage, withProviderOverrides, type ProviderOverrides } from './executor.js'
 import type { LivenessRow, Store } from './store/index.js'
 
@@ -33,7 +33,7 @@ export type ProbeFn = (opts: { connector?: string; concurrency?: number; signal?
 export type DataRouteDeps = {
   registry: Registry & Partial<Pick<ConnectorRegistry, 'setRecipes' | 'descriptorsOf'>>
   store: Store
-  /** TERMINAL_HOME: user recipes are mirrored to `<home>/recipes.yml`. */
+  /** The home directory: user recipes are mirrored to `<home>/recipes.yml`. */
   home: string
   builtinRecipes: () => Recipe[]
   probe?: ProbeFn
@@ -263,7 +263,7 @@ export function createDataRoutes(deps: DataRouteDeps) {
   return app
 }
 
-/** Read `~/.terminal/recipes.yml` when it exists: the user's recipes, validated; `[]` otherwise. */
+/** Read `~/.openterminal/recipes.yml` when it exists: the user's recipes, validated; `[]` otherwise. */
 export function loadUserRecipes(home: string, log: (msg: string) => void = () => {}): Recipe[] {
   const file = recipesPath(home)
   if (!existsSync(file)) return []

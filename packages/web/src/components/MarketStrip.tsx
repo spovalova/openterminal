@@ -1,6 +1,6 @@
 import { useEffect, useState, type FC } from 'react'
 import clsx from 'clsx'
-import { describeMarketTime, nextTradingDay, nyDate, sessionAt, type Session } from '@terminal/core'
+import { describeMarketTime, nextTradingDay, nyDate, sessionAt, type Session } from '@openterminal/core'
 
 const SESSION_LABEL: Record<Session, string> = { regular: 'open', pre: 'pre-market', post: 'after-hours', closed: 'closed' }
 const SESSION_CLASS: Record<Session, string> = { regular: 'text-up', pre: 'text-accent', post: 'text-accent', closed: 'text-fg-3' }

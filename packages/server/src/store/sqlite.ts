@@ -1,12 +1,12 @@
 // The v2 store on node:sqlite (Node 22, no native dependency): workspaces with their widgets, user recipes, the
 // catalog cache per connector, liveness rows, the run log, the frame cache and small settings, all in one file
-// (`~/.terminal/terminal.db`). Every method is synchronous underneath; the workspace API stays async so the HTTP
+// (`~/.openterminal/terminal.db`). Every method is synchronous underneath; the workspace API stays async so the HTTP
 // layer is unchanged from the JSON store.
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { DatabaseSync, type StatementSync } from 'node:sqlite'
 import { nanoid } from 'nanoid'
-import { AnyWidgetSchema, FrameSchema, MessageSchema, RecipeSchema, WorkspaceSchema, createWorkspace, type AnyWidget, type Frame, type Message, type Recipe, type Workspace } from '@terminal/core'
+import { AnyWidgetSchema, FrameSchema, MessageSchema, RecipeSchema, WorkspaceSchema, createWorkspace, type AnyWidget, type Frame, type Message, type Recipe, type Workspace } from '@openterminal/core'
 import { z } from 'zod'
 import { ID_RE, type CatalogCacheRow, type LivenessRow, type RunLogRow, type Store, type WorkspaceInit, type WorkspacePatch } from './types.js'
 

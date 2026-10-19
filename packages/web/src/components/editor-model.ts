@@ -25,7 +25,7 @@ import {
   type TransformQuery,
   type ViewV2,
   type WidgetV2,
-} from '@terminal/core'
+} from '@openterminal/core'
 
 export type DatasetKind = 'recipe' | 'route' | 'transform'
 

@@ -1,9 +1,9 @@
 // Built-in connector map and registry wiring. Config order is routing priority.
-import { ConnectorRegistry, MemoryCache, type AnnotationRule, type Cache, type Connector, type Recipe, type RegisteredConnector, type Registry, type TransformEngine } from '@terminal/core'
-import { builtinAnnotations, builtinRecipes } from '@terminal/core/node'
-import openbb from '@terminal/connector-openbb'
-import yahoo from '@terminal/connector-yahoo'
-import finnhub from '@terminal/connector-finnhub'
+import { ConnectorRegistry, MemoryCache, type AnnotationRule, type Cache, type Connector, type Recipe, type RegisteredConnector, type Registry, type TransformEngine } from '@openterminal/core'
+import { builtinAnnotations, builtinRecipes } from '@openterminal/core/node'
+import openbb from '@openterminal/connector-openbb'
+import yahoo from '@openterminal/connector-yahoo'
+import finnhub from '@openterminal/connector-finnhub'
 import type { Config } from './config.js'
 
 /** Name in config.yml → connector module. The only thing the server assumes about a module is that its default export is a Connector. */

@@ -4,7 +4,7 @@
  * bands). Drawn on the bottom layer so lines stay on top. Attached with `series.attachPrimitive`.
  */
 import type { IPrimitivePaneRenderer, IPrimitivePaneView, ISeriesPrimitive, PrimitivePaneViewZOrder, SeriesAttachedParameter, SeriesType } from 'lightweight-charts'
-import { bandColor, bandEdgeColor } from '@terminal/ui'
+import { bandColor, bandEdgeColor } from '@openterminal/ui'
 import type { BandSpec, HorzItem, Point } from './data'
 
 type Attached = SeriesAttachedParameter<HorzItem, SeriesType>

@@ -4,7 +4,7 @@ export function NoKeys() {
     <div className="rounded border border-border bg-surface px-3 py-2 text-fg-2">
       <div className="text-fg">No LLM key configured.</div>
       <div className="mt-1">
-        Add one to <code className="font-mono text-fg">~/.terminal/config.yml</code> (or <code className="font-mono">$TERMINAL_HOME/config.yml</code>) and
+        Add one to <code className="font-mono text-fg">~/.openterminal/config.yml</code> (or <code className="font-mono">$OPENTERMINAL_HOME/config.yml</code>) and
         restart:
       </div>
       <pre className="mt-1 overflow-x-auto rounded bg-bg px-2 py-1 font-mono text-[12px] text-fg">{`llm:

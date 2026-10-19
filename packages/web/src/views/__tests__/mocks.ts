@@ -105,7 +105,7 @@ export function makeChartsMock() {
     CandlestickSeries: { type: 'Candlestick' },
     HistogramSeries: { type: 'Histogram' },
     PriceScaleMode: { Normal: 0, Logarithmic: 1, Percentage: 2, IndexedTo100: 3 },
-    // enums the real @terminal/ui chart theme reads at import time
+    // enums the real @openterminal/ui chart theme reads at import time
     ColorType: { Solid: 'solid', VerticalGradient: 'gradient' },
     CrosshairMode: { Normal: 0, Magnet: 1, Hidden: 2 },
     LineStyle: { Solid: 0, Dotted: 1, Dashed: 2, LargeDashed: 3, SparseDotted: 4 },
@@ -118,12 +118,12 @@ export const UP = '#22c55e'
 export const DOWN = '#ef4444'
 
 /**
- * A `@terminal/ui` stand-in that renders enough DOM to assert on props. The real module is spread
+ * A `@openterminal/ui` stand-in that renders enough DOM to assert on props. The real module is spread
  * underneath so pure helpers (formatCell, formatCompact, EMPTY_CELL) keep working; the stubs override
  * the components, palette and theme the tests assert on.
  */
 export async function makeUiMock() {
-  const actual = await vi.importActual<typeof import('@terminal/ui')>('@terminal/ui')
+  const actual = await vi.importActual<typeof import('@openterminal/ui')>('@openterminal/ui')
   const DataTable: FC<{
     columns: { name: string; type: string }[]
     rows: unknown[][]

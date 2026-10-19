@@ -1,6 +1,6 @@
 import type { FC } from 'react'
-import { describeQuery, type AnyQuery, type Frame } from '@terminal/core'
-import { Spinner } from '@terminal/ui'
+import { describeQuery, type AnyQuery, type Frame } from '@openterminal/core'
+import { Spinner } from '@openterminal/ui'
 import { VirtualTable } from './VirtualTable'
 
 export type PreviewState = { status: 'idle' } | { status: 'loading' } | { status: 'ok'; frame: Frame; ms: number } | { status: 'error'; error: string; traceback?: string }

@@ -11,16 +11,16 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.13.0(jiti@2.7.0))
-      '@terminal/connector-finnhub':
+      '@openterminal/connector-finnhub':
         specifier: workspace:*
         version: link:connectors/finnhub
-      '@terminal/connector-openbb':
+      '@openterminal/connector-openbb':
         specifier: workspace:*
         version: link:connectors/openbb
-      '@terminal/connector-yahoo':
+      '@openterminal/connector-yahoo':
         specifier: workspace:*
         version: link:connectors/yahoo
-      '@terminal/core':
+      '@openterminal/core':
         specifier: workspace:*
         version: link:packages/core
       '@types/node':
@@ -44,7 +44,7 @@ importers:
 
   connectors/finnhub:
     dependencies:
-      '@terminal/core':
+      '@openterminal/core':
         specifier: workspace:*
         version: link:../../packages/core
       zod:
@@ -66,7 +66,7 @@ importers:
 
   connectors/openbb:
     dependencies:
-      '@terminal/core':
+      '@openterminal/core':
         specifier: workspace:*
         version: link:../../packages/core
       zod:
@@ -88,7 +88,7 @@ importers:
 
   connectors/yahoo:
     dependencies:
-      '@terminal/core':
+      '@openterminal/core':
         specifier: workspace:*
         version: link:../../packages/core
       yahoo-finance2:
@@ -113,7 +113,7 @@ importers:
 
   packages/cli:
     dependencies:
-      '@terminal/server':
+      '@openterminal/server':
         specifier: workspace:*
         version: link:../server
       open:
@@ -169,16 +169,16 @@ importers:
       '@hono/node-ws':
         specifier: ^1.3.1
         version: 1.3.1(@hono/node-server@2.1.5(hono@4.13.13))(hono@4.13.13)
-      '@terminal/connector-finnhub':
+      '@openterminal/connector-finnhub':
         specifier: workspace:*
         version: link:../../connectors/finnhub
-      '@terminal/connector-openbb':
+      '@openterminal/connector-openbb':
         specifier: workspace:*
         version: link:../../connectors/openbb
-      '@terminal/connector-yahoo':
+      '@openterminal/connector-yahoo':
         specifier: workspace:*
         version: link:../../connectors/yahoo
-      '@terminal/core':
+      '@openterminal/core':
         specifier: workspace:*
         version: link:../core
       ai:
@@ -227,7 +227,7 @@ importers:
       '@fontsource-variable/geist':
         specifier: 5.3.0
         version: 5.3.0
-      '@terminal/core':
+      '@openterminal/core':
         specifier: workspace:*
         version: link:../core
       clsx:
@@ -282,10 +282,10 @@ importers:
       '@codemirror/view':
         specifier: ^6.38.1
         version: 6.43.14
-      '@terminal/core':
+      '@openterminal/core':
         specifier: workspace:*
         version: link:../core
-      '@terminal/ui':
+      '@openterminal/ui':
         specifier: workspace:*
         version: link:../ui
       clsx:

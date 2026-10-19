@@ -89,7 +89,7 @@ npx openterminal
 
 One local process. It opens `http://localhost:4242` and works with no keys: quotes, charts, search, option chains and fundamentals come from Yahoo through the built-in `yahoo` connector.
 
-**Add an LLM key** to get the agent. Set `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`) in your environment, or write it to `~/.terminal/config.yml`:
+**Add an LLM key** to get the agent. Set `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`) in your environment, or write it to `~/.openterminal/config.yml`:
 
 ```yaml
 llm:
@@ -110,6 +110,8 @@ openbb-api
 ```
 
 Python 3.10 to 3.12. When the API answers at `http://127.0.0.1:6900`, its 800+ routes join the catalog, every recipe routes to it first, and Yahoo and Finnhub become fallbacks. When it is not running the miss costs nothing. yfinance, nasdaq, cboe, sec, finra, federal_reserve, bls and oecd need no key; FMP, Polygon, Intrinio, Tiingo, FRED, EIA and others take keys you keep on the OpenBB side. OpenBB is AGPL-3.0 and runs as its own process; this repo only sends it requests. Details and per-route provider overrides: [connectors/openbb/README.md](connectors/openbb/README.md).
+
+**Your data stays in `~/.openterminal`**: `config.yml`, the SQLite store (workspaces, your recipes, the frame cache) and the catalog cache. Set `OPENTERMINAL_HOME` to use another directory. A `~/.terminal` from before the rename is copied there on the first start and left in place.
 
 ## Data
 
@@ -152,7 +154,7 @@ A query is a **route** (`{ connector, route, params }`), a **recipe** (`{ recipe
 | `screener` | sector?, industry?, mktcap_min?, mktcap_max?, preset?, limit?, price_min? | table | openbb `equity/screener` | The whole market screened on yfinance: a sector (technology, healthcare, financial-services, energy, …), an industry, a market-cap floor or ceiling in dollars and a price floor, or a preset (day_gainers, most_actives, undervalued_large_caps, …). No P/E filter on the route: cut on trailingPE with a transform. |
 <!-- recipes:end -->
 
-The table is generated from `packages/core/recipes.yml` by `pnpm readme:recipes`; a test fails when it drifts. Recipes are data: a title template, a param schema, a preset, ordered route alternatives with param mappings, and optionally a data graph with a pandas step. Promote any widget you like to a user recipe from the Data page; it lands in `~/.terminal/recipes.yml`.
+The table is generated from `packages/core/recipes.yml` by `pnpm readme:recipes`; a test fails when it drifts. Recipes are data: a title template, a param schema, a preset, ordered route alternatives with param mappings, and optionally a data graph with a pandas step. Promote any widget you like to a user recipe from the Data page; it lands in `~/.openterminal/recipes.yml`.
 
 Nine **presets** render any frame whose shape fits: `price` (candles or a line, volume, event markers, levels, bands), `compare` (lines, optionally rebased to 100), `curve` (a numeric x axis: yield curve, IV by strike), `indicator` (RSI, MACD, moving averages in their own panes), `table`, `stat` (one headline number per symbol with its change), `facts` (a one-row card), `chain` (calls, strikes, puts), `heatmap`.
 
@@ -162,7 +164,7 @@ The whole plugin surface is one function. A connector is a package whose default
 
 ```ts
 import { z } from 'zod'
-import { defineConnector, inferFrame, parseDescriptors } from '@terminal/core'
+import { defineConnector, inferFrame, parseDescriptors } from '@openterminal/core'
 import descriptors from './descriptors.json' with { type: 'json' }
 
 export default defineConnector({
@@ -176,12 +178,12 @@ export default defineConnector({
 })
 ```
 
-Register it in `~/.terminal/config.yml`, and its routes are in the catalog on the next prompt. Tests run against recorded fixtures, never the network. The full guide, including the descriptor format, annotations, the OpenAPI generator, errors and fallback, and a worked example, is [docs/writing-a-connector.md](docs/writing-a-connector.md).
+Register it in `~/.openterminal/config.yml`, and its routes are in the catalog on the next prompt. Tests run against recorded fixtures, never the network. The full guide, including the descriptor format, annotations, the OpenAPI generator, errors and fallback, and a worked example, is [docs/writing-a-connector.md](docs/writing-a-connector.md).
 
 What else is open to change:
 
 - **Models.** Any Anthropic or OpenAI model id the installed provider packages know. The agent prompt lives in `packages/server/src/agent/prompt.ts` and is plain text.
-- **Recipes and annotations.** Data files: `packages/core/recipes.yml` and `packages/core/annotations.yml`, plus your own under `~/.terminal/`. A new question that one route answers is a recipe, not code.
+- **Recipes and annotations.** Data files: `packages/core/recipes.yml` and `packages/core/annotations.yml`, plus your own under `~/.openterminal/`. A new question that one route answers is a recipe, not code.
 - **Presets.** In `packages/core/src/presets.ts`, a pure function from options and field config to panes and layers; the renderers in `packages/web/src/views` know marks and panes only.
 
 ## Development
@@ -208,7 +210,7 @@ pnpm bench        # run scripts/prompts.json against a running server and score 
 | `packages/server` | loader, HTTP and WebSocket API, SQLite store, transform engine (Pyodide), agent |
 | `packages/ui` | design system |
 | `packages/web` | React app, the editor and the Data page, views |
-| `packages/cli` | the `npx` entry point |
+| `packages/cli` | the `npx openterminal` entry point |
 | `connectors/*` | `openbb`, `yahoo`, `finnhub` |
 | `deploy/` | systemd units for an always-on instance |
 | `docs/` | [architecture](docs/architecture.md), [vocabulary](docs/vocabulary.md), [writing a connector](docs/writing-a-connector.md), probe and bench notes |

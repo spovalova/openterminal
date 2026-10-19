@@ -1,5 +1,5 @@
 // The handful of user actions that touch the API, the socket, and the store together.
-import type { AnyWidget } from '@terminal/core'
+import type { AnyWidget } from '@openterminal/core'
 import { api, type WorkspaceExport } from './api'
 import { tickerPrompt } from './platform'
 import { useSocket } from './socketContext'

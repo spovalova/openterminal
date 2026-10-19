@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import { ConnectorRegistry, defineConnector, descriptorsFromOpenApi, inferFrame, type Descriptor } from '@terminal/core'
+import { ConnectorRegistry, defineConnector, descriptorsFromOpenApi, inferFrame, type Descriptor } from '@openterminal/core'
 import { MemoryLivenessStore } from '../src/liveness.js'
 import { KEYLESS_PROVIDERS, PROBE_CONCURRENCY, classifyError, createProbeFn, keylessAlternatives, probeCatalog, probeRoute, renderSummary, sampleParams, sampleValue } from '../src/probe.js'
 

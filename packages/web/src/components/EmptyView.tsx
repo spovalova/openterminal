@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Chip, Kbd, PromptBox } from '@terminal/ui'
-import type { Workspace } from '@terminal/core'
+import { Chip, Kbd, PromptBox } from '@openterminal/ui'
+import type { Workspace } from '@openterminal/core'
 import { useActions } from '../actions'
 import { MOD } from '../platform'
 import { useApp, type WorkspaceState } from '../state'

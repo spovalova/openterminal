@@ -25,7 +25,7 @@ import {
   type ServerMsg,
   type Step,
   type WidgetV2,
-} from '@terminal/core'
+} from '@openterminal/core'
 import { PreviewMemory, contentHintFor, previewResult, primaryDatasetOf, type PreviewResult } from './previews.js'
 import { TRANSFORM_TOOL_DESCRIPTION, TransformToolInput, runTransformTool, type TransformToolResult } from './tools-transform.js'
 

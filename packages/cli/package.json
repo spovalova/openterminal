@@ -1,15 +1,15 @@
 {
-  "name": "terminal",
+  "name": "openterminal",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "bin": { "terminal": "./bin/terminal.js" },
+  "bin": { "openterminal": "./bin/openterminal.js" },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@terminal/server": "workspace:*",
+    "@openterminal/server": "workspace:*",
     "open": "^11.0.4",
     "tsx": "^4.23.15"
   },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { frameKey, type Frame, type WidgetV2 } from '@terminal/core'
+import { frameKey, type Frame, type WidgetV2 } from '@openterminal/core'
 import { dropWidgetFrames, errorFor, framesComplete, framesFor, hasAnyFrame, parseFrameKey, putFrame, putFrameError } from '../src/state/frames'
 
 const one: WidgetV2 = { id: 'w1', title: 'Quote', size: 'sm', data: { main: { recipe: 'quote', params: { symbols: ['MU'] } } }, view: { preset: 'table' } }

@@ -1,10 +1,10 @@
 // The run log (PLAN.md section 17, "Also in v2"): one row per prompt with its steps, timing, tokens, cost and the
 // reply verification. The agent writes rows through the `RunLog` interface; the SQLite-backed store (phase 1 (e))
-// implements the same interface, and until it lands the server appends JSON lines under TERMINAL_HOME.
+// implements the same interface, and until it lands the server appends JSON lines under the home directory.
 import { appendFile, mkdir, readFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { z } from 'zod'
-import { StepSchema, VerificationSchema } from '@terminal/core'
+import { StepSchema, VerificationSchema } from '@openterminal/core'
 
 export const RunLogRowSchema = z.object({
   id: z.string().min(1),
@@ -58,7 +58,7 @@ export class MemoryRunLog implements RunLog {
 }
 
 /**
- * Rows as JSON lines in one append-only file (`<TERMINAL_HOME>/runs.jsonl`). Appends are serialised so rows never
+ * Rows as JSON lines in one append-only file (`<home>/runs.jsonl`). Appends are serialised so rows never
  * interleave; a line that does not parse is skipped on read and logged once.
  */
 export class JsonFileRunLog implements RunLog {

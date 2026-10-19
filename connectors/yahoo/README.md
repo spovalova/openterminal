@@ -1,4 +1,4 @@
-# @terminal/connector-yahoo
+# @openterminal/connector-yahoo
 
 The five [yahoo-finance2](https://github.com/gadicc/node-yahoo-finance2) endpoints as routes (pinned, no API key, config `{}`), answered through core's `inferFrame`. `src/descriptors.json` is the catalog entry for each; `src/call.ts` answers them.
 
@@ -17,7 +17,7 @@ The recipes name these routes as fallbacks behind OpenBB (and first for `quote`,
 Limits: Yahoo's data is unofficial and may change or rate-limit without notice (a 429 is retried once); no exchange-holiday calendar; Yahoo caps intraday history (`1m` to about 7 days, `5m`/`15m`/`1h` to 60 days), so long ranges at fine intervals fail per symbol; the live partial bar is included when it has a close; `quoteSummary`'s statement modules are empty since 2024, so `financials` has no Yahoo fallback.
 
 ```sh
-pnpm --filter @terminal/connector-yahoo test     # fixtures recorded by scripts/record.ts and scripts/record-catalog.ts; no network
-pnpm --filter @terminal/connector-yahoo smoke    # one frame per route, live
+pnpm --filter @openterminal/connector-yahoo test     # fixtures recorded by scripts/record.ts and scripts/record-catalog.ts; no network
+pnpm --filter @openterminal/connector-yahoo smoke    # one frame per route, live
 pnpm query yahoo quoteSummary symbol=MU modules=financialData,earningsTrend
 ```

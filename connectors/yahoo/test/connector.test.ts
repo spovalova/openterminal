@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ConnectorRegistry, MemoryCache, frameToObjects } from '@terminal/core'
+import { ConnectorRegistry, MemoryCache, frameToObjects } from '@openterminal/core'
 import yahoo, { YAHOO_ROUTES, createYahooConnector } from '../src/index.js'
 import { V12_NOW, fakeClient } from './helpers.js'
 

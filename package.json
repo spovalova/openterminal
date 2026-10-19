@@ -1,5 +1,5 @@
 {
-  "name": "terminal-monorepo",
+  "name": "openterminal-monorepo",
   "private": true,
   "type": "module",
   "version": "0.0.0",
@@ -23,10 +23,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@terminal/connector-finnhub": "workspace:*",
-    "@terminal/connector-openbb": "workspace:*",
-    "@terminal/connector-yahoo": "workspace:*",
-    "@terminal/core": "workspace:*",
+    "@openterminal/connector-finnhub": "workspace:*",
+    "@openterminal/connector-openbb": "workspace:*",
+    "@openterminal/connector-yahoo": "workspace:*",
+    "@openterminal/core": "workspace:*",
     "@types/node": "^22.0.0",
     "eslint": "^10.13.0",
     "tsx": "^4.23.15",

@@ -1,6 +1,6 @@
 import { useId, useState, type FC } from 'react'
-import { Button } from '@terminal/ui'
-import { FieldOverridesSchema, TRANSFORM_EXAMPLE, isTransformQuery, otHelpersDoc, type AnyQuery, type TransformQuery } from '@terminal/core'
+import { Button } from '@openterminal/ui'
+import { FieldOverridesSchema, TRANSFORM_EXAMPLE, isTransformQuery, otHelpersDoc, type AnyQuery, type TransformQuery } from '@openterminal/core'
 import { CodeEditor } from './CodeEditor'
 import { newTransform, nextDatasetName, type EditorDraft } from './editor-model'
 import { FramePreview, type PreviewState } from './FramePreview'

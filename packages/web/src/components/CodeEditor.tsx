@@ -18,7 +18,7 @@ export type CodeEditorProps = {
   minHeight?: number
 }
 
-/** The terminal's dark theme for CodeMirror: tokens from styles.css, the mono stack, 12px. */
+/** Open Terminal's dark theme for CodeMirror: tokens from styles.css, the mono stack, 12px. */
 const theme = EditorView.theme(
   {
     '&': { backgroundColor: 'var(--color-bg)', color: 'var(--color-fg)', fontSize: '12px', borderRadius: '4px', border: '1px solid var(--color-border)' },

@@ -1,4 +1,4 @@
-@import '@terminal/ui/styles.css';
+@import '@openterminal/ui/styles.css';
 @source '../../ui/src';
 
 :root {
@@ -113,7 +113,7 @@ body,
   animation: widget-flash 900ms ease-out;
 }
 
-/* The PromptBox carries view-transition-name: prompt-box (set by @terminal/ui). */
+/* The PromptBox carries view-transition-name: prompt-box (set by @openterminal/ui). */
 ::view-transition-old(prompt-box),
 ::view-transition-new(prompt-box) {
   animation-duration: 240ms;

@@ -1,4 +1,4 @@
-// @terminal/ui: design system for the terminal web app. See docs/notes/phase1-contracts.md ("ui → web, views").
+// @openterminal/ui: design system for the terminal web app. See docs/notes/phase1-contracts.md ("ui → web, views").
 
 export { Button, type ButtonProps } from './components/Button.js'
 export { IconButton, type IconButtonProps } from './components/IconButton.js'

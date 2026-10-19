@@ -1,4 +1,4 @@
-import { isChartPreset, type AnyWidget, type ContentHint, type Frame } from '@terminal/core'
+import { isChartPreset, type AnyWidget, type ContentHint, type Frame } from '@openterminal/core'
 import { primaryFrame, viewOf } from './fields'
 
 /**

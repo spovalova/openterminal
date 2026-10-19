@@ -1,5 +1,5 @@
 {
-  "name": "@terminal/connector-yahoo",
+  "name": "@openterminal/connector-yahoo",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
-    "@terminal/core": "workspace:*",
+    "@openterminal/core": "workspace:*",
     "yahoo-finance2": "^4.0.4",
     "zod": "^4.6.7"
   },

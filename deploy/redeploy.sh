@@ -4,6 +4,11 @@
 set -eu
 cd "$(dirname "$0")/.."
 pnpm install --frozen-lockfile
-pnpm --filter @terminal/web build
-systemctl --user restart terminal.service
-systemctl --user --no-pager --lines=5 status terminal.service
+pnpm --filter @openterminal/web build
+# Until the one-time switch from the pre-rename terminal.service, there is no unit to restart.
+if ! systemctl --user cat openterminal.service >/dev/null 2>&1; then
+  echo "built; openterminal.service is not installed yet: follow \"Switching from terminal.service\" in deploy/README.md to start it" >&2
+  exit 1
+fi
+systemctl --user restart openterminal.service
+systemctl --user --no-pager --lines=5 status openterminal.service

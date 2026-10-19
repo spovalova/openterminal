@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Dialog, WidgetFrame } from '@terminal/ui'
-import { widgetQueries, type AnyWidget } from '@terminal/core'
+import { Dialog, WidgetFrame } from '@openterminal/ui'
+import { widgetQueries, type AnyWidget } from '@openterminal/core'
 import { useActions } from '../actions'
 import { widgetDomId } from '../chips'
 import { useApp } from '../state'

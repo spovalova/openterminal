@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ConnectorRegistry, MemoryCache, type ServerMsg, type WidgetV2 } from '@terminal/core'
+import { ConnectorRegistry, MemoryCache, type ServerMsg, type WidgetV2 } from '@openterminal/core'
 import { Executor, nextExpiry, withProviderOverrides } from '../src/executor.js'
 import { fakeConnector, fakeRecipes, type Call } from './fake-connector.js'
 

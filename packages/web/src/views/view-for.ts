@@ -1,5 +1,5 @@
 import type { FC } from 'react'
-import type { AnyWidget, PresetName, ViewV2 } from '@terminal/core'
+import type { AnyWidget, PresetName, ViewV2 } from '@openterminal/core'
 import type { ViewProps } from './types'
 import { ChainView } from './ChainView'
 import { ChartView } from './ChartView'

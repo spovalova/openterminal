@@ -103,8 +103,9 @@ HTTP, under `/api`: `GET /api/health` (connectors, recipes, llm); workspaces CRU
 | `preview()` | `packages/core/src/preview.ts` |
 | Socket and HTTP message schemas, `AgentRunner` interface | `packages/core/src/protocol.ts` |
 | Config loading, built-in connector map, registry wiring | `packages/server/src/config.ts`, `connectors.ts` |
+| The home directory (`OPENTERMINAL_HOME`, else `~/.openterminal`) and its one-time copy from the pre-rename `~/.terminal` | `packages/core/src/node.ts`, `packages/server/src/home.ts` |
 | HTTP and WebSocket routes, data routes, widget execution, polling | `packages/server/src/app.ts`, `routes-data.ts`, `executor.ts` |
-| Store (SQLite at `~/.terminal/terminal.db`, the one-time JSON migration) | `packages/server/src/store/` |
+| Store (SQLite at `~/.openterminal/terminal.db`, the one-time JSON migration) | `packages/server/src/store/` |
 | Transform engine, `ot.py`, vendored wheels | `packages/server/src/transform/`, `packages/server/pyodide/` |
 | Probe and liveness | `packages/server/src/probe.ts`, `liveness.ts`, `scripts/probe-catalog.ts` |
 | Agent loop, the four tools, system prompt, reply verification, run log | `packages/server/src/agent`, `verify.ts`, `runlog.ts` |
@@ -114,7 +115,7 @@ HTTP, under `/api`: `GET /api/health` (connectors, recipes, llm); workspaces CRU
 | Field config pipeline and the views | `packages/web/src/views` |
 | `npx openterminal` | `packages/cli` |
 | Connectors | `connectors/<name>/src` |
-| Config, store, catalog cache, user recipes and annotations on disk | `~/.terminal/config.yml`, `terminal.db`, `catalog/`, `recipes.yml`, `annotations.yml` (override the directory with `TERMINAL_HOME`) |
+| Config, store, catalog cache, user recipes and annotations on disk | `~/.openterminal/config.yml`, `terminal.db`, `catalog/`, `recipes.yml`, `annotations.yml` (override the directory with `OPENTERMINAL_HOME`) |
 
 Ports: server `http://localhost:4242` (`/api`, `/ws`); web dev server `http://localhost:5173`, proxying `/api` and `/ws` to 4242; UI preview page `http://localhost:5174`.
 

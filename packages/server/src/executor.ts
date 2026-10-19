@@ -1,7 +1,7 @@
 // Widget execution: run each widget's datasets (PLAN.md section 17: a data graph of recipe, route and transform
 // queries) through the registry and emit frame / frameError per dataset. TTL polling: only the focused workspace
 // re-executes widgets when their frames' TTLs expire.
-import { DEFAULT_DATASET, describeQuery, isRouteQuery, isTransformQuery, widgetQueries, type AnyQuery, type AnyWidget, type Frame, type Registry, type ServerMsg, type Workspace } from '@terminal/core'
+import { DEFAULT_DATASET, describeQuery, isRouteQuery, isTransformQuery, widgetQueries, type AnyQuery, type AnyWidget, type Frame, type Registry, type ServerMsg, type Workspace } from '@openterminal/core'
 
 export type Emit = (m: ServerMsg) => void
 

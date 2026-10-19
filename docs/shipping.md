@@ -24,7 +24,7 @@ Commit them on the branch under `docs/screenshots/<topic>-before-*.png` and `<to
 | ![before]({{RAW}}/docs/screenshots/layout-before-nvda.png) | ![after]({{RAW}}/docs/screenshots/layout-after-nvda.png) |
 ```
 
-"Before" is the production instance on `http://localhost:4242` (it runs `main`; never restart it from a branch). "After" is the branch's own server: copy `~/.terminal` to a scratch directory, build the web app, run with `TERMINAL_HOME=<copy> PORT=<free port>`, open the same workspace, and kill that server by PID when done. Headless Chromium through Playwright lives outside the repo; PLAN.md section 11 describes how the theme pass drove it.
+"Before" is the production instance on `http://localhost:4242` (it runs `main`; never restart it from a branch). "After" is the branch's own server: copy `~/.openterminal` to a scratch directory, build the web app, run with `OPENTERMINAL_HOME=<copy> PORT=<free port>`, open the same workspace, and kill that server by PID when done. Headless Chromium through Playwright lives outside the repo; PLAN.md section 11 describes how the theme pass drove it.
 
 ## Briefing a bot
 
@@ -70,5 +70,5 @@ A PR that conflicts is reported as not merged; hand it back to its author to mer
 
 - One topic per branch. PLAN.md changes in the same commit as the code when the plan was wrong, with the reason in the commit message.
 - `pnpm typecheck && pnpm lint && pnpm test` green before `pr.sh`.
-- Never commit `.env`, `config.yml`, or anything under `~/.terminal`.
+- Never commit `.env`, `config.yml`, or anything under `~/.openterminal`.
 - Merging and redeploying production (`deploy/redeploy.sh`) are done from `main` by whoever reviews, not by the PR's author.

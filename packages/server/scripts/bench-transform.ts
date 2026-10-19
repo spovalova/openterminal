@@ -1,6 +1,6 @@
 // Time the transform engine: cold start by phase, then warm runs of the P/E worked example over two years of daily
 // bars and of a 100k-row window computation. Run from the repo root: pnpm exec tsx packages/server/scripts/bench-transform.ts
-import { TRANSFORM_EXAMPLE, isTransformError, nyMidnight, tradingDays, type Frame } from '@terminal/core'
+import { TRANSFORM_EXAMPLE, isTransformError, nyMidnight, tradingDays, type Frame } from '@openterminal/core'
 import { createTransformEngine } from '../src/transform/index.js'
 
 const engine = createTransformEngine({ log: (m) => console.error(`[engine] ${m}`) })

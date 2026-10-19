@@ -2,7 +2,7 @@
 // options, quoteSummary) are the connector's routes (descriptors.json), answered through core's `inferFrame`;
 // the recipes in packages/core/recipes.yml say which modules and params each one asks for.
 import { z } from 'zod'
-import { defineConnector, type Connector } from '@terminal/core'
+import { defineConnector, type Connector } from '@openterminal/core'
 import { makeCall, yahooDescriptors } from './call.js'
 import { defaultClient, type YahooClient } from './client.js'
 

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { createWorkspace, type Recipe, type Workspace } from '@terminal/core'
+import { createWorkspace, type Recipe, type Workspace } from '@openterminal/core'
 import { RECIPES } from '../../components/__tests__/recipes-fixture'
 
 const api = vi.hoisted(() => ({

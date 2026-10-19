@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { TRANSFORM_EXAMPLE, parseRecipes, type Message, type Recipe } from '@terminal/core'
-import { builtinRecipes } from '@terminal/core/node'
+import { TRANSFORM_EXAMPLE, parseRecipes, type Message, type Recipe } from '@openterminal/core'
+import { builtinRecipes } from '@openterminal/core/node'
 import { buildSystemPrompt, PROMPT_HISTORY } from '../prompt.js'
 import { workspace } from './helpers.js'
 

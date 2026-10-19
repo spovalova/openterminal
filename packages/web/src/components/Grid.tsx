@@ -1,5 +1,5 @@
-import { GRID_GAP, columnsFor, packLayout, rowHeightFor, type Workspace } from '@terminal/core'
-import { Button, EmptyState } from '@terminal/ui'
+import { GRID_GAP, columnsFor, packLayout, rowHeightFor, type Workspace } from '@openterminal/core'
+import { Button, EmptyState } from '@openterminal/ui'
 import { useCallback, useLayoutEffect, useState } from 'react'
 import { useApp, type WorkspaceState } from '../state'
 import { framesFor } from '../state/frames'

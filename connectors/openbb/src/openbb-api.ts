@@ -2,7 +2,7 @@
 // config, URL building, the result envelope, and a circuit breaker for when it is not running. The route calls
 // live in call.ts and the descriptor generator in descriptors.ts; nothing here knows about frames.
 // Probed against OpenBB 5.0.0 on 2026-10-17, 2026-10-18 and 2026-10-19; see docs/notes/openbb-probe.md.
-import { HttpError, type Ctx } from '@terminal/core'
+import { HttpError, type Ctx } from '@openterminal/core'
 import { z } from 'zod'
 
 export const DEFAULT_BASE_URL = 'http://127.0.0.1:6900'
