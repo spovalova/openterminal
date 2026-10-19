@@ -198,6 +198,29 @@ describe('reply verification', () => {
   })
 })
 
+describe('planning text in tool-call turns', () => {
+  it('drops a short note written before tool calls and streams the reply turn, with a paragraph break between turns', async () => {
+    const turns: Turn[] = [
+      { text: 'Tickers are known; skip search.', toolCalls: [rq('quote', { symbols: ['MU'] })] },
+      { text: 'MU is at $100.00, down 1.5% today, the only name in the basket moving more than a percent before the open; the rest are flat. [[widget:w1]]' },
+    ]
+    const { promise, messages } = run(turns)
+    const message = await promise
+    expect(message.text).toBe('MU is at $100.00, down 1.5% today, the only name in the basket moving more than a percent before the open; the rest are flat. [[widget:w1]]')
+    const deltas = messages.filter((m) => m.t === 'delta').map((m) => (m as Extract<ServerMsg, { t: 'delta' }>).text)
+    expect(deltas.join('')).toBe(message.text)
+    expect(deltas.length).toBeGreaterThan(1) // the first 120 characters arrive in one piece, the rest streams
+  })
+
+  it('keeps text from a tool-call turn once it is long enough to be a reply, and separates turns with a blank line', async () => {
+    const long = 'MU is at $100.00, down 1.5% today, which is the biggest move in the basket by a wide margin and worth a closer look before the open. '.repeat(2).trim()
+    const turns: Turn[] = [{ text: long, toolCalls: [rq('quote', { symbols: ['MU'] })] }, { text: 'Second paragraph.' }]
+    const { promise } = run(turns)
+    const message = await promise
+    expect(message.text).toBe(`${long}\n\nSecond paragraph.`)
+  })
+})
+
 describe('empty reply backstop', () => {
   it('asks once more without tools when the model ends with no text, and records the turns and the continuation', async () => {
     const runLog = new MemoryRunLog()

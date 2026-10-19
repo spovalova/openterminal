@@ -30,6 +30,13 @@ export const MAX_STEPS = MAX_TOOL_CALLS + 2
  */
 export const REPLY_NUDGE = 'Write the reply now, in two to four plain sentences, from the previews you received: the first sentence states the finding with its number; end with [[widget:<id>]] chips for the widgets set_workspace applied, or none if it was not called. No tool calls.'
 
+/**
+ * Text at the start of a model turn is held back this many characters before it streams. A turn that then issues
+ * tool calls was planning ("Use the kind form.", "Tickers are known; skip search."), not replying, and a held note
+ * is dropped; a reply passes the threshold within a second and streams from there. Seen live on 2026-10-18.
+ */
+export const HELD_TEXT_CHARS = 120
+
 /** Thrown (rejected) by run() when the signal aborts. `name` is 'AbortError' like fetch. */
 export class AgentAbortError extends Error {
   override readonly name = 'AbortError'
@@ -140,6 +147,26 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
         text += t
         emit({ t: 'delta', workspaceId: workspace.id, text: t })
       }
+      // Per-turn hold: see HELD_TEXT_CHARS.
+      let held = ''
+      let flowing = false
+      const flush = () => {
+        if (!flowing) {
+          // Separate text blocks from different turns so the streamed text reads as paragraphs.
+          if (text.length > 0 && !/\s$/.test(text) && held.length > 0) pushText('\n\n')
+          flowing = true
+        }
+        pushText(held)
+        held = ''
+      }
+      const endTurn = (finishReason: string | undefined) => {
+        if (!flowing && held.length > 0) {
+          if (finishReason === 'tool-calls') log(`[agent] dropped planning text from a tool-call turn: ${JSON.stringify(held.trim().slice(0, 80))}`)
+          else flush()
+        }
+        held = ''
+        flowing = false
+      }
 
       const record = async (extra: Partial<RunLogRow>) => {
         if (!deps.runLog) return
@@ -167,12 +194,19 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
       const consume = async (stream: AsyncIterable<TextStreamPart<any>>) => {
         for await (const part of stream) {
           switch (part.type) {
-            case 'text-start':
-              // Separate text blocks from different turns so the streamed text reads as paragraphs.
-              if (text.length > 0 && !/\s$/.test(text)) pushText('\n\n')
+            case 'start-step':
+              held = ''
+              flowing = false
               break
             case 'text-delta':
-              pushText(part.text)
+              if (flowing) pushText(part.text)
+              else {
+                held += part.text
+                if (held.length > HELD_TEXT_CHARS) flush()
+              }
+              break
+            case 'finish-step':
+              endTurn(part.finishReason)
               break
             case 'tool-error': {
               // Tool calls the SDK rejected before execute ran (invalid input, unknown tool).
@@ -205,6 +239,7 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
 
       try {
         await consume(result.fullStream)
+        endTurn(undefined)
         if (!aborted && !signal.aborted && failure === undefined && text.trim() === '' && steps.length > 0) {
           // The model used tools and then said nothing (live finding, 2026-10-18). Ask once more, without tools.
           continued = true
@@ -219,6 +254,7 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
             onStepFinish,
           })
           await consume(more.fullStream)
+          endTurn(undefined)
         }
       } catch (err) {
         if (signal.aborted) aborted = true
