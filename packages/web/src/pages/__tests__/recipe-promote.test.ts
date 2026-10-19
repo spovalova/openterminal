@@ -20,7 +20,7 @@ describe('promote a widget to a recipe', () => {
     expect(r.user).toBe(true)
     expect(r.view).toEqual({ preset: 'stat', column: 'price' })
     expect(r.params.properties?.symbols).toMatchObject({ type: 'array', default: ['MU', 'STX'] })
-    expect(r.data?.main && 'routes' in r.data.main && r.data.main.routes.map((x) => `${x.connector} ${x.route}`)).toEqual(['openbb equity/price/quote', 'yahoo quote', 'finnhub quote'])
+    expect(r.data?.main && 'routes' in r.data.main && r.data.main.routes.map((x) => `${x.connector} ${x.route}`)).toEqual(['yahoo quote', 'openbb equity/price/quote', 'finnhub quote'])
   })
 
   it('a v1 kind widget promotes through the recipe of the same name', () => {

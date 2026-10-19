@@ -17,6 +17,7 @@ import {
   parseQuery,
   recipeParams,
   recipeSummaryLines,
+  zodToJsonSchemaObject,
   type AnyQuery,
   type Kind,
   type KindDef,
@@ -25,10 +26,27 @@ import {
 } from '@terminal/core'
 import { builtinAnnotations, builtinRecipes } from '@terminal/core/node'
 import yahoo from '@terminal/connector-yahoo'
-import { renderParams } from '../packages/server/src/agent/prompt.js'
 import { configPath, loadConfig, terminalHome } from '../packages/server/src/config.js'
 import { BUILTIN_CONNECTORS, buildRegistry } from '../packages/server/src/connectors.js'
 import { loadUserRecipes } from '../packages/server/src/routes-data.js'
+
+/** `{ symbols: string[] (1-50), range?: 1d|5d = "3mo" }` for a kind's Zod params. v1 only; was in the agent prompt before the v2 rewrite and goes with the kinds in phase 3. */
+type JsonSchema = { type?: string | string[]; enum?: unknown[]; const?: unknown; items?: JsonSchema; minItems?: number; maxItems?: number; minimum?: number; maximum?: number; format?: string; default?: unknown; properties?: Record<string, JsonSchema>; required?: string[] }
+function renderParams(schema: KindDef['params']): string {
+  const json = zodToJsonSchemaObject(schema) as JsonSchema
+  const required = new Set(json.required ?? [])
+  const parts = Object.entries(json.properties ?? {}).map(([name, p]) => `${name}${required.has(name) ? '' : '?'}: ${renderType(p)}${p.default !== undefined ? ` = ${JSON.stringify(p.default)}` : ''}`)
+  return `{ ${parts.join(', ')} }`
+}
+function renderType(p: JsonSchema): string {
+  if (p.enum) return p.enum.map(String).join('|')
+  if (p.const !== undefined) return JSON.stringify(p.const)
+  if (p.type === 'array') return `${p.items ? renderType(p.items) : 'any'}[]${p.minItems !== undefined || p.maxItems !== undefined ? ` (${p.minItems ?? 0}-${p.maxItems ?? '∞'})` : ''}`
+  if (p.format === 'date') return 'YYYY-MM-DD'
+  if (p.type === 'integer' || p.type === 'number') return `${p.type}${p.minimum !== undefined || p.maximum !== undefined ? ` ${p.minimum ?? ''}-${p.maximum ?? ''}` : ''}`
+  if (typeof p.type === 'string') return p.type
+  return 'any'
+}
 
 const LEGACY = new Set<string>(['search', 'quote', 'ohlcv', 'news', 'earnings'])
 const log = (m: string) => console.error(m)

@@ -75,14 +75,15 @@ describe('legacyToRecipe and resolveRecipe', () => {
   })
   it('resolves a recipe to ordered route alternatives with the kind’s exact routes', () => {
     const alts = resolveRecipe(recipes, { recipe: 'quote', params: { symbols: ['NVDA', 'AMD'] } })
-    expect(alts.map((a) => `${a.connector} ${a.route}`)).toEqual(['openbb equity/price/quote', 'yahoo quote', 'finnhub quote'])
-    expect(alts[0]!.params).toEqual({ symbol: ['NVDA', 'AMD'], provider: 'yfinance' })
+    // yahoo first since phase 2 (it carries the day change and market state); the OpenBB route is the fallback.
+    expect(alts.map((a) => `${a.connector} ${a.route}`)).toEqual(['yahoo quote', 'openbb equity/price/quote', 'finnhub quote'])
+    expect(alts[1]!.params).toEqual({ symbol: ['NVDA', 'AMD'], provider: 'yfinance' })
     expect(alts[2]!.params).toEqual({ symbol: 'NVDA' })
   })
   it('applies defaults and filters, and picks routes by `when`', () => {
     const now = Date.UTC(2026, 9, 20, 15) // Tue 2026-10-20
     const ohlcv = resolveRecipe(recipes, { recipe: 'ohlcv', params: { symbols: ['MU'] } }, { now })
-    expect(ohlcv[0]).toEqual({ connector: 'openbb', route: 'equity/price/historical', params: { symbol: ['MU'], start_date: '2026-07-20', interval: '1d', provider: 'yfinance' } })
+    expect(ohlcv[0]).toEqual({ connector: 'openbb', route: 'equity/price/historical', params: { symbol: ['MU'], start_date: '2026-07-20', interval: '1d', provider: 'yfinance' }, rename: { date: 'time' } })
     expect(ohlcv[1]!.params).toMatchObject({ interval: '1d', period1: '2026-07-20' })
     const weekly = resolveRecipe(recipes, { recipe: 'ohlcv', params: { symbols: ['MU'], interval: '1w', range: '1d' } }, { now })
     expect(weekly[0]!.params.interval).toBe('1W')

@@ -52,6 +52,7 @@ export function effectiveSpan(widget: LayoutWidget, columns: number, widgetCount
   const hint = widget.contentHint
   if (!hint) return { ...base, demoted: false }
   let rows = base.rows
+  let cols = base.cols
   switch (hint.kind) {
     case 'stat':
     case 'facts':
@@ -62,11 +63,26 @@ export function effectiveSpan(widget: LayoutWidget, columns: number, widgetCount
       break
     case 'chart':
       rows = widgetCount > TALL_CHART_MAX_WIDGETS ? base.rows : 2
+      // A tall non-hero chart (md) is one column wide in a three-column grid of three or more widgets: two 2x2 charts
+      // cannot share a band with the hero, so every md chart would otherwise take a full-width band of its own and a
+      // six-widget workspace would run five bands deep (phase 2; the Instinct reference tiles six charts three across).
+      if (rows === 2 && widget.size === 'md' && columns >= 3 && widgetCount >= 3) cols = 1
       break
     case 'chain':
       break
   }
-  return { cols: base.cols, rows, demoted: rows !== base.rows }
+  return { cols, rows, demoted: rows !== base.rows || cols !== base.cols }
+}
+
+/**
+ * True when stretching this widget taller would show blank space: a table with six rows or fewer, a stat, a facts
+ * card (the content-short kinds). Charts, chains, long tables and widgets without a hint fill whatever they get.
+ */
+export function isShortContent(widget: LayoutWidget): boolean {
+  const hint = widget.contentHint
+  if (!hint) return false
+  if (hint.kind === 'stat' || hint.kind === 'facts') return true
+  return hint.kind === 'table' && hint.rows !== undefined && hint.rows <= SHORT_TABLE_ROWS
 }
 
 /**
@@ -79,80 +95,181 @@ export function effectiveSpan(widget: LayoutWidget, columns: number, widgetCount
  * below, whichever can grow into the cell without overlapping anything. The result is explicit
  * positions, so the renderer places widgets exactly where the packer put them. Widgets without a
  * `contentHint` are placed by size alone (the v1 behaviour).
+ *
+ * Two rules keep blank space out of short content (phase 2, from the (d) report of a three-row table stretched to two
+ * rows beside the hero): a one-row widget is not pulled up into a slot where the cell under it would be a hole that
+ * no later widget can fill (it goes to the next row and the taller neighbour, usually the hero chart, grows across
+ * instead); and when a hole has several neighbours that could grow into it, a chart, a chain or a long table grows
+ * before a short table, a stat or a facts card, and a short widget grows sideways before it grows taller.
  */
 export function packLayout(widgets: readonly LayoutWidget[], columns: number): Placement[] {
   const cols = Math.max(1, Math.floor(columns))
+  const base = widgets.map((w) => effectiveSpan(w, cols, widgets.length))
+  // Some span sets cannot tile: a hero, a tall one-column chart beside it, another tall chart and a stat leave the
+  // stat alone in a band it can only fill by growing taller. The packer then tries the same set with one or more of
+  // the tall charts back at their size's own span (an md chart as 2x1) and keeps the layout that stretches no short
+  // widget taller, then the fewest rows, then the fewest charts flattened, then the fewest stretches.
+  const tall = widgets.map((w, i) => (w.contentHint?.kind === 'chart' && base[i]!.demoted ? i : -1)).filter((i) => i >= 0).slice(0, 6)
+  const short = widgets.map(isShortContent)
+  let best: Placement[] | undefined
+  let bestCost: number[] = []
+  for (let mask = 0; mask < 1 << tall.length; mask++) {
+    const spans = base.map((s, i) => {
+      const k = tall.indexOf(i)
+      if (k < 0 || !((mask >> k) & 1)) return s
+      const b = spanFor(widgets[i]!.size, cols)
+      return { cols: b.cols, rows: b.rows, demoted: false }
+    })
+    const out = packOnce(widgets, spans, cols)
+    const rows = out.reduce((n, p) => Math.max(n, p.row + p.rows), 0)
+    const tallerShort = out.filter((p, i) => short[i] && p.rows > spans[i]!.rows).length
+    const flattened = tall.filter((_i, k) => (mask >> k) & 1).length
+    const stretched = out.filter((p) => p.stretched).length
+    const cost = [tallerShort, rows, flattened, stretched]
+    if (!best || lexLess(cost, bestCost)) {
+      best = out
+      bestCost = cost
+    }
+  }
+  return best ?? []
+}
+
+/** Lexicographic less-than over equal-length number tuples. */
+function lexLess(a: readonly number[], b: readonly number[]): boolean {
+  for (let i = 0; i < a.length; i++) {
+    if (a[i]! !== b[i]!) return a[i]! < b[i]!
+  }
+  return false
+}
+
+/** One packing with the spans given (see `packLayout`, which chooses between span sets). */
+function packOnce(widgets: readonly LayoutWidget[], spans: readonly { cols: number; rows: number; demoted: boolean }[], cols: number): Placement[] {
   const grid: number[][] = [] // grid[row][col] = widget index, -1 when empty
   const rowAt = (r: number) => {
     while (grid.length <= r) grid.push(new Array<number>(cols).fill(-1))
     return grid[r]!
   }
+  const cell = (r: number, c: number) => (r < 0 || c < 0 || c >= cols || r >= grid.length ? -1 : grid[r]![c]!)
   const free = (r: number, c: number, h: number, w: number) => {
-    if (c + w > cols) return false
+    if (c < 0 || r < 0 || c + w > cols) return false
     for (let y = r; y < r + h; y++) for (let x = c; x < c + w; x++) if (rowAt(y)[x] !== -1) return false
     return true
   }
   const fill = (i: number, r: number, c: number, h: number, w: number) => {
     for (let y = r; y < r + h; y++) for (let x = c; x < c + w; x++) rowAt(y)[x] = i
   }
-
-  // 1. Dense placement in widget order.
+  const clear = (r: number, c: number, h: number, w: number) => {
+    for (let y = r; y < r + h; y++) for (let x = c; x < c + w; x++) grid[y]![x] = -1
+  }
+  const short = widgets.map(isShortContent)
   const out: Placement[] = []
-  widgets.forEach((wdg, i) => {
-    const span = effectiveSpan(wdg, cols, widgets.length)
+
+  type Growth = { col: number; row: number; cols: number; rows: number; vertical: boolean }
+  /** How placed widget `i` would grow to cover cell (r, c), or undefined when it cannot without overlapping. */
+  const growth = (i: number, r: number, c: number, height: number): Growth | undefined => {
+    const p = out[i]!
+    let next: Growth | undefined
+    if (c === p.col + p.cols && r >= p.row && r < p.row + p.rows) next = { col: p.col, row: p.row, cols: p.cols + 1, rows: p.rows, vertical: false } // grow right
+    else if (r === p.row + p.rows && c >= p.col && c < p.col + p.cols) next = { col: p.col, row: p.row, cols: p.cols, rows: p.rows + 1, vertical: true } // grow down
+    else if (c === p.col - 1 && r >= p.row && r < p.row + p.rows) next = { col: p.col - 1, row: p.row, cols: p.cols + 1, rows: p.rows, vertical: false } // grow left
+    else if (r === p.row - 1 && c >= p.col && c < p.col + p.cols) next = { col: p.col, row: p.row - 1, cols: p.cols, rows: p.rows + 1, vertical: true } // grow up
+    if (!next || next.row + next.rows > height || next.col + next.cols > cols) return undefined
+    for (let y = next.row; y < next.row + next.rows; y++) for (let x = next.col; x < next.col + next.cols; x++) if (cell(y, x) !== -1 && cell(y, x) !== i) return undefined
+    return next
+  }
+  const neighbours = (r: number, c: number): number[] => [cell(r, c - 1), cell(r - 1, c), cell(r, c + 1), cell(r + 1, c)].filter((i) => i >= 0)
+  /** Lower is better: anything that fills its height, then a short widget growing sideways, then one growing taller. */
+  const rank = (i: number, g: Growth) => (!short[i] ? 0 : g.vertical ? 2 : 1)
+
+  /** Could one of the widgets after `after` be placed over cell (r, c) on the grid as it stands? */
+  const fillableLater = (r: number, c: number, after: number): boolean => {
+    for (let j = after + 1; j < widgets.length; j++) {
+      const s = spans[j]!
+      for (let y = r - s.rows + 1; y <= r; y++) for (let x = c - s.cols + 1; x <= c; x++) if (free(y, x, s.rows, s.cols)) return true
+    }
+    return false
+  }
+  /**
+   * A free cell that only a short widget growing taller could ever fill: no later widget fits over it and every
+   * neighbour that can grow into it is a short table, stat or facts card growing vertically.
+   */
+  const freeCell = (r: number, c: number) => r >= 0 && c >= 0 && c < cols && r < grid.length && grid[r]![c] === -1
+  const stranded = (r: number, c: number, placing: number, height: number): boolean => {
+    if (fillableLater(r, c, placing)) return false
+    // A free row neighbour decides this cell's fate too: a sideways growth that reaches it continues into this one.
+    if (freeCell(r, c - 1) || freeCell(r, c + 1)) return false
+    for (const n of neighbours(r, c)) {
+      const g = growth(n, r, c, height)
+      if (g && rank(n, g) < 2) return false
+    }
+    return true
+  }
+  /** Placing widget `i` at (r, c) leaves a stranded cell near it (within the rows already in use). */
+  const strandsAShortWidget = (i: number, r: number, c: number, h: number, w: number): boolean => {
+    fill(i, r, c, h, w)
+    out.push({ col: c, row: r, cols: w, rows: h, stretched: false, demoted: false })
+    const used = out.reduce((n, p) => Math.max(n, p.row + p.rows), 0)
+    let bad = false
+    for (let y = Math.max(0, r - 1); y < Math.min(used, r + h + 1) && !bad; y++) {
+      for (let x = Math.max(0, c - 1); x <= Math.min(cols - 1, c + w) && !bad; x++) {
+        if (cell(y, x) === -1 && stranded(y, x, i, used)) bad = true
+      }
+    }
+    out.pop()
+    clear(r, c, h, w)
+    return bad
+  }
+
+  // 1. Dense placement in widget order, skipping slots that would strand a one-row widget beside a hole.
+  widgets.forEach((_wdg, i) => {
+    const span = spans[i]!
     let placed = false
+    let fallback: { r: number; c: number } | undefined
+    const limit = widgets.reduce((n, _w, k) => n + spans[k]!.rows, 0) + 2
     for (let r = 0; !placed; r++) {
       for (let c = 0; c < cols; c++) {
-        if (free(r, c, span.rows, span.cols)) {
-          fill(i, r, c, span.rows, span.cols)
-          out.push({ col: c, row: r, cols: span.cols, rows: span.rows, stretched: false, demoted: span.demoted })
-          placed = true
-          break
+        if (!free(r, c, span.rows, span.cols)) continue
+        if (r < limit && strandsAShortWidget(i, r, c, span.rows, span.cols)) {
+          fallback ??= { r, c }
+          continue
         }
+        fill(i, r, c, span.rows, span.cols)
+        out.push({ col: c, row: r, cols: span.cols, rows: span.rows, stretched: false, demoted: span.demoted })
+        placed = true
+        break
+      }
+      if (!placed && fallback && r >= limit) {
+        fill(i, fallback.r, fallback.c, span.rows, span.cols)
+        out.push({ col: fallback.c, row: fallback.r, cols: span.cols, rows: span.rows, stretched: false, demoted: span.demoted })
+        placed = true
       }
     }
   })
+  // Probing extends the grid past the last placed row; those rows are not holes.
+  while (grid.length > 0 && grid[grid.length - 1]!.every((x) => x === -1)) grid.pop()
 
-  // 2. Fill holes by stretching a neighbour that can grow into the cell without overlap.
+  // 2. Fill holes by stretching the neighbour that can grow into the cell with the least blank space.
   const height = grid.length
-  const neighbours = (r: number, c: number): number[] => {
-    const left = c > 0 ? grid[r]![c - 1]! : -1
-    const up = r > 0 ? grid[r - 1]![c]! : -1
-    const right = c + 1 < cols ? grid[r]![c + 1]! : -1
-    const down = r + 1 < height ? grid[r + 1]![c]! : -1
-    return [left, up, right, down].filter((i) => i >= 0)
-  }
-  const tryGrow = (i: number, r: number, c: number): boolean => {
-    const p = out[i]!
-    let next: { col: number; row: number; cols: number; rows: number } | undefined
-    if (c === p.col + p.cols && r >= p.row && r < p.row + p.rows) next = { ...p, cols: p.cols + 1 } // grow right
-    else if (r === p.row + p.rows && c >= p.col && c < p.col + p.cols) next = { ...p, rows: p.rows + 1 } // grow down
-    else if (c === p.col - 1 && r >= p.row && r < p.row + p.rows) next = { col: p.col - 1, row: p.row, cols: p.cols + 1, rows: p.rows } // grow left
-    else if (r === p.row - 1 && c >= p.col && c < p.col + p.cols) next = { col: p.col, row: p.row - 1, cols: p.cols, rows: p.rows + 1 } // grow up
-    if (!next || next.row + next.rows > height) return false
-    for (let y = next.row; y < next.row + next.rows; y++) for (let x = next.col; x < next.col + next.cols; x++) if (grid[y]![x] !== -1 && grid[y]![x] !== i) return false
-    fill(i, next.row, next.col, next.rows, next.cols)
-    out[i] = { ...next, stretched: true, demoted: p.demoted }
-    return true
-  }
   let progress = true
   while (progress) {
     progress = false
     for (let r = 0; r < height; r++) {
       for (let c = 0; c < cols; c++) {
         if (grid[r]![c] !== -1) continue
-        for (const n of neighbours(r, c)) {
-          if (tryGrow(n, r, c)) {
-            progress = true
-            break
-          }
-        }
+        const options = neighbours(r, c).flatMap((n) => {
+          const g = growth(n, r, c, height)
+          return g ? [{ n, g, rank: rank(n, g) }] : []
+        })
+        if (options.length === 0) continue
+        const best = options.reduce((a, b) => (b.rank < a.rank ? b : a))
+        fill(best.n, best.g.row, best.g.col, best.g.rows, best.g.cols)
+        out[best.n] = { col: best.g.col, row: best.g.row, cols: best.g.cols, rows: best.g.rows, stretched: true, demoted: out[best.n]!.demoted }
+        progress = true
       }
     }
   }
   return out
 }
-
 /** True when some cell of the grid the packer produced stays empty (only possible with zero widgets). */
 export function hasHoles(placements: readonly Placement[], columns: number): boolean {
   const cells = new Set<string>()

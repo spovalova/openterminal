@@ -2,7 +2,8 @@
 //
 //   pnpm bench                       every prompt
 //   pnpm bench semis gold            by name
-//   pnpm bench -- --group v2         one group (prompts.json entries carry a `group`; v1 is the 2026-10-18 set, v2 the strict use-case set)
+//   pnpm bench -- --group v2         one group (prompts.json entries carry a `group`; v1 is the 2026-10-18 set, v2 the strict use-case set,
+//                                    v2-accept the twelve visual cases of PLAN.md section 17; scripts/accept.mjs screenshots and checks them)
 //   pnpm bench -- --prompt "..."     an ad-hoc prompt (repeat --prompt for follow-ups on the same workspace)
 //
 // BASE (default http://127.0.0.1:4242) picks the server. Each run creates a workspace named "bench: <name>"
@@ -21,7 +22,7 @@ import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const base = process.env.BASE ?? 'http://127.0.0.1:4242'
-const args = process.argv.slice(2)
+const args = process.argv.slice(2).filter((a) => a !== '--') // pnpm passes the `--` separator through
 const flag = (name) => {
   const i = args.indexOf(name)
   return i === -1 ? undefined : args.splice(i, 2)[1]
@@ -82,7 +83,7 @@ function verify(widget, frame) {
       const first = rs[0], last = rs[rs.length - 1]
       const vals = rs.map((r) => r[v]).filter((x) => typeof x === 'number')
       const chg = first[v] ? ((last[v] - first[v]) / first[v]) * 100 : null
-      lines.push(`  ${sym}: ${rs.length} bars ${iso(first[t])} → ${iso(last[t])}; first ${fmt(first[v])} last ${fmt(last[v])} chg ${fmt(chg)}% (first bar to last bar); min ${fmt(Math.min(...vals))} max ${fmt(Math.max(...vals))}` + (chg !== null && widget.query.kind === 'macro' ? ` abs ${fmt(last[v] - first[v])}` : ''))
+      lines.push(`  ${sym}: ${rs.length} bars ${iso(first[t])} → ${iso(last[t])}; first ${fmt(first[v])} last ${fmt(last[v])} chg ${fmt(chg)}% (first bar to last bar); min ${fmt(Math.min(...vals))} max ${fmt(Math.max(...vals))}` + (chg !== null && kind === 'macro' ? ` abs ${fmt(last[v] - first[v])}` : ''))
     }
     return lines
   }
@@ -140,8 +141,9 @@ async function runCase({ name, prompts }) {
         if (m.step.tool === 'set_workspace' && !m.step.error && Array.isArray(m.step.args?.widgets)) lastSet = m.step.args.widgets.map((w, i) => ({ id: `w${i + 1}`, ...w }))
       }
       else if (m.t === 'widgets') { widgets = m.widgets; frames.clear(); console.log(`${pad(at)}ms widgets name=${m.name ?? ''} ${m.widgets.map(describe).join(' ')}`) }
-      else if (m.t === 'frame') { frames.set(m.widgetId, m.frame); console.log(`${pad(at)}ms frame ${m.widgetId} ${m.frame.rows.length} rows (${m.frame.meta.connector})`) }
-      else if (m.t === 'frameError') console.log(`${pad(at)}ms frameError ${m.widgetId}: ${m.error}`)
+      // v2 frames carry a dataset; the verification block reads the main one, so secondary datasets (events, levels) are keyed apart.
+      else if (m.t === 'frame') { frames.set(m.dataset ? `${m.widgetId}/${m.dataset}` : m.widgetId, m.frame); console.log(`${pad(at)}ms frame ${m.widgetId}${m.dataset ? `/${m.dataset}` : ''} ${m.frame.rows.length} rows (${m.frame.meta.connector})`) }
+      else if (m.t === 'frameError') console.log(`${pad(at)}ms frameError ${m.widgetId}${m.dataset ? `/${m.dataset}` : ''}: ${m.error}`)
       else if (m.t !== 'delta') console.log(`${pad(at)}ms ${m.t}${m.error ? ' ' + m.error : ''}`)
       if (m.t === 'done' || m.t === 'failed') {
         console.log(`\nREPLY ${i + 1} (${at}ms):\n${m.message?.text ?? '(failed)'}\n`)

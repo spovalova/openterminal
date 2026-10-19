@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { ConnectorRegistry, defineConnector, descriptorsFromOpenApi, inferFrame, type Descriptor } from '@terminal/core'
 import { MemoryLivenessStore } from '../src/liveness.js'
-import { KEYLESS_PROVIDERS, classifyError, createProbeFn, keylessAlternatives, probeCatalog, probeRoute, renderSummary, sampleParams, sampleValue } from '../src/probe.js'
+import { KEYLESS_PROVIDERS, PROBE_CONCURRENCY, classifyError, createProbeFn, keylessAlternatives, probeCatalog, probeRoute, renderSummary, sampleParams, sampleValue } from '../src/probe.js'
 
 /** Monday 2026-10-19 12:00 ET. Last week is Oct 12 to Oct 16. */
 const NOW = Date.UTC(2026, 9, 19, 16)
@@ -36,6 +36,12 @@ describe('sampleParams', () => {
     expect(sampleValue({ name: 'period', type: 'integer', required: true }, base, NOW)).toBe(1)
     expect(sampleValue({ name: 'use_cache', type: 'boolean', required: true }, base, NOW)).toBe(false)
     expect(sampleValue({ name: 'modules', type: 'string[]', required: true }, base, NOW)).toEqual(['price'])
+    // FINRA: the bare bond universe times out, so the optional issuer filter is sent, and the history route gets a CUSIP.
+    expect(sampleValue({ name: 'issuer_name', type: 'string', required: false }, base, NOW)).toBe('coreweave')
+    expect(sampleValue({ name: 'cusip', type: 'string', required: true }, base, NOW)).toBe('21873SAB4')
+    const bonds: Descriptor = { ...base, route: 'fixedincome/corporate/bond_prices', params: [{ name: 'issuer_name', type: 'string', required: false }, { name: 'provider', type: 'string', required: false, enum: ['finra'] }] }
+    expect(sampleParams(bonds, NOW)).toMatchObject({ params: { issuer_name: 'coreweave' } })
+    expect(PROBE_CONCURRENCY).toBe(4)
     expect(sampleValue({ name: 'dataflow_id', type: 'string', required: true }, base, NOW)).toBeUndefined()
     expect(sampleParams({ ...base, params: [{ name: 'dataflow_id', type: 'string', required: true }] }, NOW)).toEqual({ skip: 'no sample for required param "dataflow_id"' })
     expect(sampleParams({ ...base, params: [{ name: 'symbol', type: 'string', required: true, enum: ['AAPL'] }] }, NOW)).toMatchObject({ skip: expect.stringMatching(/rejected/) })

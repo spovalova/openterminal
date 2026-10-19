@@ -51,14 +51,15 @@ export const FactsCard: FC<ViewProps> = ({ widget, frames }) => {
         const long = f.format === 'text' && typeof f.raw === 'string' && f.raw.length > 40
         return (
           <div key={f.column} data-fact={f.column} className="flex min-w-0 flex-col gap-0.5 border-b border-border/60 pb-1.5">
-            <div className="truncate text-xs leading-4 text-fg-3" title={f.label}>
+            {/* Labels and values wrap to two lines at word boundaries rather than cutting mid-word (section 17 checklist). */}
+            <div className="line-clamp-2 text-xs leading-4 break-words text-fg-3" title={f.label}>
               {f.label}
             </div>
             <div
               data-field="value"
               title={long ? String(f.raw) : undefined}
               className={clsx(
-                'min-w-0 truncate text-sm leading-5',
+                'line-clamp-2 min-w-0 text-sm leading-5 break-words',
                 f.format !== 'text' && f.format !== 'link' && 'num',
                 f.text === EMPTY_CELL ? 'text-fg-3' : f.dir === 'up' ? 'text-up' : f.dir === 'down' ? 'text-down' : 'text-fg',
               )}

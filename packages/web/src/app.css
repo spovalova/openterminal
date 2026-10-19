@@ -35,7 +35,9 @@ body,
  * their number a step smaller.
  */
 .stat-hero {
-  font-size: clamp(28px, 13cqw, 56px);
+  /* one symbol per cell: the number is the widget (section 17 fill rule: a card fills 60% of its body); scales with the
+     cell's width and height so a 470px row at 1920 gets a number to match */
+  font-size: clamp(32px, min(15cqw, 30cqh), 112px);
   line-height: 1.05;
   letter-spacing: -0.05em;
 }
@@ -57,6 +59,14 @@ body,
  * facts take three rows in a wide cell. Centred when it does not scroll; a card with six facts or fewer sets
  * its values a step larger, like a row of stats.
  */
+/* Two or three table rows as cards (TableView RowCards): one column per card, sharing the body's height. */
+.row-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+  align-content: stretch;
+}
+
 .facts-card {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));

@@ -43,17 +43,22 @@ recipes:
       properties:
         symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50, description: Ticker symbols }
       required: [symbols]
-    view: { preset: stat, column: last_price, change: change_percent }
+    view: { preset: stat }
     size: sm
+    # yahoo first (phase 2 correction): OpenBB's yfinance quote carries no change, change percent or market state
+    # (v1 computed the change from prev_close), so a "today's move" stat over it had no change line and the agent
+    # would have had to compute the day move itself (an unverified figure). yahoo's quote has regularMarketChangePercent,
+    # marketState and the pre- and post-market prices; the stat preset picks the key field and the change column from
+    # the annotations, so the OpenBB fallback still renders the price when yahoo is down.
     routes:
+      - connector: yahoo
+        route: quote
+        params: { symbols: "{symbols}" }
       - connector: openbb
         route: equity/price/quote
         provider: yfinance
         params: { symbol: "{symbols}" }
         note: yfinance has no change field (v1 computed it from prev_close) and no market state; ETFs answer without last_price.
-      - connector: yahoo
-        route: quote
-        params: { symbols: "{symbols}" }
       - connector: finnhub
         route: quote
         params: { symbol: "{symbols|first}" }
@@ -72,15 +77,19 @@ recipes:
     view: { preset: price, volume: false }
     size: lg
     events: earnings
+    # `rename` keeps the kind's `time` column on both routes (the providers send `date`): the transform example,
+    # the ot helpers (prev_close, baseline, corr) and the subtitles read `time` (phase 2 integration).
     routes:
       - connector: openbb
         route: equity/price/historical
         provider: yfinance
         params: { symbol: "{symbols}", start_date: "{range|start_date}", interval: "{interval|openbb_interval}" }
+        rename: { date: time }
         note: single-symbol rows carry no symbol field; v1 added it and sorted by symbol then time.
       - connector: yahoo
         route: chart
         params: { symbol: "{symbols}", period1: "{range|start_date}", interval: "{interval|yahoo_interval}", includePrePost: false }
+        rename: { date: time }
 
   - name: news
     title: "{symbols} news"
@@ -116,19 +125,32 @@ recipes:
     view: { preset: table, columns: [symbol, report_date, reporting_time, eps_consensus] }
     size: sm
     ttl: 3600000
-    routes:
-      - connector: openbb
-        route: equity/calendar/earnings
-        provider: nasdaq
-        params: { start_date: "{from}", end_date: "{to}" }
-        note: the whole market; v1 kept the requested symbols. The caller filters by `symbols` until a transform does.
-      - connector: yahoo
-        route: quoteSummary
-        params: { symbol: "{symbols}", modules: [calendarEvents] }
-        note: next date and estimate only; session null.
-      - connector: finnhub
-        route: calendar/earnings
-        params: { from: "{from}", to: "{to}", symbol: "{symbols|first}" }
+    # The nasdaq calendar is the whole market (4,000 rows a month); `main` keeps the requested symbols, reading them
+    # from the reserved `params` input (phase 2; the v1 handler filtered in code).
+    data:
+      raw:
+        routes:
+          - connector: openbb
+            route: equity/calendar/earnings
+            provider: nasdaq
+            params: { start_date: "{from}", end_date: "{to}" }
+            note: the whole market; main keeps the requested symbols.
+          - connector: yahoo
+            route: quoteSummary
+            params: { symbol: "{symbols}", modules: [calendarEvents] }
+            note: next date and estimate only; session null.
+          - connector: finnhub
+            route: calendar/earnings
+            params: { from: "{from}", to: "{to}", symbol: "{symbols|first}" }
+      main:
+        inputs: [raw, params]
+        code: |
+          wanted = [s.strip().upper() for s in str(params.at[0, "symbols"]).split(",") if s.strip()]
+          df = raw
+          if "symbol" in df.columns:
+              df = df[df["symbol"].astype(str).str.upper().isin(wanted)]
+          sort_by = [c for c in ("report_date", "date") if c in df.columns][:1]
+          result = df.sort_values(sort_by) if sort_by else df
 
   # ------------------------------------------------------------------------------------------------- company
   - name: profile
@@ -273,7 +295,9 @@ recipes:
         symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
         limit: { type: integer, minimum: 1, maximum: 60, default: 12 }
       required: [symbols]
-    view: { preset: table, columns: [ex_dividend_date, amount] }
+    # No column list: the OpenBB frame is `symbol, ex_dividend_date, amount` and yahoo's fallback is
+    # `symbol, date, dividends.amount`, so the columns come from the annotations' priorities and both render.
+    view: { preset: table, sort: { column: ex_dividend_date, dir: desc } }
     size: sm
     ttl: 86400000
     routes:
@@ -368,15 +392,44 @@ recipes:
     view: { preset: chain }
     size: lg
     ttl: 60000
-    routes:
-      - connector: openbb
-        route: derivatives/options/chains
-        provider: cboe
-        params: { symbol: "{symbol}" }
-        note: the whole chain (MU is 11,000 rows); v1 picked the expiration and the strike window. implied_volatility is a fraction (annotated).
-      - connector: yahoo
-        route: options
-        params: { symbol: "{symbol}", date: "{expiration}" }
+    # cboe serves the whole chain (TSLA is 4,800 rows over every expiration); `main` keeps one expiration (the first
+    # on or after `expiration`, else the nearest at least 7 days out), the requested side and `strikes` strikes each
+    # side of the underlying, reading the params from the reserved `params` input (phase 2; v1 did this in code).
+    data:
+      raw:
+        routes:
+          - connector: openbb
+            route: derivatives/options/chains
+            provider: cboe
+            params: { symbol: "{symbol}" }
+            note: the whole chain; main picks the expiration and the strike window. implied_volatility is a fraction (annotated).
+          - connector: yahoo
+            route: options
+            params: { symbol: "{symbol}", date: "{expiration}" }
+      main:
+        inputs: [raw, params]
+        code: |
+          import datetime as dt
+          p = params.iloc[0]
+          df = raw
+          if "expiration" in df.columns and "option_type" in df.columns and len(df):
+              exps = sorted(str(e)[:10] for e in df["expiration"].dropna().unique())
+              want = str(p["expiration"])[:10] if "expiration" in p.index and p["expiration"] else ""
+              if not want:
+                  want = (dt.date.fromisoformat(ot.last_trading_day()) + dt.timedelta(days=7)).isoformat()
+              pick = next((e for e in exps if e >= want), exps[-1])
+              df = df[df["expiration"].astype(str).str[:10] == pick]
+              side = str(p["type"]) if "type" in p.index else "both"
+              if side in ("call", "put"):
+                  df = df[df["option_type"] == side]
+              n = int(p["strikes"]) if "strikes" in p.index else 10
+              if "underlying_price" in df.columns and df["underlying_price"].notna().any():
+                  u = float(df["underlying_price"].dropna().iloc[0])
+                  strikes = sorted(df["strike"].dropna().unique())
+                  keep = [k for k in strikes if k <= u][-n:] + [k for k in strikes if k > u][:n]
+                  df = df[df["strike"].isin(keep)]
+              df = df.sort_values(["strike", "option_type"])
+          result = df
 
   - name: volatility
     title: "{symbols} volatility"
@@ -491,38 +544,61 @@ recipes:
     view: { preset: compare, normalize: false }
     size: md
     ttl: 3600000
-    routes:
-      - connector: openbb
-        route: fixedincome/government/treasury_rates
-        provider: federal_reserve
-        params: { start_date: "{range|start_date}" }
-        when: { series: [treasury_3m, treasury_2y, treasury_10y, treasury_30y, spread_10y_2y] }
-        note: one call carries every maturity (month_3 … year_30, fractions); the series picks its column, the spread is year_10 - year_2.
-      - connector: openbb
-        route: fixedincome/rate/effr
-        provider: federal_reserve
-        params: { start_date: "{range|start_date}" }
-        when: { series: fed_funds }
-      - connector: openbb
-        route: fixedincome/rate/sofr
-        provider: federal_reserve
-        params: { start_date: "{range|start_date}" }
-        when: { series: sofr }
-      - connector: openbb
-        route: economy/money_measures
-        provider: federal_reserve
-        params: { start_date: "{range|start_date}" }
-        when: { series: m2 }
-      - connector: openbb
-        route: economy/cpi
-        provider: oecd
-        params: { country: united_states, transform: yoy, frequency: monthly, start_date: "{range|start_date}" }
-        when: { series: cpi_yoy }
-      - connector: openbb
-        route: economy/unemployment
-        provider: oecd
-        params: { country: united_states, frequency: monthly, start_date: "{range|start_date}" }
-        when: { series: unemployment }
+    # The routes answer wide (treasury_rates carries every maturity) or under their own names (effr `rate`); `main`
+    # keeps the series' column under its own name (its annotation follows: label, unit) plus `time` and `series`,
+    # and computes the 10y-2y spread, reading the series from the reserved `params` input (phase 2; v1 did this in code).
+    data:
+      raw:
+        routes:
+          - connector: openbb
+            route: fixedincome/government/treasury_rates
+            provider: federal_reserve
+            params: { start_date: "{range|start_date}" }
+            when: { series: [treasury_3m, treasury_2y, treasury_10y, treasury_30y, spread_10y_2y] }
+            note: one call carries every maturity (month_3 … year_30, fractions); main picks the column, the spread is year_10 - year_2.
+          - connector: openbb
+            route: fixedincome/rate/effr
+            provider: federal_reserve
+            params: { start_date: "{range|start_date}" }
+            when: { series: fed_funds }
+          - connector: openbb
+            route: fixedincome/rate/sofr
+            provider: federal_reserve
+            params: { start_date: "{range|start_date}" }
+            when: { series: sofr }
+          - connector: openbb
+            route: economy/money_measures
+            provider: federal_reserve
+            params: { start_date: "{range|start_date}" }
+            when: { series: m2 }
+          - connector: openbb
+            route: economy/cpi
+            provider: oecd
+            params: { country: united_states, transform: yoy, frequency: monthly, start_date: "{range|start_date}" }
+            when: { series: cpi_yoy }
+          - connector: openbb
+            route: economy/unemployment
+            provider: oecd
+            params: { country: united_states, frequency: monthly, start_date: "{range|start_date}" }
+            when: { series: unemployment }
+      main:
+        inputs: [raw, params]
+        code: |
+          s = str(params.at[0, "series"])
+          col = {"treasury_3m": "month_3", "treasury_2y": "year_2", "treasury_10y": "year_10", "treasury_30y": "year_30", "fed_funds": "rate", "sofr": "rate", "m2": "m2", "cpi_yoy": "value", "unemployment": "value"}.get(s, "value")
+          df = raw.copy()
+          t = next((c for c in ("time", "date", "month") if c in df.columns), None)
+          if t and t != "time":
+              df = df.rename(columns={t: "time"})
+          if s == "spread_10y_2y":
+              df["spread_10y_2y"] = df["year_10"] - df["year_2"]
+              col = "spread_10y_2y"
+          if col not in df.columns:
+              col = next(c for c in df.columns if c != "time" and df[c].dtype.kind in "fi")
+          result = df[["time", col]].dropna(subset=[col]).assign(series=s).sort_values("time")
+        columns:
+          spread_10y_2y: { unit: percent, label: 10Y-2Y, key: true }
+          series: { label: Series, priority: 1 }
 
   - name: yield_curve
     title: "Yield curve {date}"
@@ -559,9 +635,11 @@ recipes:
         route: index/price/historical
         provider: yfinance
         params: { symbol: "{symbol}", start_date: "{range|start_date}", interval: "{interval|openbb_interval}" }
+        rename: { date: time }
       - connector: yahoo
         route: chart
         params: { symbol: "{symbol}", period1: "{range|start_date}", interval: "{interval|yahoo_interval}", includePrePost: false }
+        rename: { date: time }
 
   - name: screener
     title: "Screener: {preset}"

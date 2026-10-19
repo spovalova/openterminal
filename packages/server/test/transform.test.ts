@@ -22,6 +22,7 @@ import {
   tradingDays,
   type AnyQueryInput,
   type Frame,
+  type TransformOutput,
 } from '@terminal/core'
 import { z } from 'zod'
 import { createTransformEngine, fromColumnar, toColumnar, vendoredWheels, type ServerTransformEngine } from '../src/transform/index.js'
@@ -34,13 +35,23 @@ const NOW = Date.UTC(2026, 9, 14, 18, 0, 0)
 
 let engine: ServerTransformEngine
 const logs: string[] = []
+/** A run issued while the worker was still booting (the server's first `transform` call on a cold start). */
+let early: Promise<TransformOutput>
+let bootsAfterEarly = 0
 
 beforeAll(async () => {
   engine = createTransformEngine({ log: (m) => logs.push(m), now: () => NOW, interruptGraceMs: 800 })
   const t0 = Date.now()
-  await engine.warmup()
+  // The server starts warmup in the background after listen and does not await it; a prompt that reaches `transform`
+  // before the worker is ready must wait for the same worker, not fail and not boot a second one.
+  const warm = engine.warmup()
+  const x: Frame = { columns: [{ name: 'a', type: 'number' }], rows: [[1], [2], [3]], meta: { connector: 'fixture', fetchedAt: NOW, ttl: 0 } }
+  early = engine.run({ x }, 'result = x[["a"]]')
+  await warm
   const s = engine.stats()
   console.log(`[transform] cold start ${Date.now() - t0} ms (pyodide ${s.coldStart?.pyodide}, packages ${s.coldStart?.packages}, imports ${s.coldStart?.imports}); heap ${s.heapMb} MB`)
+  await early
+  bootsAfterEarly = engine.stats().boots
 }, BOOT_MS)
 
 afterAll(async () => {
@@ -125,6 +136,17 @@ async function py(code: string, inputs: Record<string, Frame> = { df: priceFrame
 }
 
 // ---------- vendoring ----------
+
+describe('cold start', () => {
+  it('a run issued during warm-up waits for the worker instead of failing, on the one worker (the server does not await warmup)', async () => {
+    const out = await early
+    expect(isTransformError(out)).toBe(false)
+    if (isTransformError(out)) throw new Error(out.error)
+    expect(out.rows).toEqual([[1], [2], [3]])
+    expect(bootsAfterEarly).toBe(1)
+    expect(logs.some((l) => /transform worker ready in \d+ ms/.test(l))).toBe(true)
+  })
+})
 
 describe('vendored wheels', () => {
   it('every wheel the lock file needs for pandas, scipy and tzdata is on disk', () => {

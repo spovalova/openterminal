@@ -22,13 +22,15 @@ describe('DataTable never scrolls sideways', () => {
   })
 
   it('gives numeric, date and time columns a fixed width and lets text share the rest', () => {
-    expect(columnWidth('price', 'price')).toBe(76)
-    expect(columnWidth('change_pct', 'change')).toBe(72)
-    expect(columnWidth('time', 'time')).toBe(80)
+    // A YYYY-MM-DD in the mono stack needs 84px plus padding: date and time are 104 (phase 2, the "2026-10…" defect).
+    expect(columnWidth('price', 'price')).toBe(84)
+    expect(columnWidth('change_pct', 'change')).toBe(80)
+    expect(columnWidth('time', 'time')).toBe(104)
+    expect(columnWidth('date', 'date')).toBe(104)
     expect(columnWidth('symbol', 'text')).toBe(72)
     expect(columnWidth('headline', 'text')).toBeUndefined()
     const html = renderToString(createElement(DataTable, { columns, rows, formats: { price: 'price', time: 'time' } }))
-    expect(html).toMatch(/<th[^>]*style="width:76px"[^>]*>/)
+    expect(html).toMatch(/<th[^>]*style="width:84px"[^>]*>/)
   })
 
   it('marks column priority with data-rank on header and body cells so container queries can hide them', () => {
@@ -38,10 +40,14 @@ describe('DataTable never scrolls sideways', () => {
     expect(html).not.toContain('data-rank="0"')
   })
 
-  it('truncates long text with a tooltip', () => {
+  it('wraps prose to two lines at word boundaries with a tooltip, never cutting mid-word (section 17 checklist)', () => {
     const html = renderToString(createElement(DataTable, { columns, rows }))
     const td = html.match(/<td[^>]*title="A headline that is long enough to need a tooltip"[^>]*>/)?.[0]
     expect(td).toBeDefined()
-    expect(td).toContain('truncate')
+    expect(td).toContain('whitespace-normal')
+    expect(td).not.toContain('truncate')
+    expect(html).toMatch(/<span class="line-clamp-2 break-words whitespace-normal" title="A headline that is long enough to need a tooltip">/)
+    // Numbers, dates and tickers stay one line.
+    expect(html).toMatch(/<td class="border-b border-border\/60 px-2 h-7 truncate whitespace-nowrap text-right num/)
   })
 })

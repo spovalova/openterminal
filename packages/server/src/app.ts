@@ -101,13 +101,22 @@ export function createApp(deps: AppDeps) {
   })
 
   // ---- widgets ----
+  // `?workspace=` scopes the lookup: widget ids repeat across workspaces (w1..wN in every one), so without it the
+  // first workspace holding the id answers, which may be another tab's widget. The web always passes it (phase 2).
   app.get('/api/widgets/:id/frame', async (c) => {
-    const found = await store.findWidget(c.req.param('id'))
-    if (!found) return c.json({ error: 'widget not found' }, 404)
+    const id = c.req.param('id')
+    const workspaceId = c.req.query('workspace') || undefined
+    let widget: AnyWidget | undefined
+    if (workspaceId) {
+      const ws = await store.get(workspaceId)
+      if (!ws) return c.json({ error: 'workspace not found' }, 404)
+      widget = ws.widgets.find((w) => w.id === id)
+    } else widget = (await store.findWidget(id))?.widget
+    if (!widget) return c.json({ error: 'widget not found' }, 404)
     const bypassCache = c.req.query('refresh') === '1'
     const dataset = c.req.query('dataset') || undefined
     try {
-      return c.json(await executor.frameFor(found.widget, { bypassCache, ...(dataset ? { dataset } : {}) }))
+      return c.json(await executor.frameFor(widget, { bypassCache, ...(dataset ? { dataset } : {}) }))
     } catch (err) {
       return c.json({ error: errorMessage(err) }, 502)
     }

@@ -445,6 +445,11 @@ export function buildChart(panes: readonly Pane[], frames: Record<string, Frame>
         const idt = layer.detail ? columnIndex(f, layer.detail) : -1
         const detailFormat = layer.detail ? datasets[layer.data]?.fields[layer.detail]?.format : undefined
         const keys = [...h.byTime.keys()]
+        // The kind when the frame has no kind column: the dataset's recipe or route tail (news → N, earnings → E,
+        // insiders → I), then the dataset name, so an `events` dataset of news is not a column of E's.
+        const lineage = f.meta.lineage
+        const fallbackKind = lineage?.recipe ?? lineage?.route?.split('/').pop() ?? layer.data ?? 'custom'
+        const added: typeof h.markers = []
         for (const row of f.rows) {
           const ms = x === 'time' ? cellMs(row[ix]) : num(row[ix])
           if (ms == null) continue
@@ -453,15 +458,28 @@ export function buildChart(panes: readonly Pane[], frames: Record<string, Frame>
           if (key == null) continue
           // Only markers inside the drawn range; farther than a week from any bar means the event is off the chart.
           if (x === 'time' && Math.abs(key - want) > 7 * 86_400_000) continue
-          const kindValue = ik >= 0 && row[ik] != null ? String(row[ik]) : (layer.data ?? 'custom')
+          const kindValue = ik >= 0 && row[ik] != null ? String(row[ik]) : fallbackKind
           const kindKey = kindValue.toLowerCase()
           const style = markerStyle(kindKey)
           const detailRaw = idt >= 0 ? row[idt] : null
           const detail = detailRaw == null ? null : typeof detailRaw === 'number' && (detailFormat === 'change' || detailFormat === 'percent' || /pct|percent/.test(layer.detail ?? '')) ? `${detailRaw > 0 ? '+' : ''}${detailRaw.toFixed(2)}%` : String(detailRaw)
           const time: HorzItem = x === 'time' ? toChartTime(key, intraday) : key
           const position = layer.position === 'below' ? 'belowBar' : layer.position === 'inline' ? 'inBar' : 'aboveBar'
-          h.markers.push({ time, at: ms, kind: kindKey, letter: style.letter, color: style.color, label: il >= 0 && row[il] != null ? String(row[il]) : kindValue, detail, position })
+          added.push({ time, at: ms, kind: kindKey, letter: style.letter, color: style.color, label: il >= 0 && row[il] != null ? String(row[il]) : kindValue, detail, position })
           if (!markerKinds.has(kindKey)) markerKinds.set(kindKey, { kind: kindKey, letter: style.letter, color: style.color })
+        }
+        // Several events of one kind on one bar (a day of headlines) are one marker whose detail counts the rest; the
+        // tooltip lists them. Otherwise lightweight-charts stacks a column of letters over the bar.
+        const merged = new Map<string, (typeof added)[number] & { more: string[] }>()
+        for (const m of added) {
+          const id = `${horzKey(m.time)}|${m.kind}|${m.position}`
+          const prev = merged.get(id)
+          if (!prev) merged.set(id, { ...m, more: [] })
+          else prev.more.push(m.label)
+        }
+        for (const m of merged.values()) {
+          const { more, ...rest } = m
+          h.markers.push(more.length === 0 ? rest : { ...rest, detail: rest.detail ? `${rest.detail} · +${more.length} more` : `+${more.length} more`, label: rest.label })
         }
         h.markers.sort((a, b) => horzKey(a.time) - horzKey(b.time))
       } else if (layer.mark === 'band') {

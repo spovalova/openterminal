@@ -42,9 +42,8 @@ export const MAX_TOOL_CALLS = 10
 export type ToolBudget = { used: number; max: number }
 
 /**
- * The `widgets` message with v2 widgets. The protocol's `widgets` message still carries `WidgetSchema` (v1) until the
- * integration bot switches it to `AnyWidgetSchema` (docs/notes/v2-contracts.md, "not in core yet"); the server drops
- * and logs this message until then, and the tools' result still tells the model the ids it applied.
+ * The `widgets` message with v2 widgets. Since phase 2 the protocol's `widgets` message carries `AnyWidgetSchema`, so
+ * this is a narrowing of `ServerMsg`'s `widgets` member (kept as a named type for the tools' `emit`).
  */
 export type WidgetsV2Msg = { t: 'widgets'; workspaceId: string; widgets: WidgetV2[]; name?: string }
 
@@ -181,13 +180,13 @@ export function layoutNote(widgets: readonly WidgetV2[], memory: PreviewMemory):
     3,
   )
   const stretched = placements.flatMap((p, i) => (p.stretched ? [widgets[i]!] : []))
-  const sized = placements.flatMap((p, i) => (p.demoted ? [`${widgets[i]!.id} (${widgets[i]!.view.preset}, ${widgets[i]!.size}) is ${p.rows === 1 ? 'one row' : `${p.rows} rows`} tall`] : []))
+  const sized = placements.flatMap((p, i) => (p.demoted ? [`${widgets[i]!.id} (${widgets[i]!.view.preset}, ${widgets[i]!.size}) is ${p.cols === 1 && widgets[i]!.size !== 'sm' ? 'one column wide and ' : ''}${p.rows === 1 ? 'one row' : `${p.rows} rows`} tall`] : []))
   const parts: string[] = []
   if (stretched.length > 0) {
     const names = stretched.map((w) => `${w.id} (${w.size})`).join(', ')
     parts.push(`Layout repaired: ${names} ${stretched.length === 1 ? 'was' : 'were'} stretched to fill cells that would have stayed empty in the 3-column grid (lg is 2x2, md 2x1, sm 1x1). This is fine; a set that tiles (an md beside an sm, two sm in a row) needs no repair.`)
   }
-  if (sized.length > 0) parts.push(`Sized by content: ${sized.join(', ')} (tables with six rows or fewer, stats and facts cards are one row; charts are two).`)
+  if (sized.length > 0) parts.push(`Sized by content: ${sized.join(', ')} (tables with six rows or fewer, stats and facts cards are one row; charts are two, and a non-hero md chart is one column wide so three charts tile across).`)
   return parts.length ? `${parts.join(' ')} ` : ''
 }
 

@@ -121,6 +121,27 @@ describe('the seed file (packages/core/annotations.yml)', () => {
     expect(unit('openbb', 'equity/shorts/short_interest', 'current_short_position')).toBe('shares')
     expect(unit('yahoo', 'chart', 'volume')).toBe('shares')
   })
+  it('keeps the FINRA bond percents as sent (coupon 9.25, yield 13.63, change 1.15; phase 2 correction, the seed said fraction)', () => {
+    const rules = builtinAnnotations()
+    const ref = { connector: 'openbb', route: 'fixedincome/corporate/bond_prices' }
+    const frame: Frame = {
+      columns: [{ name: 'cusip', type: 'string' }, { name: 'coupon_rate', type: 'number' }, { name: 'price', type: 'number' }, { name: 'last_sale_yield', type: 'number' }, { name: 'price_change_percent', type: 'number' }],
+      rows: [['21873SAB4', 9.25, 87.75, 13.63, 1.15]],
+      meta: { connector: 'openbb', fetchedAt: 0, ttl: 0 },
+    }
+    const out = applyAnnotations(frame, ref, rules)
+    expect(out.rows[0]).toEqual(['21873SAB4', 9.25, 87.75, 13.63, 1.15])
+    expect(out.meta.fields?.coupon_rate).toMatchObject({ unit: 'percent' })
+    expect(out.meta.fields?.last_sale_yield).toMatchObject({ unit: 'percent', key: true })
+    expect(out.meta.fields?.price_change_percent).toMatchObject({ unit: 'percent', format: 'change' })
+    const hist = applyAnnotations(
+      { columns: [{ name: 'date', type: 'time' }, { name: 'price', type: 'number' }, { name: 'last_sale_yield', type: 'number' }], rows: [[1, 100.06, 9.22]], meta: { connector: 'openbb', fetchedAt: 0, ttl: 0 } },
+      { connector: 'openbb', route: 'finra/fixedincome/bond_historical' },
+      rules,
+    )
+    expect(hist.rows[0]).toEqual([1, 100.06, 9.22])
+    expect(hist.meta.fields?.last_sale_yield).toMatchObject({ unit: 'percent', key: true })
+  })
   it('labels the ugly names', () => {
     const label = (connector: string, route: string, field: string) => annotationsFor(seed, { connector, route }, field).label
     expect(label('openbb', 'equity/price/quote', 'iv30_annual_high')).toBe('IV30 high')

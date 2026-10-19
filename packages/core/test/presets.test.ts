@@ -119,10 +119,43 @@ describe('controlFor', () => {
     })
     expect(controlFor({ preset: 'table', columns: ['symbol', 'nope', 'last_price'] }, ds({ main: quotes }))).toMatchObject({ columns: ['symbol', 'last_price'] })
   })
+  it('table: a column list that names nothing in the frame falls back to the priority order, never an empty table', () => {
+    const c = controlFor({ preset: 'table', columns: ['ex_dividend_date', 'amount'] }, ds({ main: frame([['symbol', 'string'], ['date', 'time'], ['dividends.amount', 'number']], [['AAPL', 1, 0.25]], { 'dividends.amount': { unit: 'usd', priority: 2 } }) }))
+    expect(c?.kind).toBe('table')
+    if (c?.kind !== 'table') throw new Error()
+    expect([...c.columns].sort()).toEqual(['date', 'dividends.amount', 'symbol'])
+    // A partial match keeps what matched.
+    const partial = controlFor({ preset: 'table', columns: ['symbol', 'nope'] }, ds({ main: quotes }))
+    expect(partial?.kind === 'table' && partial.columns).toEqual(['symbol'])
+  })
+  it('table: a sort on a date column the frame names differently falls back to the time column', () => {
+    const c = controlFor({ preset: 'table', sort: { column: 'ex_dividend_date', dir: 'desc' } }, ds({ main: frame([['symbol', 'string'], ['date', 'time'], ['amount', 'number']], [['AAPL', 1, 0.25]]) }))
+    expect(c?.kind === 'table' && c.sort).toEqual({ column: 'date', dir: 'desc' })
+    const none = controlFor({ preset: 'table', sort: { column: 'weight', dir: 'desc' } }, ds({ main: quotes }))
+    expect(none?.kind === 'table' && none.sort).toBeUndefined()
+  })
   it('stat: the key field, its change column and format', () => {
     expect(controlFor({ preset: 'stat' }, ds({ main: quotes }))).toEqual({ kind: 'stat', data: 'main', column: 'last_price', group: 'symbol', change: 'change_percent', format: 'price', label: 'Last', unit: 'usd' })
-    expect(controlFor({ preset: 'stat', column: 'volume' }, ds({ main: quotes }))).toMatchObject({ column: 'volume', format: 'compact', change: 'change_percent' })
+    // A volume headline does not borrow the price's day change (phase 2: only a price-like column takes the bare change columns).
+    const vol = controlFor({ preset: 'stat', column: 'volume' }, ds({ main: quotes }))
+    expect(vol).toMatchObject({ column: 'volume', format: 'compact' })
+    expect(vol?.kind === 'stat' && vol.change).toBeUndefined()
     expect(controlFor({ preset: 'stat' }, ds({ main: frame([['name', 'string']], [['x']]) }))).toBeUndefined()
+  })
+  it('stat: without a conventional change column, the annotated day change (percent, format change) is the change line', () => {
+    const yq = frame([['symbol', 'string'], ['regularMarketPrice', 'number'], ['regularMarketChangePercent', 'number'], ['preMarketChangePercent', 'number'], ['marketState', 'string']], [['NVDA', 180, -5.6, 0.4, 'CLOSED']], {
+      regularMarketPrice: { unit: 'usd', key: true, label: 'Last', priority: 1 },
+      regularMarketChangePercent: { unit: 'percent', format: 'change', label: 'Chg %', priority: 2 },
+      preMarketChangePercent: { unit: 'percent', format: 'change', label: 'Pre %', priority: 4 },
+    })
+    const c = controlFor({ preset: 'stat', column: 'last_price', change: 'change_percent' }, ds({ main: yq }))
+    expect(c).toMatchObject({ kind: 'stat', column: 'regularMarketPrice', change: 'regularMarketChangePercent' })
+    // The stock's day change is not the change line of a non-price headline (IV30 over cboe's quote).
+    const vol = frame([['symbol', 'string'], ['last_price', 'number'], ['change_percent', 'number'], ['iv30', 'number']], [['TSLA', 352, -2.18, 47.4]], { iv30: { unit: 'percent', key: true, label: 'IV30' }, change_percent: { unit: 'percent', format: 'change' } })
+    const v = controlFor({ preset: 'stat', column: 'iv30' }, ds({ main: vol }))
+    expect(v?.kind === 'stat' && v.change).toBeUndefined()
+    const px = controlFor({ preset: 'stat', column: 'last_price' }, ds({ main: vol }))
+    expect(px?.kind === 'stat' && px.change).toBe('change_percent')
   })
   it('facts and chain and chart', () => {
     expect(controlFor({ preset: 'facts', columns: ['symbol', 'last_price'] }, ds({ main: quotes }))).toMatchObject({ kind: 'facts', columns: ['symbol', 'last_price'], formats: { last_price: 'price' } })

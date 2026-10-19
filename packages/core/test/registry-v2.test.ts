@@ -17,6 +17,7 @@ import {
   ttlForRoute,
   type Descriptor,
   type Frame,
+  type Recipe,
   type TransformEngine,
 } from '../src/index.js'
 import { builtinRecipes } from '../src/node.js'
@@ -195,29 +196,126 @@ describe('ConnectorRegistry.run (v2)', () => {
   it('runs a recipe through its alternatives in order and falls back on error', async () => {
     const log = vi.fn()
     const r = new ConnectorRegistry({ recipes: builtinRecipes(), annotations, cache: new MemoryCache(), log })
-    const flaky = defineConnector({
+    // The quote recipe asks yahoo first (phase 2); when yahoo fails, OpenBB's route answers.
+    const openbb = defineConnector({
       name: 'openbb',
       config: z.object({}),
       descriptors: () => [quoteDescriptor].map((d) => ({ ...d, connector: 'openbb', providers: ['yfinance'] })),
+      call: async (_route, params) => inferFrame((params.symbol as string[]).map((s) => ({ symbol: s, last_price: 99, change_percent: 0.01 })), { connector: 'openbb' }),
+    })
+    const flaky = defineConnector({
+      name: 'yahoo',
+      config: z.object({}),
+      descriptors: () => [{ connector: 'yahoo', route: 'quote', summary: 'Yahoo quote', params: [{ name: 'symbols', type: 'string[]', required: true }], providers: [], fields: [{ name: 'symbol', type: 'string' }, { name: 'regularMarketPrice', type: 'number' }] }],
       call: async () => {
         throw new Error('boom')
       },
     })
-    const yahoo = defineConnector({
-      name: 'yahoo',
-      config: z.object({}),
-      descriptors: () => [{ connector: 'yahoo', route: 'quote', summary: 'Yahoo quote', params: [{ name: 'symbols', type: 'string[]', required: true }], providers: [], fields: [{ name: 'symbol', type: 'string' }, { name: 'regularMarketPrice', type: 'number' }] }],
-      call: async (_route, params) => inferFrame((params.symbols as string[]).map((s) => ({ symbol: s, regularMarketPrice: 99 })), { connector: 'yahoo' }),
-    })
+    r.register(openbb, {})
     r.register(flaky, {})
-    r.register(yahoo, {})
     const f = await r.run({ recipe: 'quote', params: { symbols: ['MU'] } })
-    expect(f.meta.connector).toBe('yahoo')
-    expect(f.meta.lineage).toMatchObject({ connector: 'yahoo', route: 'quote', recipe: 'quote' })
-    expect(f.rows).toEqual([['MU', 99]])
-    expect(log).toHaveBeenCalledWith(expect.stringContaining('[openbb] equity/price/quote failed: boom'))
+    expect(f.meta.connector).toBe('openbb')
+    expect(f.meta.lineage).toMatchObject({ connector: 'openbb', route: 'equity/price/quote', recipe: 'quote' })
+    expect(f.rows).toEqual([['MU', 99, 1]])
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('[yahoo] quote failed: boom'))
     await expect(r.run({ recipe: 'holdings', params: { symbol: 'SMH' } })).rejects.toThrow(/failed on every route/)
     await expect(r.run({ recipe: 'nope', params: {} })).rejects.toThrow(/unknown recipe "nope"/)
+  })
+  it('applies a recipe route’s renames to the frame (the price routes’ `date` becomes the kind’s `time`)', async () => {
+    const r = new ConnectorRegistry({
+      recipes: [{ name: 'bars', title: 'bars', params: { type: 'object', properties: { symbols: { type: 'array', items: { type: 'string' } } }, required: ['symbols'] }, view: { preset: 'price' }, routes: [{ connector: 'acme', route: 'equity/price/historical', params: { symbol: '{symbols}' }, rename: { date: 'time' } }] }],
+      annotations: parseAnnotations({ '*:*:date': { label: 'Date', priority: 1 } }),
+    })
+    r.register(acme, {})
+    const f = await r.run({ recipe: 'bars', params: { symbols: ['NVDA'] } })
+    expect(f.columns.map((c) => c.name)).toEqual(['symbol', 'time', 'close'])
+    expect(f.meta.fields!.time).toMatchObject({ label: 'Date' })
+    expect(f.meta.fields!.date).toBeUndefined()
+    const real = builtinRecipes().find((x) => x.name === 'ohlcv')!
+    expect(real.routes!.every((x) => x.rename?.date === 'time')).toBe(true)
+  })
+  it('binds the recipe’s validated params as the `params` input of its transforms', async () => {
+    const seen: Record<string, Frame>[] = []
+    const engine: TransformEngine = {
+      run: vi.fn(async (inputs: Record<string, Frame>) => {
+        seen.push(inputs)
+        return inputs.raw!
+      }),
+    }
+    const r = new ConnectorRegistry({
+      recipes: [{ name: 'pick', title: 'pick', params: { type: 'object', properties: { symbols: { type: 'array', items: { type: 'string' } }, strikes: { type: 'integer', default: 10 } }, required: ['symbols'] }, view: { preset: 'table' }, data: { raw: { routes: [{ connector: 'acme', route: 'equity/price/quote', params: { symbol: '{symbols}' } }] }, main: { inputs: ['raw', 'params'], code: 'result = raw' } } }],
+      annotations,
+      transform: engine,
+    })
+    r.register(acme, {})
+    const f = await r.run({ recipe: 'pick', params: { symbols: ['NVDA', 'AMD'] } })
+    expect(f.rows).toHaveLength(2)
+    expect(Object.keys(seen[0]!).sort()).toEqual(['params', 'raw'])
+    expect(seen[0]!.params!.columns.map((c) => c.name)).toEqual(['symbols', 'strikes'])
+    expect(seen[0]!.params!.rows).toEqual([['NVDA, AMD', 10]])
+    expect(f.meta.lineage).toMatchObject({ recipe: 'pick', inputs: { params: { connector: 'recipe' } } })
+  })
+  it('treats a cached recipe frame from an older recipe definition as a miss (the persistent cache outlives recipes.yml edits)', async () => {
+    const cache = new MemoryCache()
+    const recipe: Recipe = { name: 'q', title: 'q', params: { type: 'object', properties: { symbols: { type: 'array', items: { type: 'string' } } }, required: ['symbols'] }, view: { preset: 'table' }, routes: [{ connector: 'acme', route: 'equity/price/quote', params: { symbol: '{symbols}' } }] }
+    const r = new ConnectorRegistry({ recipes: [recipe], annotations, cache })
+    r.register(acme, {})
+    const q = { recipe: 'q', params: { symbols: ['NVDA'] } }
+    const first = await r.run(q)
+    expect(first.meta.lineage?.recipeVersion).toMatch(/^[0-9a-f]{8}$/)
+    expect(await r.run(q)).toBe(first) // a hit while the definition is the same
+    // The same recipe name with a changed definition (a rename added): the cached frame is stale.
+    r.setRecipes([{ ...recipe, routes: [{ ...recipe.routes![0]!, rename: { last_price: 'last' } }] }])
+    const second = await r.run(q)
+    expect(second).not.toBe(first)
+    expect(second.columns.map((c) => c.name)).toContain('last')
+    expect(second.meta.lineage?.recipeVersion).not.toBe(first.meta.lineage?.recipeVersion)
+    expect(await r.run(q)).toBe(second)
+  })
+  it('tries the next alternative when a route answers no rows, and returns the empty frame only when every alternative is empty', async () => {
+    const log = vi.fn()
+    const r = new ConnectorRegistry({
+      recipes: [
+        { name: 'est', title: 'est', params: { type: 'object', properties: { symbols: { type: 'array', items: { type: 'string' } } }, required: ['symbols'] }, view: { preset: 'facts' }, routes: [{ connector: 'blank', route: 'equity/price/quote', params: { symbol: '{symbols}' } }, { connector: 'acme', route: 'equity/price/quote', params: { symbol: '{symbols}' } }] },
+        { name: 'none', title: 'none', params: { type: 'object', properties: { symbols: { type: 'array', items: { type: 'string' } } }, required: ['symbols'] }, view: { preset: 'facts' }, routes: [{ connector: 'blank', route: 'equity/price/quote', params: { symbol: '{symbols}' } }] },
+      ],
+      annotations,
+      log,
+    })
+    const blank = defineConnector({
+      name: 'blank',
+      config: z.object({}),
+      descriptors: () => [{ ...quoteDescriptor, connector: 'blank' }],
+      call: async () => inferFrame([], { connector: 'blank' }, { descriptor: quoteDescriptor }),
+    })
+    r.register(blank, {})
+    r.register(acme, {})
+    const f = await r.run({ recipe: 'est', params: { symbols: ['TSLA'] } })
+    expect(f.meta.connector).toBe('acme')
+    expect(f.rows).toHaveLength(1)
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('[blank] equity/price/quote answered no rows'))
+    const none = await r.run({ recipe: 'none', params: { symbols: ['TSLA'] } })
+    expect(none.rows).toHaveLength(0)
+    expect(none.meta.connector).toBe('blank')
+  })
+  it('does not cache an empty frame (a provider hiccup must not stand for the whole TTL)', async () => {
+    let calls = 0
+    const flaky = defineConnector({
+      name: 'acme',
+      config: z.object({}),
+      descriptors: () => [quoteDescriptor],
+      call: async (_route, params) => {
+        calls += 1
+        return inferFrame(calls === 1 ? [] : (params.symbol as string[]).map((s) => ({ symbol: s, last_price: 1, change_percent: 0 })), { connector: 'acme' }, { descriptor: quoteDescriptor })
+      },
+    })
+    const r = new ConnectorRegistry({ annotations, cache: new MemoryCache() })
+    r.register(flaky, {})
+    const q = { connector: 'acme', route: 'equity/price/quote', params: { symbol: ['NVDA'] } }
+    expect((await r.run(q)).rows).toHaveLength(0)
+    expect((await r.run(q)).rows).toHaveLength(1) // asked again, not served from the cache
+    expect((await r.run(q)).rows).toHaveLength(1)
+    expect(calls).toBe(2)
   })
   it('applies a recipe’s ttl and field overrides', async () => {
     const r = new ConnectorRegistry({

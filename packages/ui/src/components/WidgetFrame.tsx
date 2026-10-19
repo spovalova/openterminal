@@ -97,7 +97,8 @@ export const WidgetFrame: FC<WidgetFrameProps> = ({
           <h3 className="truncate text-sm leading-4 font-medium text-fg" title={title}>
             {title}
           </h3>
-          <div className="truncate text-xs leading-4 text-fg-3" data-subtitle="" title={subtitle}>
+          {/* Wraps to two lines at word boundaries in a narrow cell rather than cutting mid-word (section 17 checklist). */}
+          <div className="line-clamp-2 text-xs leading-4 break-words text-fg-3" data-subtitle="" title={subtitle}>
             {subtitle ?? ' '}
           </div>
         </div>

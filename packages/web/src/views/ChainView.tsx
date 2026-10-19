@@ -42,15 +42,44 @@ function num(v: unknown): number | null {
   return typeof v === 'number' && Number.isFinite(v) ? v : null
 }
 
+/**
+ * Column names per contract field: the v1 `options` kind's first, then the v2 routes' (OpenBB cboe `option_type`,
+ * `underlying_symbol`, `last_trade_price`, `implied_volatility`; yahoo `lastPrice`, `openInterest`, `impliedVolatility`).
+ */
+const ALIASES: Record<ContractField | 'type' | 'symbol' | 'expiration' | 'dte' | 'underlying_price', readonly string[]> = {
+  type: ['type', 'option_type', 'contract_type'],
+  symbol: ['symbol', 'underlying_symbol'],
+  expiration: ['expiration', 'expiration_date', 'expirationDate'],
+  dte: ['dte'],
+  underlying_price: ['underlying_price', 'underlyingPrice'],
+  bid: ['bid'],
+  ask: ['ask'],
+  last: ['last', 'last_trade_price', 'last_price', 'lastPrice'],
+  volume: ['volume'],
+  open_interest: ['open_interest', 'openInterest'],
+  iv: ['iv', 'implied_volatility', 'impliedVolatility'],
+  delta: ['delta'],
+  gamma: ['gamma'],
+  theta: ['theta'],
+  vega: ['vega'],
+}
+function aliasIndex(frame: Frame, field: keyof typeof ALIASES): number {
+  for (const name of ALIASES[field]) {
+    const i = columnIndex(frame, name)
+    if (i >= 0) return i
+  }
+  return -1
+}
+
 /** Pivot an `options` frame (one row per contract) into one row per strike with a call and a put side. */
 export function buildChain(frame: Frame): Chain {
   const iStrike = columnIndex(frame, 'strike')
-  const iType = columnIndex(frame, 'type')
-  const iSymbol = columnIndex(frame, 'symbol')
-  const iExp = columnIndex(frame, 'expiration')
-  const iDte = columnIndex(frame, 'dte')
-  const iUnderlying = columnIndex(frame, 'underlying_price')
-  const fieldIdx = Object.fromEntries(CONTRACT_FIELDS.map((f) => [f, columnIndex(frame, f)])) as Record<ContractField, number>
+  const iType = aliasIndex(frame, 'type')
+  const iSymbol = aliasIndex(frame, 'symbol')
+  const iExp = aliasIndex(frame, 'expiration')
+  const iDte = aliasIndex(frame, 'dte')
+  const iUnderlying = aliasIndex(frame, 'underlying_price')
+  const fieldIdx = Object.fromEntries(CONTRACT_FIELDS.map((f) => [f, aliasIndex(frame, f)])) as Record<ContractField, number>
 
   const byStrike = new Map<number, ChainRow>()
   let symbol: string | null = null

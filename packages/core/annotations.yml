@@ -248,11 +248,28 @@ annotations:
   "openbb:fixedincome/rate/sofr:rate": { unit: fraction, label: SOFR, priority: 1, key: true }
   "openbb:fixedincome/rate/sofr:volume": { unit: usd, format: compact, label: Volume ($bn), priority: 6 }
   "openbb:fixedincome/spreads/tcm:rate": { unit: fraction, label: Spread, priority: 1 }
+  # FINRA TRACE (provider finra) sends percents, not fractions: coupon_rate 9.25, last_sale_yield 13.63,
+  # price_change_percent 1.15 (checked live 2026-10-19 on issuer_name=coreweave; phase 2 correction, the seed said
+  # fraction and the preview showed 925). Price is per 100 of par.
   "openbb:fixedincome/corporate/bond_prices:price": { unit: usd, format: price, label: Price, priority: 2 }
-  "openbb:fixedincome/corporate/bond_prices:yield_to_maturity": { unit: fraction, label: YTM, priority: 1, key: true }
-  "openbb:fixedincome/corporate/bond_prices:coupon_rate": { unit: fraction, label: Coupon, priority: 3 }
+  "openbb:fixedincome/corporate/bond_prices:yield_to_maturity": { unit: percent, label: YTM, priority: 1 }
+  "openbb:fixedincome/corporate/bond_prices:last_sale_yield": { unit: percent, label: Yield, priority: 1, key: true }
+  "openbb:fixedincome/corporate/bond_prices:coupon_rate": { unit: percent, label: Coupon, priority: 3 }
   "openbb:fixedincome/corporate/bond_prices:maturity_date": { label: Maturity, priority: 2 }
+  "openbb:fixedincome/corporate/bond_prices:price_change": { unit: usd, format: change, label: Chg, priority: 6 }
+  "openbb:fixedincome/corporate/bond_prices:price_change_percent": { unit: percent, format: change, label: "Chg %", priority: 4 }
+  "openbb:fixedincome/corporate/bond_prices:last_trade_date": { label: Last trade, priority: 5 }
+  "openbb:fixedincome/corporate/bond_prices:moodys_rating": { label: Moody's, priority: 4 }
+  "openbb:fixedincome/corporate/bond_prices:sp_rating": { label: S&P, priority: 4 }
+  "openbb:fixedincome/corporate/bond_prices:issuer_name": { label: Issuer, priority: 3 }
+  "openbb:fixedincome/corporate/bond_prices:cusip": { label: CUSIP, priority: 2 }
+  "openbb:fixedincome/corporate/bond_prices:call_date": { label: Call date, priority: 7 }
+  "openbb:fixedincome/corporate/bond_prices:grade": { label: Grade, priority: 7 }
   "openbb:fixedincome/corporate/bond_prices:volume": { unit: count, format: compact, label: Volume, priority: 5 }
+  "openbb:finra/fixedincome/bond_historical:date": { label: Date, priority: 1 }
+  "openbb:finra/fixedincome/bond_historical:price": { unit: usd, format: price, label: Price, priority: 2 }
+  "openbb:finra/fixedincome/bond_historical:last_sale_yield": { unit: percent, label: Yield, priority: 1, key: true }
+  "openbb:finra/fixedincome/bond_historical:cusip": { label: CUSIP, priority: 3 }
   "openbb:economy/money_measures:m2": { unit: usd, format: compact, label: M2, priority: 1, key: true }
   "openbb:economy/money_measures:m1": { unit: usd, format: compact, label: M1, priority: 2 }
   "openbb:economy/money_measures:month": { label: Month, priority: 1 }
@@ -333,6 +350,34 @@ annotations:
   "yahoo:quoteSummary:earningsHistory.surprisePercent": { unit: fraction, format: change, label: "Surprise %", priority: 2 }
   "yahoo:quoteSummary:earningsTrend.earningsEstimate.avg": { unit: usd, format: price, label: EPS est., priority: 2 }
   "yahoo:quoteSummary:earningsTrend.earningsEstimate.growth": { unit: fraction, format: change, label: EPS growth, priority: 3 }
+  # The rest of the earningsTrend module (the estimates fallback when yfinance's consensus answers no rows): short
+  # labels for the facts card, the bookkeeping fields hidden.
+  "yahoo:quoteSummary:earningsTrend.period": { label: Period, priority: 1 }
+  "yahoo:quoteSummary:earningsTrend.endDate": { label: Period end, priority: 2 }
+  "yahoo:quoteSummary:earningsTrend.earningsEstimate.low": { unit: usd, format: price, label: EPS est. low, priority: 5 }
+  "yahoo:quoteSummary:earningsTrend.earningsEstimate.high": { unit: usd, format: price, label: EPS est. high, priority: 5 }
+  "yahoo:quoteSummary:earningsTrend.earningsEstimate.yearAgoEps": { unit: usd, format: price, label: EPS year ago, priority: 6 }
+  "yahoo:quoteSummary:earningsTrend.earningsEstimate.numberOfAnalysts": { unit: count, format: integer, label: EPS analysts, priority: 7 }
+  "yahoo:quoteSummary:earningsTrend.earningsEstimate.earningsCurrency": { hidden: true }
+  "yahoo:quoteSummary:earningsTrend.revenueEstimate.avg": { unit: usd, format: compact, label: Revenue est., priority: 2 }
+  "yahoo:quoteSummary:earningsTrend.revenueEstimate.low": { unit: usd, format: compact, label: Revenue est. low, priority: 6 }
+  "yahoo:quoteSummary:earningsTrend.revenueEstimate.high": { unit: usd, format: compact, label: Revenue est. high, priority: 6 }
+  "yahoo:quoteSummary:earningsTrend.revenueEstimate.growth": { unit: fraction, format: change, label: Revenue growth, priority: 3 }
+  "yahoo:quoteSummary:earningsTrend.revenueEstimate.yearAgoRevenue": { unit: usd, format: compact, label: Revenue year ago, priority: 7 }
+  "yahoo:quoteSummary:earningsTrend.revenueEstimate.numberOfAnalysts": { unit: count, format: integer, label: Revenue analysts, priority: 8 }
+  "yahoo:quoteSummary:earningsTrend.revenueEstimate.revenueCurrency": { hidden: true }
+  "yahoo:quoteSummary:earningsTrend.epsTrend.current": { unit: usd, format: price, label: EPS trend now, priority: 6 }
+  "yahoo:quoteSummary:earningsTrend.epsTrend.7daysAgo": { unit: usd, format: price, label: EPS 7d ago, priority: 8 }
+  "yahoo:quoteSummary:earningsTrend.epsTrend.30daysAgo": { unit: usd, format: price, label: EPS 30d ago, priority: 7 }
+  "yahoo:quoteSummary:earningsTrend.epsTrend.60daysAgo": { unit: usd, format: price, label: EPS 60d ago, priority: 8 }
+  "yahoo:quoteSummary:earningsTrend.epsTrend.90daysAgo": { unit: usd, format: price, label: EPS 90d ago, priority: 8 }
+  "yahoo:quoteSummary:earningsTrend.epsRevisions.upLast7days": { unit: count, format: integer, label: Up revisions 7d, priority: 7 }
+  "yahoo:quoteSummary:earningsTrend.epsRevisions.upLast30days": { unit: count, format: integer, label: Up revisions 30d, priority: 6 }
+  "yahoo:quoteSummary:earningsTrend.epsRevisions.downLast7days": { unit: count, format: integer, label: Down revisions 7d, priority: 7 }
+  "yahoo:quoteSummary:earningsTrend.epsRevisions.downLast30days": { unit: count, format: integer, label: Down revisions 30d, priority: 6 }
+  "yahoo:quoteSummary:earningsTrend.maxAge": { hidden: true }
+  "yahoo:quoteSummary:financialData.maxAge": { hidden: true }
+  "yahoo:quoteSummary:financialData.financialCurrency": { hidden: true }
   "yahoo:quoteSummary:insiderTransactions.shares": { unit: shares, format: compact, label: Shares, priority: 3 }
   "yahoo:quoteSummary:insiderTransactions.value": { unit: usd, format: compact, label: Value, priority: 4 }
   "yahoo:quoteSummary:insiderTransactions.filerName": { label: Insider, priority: 2 }

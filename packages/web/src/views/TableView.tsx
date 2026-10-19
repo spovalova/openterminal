@@ -1,6 +1,7 @@
 import { useMemo, useState, type FC } from 'react'
+import clsx from 'clsx'
 import { columnIndex, controlFor, type Column, type Format, type Frame, type TableControl } from '@terminal/core'
-import { DataTable, EmptyState, type CellFormat } from '@terminal/ui'
+import { DataTable, EMPTY_CELL, EmptyState, direction, formatCell, type CellFormat } from '@terminal/ui'
 import type { ViewProps } from './types'
 import { VirtualTable } from '../components/VirtualTable'
 import { FactsCard } from './FactsCard'
@@ -137,6 +138,9 @@ export const TableView: FC<ViewProps> = ({ widget, frames }) => {
   const cellMark = extremes ? (row: unknown[], column: string) => extremes.get(row)?.[column] : undefined
 
   const common = { columns: projected.columns, rows: limited, formats, labels: table.labels, priority: ranksFor(table.columns), sort, onSort }
+  // Two or three rows cannot fill a grid row as a table (the (d) note: 28px rows in a 240px cell); each row becomes a
+  // card of label-over-value facts, the key column as its heading, so the cell reads full and every column shows.
+  if (limited.length <= ROW_CARDS_MAX) return <RowCards frame={projected} rows={limited} formats={formats} labels={table.labels} columns={table.columns} />
   return (
     <div data-view="table" data-rows={frame.rows.length} data-virtual={limited.length > VIRTUAL_ROWS ? '' : undefined} className="h-full w-full overflow-hidden">
       {limited.length > VIRTUAL_ROWS ? (
@@ -151,6 +155,50 @@ export const TableView: FC<ViewProps> = ({ widget, frames }) => {
 
 /** Above this many rows the table windows its rows (VirtualTable); below it every row renders with highlight and marks. */
 export const VIRTUAL_ROWS = 150
+/** Up to this many rows a table renders as one card per row (a one-row frame is the facts card; two or three are row cards). */
+export const ROW_CARDS_MAX = 3
+
+/**
+ * Two or three rows as cards: the first text column (symbol, name) heads each card and the other columns follow as
+ * label over value, the same formats as the table; signed changes coloured. Each card takes a column of the cell.
+ */
+const RowCards: FC<{ frame: Frame; rows: unknown[][]; formats: Record<string, CellFormat>; labels: Record<string, string>; columns: readonly string[] }> = ({ frame, rows, formats, labels, columns }) => {
+  const names = frame.columns.map((c) => c.name)
+  const head = columns.find((c) => names.includes(c) && frame.columns[columnIndex(frame, c)]!.type === 'string') ?? columns[0]!
+  const rest = columns.filter((c) => c !== head && names.includes(c))
+  return (
+    <div data-view="table" data-rows={frame.rows.length} data-cards="" className="row-cards h-full w-full overflow-x-hidden overflow-y-auto p-3">
+      {rows.map((row, ri) => {
+        const headText = String(row[columnIndex(frame, head)] ?? '')
+        return (
+          <div key={ri} data-row={ri} className="flex min-w-0 flex-col gap-1.5 rounded-md border border-border bg-surface-2/50 px-3 py-2.5">
+            <div className="num truncate text-sm font-semibold text-fg" title={headText}>
+              {headText || '—'}
+            </div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs leading-4">
+              {rest.map((c) => {
+                const v = row[columnIndex(frame, c)]
+                const f = formats[c] ?? 'text'
+                const text = formatCell(v, f)
+                const dir = f === 'change' ? direction(v) : null
+                return (
+                  <div key={c} className="flex min-w-0 flex-col">
+                    <span className="truncate text-fg-3" title={labels[c] ?? c}>
+                      {labels[c] ?? c.replace(/_/g, ' ')}
+                    </span>
+                    <span className={clsx('line-clamp-2 break-words', f !== 'text' && 'num', text === EMPTY_CELL ? 'text-fg-3' : dir === 'up' ? 'text-up' : dir === 'down' ? 'text-down' : 'text-fg')} title={typeof v === 'string' ? v : undefined}>
+                      {text}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 /** The table control for a widget: its own when it is a table view, else the frame as a plain table (the table is the floor and always renders). */
 export function tableControlOf(widget: ViewProps['widget'], frames: Record<string, Frame>): TableControl | undefined {

@@ -28,10 +28,47 @@ export const RecipeRouteSchema = z.object({
   params: z.record(z.string(), z.unknown()).default({}),
   /** Use this route only when every listed recipe param equals (or, for arrays, contains) one of the values. */
   when: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional(),
+  /**
+   * Column renames applied to this route's frame (`{ date: time }`): the recipe's frame keeps the column names the
+   * kind of the same name had, whichever provider answered, so transforms and helpers that read `time` work on
+   * every alternative. A rename whose source is missing or whose target already exists is skipped.
+   */
+  rename: z.record(z.string(), z.string().min(1)).optional(),
   /** What this route does not do that the kind handler did; shown to phase 1 and in the Data page. */
   note: z.string().optional(),
 })
 export type RecipeRoute = z.output<typeof RecipeRouteSchema>
+
+/** A route query as a recipe expands it: the query plus the recipe route's column renames. */
+export type RecipeRouteQuery = RouteQuery & { rename?: Record<string, string> }
+
+/**
+ * The reserved transform input that carries the recipe's validated params as a one-row frame (one column per param;
+ * arrays joined with ", "), so a recipe's transform can pick an expiration, filter the calendar to the symbols or
+ * select a macro series without code templating: `s = params.at[0, "series"]`. Phase 2; the v1 handlers did this in code.
+ */
+export const RECIPE_PARAMS_INPUT = 'params'
+
+/** The one-row params frame bound as `params` for a recipe's transforms. */
+export function recipeParamsFrame(params: Record<string, unknown>, fetchedAt = Date.now()): { columns: { name: string; type: 'string' | 'number' | 'boolean' }[]; rows: unknown[][]; meta: { connector: string; fetchedAt: number; ttl: number } } {
+  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
+  const columns = entries.map(([name, v]) => ({ name, type: typeof v === 'number' ? ('number' as const) : typeof v === 'boolean' ? ('boolean' as const) : ('string' as const) }))
+  const row = entries.map(([, v]) => (Array.isArray(v) ? v.map(String).join(', ') : typeof v === 'object' ? JSON.stringify(v) : v))
+  return { columns, rows: [row], meta: { connector: 'recipe', fetchedAt, ttl: 0 } }
+}
+
+/** The frame with columns (and their field config) renamed; the same frame when nothing applies. */
+export function renameColumns<F extends { columns: { name: string }[]; meta?: { fields?: Record<string, unknown> } }>(frame: F, rename: Record<string, string> | undefined): F {
+  if (!rename) return frame
+  const names = new Set(frame.columns.map((c) => c.name))
+  const applicable = Object.entries(rename).filter(([from, to]) => names.has(from) && !names.has(to) && from !== to)
+  if (applicable.length === 0) return frame
+  const map = new Map(applicable)
+  const columns = frame.columns.map((c) => (map.has(c.name) ? { ...c, name: map.get(c.name)! } : c))
+  const fields = frame.meta?.fields
+  const renamedFields = fields ? Object.fromEntries(Object.entries(fields).map(([k, v]) => [map.get(k) ?? k, v])) : undefined
+  return { ...frame, columns, ...(frame.meta ? { meta: { ...frame.meta, ...(renamedFields ? { fields: renamedFields } : {}) } } : {}) }
+}
 
 /** A recipe dataset is ordered route alternatives, or a transform over the recipe's other datasets. */
 export const RecipeDatasetSchema = z.union([
@@ -105,7 +142,7 @@ export function validateRecipe(r: Recipe): string[] {
         for (const k of Object.keys(route.when ?? {})) if (!known.has(k)) issues.push(`${name}: ${route.route} when.${k} is not a param`)
       }
     } else {
-      for (const input of ds.inputs) if (!datasets[input] || input === name) issues.push(`${name}: transform input "${input}" is not a dataset of the recipe`)
+      for (const input of ds.inputs) if (input !== RECIPE_PARAMS_INPUT && (!datasets[input] || input === name)) issues.push(`${name}: transform input "${input}" is not a dataset of the recipe`)
     }
   }
   return issues
@@ -135,14 +172,14 @@ export function recipeDescriptor(r: Recipe): Descriptor {
   return d
 }
 
-export type ExpandedDataset = { routes: RouteQuery[] } | { transform: Omit<TransformQuery, 'inputs'> & { inputs: string[] } }
+export type ExpandedDataset = { routes: RecipeRouteQuery[] } | { transform: Omit<TransformQuery, 'inputs'> & { inputs: string[] } }
 export type ExpandedRecipe = {
   recipe: Recipe
   /** Validated params with defaults. */
   params: Record<string, unknown>
   title: string
   /** `main`'s route alternatives (empty when `main` is a transform). */
-  routes: RouteQuery[]
+  routes: RecipeRouteQuery[]
   data: Record<string, ExpandedDataset>
 }
 
@@ -155,7 +192,7 @@ export function expandRecipe(r: Recipe, rawParams: Record<string, unknown>, opts
   const data: Record<string, ExpandedDataset> = {}
   for (const [name, ds] of Object.entries(recipeDatasets(r))) {
     if ('routes' in ds) {
-      const routes: RouteQuery[] = []
+      const routes: RecipeRouteQuery[] = []
       for (const route of ds.routes) {
         if (!whenMatches(route.when, params)) continue
         const p: Record<string, unknown> = {}
@@ -164,7 +201,7 @@ export function expandRecipe(r: Recipe, rawParams: Record<string, unknown>, opts
           if (rendered !== undefined && rendered !== null && rendered !== '') p[k] = rendered
         }
         if (route.provider) p.provider = route.provider
-        routes.push({ connector: route.connector, route: route.route, params: p })
+        routes.push({ connector: route.connector, route: route.route, params: p, ...(route.rename ? { rename: route.rename } : {}) })
       }
       data[name] = { routes }
     } else {
@@ -174,8 +211,35 @@ export function expandRecipe(r: Recipe, rawParams: Record<string, unknown>, opts
     }
   }
   const main = data.main
-  const routes = main && 'routes' in main ? main.routes : []
+  // The route alternatives the recipe calls: main's, or, when main is a transform (options, earnings, macro), the
+  // first route dataset's (what `resolveRecipe` and the catalog views report as the recipe's routes).
+  const firstRoutes = Object.values(data).find((d): d is { routes: RecipeRouteQuery[] } => 'routes' in d)
+  const routes = main && 'routes' in main ? main.routes : (firstRoutes?.routes ?? [])
   return { recipe: r, params, title: titleFor(r, params), routes, data }
+}
+
+/**
+ * A short hash of the recipe definition (FNV-1a over its JSON). Stamped on the frames a recipe produces as
+ * `lineage.recipeVersion`, so a frame cached under an older definition (the persistent cache outlives a restart and a
+ * recipes.yml edit) is a cache miss rather than a stale shape.
+ */
+export function recipeVersion(r: Recipe): string {
+  const s = JSON.stringify(r)
+  let h = 0x811c9dc5
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 0x01000193) >>> 0
+  }
+  return h.toString(16).padStart(8, '0')
+}
+
+/** The recipe's route alternatives as written: main's, else the first route dataset's (the one main transforms over). */
+export function recipeRouteAlternatives(r: Recipe): RecipeRoute[] {
+  const datasets = recipeDatasets(r)
+  const main = datasets.main
+  if (main && 'routes' in main) return main.routes
+  const first = Object.values(datasets).find((d): d is { routes: RecipeRoute[] } => 'routes' in d)
+  return first?.routes ?? []
 }
 
 /** The title template rendered with the params: arrays joined with ", ", missing params dropped, whitespace collapsed. */
