@@ -1,4 +1,4 @@
-import type { FC, MouseEvent } from 'react'
+import { useEffect, useRef, type FC, type MouseEvent } from 'react'
 import clsx from 'clsx'
 import { CloseIcon, PlusIcon } from './icons.js'
 
@@ -11,10 +11,20 @@ export type TabsProps = {
   className?: string
 }
 
-/** Top workspace tab bar. Dense, 36px tall, active tab underlined with the accent. */
-export const Tabs: FC<TabsProps> = ({ items, activeId, onSelect, onClose, onNew, className }) => (
+/**
+ * Top workspace tab bar. Dense, 36px tall, active tab underlined with the accent. Tabs keep 140px at least (taste
+ * round, change 15: "Memory …" at 80px said nothing); past the bar's width the row scrolls sideways without a
+ * scrollbar and the active tab is kept in view.
+ */
+export const Tabs: FC<TabsProps> = ({ items, activeId, onSelect, onClose, onNew, className }) => {
+  const rowRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = rowRef.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+    el?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+  }, [activeId, items.length])
+  return (
   <div role="tablist" className={clsx('flex h-9 items-stretch border-b border-border bg-bg', className)}>
-    <div className="flex min-w-0 flex-1 items-stretch overflow-x-auto">
+    <div ref={rowRef} className="flex min-w-0 flex-1 items-stretch overflow-x-auto [scrollbar-width:none]">
       {items.map((it) => {
         const active = it.id === activeId
         return (
@@ -34,7 +44,7 @@ export const Tabs: FC<TabsProps> = ({ items, activeId, onSelect, onClose, onNew,
               if (e.button === 1 && onClose) onClose(it.id)
             }}
             className={clsx(
-              'group relative flex max-w-[200px] min-w-[96px] cursor-default items-center gap-1 border-r border-border pr-1 pl-3 text-sm select-none',
+              'group relative flex max-w-[220px] min-w-[140px] shrink-0 cursor-default items-center gap-1 border-r border-border pr-1 pl-3 text-sm select-none',
               active ? 'bg-surface text-fg' : 'text-fg-2 hover:bg-surface hover:text-fg',
             )}
           >
@@ -75,4 +85,5 @@ export const Tabs: FC<TabsProps> = ({ items, activeId, onSelect, onClose, onNew,
       )}
     </div>
   </div>
-)
+  )
+}

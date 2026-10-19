@@ -4,7 +4,7 @@
  * and bands, with the legend rows and the x-axis kind. The renderer (ChartView) only walks the result; it
  * never knows what the data means (PLAN.md section 17, "layers").
  */
-import { columnIndex, type DatasetsFieldConfig, type Frame, type Layer, type Pane, type Scale } from '@terminal/core'
+import { columnIndex, fieldLabel, type DatasetsFieldConfig, type Frame, type Layer, type Pane, type Scale } from '@terminal/core'
 import { DOWN_COLOR, UP_COLOR, markerStyle, seriesPalette } from '@terminal/ui'
 import type { BusinessDay, Time, UTCTimestamp } from 'lightweight-charts'
 import { withAlpha } from '../format'
@@ -79,6 +79,8 @@ export type ChartSpec = {
   markerKinds: { kind: string; letter: string; color: string }[]
   /** Numeric x values in data order, for axis formatting of a yield curve (months → label). */
   xLabels: Map<number, string>
+  /** Paired bars on a strike axis are drawn at offsets around each strike; the axis rounds back to this step (change 14). */
+  xStep?: number
 }
 
 export type BuildOptions = {
@@ -486,8 +488,15 @@ export function buildChart(panes: readonly Pane[], frames: Record<string, Frame>
         const h = host('right')
         if (!h) continue
         if (layer.from !== undefined && layer.to !== undefined) {
-          const from: HorzItem = x === 'time' ? toChartTime(layer.from, intraday) : layer.from
-          const to: HorzItem = x === 'time' ? toChartTime(layer.to, intraday) : layer.to
+          let from: HorzItem = x === 'time' ? toChartTime(layer.from, intraday) : layer.from
+          let to: HorzItem = x === 'time' ? toChartTime(layer.to, intraday) : layer.to
+          // Snap to the first and last bars inside the range, so "last week" ends on Friday's bar rather than running
+          // off the plot when the range's end is a weekend (change 14).
+          const inside = (h.data as { time: HorzItem }[]).map((d) => d.time).filter((t) => horzKey(t) >= horzKey(from) && horzKey(t) <= horzKey(to))
+          if (inside.length > 0) {
+            from = inside[0]!
+            to = inside[inside.length - 1]!
+          }
           h.bands.push({ kind: 'x', from, to, color: layer.color, label: layer.label })
         } else if (layer.when && layer.data) {
           const f = frames[layer.data]
@@ -525,8 +534,56 @@ export function buildChart(panes: readonly Pane[], frames: Record<string, Frame>
     series.push(...paneSeries)
   })
 
-  return { x, intraday, panes: paneSpecs, series, markerKinds: [...markerKinds.values()], xLabels }
+  // Paired bars on a strike axis (change 14): two or more bar series over the same strikes are drawn side by side,
+  // each offset around its strike, with an empty slot after each pair so the pairs read as groups.
+  let xStep: number | undefined
+  const paired = x === 'number' ? series.filter((s) => s.pane === 0 && s.kind === 'histogram') : []
+  if (paired.length >= 2) {
+    const xs = [...new Set(paired.flatMap((s) => (s.data as { time: HorzItem }[]).map((d) => d.time as number)))].sort((a, b) => a - b)
+    const step = xs.slice(1).reduce((m, v, i) => Math.min(m, v - xs[i]!), Infinity)
+    if (Number.isFinite(step) && step > 0) {
+      xStep = step
+      const n = paired.length
+      const d = step / (n + 2)
+      paired.forEach((s, i) => {
+        const shift = (i - (n - 1) / 2) * d
+        const data = (s.data as Bar[]).map((b) => ({ ...b, time: ((b.time as number) + shift) as HorzItem }))
+        s.data = data
+        s.byTime = new Map(data.map((b) => [horzKey(b.time), b.value]))
+      })
+      // The gap slot after each strike (whitespace on the last series) and, on it, the underlying's rule.
+      const last = paired[n - 1]!
+      const gap = ((n - 1) / 2 + 1) * d
+      last.data = [...(last.data as Bar[]), ...xs.map((v) => ({ time: (v + gap) as HorzItem }) as unknown as Bar)].sort((a, b) => (a.time as number) - (b.time as number))
+      const frame = Object.values(frames).find((f) => f && UNDERLYING.some((c) => columnIndex(f, c) >= 0))
+      if (frame) {
+        const iu = UNDERLYING.map((c) => columnIndex(frame, c)).find((i) => i >= 0)!
+        const u = frame.rows.map((r) => num(r[iu])).find((v): v is number => v != null)
+        const below = u == null ? undefined : [...xs].reverse().find((v) => v <= u)
+        if (below != null) paired[0]!.bands.push({ kind: 'x', from: (below + gap) as HorzItem, to: (below + gap) as HorzItem, color: undefined, label: 'Underlying' })
+      }
+    }
+  }
+
+  // A strike axis (change 14): the underlying as a 1px vertical rule at the nearest strike, when the frame carries it.
+  if (x === 'number' && xStep === undefined) {
+    const host = series.find((s) => s.pane === 0)
+    const frame = Object.values(frames).find((f) => f && UNDERLYING.some((c) => columnIndex(f, c) >= 0))
+    if (host && frame) {
+      const iu = UNDERLYING.map((c) => columnIndex(frame, c)).find((i) => i >= 0)!
+      const u = frame.rows.map((r) => num(r[iu])).find((v): v is number => v != null)
+      const xs = (host.data as { time: HorzItem }[]).map((d) => d.time as number)
+      if (u != null && xs.length > 0) {
+        const nearest = xs.reduce((a, b) => (Math.abs(b - u) < Math.abs(a - u) ? b : a))
+        host.bands.push({ kind: 'x', from: nearest, to: nearest, color: undefined, label: 'Underlying' })
+      }
+    }
+  }
+
+  return { x, intraday, panes: paneSpecs, series, markerKinds: [...markerKinds.values()], xLabels, ...(xStep ? { xStep } : {}) }
 }
+
+const UNDERLYING = ['underlying_price', 'underlyingPrice', 'underlying']
 
 /** Legend text for a series: last value and change in the series' own format (percent units move in basis points). */
 export function legendValues(s: SeriesSpec, unitPercent: boolean, hover?: number | null): { last: string; change: string; changeValue: number | null } {
@@ -553,8 +610,8 @@ export function formatValue(v: number, format: PriceFormatKind, precision = 2): 
       if (abs >= 1e12) return `${sign}${(abs / 1e12).toFixed(2)}T`
       if (abs >= 1e9) return `${sign}${(abs / 1e9).toFixed(2)}B`
       if (abs >= 1e6) return `${sign}${(abs / 1e6).toFixed(1)}M`
-      if (abs >= 1e3) return `${sign}${(abs / 1e3).toFixed(1)}K`
-      return grouped(0).format(v)
+      // Below a million a level reads in full (change 13): an index at 7,659.44, never "7.7K"; 95,394 shares as written.
+      return grouped(Number.isInteger(v) ? 0 : Math.min(precision, 2)).format(v)
     }
     case 'integer':
       return grouped(0).format(v)
@@ -565,4 +622,25 @@ export function formatValue(v: number, format: PriceFormatKind, precision = 2): 
     default:
       return grouped(precision).format(v)
   }
+}
+
+/** Display names for marker kinds in the legend chip and the tooltip (change 11): a recipe id never shows as typed. */
+const MARKER_KIND_LABELS: Record<string, string> = {
+  earnings: 'Earnings',
+  eps_history: 'Earnings',
+  news: 'News',
+  dividend: 'Dividends',
+  dividends: 'Dividends',
+  insider: 'Insiders',
+  insiders: 'Insiders',
+  macro: 'Macro',
+  calendar: 'Releases',
+  events: 'Events',
+  split: 'Splits',
+  buy: 'Buy',
+  sell: 'Sell',
+  custom: 'Events',
+}
+export function markerKindLabel(kind: string): string {
+  return MARKER_KIND_LABELS[kind.toLowerCase()] ?? fieldLabel(kind)
 }

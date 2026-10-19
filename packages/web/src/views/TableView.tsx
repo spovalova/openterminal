@@ -1,10 +1,11 @@
 import { useMemo, useState, type FC } from 'react'
 import clsx from 'clsx'
 import { columnIndex, controlFor, type Column, type Format, type Frame, type TableControl } from '@terminal/core'
-import { DataTable, EMPTY_CELL, EmptyState, direction, formatCell, type CellFormat } from '@terminal/ui'
+import { DataTable, EMPTY_CELL, EmptyState, direction, displayText, formatCell, type CellFormat } from '@terminal/ui'
 import type { ViewProps } from './types'
 import { VirtualTable } from '../components/VirtualTable'
 import { FactsCard } from './FactsCard'
+import { columnLabel } from './labels'
 import { controlOf, datasetsFor, emptyHintFor, primaryFrame, viewOf } from './fields'
 
 export type SortSpec = { column: string; dir: 'asc' | 'desc' }
@@ -57,35 +58,124 @@ export function cellFormat(format: Format): CellFormat {
 }
 
 /** Columns where a lower value is the better one (multiples, leverage, days to cover); every other numeric column reads higher-is-better. */
-const LOWER_IS_BETTER = /(^|_)(pe|peg|ps|pb|ev_ebitda|debt|debt_to_equity|days_to_cover|cost|expense|short_interest|iv|iv30|hv30)$/
+const LOWER_IS_BETTER = /(^|_)(pe|peg|ps|pb|ev_ebitda|ev_revenue|debt|debt_to_equity|days_to_cover|cost|expense|short_interest|iv|iv30|hv30)$/
+/** Multiples where a value under one (or negative: losses) is an artefact, not the best of the group. */
+const MULTIPLE = /(^|_)(pe|forward_pe|peg|ps|pb|ev_ebitda|ev_revenue)$/
+/** Names that are comparisons (rates, multiples, margins, growth): marked whatever their format. */
+const COMPARATIVE = /(^|_)(pe|peg|ps|pb|ev_ebitda|ev_revenue|debt_to_equity|margin|growth|yield|return|roe|roa|upside|surprise|reaction|move|change|pct|cagr|drawdown)($|_)|margin|growth/
+/** Absolute levels (prices, counts, amounts): never marked, a "best" EPS estimate or close means nothing (change 6). */
+const ABSOLUTE = /(^|_)(eps|close|open|high|low|price|last|market_cap|mktcap|revenue|volume|count|analysts|shares|cash|debt_total|fcf|ebitda|income|strike|bid|ask|oi|open_interest)($|_)/
+
+/** Whether a column carries a comparison worth marking best and worst: by its name first, else by its core format. */
+export function markable(name: string, format: Format | CellFormat | undefined): boolean {
+  if (COMPARATIVE.test(name)) return true
+  if (ABSOLUTE.test(name)) return false
+  return format === 'ratio' || format === 'percent' || format === 'change'
+}
 
 export type Extremes = Map<unknown[], Record<string, 'best' | 'worst'>>
 
-/** The best and worst value per numeric column (compare tables): max and min, swapped where lower is better. */
-export function extremesFor(frame: Pick<Frame, 'columns' | 'rows'>, columns: readonly string[], formats: Record<string, CellFormat>): Extremes {
+/**
+ * The best and worst value per comparative column (compare tables, change 6): max and min, swapped where lower is
+ * better; absolute columns (EPS, close, market cap, counts) are never marked, and a multiple under one is skipped.
+ * `formats` are the control's core formats (`ratio` is a comparison; a `price` column is a level).
+ */
+export function extremesFor(frame: Pick<Frame, 'columns' | 'rows'>, columns: readonly string[], formats: Record<string, Format | CellFormat>): Extremes {
   const out: Extremes = new Map()
   if (frame.rows.length < 2) return out
   for (const name of columns) {
     const f = formats[name]
     if (!f || f === 'text' || f === 'date' || f === 'time' || f === 'link') continue
+    if (!markable(name, f)) continue
     const i = columnIndex(frame, name)
     if (i < 0) continue
+    const lower = LOWER_IS_BETTER.test(name)
+    const multiple = MULTIPLE.test(name)
     let hi: unknown[] | undefined
     let lo: unknown[] | undefined
     for (const row of frame.rows) {
       const v = row[i]
       if (typeof v !== 'number' || !Number.isFinite(v)) continue
+      if (multiple && v < 1) continue
       if (!hi || v > (hi[i] as number)) hi = row
       if (!lo || v < (lo[i] as number)) lo = row
     }
     if (!hi || !lo || hi === lo) continue
-    const lower = LOWER_IS_BETTER.test(name)
     const best = lower ? lo : hi
     const worst = lower ? hi : lo
     out.set(best, { ...(out.get(best) ?? {}), [name]: 'best' })
     out.set(worst, { ...(out.get(worst) ?? {}), [name]: 'worst' })
   }
   return out
+}
+
+/** A metric name as written in a pivoted compare table ("P/E", "Revenue growth %") reduced to the column vocabulary above. */
+function metricKey(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/p\/e/g, 'pe')
+    .replace(/p\/s/g, 'ps')
+    .replace(/p\/b/g, 'pb')
+    .replace(/ev\s*\/\s*revenue/g, 'ev_revenue')
+    .replace(/ev\s*\/\s*ebitda/g, 'ev_ebitda')
+    .replace(/debt\s*\/\s*equity/g, 'debt_to_equity')
+    .replace(/%/g, 'pct')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '')
+}
+
+/**
+ * Best and worst across a row of a pivoted compare table (metrics as rows, one column per symbol): the metric's
+ * name decides whether it is a comparison and which way is better. Keys are the row and the symbol column.
+ */
+export function rowExtremesFor(frame: Pick<Frame, 'columns' | 'rows'>, metricColumn: string, valueColumns: readonly string[]): Extremes {
+  const out: Extremes = new Map()
+  const m = columnIndex(frame, metricColumn)
+  if (m < 0 || valueColumns.length < 2) return out
+  const idx = valueColumns.map((c) => [c, columnIndex(frame, c)] as const).filter(([, i]) => i >= 0)
+  for (const row of frame.rows) {
+    const key = metricKey(String(row[m] ?? ''))
+    if (!key || !markable(key, undefined) || ABSOLUTE.test(key) && !COMPARATIVE.test(key)) continue
+    const lower = LOWER_IS_BETTER.test(key) || /(^|_)(pe|ps|pb|ev_revenue|ev_ebitda|debt)($|_)/.test(key)
+    const multiple = MULTIPLE.test(key) || /(^|_)(pe|ps|pb|ev_revenue|ev_ebitda)($|_)/.test(key)
+    let hi: string | undefined
+    let lo: string | undefined
+    let hv = -Infinity
+    let lv = Infinity
+    for (const [c, i] of idx) {
+      const v = row[i]
+      if (typeof v !== 'number' || !Number.isFinite(v)) continue
+      if (multiple && v < 1) continue
+      if (v > hv) [hv, hi] = [v, c]
+      if (v < lv) [lv, lo] = [v, c]
+    }
+    if (!hi || !lo || hi === lo) continue
+    out.set(row, { [lower ? lo : hi]: 'best', [lower ? hi : lo]: 'worst' })
+  }
+  return out
+}
+
+/** A pivoted compare table: a text `metric` column first and numeric columns after it, one per symbol. */
+export function pivotMetricColumn(frame: Pick<Frame, 'columns' | 'rows'>): string | undefined {
+  const first = frame.columns[0]
+  if (!first || first.type !== 'string' || !/^(metric|field|item|measure|line)$/i.test(first.name)) return undefined
+  // Symbol columns are numbers, or mostly numbers when the pivot carries a row of words (a "Rating" row makes pandas
+  // type every symbol column as object).
+  const rest = frame.columns.slice(1).map((_, i) => i + 1)
+  return rest.length >= 2 && rest.every((i) => frame.columns[i]!.type === 'number' || mostlyNumeric(frame.rows, i)) ? first.name : undefined
+}
+
+/** At least four in five of a column's non-empty cells are numbers. */
+export function mostlyNumeric(rows: readonly unknown[][], i: number): boolean {
+  let n = 0
+  let num = 0
+  for (const r of rows) {
+    const v = r[i]
+    if (v == null || v === '') continue
+    n++
+    if (typeof v === 'number' || (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v)))) num++
+  }
+  return n > 0 && num / n >= 0.8
 }
 
 /** The frame projected onto the control's columns, in its order. */
@@ -109,8 +199,21 @@ export const TableView: FC<ViewProps> = ({ widget, frames }) => {
   const sort = state?.key === sortKey ? state.sort : table?.sort
 
   const projected = useMemo(() => (frame && table ? projectFrame(frame, table.columns) : frame), [frame, table])
-  const formats = useMemo(() => formatsOf(table), [table])
-  const extremes = useMemo(() => (projected && table?.extremes ? extremesFor(projected, table.columns, formats) : undefined), [projected, table, formats])
+  const formats = useMemo(() => {
+    const out = formatsOf(table)
+    // An object column of numbers (a pivot with a row of words) reads as numbers: right-aligned, two decimals (change 5).
+    if (projected) projected.columns.forEach((c, i) => {
+      if (out[c.name] === 'text' && c.type === 'string' && c.name !== projected.columns[0]?.name && mostlyNumeric(projected.rows, i)) out[c.name] = 'price'
+    })
+    return out
+  }, [table, projected])
+  const extremes = useMemo(() => {
+    if (!projected || !table) return undefined
+    // A pivoted compare table (metrics as rows) marks across each row whether or not the control asked (the compare recipe's shape).
+    const metric = pivotMetricColumn(projected)
+    if (metric) return rowExtremesFor(projected, metric, table.columns.filter((c) => c !== metric))
+    return table.extremes ? extremesFor(projected, table.columns, { ...formats, ...table.formats }) : undefined
+  }, [projected, table, formats])
   const sorted = useMemo(() => (projected ? sortRows(projected, sort) : []), [projected, sort])
 
   if (!frame || !projected) return <EmptyState title="No data" hint="The frame has not landed." />
@@ -170,12 +273,13 @@ const RowCards: FC<{ frame: Frame; rows: unknown[][]; formats: Record<string, Ce
               {rest.map((c) => {
                 const v = row[columnIndex(frame, c)]
                 const f = formats[c] ?? 'text'
-                const text = formatCell(v, f)
+                const text = f === 'text' && typeof v === 'string' ? displayText(v) : formatCell(v, f)
                 const dir = f === 'change' ? direction(v) : null
                 return (
                   <div key={c} className="flex min-w-0 flex-col">
-                    <span className="truncate text-fg-3" title={labels[c] ?? c}>
-                      {labels[c] ?? c.replace(/_/g, ' ')}
+                    {/* Display names, wrapped at words rather than cut (change 11: "num estimates", "previous report date"). */}
+                    <span className="line-clamp-2 break-words text-fg-3" title={labels[c] ?? columnLabel(c)}>
+                      {labels[c] ?? columnLabel(c)}
                     </span>
                     <span className={clsx('line-clamp-2 break-words', f !== 'text' && 'num', text === EMPTY_CELL ? 'text-fg-3' : dir === 'up' ? 'text-up' : dir === 'down' ? 'text-down' : 'text-fg')} title={typeof v === 'string' ? v : undefined}>
                       {text}
@@ -201,13 +305,18 @@ export function tableControlOf(widget: ViewProps['widget'], frames: Record<strin
 /** Percent columns that are signed moves rather than levels: coloured when the control colorizes them. */
 const SIGNED = /_pct$|^change|growth|return|surprise|upside|reaction|_chg$/
 
+/** Columns whose sign is fixed by what they measure (distance below a high, move to breakeven, a put's delta, a drawdown). */
+export const ONE_SIGNED = /vs_?52w|52w_high_pct|from_(52w_)?high|off_(the_)?(high|peak)|below_high|to_be|breakeven|move_to|be_pct|(^|_)delta($|_)|drawdown/
+
 /** Cell formats from the control: its formats, with colorized percent columns that read as moves rendered as signed changes. */
 function formatsOf(table: TableControl | undefined): Record<string, CellFormat> {
   const out: Record<string, CellFormat> = {}
   if (!table) return out
   for (const c of table.columns) {
     const f = cellFormat(table.formats[c] ?? 'text')
-    out[c] = f === 'percent' && table.colorize.includes(c) && SIGNED.test(c) ? 'change' : f
+    const signed = f === 'percent' && table.colorize.includes(c) && SIGNED.test(c) ? 'change' : f
+    // A column negative (or positive) by construction carries no direction in its colour: neutral (change 7).
+    out[c] = signed === 'change' && ONE_SIGNED.test(c) ? 'percent' : signed
   }
   return out
 }

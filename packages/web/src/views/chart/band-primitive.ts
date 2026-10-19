@@ -4,7 +4,7 @@
  * bands). Drawn on the bottom layer so lines stay on top. Attached with `series.attachPrimitive`.
  */
 import type { IPrimitivePaneRenderer, IPrimitivePaneView, ISeriesPrimitive, PrimitivePaneViewZOrder, SeriesAttachedParameter, SeriesType } from 'lightweight-charts'
-import { bandColor } from '@terminal/ui'
+import { bandColor, bandEdgeColor } from '@terminal/ui'
 import type { BandSpec, HorzItem, Point } from './data'
 
 type Attached = SeriesAttachedParameter<HorzItem, SeriesType>
@@ -44,9 +44,18 @@ export class BandPrimitive implements ISeriesPrimitive<HorzItem> {
         const x1 = x(b.from)
         const x2 = x(b.to)
         if (x1 == null && x2 == null) continue
-        const left = Math.min(x1 ?? 0, x2 ?? width)
-        const right = Math.max(x1 ?? 0, x2 ?? width)
-        out.push({ kind: 'rect', x: left, y: 0, w: Math.max(2, right - left), h: height, color })
+        // A range covers its first and last bars whole (half a bar beyond each centre), as a faint fill with 1px edges;
+        // a single x (the underlying on a strike axis) is a 1px rule.
+        const half = x1 != null && x2 != null && x1 === x2 ? 0 : halfBar(ts)
+        const left = Math.min(x1 ?? 0, x2 ?? width) - (x1 == null ? 0 : half)
+        const right = Math.max(x1 ?? 0, x2 ?? width) + (x2 == null ? 0 : half)
+        if (right - left < 2) {
+          out.push({ kind: 'rect', x: left, y: 0, w: 1, h: height, color: b.color ?? bandEdgeColor })
+          continue
+        }
+        out.push({ kind: 'rect', x: left, y: 0, w: right - left, h: height, color })
+        if (x1 != null) out.push({ kind: 'rect', x: left, y: 0, w: 1, h: height, color: bandEdgeColor })
+        if (x2 != null) out.push({ kind: 'rect', x: right - 1, y: 0, w: 1, h: height, color: bandEdgeColor })
       } else if (b.kind === 'y') {
         const y1 = y(b.lo)
         const y2 = y(b.hi)
@@ -60,6 +69,15 @@ export class BandPrimitive implements ISeriesPrimitive<HorzItem> {
       }
     }
     return out
+  }
+}
+
+/** Half the space one bar takes, so a band covers its edge bars whole. */
+function halfBar(ts: { options?: () => { barSpacing?: number } }): number {
+  try {
+    return (ts.options?.().barSpacing ?? 0) / 2
+  } catch {
+    return 0
   }
 }
 

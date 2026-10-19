@@ -1,3 +1,5 @@
+import { fieldLabel } from '@terminal/core'
+
 /**
  * Human labels for columns the annotations did not label (a transform's output, a route nobody annotated yet):
  * the common financial column names, else the column name with spaces. A field config `label` always wins.
@@ -47,5 +49,8 @@ export const COLUMN_LABEL: Record<string, string> = {
 }
 
 export function columnLabel(column: string): string {
-  return COLUMN_LABEL[column] ?? column.replace(/_/g, ' ')
+  const known = COLUMN_LABEL[column]
+  // Sentence case everywhere (taste round, changes 5 and 11): the known labels keep their acronyms, anything else reads through fieldLabel.
+  if (known) return known.charAt(0).toUpperCase() + known.slice(1)
+  return fieldLabel(column)
 }

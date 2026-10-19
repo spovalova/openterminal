@@ -1,5 +1,5 @@
 import type { Frame } from '@terminal/core'
-import { columnIndex, preview } from '@terminal/core'
+import { columnIndex, fieldLabel, preview } from '@terminal/core'
 import type { BusinessDay, CandlestickData, HistogramData, LineData, Time, UTCTimestamp } from 'lightweight-charts'
 // Short labels for the macro series, shared with the widget sub-header; a symbol is its own label.
 import { MACRO_LABELS } from '../subtitle'
@@ -117,5 +117,15 @@ export function legendRows(frame: Frame, groups: string[], colorFor: (i: number)
 export function legendLabel(group: string, labels?: Record<string, string>): string {
   const override = labels?.[group]?.trim()
   if (override) return override
-  return MACRO_LABELS[group] ?? group
+  return MACRO_LABELS[group] ?? displayName(group)
+}
+
+/**
+ * A series, column or axis name as people read it (taste round, change 11): a ticker ("NVDA", "BRK.B", "^GSPC")
+ * stays as written; an identifier ("eps_ttm", "trailing_pe", "close") reads through fieldLabel.
+ */
+export function displayName(name: string): string {
+  if (/^[A-Z0-9^][A-Z0-9.^=-]*$/.test(name)) return name
+  if (/^[a-z]|_/.test(name)) return fieldLabel(name)
+  return name
 }

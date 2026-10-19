@@ -34,20 +34,24 @@ export function spanFor(size: Size, columns: number): { cols: number; rows: numb
  * What a widget will show, so the packer can size by content (PLAN.md section 17, "size by content"):
  * `rows` is the frame's row count when known; `kind` is what the view renders.
  */
-export type ContentHint = { rows?: number; kind: 'table' | 'chart' | 'stat' | 'facts' | 'chain' }
+export type ContentHint = { rows?: number; kind: 'table' | 'chart' | 'stat' | 'facts' | 'chain'; /** Columns the table shows (taste round: a five-column compare table needs two grid columns). */ columns?: number }
+
+/** A table with this many columns or more keeps its two grid columns: at one column it sheds the symbols it compares. */
+export const WIDE_TABLE_COLUMNS = 5
 export type LayoutWidget = { size: Size; contentHint?: ContentHint }
 
 /** Tables with this many rows or fewer are one row tall. */
 export const SHORT_TABLE_ROWS = 6
-/** Charts are two rows tall up to this many widgets; past it, their size's own span. */
-export const TALL_CHART_MAX_WIDGETS = 6
 
 /**
- * The span a widget gets: its size's span, then the content rule. A table with six rows or fewer, a stat, a facts
- * card and a one-row quote are one row tall; a chart is two rows tall unless the workspace has more than six
- * widgets. Columns are never changed here; only the height follows the content.
+ * The span a widget gets: its size's span, then the content rule (taste round, change 1). A table with six rows or
+ * fewer, a stat, a facts card and a one-row quote are one row tall, and a stat or a facts card is never the full
+ * width of a grid with two or more columns (a row of compact cards or a label:value grid has nothing to put in a
+ * third column). A chart is never taller than it is wide: the lg hero is 2x2, an md chart one cell in a
+ * three-column grid (two across in a two-column grid), an sm chart one cell; so three charts tile across the
+ * Instinct way and no time series renders portrait. Chains keep their size.
  */
-export function effectiveSpan(widget: LayoutWidget, columns: number, widgetCount: number): { cols: number; rows: number; demoted: boolean } {
+export function effectiveSpan(widget: LayoutWidget, columns: number, _widgetCount = 0): { cols: number; rows: number; demoted: boolean } {
   const base = spanFor(widget.size, columns)
   const hint = widget.contentHint
   if (!hint) return { ...base, demoted: false }
@@ -57,21 +61,30 @@ export function effectiveSpan(widget: LayoutWidget, columns: number, widgetCount
     case 'stat':
     case 'facts':
       rows = 1
+      if (columns >= 2) cols = Math.min(cols, columns - 1)
       break
     case 'table':
       if (hint.rows !== undefined && hint.rows <= SHORT_TABLE_ROWS) rows = 1
       break
     case 'chart':
-      rows = widgetCount > TALL_CHART_MAX_WIDGETS ? base.rows : 2
-      // A tall non-hero chart (md) is one column wide in a three-column grid of three or more widgets: two 2x2 charts
-      // cannot share a band with the hero, so every md chart would otherwise take a full-width band of its own and a
-      // six-widget workspace would run five bands deep (phase 2; the Instinct reference tiles six charts three across).
-      if (rows === 2 && widget.size === 'md' && columns >= 3 && widgetCount >= 3) cols = 1
+      if (widget.size === 'md' && columns >= 3) cols = 1
+      rows = Math.min(rows, cols)
       break
     case 'chain':
       break
   }
   return { cols, rows, demoted: rows !== base.rows || cols !== base.cols }
+}
+
+/** A chart placement this tall for its width reads as portrait: more rows than columns (a 1x2 cell at 340 x 780 px). */
+export function isPortraitChart(widget: LayoutWidget, span: { cols: number; rows: number }): boolean {
+  return widget.contentHint?.kind === 'chart' && span.rows > span.cols
+}
+
+/** A stat row or a facts card stretched across every column of a three-column grid (change 1: "never full width"). */
+export function isFullWidthShort(widget: LayoutWidget, span: { cols: number }, columns: number): boolean {
+  const kind = widget.contentHint?.kind
+  return (kind === 'stat' || kind === 'facts') && columns >= 3 && span.cols >= columns
 }
 
 /**
@@ -109,23 +122,39 @@ export function packLayout(widgets: readonly LayoutWidget[], columns: number): P
   // stat alone in a band it can only fill by growing taller. The packer then tries the same set with one or more of
   // the tall charts back at their size's own span (an md chart as 2x1) and keeps the layout that stretches no short
   // widget taller, then the fewest rows, then the fewest charts flattened, then the fewest stretches.
-  const tall = widgets.map((w, i) => (w.contentHint?.kind === 'chart' && base[i]!.demoted ? i : -1)).filter((i) => i >= 0).slice(0, 6)
+  // Each widget may carry one alternative span: a demoted md chart back at its size's span (2x1), and (change 1) a
+  // two-column one-row widget (an md stat row, a facts card, a short or long md table) at one column, since two
+  // of them cannot share a three-column band and the third cell beside a 2x1 would otherwise be a hole.
+  const alternatives: { i: number; span: { cols: number; rows: number; demoted: boolean } }[] = []
+  widgets.forEach((w, i) => {
+    const kind = w.contentHint?.kind
+    const s = base[i]!
+    if (kind === 'chart' && s.demoted && w.size === 'md') {
+      const b = spanFor(w.size, cols)
+      alternatives.push({ i, span: { cols: b.cols, rows: Math.min(b.rows, b.cols), demoted: false } })
+    } else if (kind && kind !== 'chart' && kind !== 'chain' && s.cols === 2 && cols >= 3 && s.rows === 1 && !(kind === 'table' && (w.contentHint?.columns ?? 0) >= WIDE_TABLE_COLUMNS)) {
+      alternatives.push({ i, span: { cols: 1, rows: 1, demoted: true } })
+    }
+  })
+  const alts = alternatives.slice(0, 7)
   const short = widgets.map(isShortContent)
   let best: Placement[] | undefined
   let bestCost: number[] = []
-  for (let mask = 0; mask < 1 << tall.length; mask++) {
+  for (let mask = 0; mask < 1 << alts.length; mask++) {
     const spans = base.map((s, i) => {
-      const k = tall.indexOf(i)
+      const k = alts.findIndex((a) => a.i === i)
       if (k < 0 || !((mask >> k) & 1)) return s
-      const b = spanFor(widgets[i]!.size, cols)
-      return { cols: b.cols, rows: b.rows, demoted: false }
+      return alts[k]!.span
     })
     const out = packOnce(widgets, spans, cols)
     const rows = out.reduce((n, p) => Math.max(n, p.row + p.rows), 0)
     const tallerShort = out.filter((p, i) => short[i] && p.rows > spans[i]!.rows).length
-    const flattened = tall.filter((_i, k) => (mask >> k) & 1).length
+    // Change 1: a portrait chart or a full-width stat row costs as much as a stretched short widget.
+    const portrait = out.filter((p, i) => isPortraitChart(widgets[i]!, p)).length
+    const fullWidth = out.filter((p, i) => isFullWidthShort(widgets[i]!, p, cols)).length
+    const flattened = alts.filter((_a, k) => (mask >> k) & 1).length
     const stretched = out.filter((p) => p.stretched).length
-    const cost = [tallerShort, rows, flattened, stretched]
+    const cost = [tallerShort + portrait + fullWidth, rows, flattened, stretched]
     if (!best || lexLess(cost, bestCost)) {
       best = out
       bestCost = cost
@@ -178,8 +207,15 @@ function packOnce(widgets: readonly LayoutWidget[], spans: readonly { cols: numb
     return next
   }
   const neighbours = (r: number, c: number): number[] => [cell(r, c - 1), cell(r - 1, c), cell(r, c + 1), cell(r + 1, c)].filter((i) => i >= 0)
-  /** Lower is better: anything that fills its height, then a short widget growing sideways, then one growing taller. */
-  const rank = (i: number, g: Growth) => (!short[i] ? 0 : g.vertical ? 2 : 1)
+  /**
+   * Lower is better: anything that fills its height, then a short widget growing sideways, then one growing taller;
+   * a chart growing portrait or a stat row growing to the full width (change 1) last of all, taken only when nothing
+   * else can fill the cell.
+   */
+  const rank = (i: number, g: Growth) => {
+    if (isPortraitChart(widgets[i]!, g) || isFullWidthShort(widgets[i]!, g, cols)) return 3
+    return !short[i] ? 0 : g.vertical ? 2 : 1
+  }
 
   /** Could one of the widgets after `after` be placed over cell (r, c) on the grid as it stands? */
   const fillableLater = (r: number, c: number, after: number): boolean => {
@@ -227,6 +263,13 @@ function packOnce(widgets: readonly LayoutWidget[], spans: readonly { cols: numb
     let fallback: { r: number; c: number } | undefined
     const limit = widgets.reduce((n, _w, k) => n + spans[k]!.rows, 0) + 2
     for (let r = 0; !placed; r++) {
+      // Every slot inside the used rows stranded a short widget: take the first of them rather than a fresh row past
+      // the limit (which left the rows between as holes for the hero to swallow: the 3x4 hero of the taste round).
+      if (r >= limit && fallback) {
+        fill(i, fallback.r, fallback.c, span.rows, span.cols)
+        out.push({ col: fallback.c, row: fallback.r, cols: span.cols, rows: span.rows, stretched: false, demoted: span.demoted })
+        break
+      }
       for (let c = 0; c < cols; c++) {
         if (!free(r, c, span.rows, span.cols)) continue
         if (r < limit && strandsAShortWidget(i, r, c, span.rows, span.cols)) {
@@ -237,11 +280,6 @@ function packOnce(widgets: readonly LayoutWidget[], spans: readonly { cols: numb
         out.push({ col: c, row: r, cols: span.cols, rows: span.rows, stretched: false, demoted: span.demoted })
         placed = true
         break
-      }
-      if (!placed && fallback && r >= limit) {
-        fill(i, fallback.r, fallback.c, span.rows, span.cols)
-        out.push({ col: fallback.c, row: fallback.r, cols: span.cols, rows: span.rows, stretched: false, demoted: span.demoted })
-        placed = true
       }
     }
   })
@@ -291,7 +329,14 @@ export const GRID_GAP = 8
  * than `1fr`, because fr rows in a scrolling (so indefinite) grid size to their content, and a chart
  * that fills its cell then grows without bound.
  */
-export function rowHeightFor(rows: number, height: number, chrome = 0): number {
+export function rowHeightFor(rows: number, height: number, chrome = 0, columnWidth = 0): number {
   if (rows <= 0 || height <= 0) return MIN_ROW_HEIGHT
-  return Math.max(MIN_ROW_HEIGHT, Math.floor((height - chrome - GRID_GAP * (rows - 1)) / rows))
+  const share = Math.max(MIN_ROW_HEIGHT, Math.floor((height - chrome - GRID_GAP * (rows - 1)) / rows))
+  if (columnWidth <= 0) return share
+  // Change 1: a row is never taller than about two thirds of a column, so a one-cell chart and the 2x2 hero both
+  // sit near 0.66 x width (a 1920 pane with two rows otherwise made 500 x 480 cells); never under the minimum.
+  return Math.min(share, Math.max(MIN_ROW_HEIGHT, Math.round(columnWidth * MAX_ROW_ASPECT)))
 }
+
+/** Row height as a fraction of the column width, the cap `rowHeightFor` applies when it knows the column width. */
+export const MAX_ROW_ASPECT = 0.66

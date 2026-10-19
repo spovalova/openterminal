@@ -33,7 +33,7 @@ export function Sidebar({ workspace, ws }: { workspace: Workspace; ws: Workspace
         </IconButton>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 pt-3 pb-6">
         {messages.length === 0 && ws.status !== 'streaming' && !ws.sending && (
           <div className="text-fg-2">Ask a follow-up to rewrite the workspace. The agent sees the current widgets.</div>
         )}
@@ -66,7 +66,7 @@ function MessageView({ message, workspace, durationMs }: { message: Message; wor
   return (
     <div className="flex flex-col gap-2">
       {steps.length > 0 && <Steps steps={steps} durationMs={ms} />}
-      <Reply text={message.text} widgets={workspace.widgets} />
+      <Reply text={message.text} widgets={workspace.widgets} unverified={message.verification?.unmatched.map((u) => u.text) ?? []} />
       {message.verification && <VerificationLine verification={message.verification} />}
     </div>
   )
@@ -86,10 +86,10 @@ function VerificationLine({ verification }: { verification: NonNullable<Message[
       </div>
     )
   }
+  // Muted, never red (change 8): the count here, each unverified figure underlined in the reply with a hover; the list is the run log's.
   return (
-    <div data-verification="unmatched" className="text-xs text-down">
-      Not in any frame: <span className="num">{verification.unmatched.map((u) => u.text).join(', ')}</span>
-      <span className="text-fg-3"> · {verification.matched} of {verification.checked} verified</span>
+    <div data-verification="unmatched" className="text-xs text-fg-3" title={`Not in any frame: ${verification.unmatched.map((u) => u.text).join(', ')}`}>
+      {verification.matched} of {verification.checked} figures verified · unverified figures are underlined
     </div>
   )
 }

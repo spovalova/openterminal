@@ -102,7 +102,7 @@ describe('content hints', () => {
     const c2 = FIXTURES.find((f) => f.id === 'C2')!
     expect(contentHintFor(c2.widget, c2.frames)).toEqual({ kind: 'facts', rows: 1 })
     const a3 = FIXTURES.find((f) => f.id === 'A3')!
-    expect(contentHintFor(a3.widget, a3.frames)).toEqual({ kind: 'table', rows: 4 })
+    expect(contentHintFor(a3.widget, a3.frames)).toEqual({ kind: 'table', rows: 4, columns: a3.frame.columns.length }) // the column count keeps a wide compare table two grid columns wide
     expect(contentHintFor(FIXTURES.find((f) => f.id === 'stat-quote')!.widget, {})).toEqual({ kind: 'stat' })
     expect(contentHintFor(FIXTURES.find((f) => f.id === 'options')!.widget, {})).toEqual({ kind: 'chain' })
     expect(contentHintFor(FIXTURES.find((f) => f.id === 'v2-heatmap')!.widget, {})).toEqual({ kind: 'chart' })

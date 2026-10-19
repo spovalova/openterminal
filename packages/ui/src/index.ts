@@ -7,7 +7,7 @@ export { Chip, type ChipProps } from './components/Chip.js'
 export { Tabs, type TabsProps } from './components/Tabs.js'
 export { PromptBox, type PromptBoxProps } from './components/PromptBox.js'
 export { WidgetFrame, sizeClass, type WidgetFrameProps } from './components/WidgetFrame.js'
-export { DataTable, columnWidth, type DataTableProps } from './components/DataTable.js'
+export { DataTable, columnWidth, displayText, type DataTableProps } from './components/DataTable.js'
 export { Steps, type StepsProps } from './components/Steps.js'
 export { Skeleton } from './components/Skeleton.js'
 export { Spinner } from './components/Spinner.js'
@@ -40,6 +40,7 @@ export {
   markerStyle,
   levelColor,
   bandColor,
+  bandEdgeColor,
   zeroLineColor,
   divergingScale,
   sequentialScale,

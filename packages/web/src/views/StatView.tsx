@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FC } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FC } from 'react'
 import clsx from 'clsx'
 import { columnIndex, type Frame, type StatControl } from '@terminal/core'
 import { EMPTY_CELL, EmptyState, direction, formatCell, type CellFormat } from '@terminal/ui'
@@ -143,7 +143,10 @@ export function seriesDetails(frame: Frame, column: string, format: CellFormat):
  * annotated numeric column (label and format from the field config) so a transform's stat shows its companions too.
  */
 export function detailRows(frame: Frame, column: string, change: string | undefined, fields: Record<string, { label?: string; format?: string; hidden?: boolean }> = {}, max = 6): Detail[] {
-  const row = frame.rows[0]
+  // Over a time series the companions come from the newest row, like the headline ("Close 145.89" from two years ago
+  // sat under today's P/E).
+  const it = frame.columns.findIndex((c) => c.type === 'time')
+  const row = it < 0 ? frame.rows[0] : frame.rows.reduce<unknown[] | undefined>((best, r) => (best === undefined || (r[it] as number) > (best[it] as number) ? r : best), undefined)
   if (!row) return []
   const out: Detail[] = []
   const used = new Set<string>([column, ...(change ? [change] : [])])
@@ -205,55 +208,138 @@ function useTicks(stats: Stat[]): Record<string, Tick> {
 }
 
 /**
- * `stat` preset: the control's column (the key field, else the first measure) as one big number per group, the
- * group as its label, and a change line under it (quote: the day change, plus the extended-hours price outside
- * the regular session). One group fills the widget; several become a row of compact cards.
+ * The symbols the widget asked for, in the user's order (a quote recipe's `symbols`): the
+ * cards keep that order rather than the provider's (change 2: "NVDA, AMD, MU, TSLA, AAPL" came back scrambled).
+ */
+export function symbolOrder(widget: ViewProps['widget']): string[] {
+  const queries: unknown[] = Object.values(widget.data)
+  for (const q of queries) {
+    const params = (q as { params?: { symbols?: unknown } } | undefined)?.params
+    if (params && Array.isArray(params.symbols)) return params.symbols.map(String)
+  }
+  return []
+}
+
+/** Stats in the order the widget asked for its symbols; symbols the query did not name keep their frame order after them. */
+export function orderStats(stats: Stat[], order: readonly string[]): Stat[] {
+  if (order.length === 0) return stats
+  const rank = new Map(order.map((s, i) => [s.toUpperCase(), i]))
+  return stats.map((s, i) => ({ s, i, r: rank.get(s.symbol.toUpperCase()) ?? order.length + i })).sort((a, b) => a.r - b.r).map((x) => x.s)
+}
+
+/**
+ * `stat` preset: the control's column (the key field, else the first measure) as one number per group, the group
+ * as its label, and a change line under it (quote: the day change, plus the extended-hours price outside the
+ * regular session). One group is a quote card: the number capped at 32px with its companions in a 3x2 grid
+ * (change 2); several are a row of compact 80px cards that fills or centres, never full-width slabs.
  */
 export const StatView: FC<ViewProps> = ({ widget, frames }) => {
   const control = controlOf(widget, frames)
   const stat = control?.kind === 'stat' ? control : undefined
   const frame = stat ? frames[stat.data] : primaryFrame(widget, frames)
   const column = stat?.column ?? ''
-  const stats = useMemo(() => (frame && stat ? statRows(frame, column, stat) : []), [frame, stat, column])
+  const stats = useMemo(() => (frame && stat ? orderStats(statRows(frame, column, stat), symbolOrder(widget)) : []), [frame, stat, column, widget])
   const ticks = useTicks(stats)
+  const [sizeRef, size] = useSize()
+  const dense = stats.length > 1 && size != null && !cardsFit(stats.length, size.width, size.height)
+  const cardHeight = size && !dense ? cardHeightFor(stats.length, size.width, size.height) : undefined
 
   if (stats.length === 0) {
     return <EmptyState title="No data" hint="The query returned no rows for these symbols." />
   }
 
-  const label = stat?.label && stat.label !== column ? stat.label : columnLabel(column)
+  const raw = stat?.label && stat.label !== column ? stat.label : columnLabel(column)
+  const label = raw.charAt(0).toUpperCase() + raw.slice(1) // sentence case (change 11); a v1 kind table wrote "forward P/E"
   if (stats.length === 1) {
     const s = stats[0]!
-    // One symbol fills the card: the headline, then up to six companion figures (prev close, range, volume, cap),
-    // so a quote or volatility stat reads like a quote card rather than one number in a blank cell (section 17 fill rule).
+    // One symbol is a quote card: the headline, then up to six companion figures (prev close, range, volume, cap) in
+    // a two- or three-column label:value grid, so a quote or volatility stat reads like a quote card at body size.
     const details = frame ? [...seriesDetails(frame, column, stat ? cellFormat(stat.format) : 'price'), ...detailRows(frame, column, stat?.change, frame.meta.fields ?? {})].slice(0, 6) : []
     return (
-      <div data-view="stat" data-column={column} data-count={1} className="flex h-full w-full flex-col justify-center gap-5 overflow-hidden p-3">
-        <div>
-          <StatBody stat={s} label={label} tick={ticks[s.symbol]} hero />
-        </div>
-        {details.length > 0 && (
-          <div data-details="" className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border/60 pt-3 text-xs leading-5 @[420px]/widget:grid-cols-3">
-            {details.map((d) => (
-              <div key={d.label} className="flex min-w-0 items-baseline justify-between gap-2">
-                <span className="truncate text-fg-3">{d.label}</span>
-                <span className="num whitespace-nowrap text-fg-2">{d.text}</span>
-              </div>
-            ))}
+      <div data-view="stat" data-column={column} data-count={1} className="flex h-full w-full flex-col overflow-hidden p-3">
+        <div className={clsx('flex flex-col gap-3', details.length > 0 ? 'flex-auto justify-between' : 'my-auto min-h-0')}>
+          <div>
+            <StatBody stat={s} label={label} tick={ticks[s.symbol]} hero />
           </div>
-        )}
+          {details.length > 0 && (
+            <div data-details="" className="grid grid-cols-2 gap-x-5 gap-y-1.5 border-t border-border/60 pt-2.5 text-xs leading-5 @[360px]/widget:grid-cols-3">
+              {details.map((d) => (
+                <div key={d.label} className="flex min-w-0 items-baseline justify-between gap-2">
+                  <span className="line-clamp-2 min-w-0 break-words text-fg-3">{d.label}</span>
+                  <span className="num whitespace-nowrap text-fg-2">{d.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+  if (dense) {
+    // More symbols than compact cards fit the cell (five in a 340x190 cell): one line per symbol, ticker · value ·
+    // change, so nothing scrolls or clips under the foot (taste round, change 2).
+    return (
+      <div ref={sizeRef} data-view="stat" data-column={column} data-count={stats.length} data-dense="" className="flex h-full w-full flex-col overflow-x-hidden overflow-y-auto px-3 py-1.5">
+        <div className="my-auto flex flex-col">
+          {stats.map((s) => (
+            <div key={s.symbol} data-symbol={s.symbol} className="flex min-w-0 items-baseline gap-3 border-b border-border/50 py-1 text-sm leading-5 last:border-b-0">
+              <span data-field="symbol" className="num w-14 shrink-0 truncate font-semibold text-fg">
+                {s.symbol}
+              </span>
+              <span key={ticks[s.symbol]?.n ?? 0} data-field="value" data-tick={ticks[s.symbol]?.dir} className={clsx('num ml-auto font-semibold', s.value == null ? 'text-fg-3' : 'text-fg')}>
+                {s.text}
+              </span>
+              <span data-field="secondary" className={clsx('num w-20 shrink-0 text-right', dirClass(s.secondary?.dir ?? null))}>
+                {s.secondary?.text ?? ''}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
   return (
-    <div data-view="stat" data-column={column} data-count={stats.length} className="stat-cards h-full w-full overflow-x-hidden overflow-y-auto p-3">
-      {stats.map((s) => (
-        <div key={s.symbol} data-symbol={s.symbol} className="flex min-w-0 flex-col justify-center overflow-hidden rounded-md border border-border bg-surface-2/50 px-3 py-2.5">
-          <StatBody stat={s} label={label} tick={ticks[s.symbol]} />
-        </div>
-      ))}
+    <div ref={sizeRef} data-view="stat" data-column={column} data-count={stats.length} className="flex h-full w-full flex-col overflow-x-hidden overflow-y-auto p-2">
+      <div className="stat-cards my-auto">
+        {stats.map((s) => (
+          <div key={s.symbol} data-symbol={s.symbol} className="stat-card flex min-w-0 flex-col justify-center overflow-hidden rounded-md border border-border bg-surface-2/50 px-3 py-2" style={cardHeight ? { height: cardHeight } : undefined}>
+            <StatBody stat={s} label={label} tick={ticks[s.symbol]} />
+          </div>
+        ))}
+      </div>
     </div>
   )
+}
+
+/** Whether `n` compact cards (136px wide at least, 72px tall, 8px gaps, 8px padding) fit a cell of this size. */
+export function cardsFit(n: number, width: number, height: number): boolean {
+  if (width <= 0 || height <= 0) return true
+  const perRow = Math.max(1, Math.floor((width - 16 + 8) / (136 + 8)))
+  const rows = Math.ceil(n / perRow)
+  return rows * 72 + (rows - 1) * 8 + 16 <= height
+}
+
+/**
+ * How tall each compact card is: the rows share the cell's height, 72px at least and 128px at most, so three cards in
+ * a tall 1920 cell are a band across it rather than a strip floating in the middle (and never a 170px slab).
+ */
+export function cardHeightFor(n: number, width: number, height: number): number | undefined {
+  if (width <= 0 || height <= 0) return undefined
+  const perRow = Math.max(1, Math.floor((width - 16 + 8) / (136 + 8)))
+  const rows = Math.ceil(n / perRow)
+  return Math.max(72, Math.min(128, Math.floor((height - 16 - (rows - 1) * 8) / rows)))
+}
+
+/** The element's content size, measured (undefined until the first layout, so tests and server rendering keep the cards). */
+function useSize(): [(el: HTMLDivElement | null) => void, { width: number; height: number } | undefined] {
+  const [size, setSize] = useState<{ width: number; height: number } | undefined>(undefined)
+  const ref = useCallback((el: HTMLDivElement | null) => {
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const update = () => setSize((prev) => (prev && prev.width === el.clientWidth && prev.height === el.clientHeight ? prev : { width: el.clientWidth, height: el.clientHeight }))
+    update()
+    new ResizeObserver(update).observe(el)
+  }, [])
+  return [ref, size]
 }
 
 const dirClass = (dir: 'up' | 'down' | null) => (dir === 'up' ? 'text-up' : dir === 'down' ? 'text-down' : 'text-fg-2')

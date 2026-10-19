@@ -21,7 +21,7 @@ export const Steps: FC<StepsProps> = ({ steps, durationMs, defaultOpen, classNam
           {live ? 'Working…' : `Worked for ${formatDuration(durationMs)}`}
           <span className="mx-1 text-border-strong">·</span>
           {n} {n === 1 ? 'step' : 'steps'}
-          {failed > 0 && <span className="ml-1 text-down">({failed} failed)</span>}
+          {failed > 0 && <span className="ml-1 text-fg-3">({failed} failed)</span>}
         </span>
       </summary>
       <ol className="mt-1 ml-1 flex flex-col border-l border-border pl-2">

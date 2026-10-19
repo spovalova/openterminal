@@ -212,15 +212,17 @@ export function App() {
                 ●
               </span>
               <span>{state.socket === 'open' ? 'connected' : state.socket === 'connecting' ? 'connecting…' : 'disconnected, retrying'}</span>
-              {state.health && (
-                <span>
-                  · {state.health.connectors.length} {state.health.connectors.length === 1 ? 'connector' : 'connectors'} · {state.health.recipes} recipes{state.health.llm ? '' : ' · no LLM key'}
-                </span>
-              )}
+              {/* Counts of connectors and recipes are internal (taste round, change 15); only a missing key is the user's business. */}
+              {state.health && !state.health.llm && <span>· no LLM key</span>}
               <span className="text-fg-3">·</span>
               <MarketStrip />
             </div>
             <div className="flex items-center gap-3">
+              {/* The charts' attribution (lightweight-charts' NOTICE) lives here once instead of a logo inside every plot,
+                  where it sat on MACD histograms and volume bars (taste round, change 13). */}
+              <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer noopener" data-attribution="" className="text-fg-3 hover:text-fg-2">
+                Charts by TradingView
+              </a>
               <span>
                 <Kbd>{MOD}</Kbd> <Kbd>K</Kbd> palette · <Kbd>{MOD}</Kbd> <Kbd>\</Kbd> sidebar
               </span>

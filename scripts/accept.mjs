@@ -156,7 +156,11 @@ const measure = () => {
       contentBottom = Math.max(contentBottom, Math.min(r.bottom, bodyRect.bottom))
     }
     let tableRows = null
-    if (kind === 'chart') for (const c of body.querySelectorAll('canvas')) consider(c)
+    if (kind === 'chart') {
+      for (const c of body.querySelectorAll('canvas')) consider(c)
+      // The price pane's legend sits above the plot (taste round, change 4): it is the chart's content too.
+      for (const l of body.querySelectorAll('[data-legend]')) consider(l)
+    }
     else if (kind === 'table' || kind === 'chain' || kind === 'heatmap') {
       const table = body.querySelector('table')
       if (table) {
@@ -259,7 +263,8 @@ function score(m, facts) {
   return { pass: keys.every((k) => !fails[k]), result }
 }
 
-const browser = await chromium.launch({ channel: 'chromium' })
+// CHROMIUM_PATH points at a Chromium build when the Playwright cache holds a different revision than the library expects.
+const browser = await chromium.launch({ channel: 'chromium', ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}) })
 const rows = []
 for (const [width, height] of viewports) {
   const viewport = `${width}x${height}`
@@ -272,6 +277,21 @@ for (const [width, height] of viewports) {
     await page.goto(BASE, { waitUntil: 'domcontentloaded' })
     await page.evaluate((id) => localStorage.setItem('terminal.activeWorkspace', id), c.workspaceId)
     await page.goto(BASE, { waitUntil: 'networkidle' })
+    // The first page load can write its own remembered workspace back after ours (the first case screenshotted the
+    // previous session's tab): check what the app settled on and reload until it is the case's workspace.
+    for (let i = 0; i < 4; i++) {
+      const name = c.stored?.name ?? c.workspaceName
+      // The app can still be restoring when storage already holds our id: wait for the selected tab to name the workspace.
+      const shown = name
+        ? await page
+            .waitForFunction((n) => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent?.includes(n), name, { timeout: 5_000 })
+            .then(() => true)
+            .catch(() => false)
+        : (await page.evaluate(() => localStorage.getItem('terminal.activeWorkspace'))) === c.workspaceId
+      if (shown) break
+      await page.evaluate((id) => localStorage.setItem('terminal.activeWorkspace', id), c.workspaceId)
+      await page.goto(BASE, { waitUntil: 'networkidle' })
+    }
     await page
       .waitForFunction(
         () => {

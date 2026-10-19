@@ -4,7 +4,7 @@
  * rebased", "NVDA · Oct 23, 2026 · 4 DTE · underlying 213.75". A route or a transform describes itself by its path
  * or its inputs. Never typed by the agent or the user.
  */
-import { DEFAULT_DATASET, columnIndex, describeQuery, type AnyQuery, type AnyWidget, type Frame, type ViewV2 } from '@terminal/core'
+import { DEFAULT_DATASET, columnIndex, describeQuery, enumLabel, fieldLabel, type AnyQuery, type AnyWidget, type Frame, type ViewV2 } from '@terminal/core'
 import { formatCell } from '@terminal/ui'
 
 /** Short labels for the macro series, shared with the series legend. */
@@ -302,25 +302,81 @@ export function describeDataset(q: AnyQuery, view?: ViewV2, frame?: Frame, now: 
   const query = q as { recipe?: string; params?: Params; connector?: string; route?: string; inputs?: Record<string, unknown> }
   if (query.recipe) return subtitleForRecipe(query.recipe, query.params ?? {}, view, frame, now)
   if (query.route) {
-    const p = Object.entries(query.params ?? {}).filter(([k, v]) => k !== 'provider' && v != null && v !== '')
-    const shown = p.slice(0, 3).map(([k, v]) => `${k}=${Array.isArray(v) ? symbolsLabel(v.map(String)) : String(v)}`)
-    const parts = [query.route, ...shown]
+    // A route by what it serves, never its path or `key=value` pairs (taste round, change 11): "Economic calendar ·
+    // Oct 19 to Oct 24 · United States", "Quote · NVDA, AMD".
+    const params = Object.entries(query.params ?? {}).filter(([k, v]) => k !== 'provider' && v != null && v !== '')
+    const values = params.slice(0, 3).map(([, v]) => paramText(v, now))
+    const parts = [routeNoun(query.route), ...values]
     if (frame) parts.push(count(frame.rows.length, frame.columns.some((c) => c.type === 'time') ? 'bar' : 'row'))
-    return parts.join(SEP)
+    return parts.filter(Boolean).join(SEP)
   }
   if (query.inputs) {
     const ins = Object.values(query.inputs) as { recipe?: string; route?: string; params?: Params }[]
     const syms = [...new Set(ins.flatMap((i) => (Array.isArray(i.params?.symbols) ? (i.params!.symbols as unknown[]).map(String) : typeof i.params?.symbol === 'string' ? [i.params.symbol] : [])))]
-    const from = [...new Set(ins.map((i) => i.recipe ?? i.route ?? 'frames'))]
-    return `derived from ${from.join(' + ')}${syms.length ? SEP + symbolsLabel(syms) : ''}`
+    const from = [...new Set(ins.map((i) => (i.recipe ? recipeNoun(i.recipe) : i.route ? routeNoun(i.route).toLowerCase() : 'frames')))]
+    return `${syms.length ? symbolsLabel(syms) + SEP : ''}from ${joinWords(from)}`
   }
   return describeQuery(q)
 }
 
-/** The short name of a secondary dataset in the subtitle: its recipe ("news markers"), route tail or "derived". */
+/** What a recipe serves, as a noun for "from prices and reported EPS" and "earnings markers" (change 11). */
+const RECIPE_NOUN: Record<string, string> = {
+  ohlcv: 'prices',
+  index: 'index levels',
+  quote: 'quotes',
+  eps_history: 'reported EPS',
+  earnings: 'earnings dates',
+  metrics: 'metrics',
+  financials: 'financials',
+  estimates: 'estimates',
+  options: 'options',
+  volatility: 'volatility',
+  calendar: 'the calendar',
+  macro: 'rates',
+  yield_curve: 'the yield curve',
+  screener: 'the screener',
+  news: 'news',
+  dividends: 'dividends',
+  insiders: 'insider trades',
+  institutions: 'holders',
+  short_interest: 'short interest',
+  movers: 'movers',
+  holdings: 'holdings',
+  profile: 'profiles',
+}
+/** The marker kind a secondary dataset draws, by recipe. */
+const MARKER_NOUN: Record<string, string> = { eps_history: 'earnings', earnings: 'earnings', calendar: 'release', news: 'news', dividends: 'dividend', insiders: 'insider', macro: 'release', ohlcv: 'price', index: 'index' }
+
+export function recipeNoun(recipe: string): string {
+  return RECIPE_NOUN[recipe] ?? fieldLabel(recipe).toLowerCase()
+}
+
+/** A route's display name from its last path segments: "equity/price/quote" → "Quote", "economy/calendar" → "Economic calendar". */
+export function routeNoun(route: string): string {
+  const parts = route.split('/').filter(Boolean)
+  const last = parts[parts.length - 1] ?? route
+  if (last === 'calendar' && parts[0] === 'economy') return 'Economic calendar'
+  if (last === 'historical' && parts.length > 1) return `${fieldLabel(parts[parts.length - 2]!)} history`
+  return fieldLabel(last)
+}
+
+function paramText(v: unknown, now: number): string {
+  if (Array.isArray(v)) return symbolsLabel(v.map(String))
+  const s = String(v)
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return shortDate(s, now)
+  if (/^[a-z]+(_[a-z]+)+$/.test(s)) return fieldLabel(s).replace(/^\w/, (c) => c.toUpperCase()).replace(/\b(states|kingdom)\b/i, (w) => w.charAt(0).toUpperCase() + w.slice(1))
+  return /^[a-z]/.test(s) ? enumLabel(s) : s
+}
+
+function joinWords(words: string[]): string {
+  if (words.length <= 1) return words.join('')
+  return `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`
+}
+
+/** The short name of a secondary dataset in the subtitle: "earnings markers", "news markers", never the recipe id. */
 function markerName(q: unknown): string {
   const query = q as { recipe?: string; route?: string; inputs?: unknown }
-  if (query.recipe) return `${query.recipe} markers`
-  if (query.route) return `${query.route.split('/').pop()} markers`
+  if (query.recipe) return `${MARKER_NOUN[query.recipe] ?? recipeNoun(query.recipe)} markers`
+  if (query.route) return `${routeNoun(query.route).toLowerCase()} markers`
   return 'derived markers'
 }

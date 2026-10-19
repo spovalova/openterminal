@@ -1,4 +1,4 @@
-import { columnsFor, packLayout, rowHeightFor, type Workspace } from '@terminal/core'
+import { GRID_GAP, columnsFor, packLayout, rowHeightFor, type Workspace } from '@terminal/core'
 import { Button, EmptyState } from '@terminal/ui'
 import { useCallback, useLayoutEffect, useState } from 'react'
 import { useApp, type WorkspaceState } from '../state'
@@ -72,7 +72,8 @@ export function Grid({ workspace, ws }: { workspace: Workspace; ws: WorkspaceSta
     columns,
   )
   const rows = layout.reduce((n, p) => Math.max(n, p.row + p.rows), 0)
-  const rowHeight = rowHeightFor(rows, pane.height, CHROME_HEIGHT)
+  const columnWidth = (pane.width - GRID_GAP * (columns - 1)) / columns
+  const rowHeight = rowHeightFor(rows, pane.height, CHROME_HEIGHT, columnWidth)
 
   return (
     <div ref={ref} className="flex h-full flex-col overflow-y-auto p-2">

@@ -3,7 +3,7 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { type Frame, type WidgetV2 } from '@terminal/core'
 
-import { StatView, columnLabel, statRows } from '../StatView'
+import { StatView, cardHeightFor, cardsFit, columnLabel, orderStats, statRows, symbolOrder } from '../StatView'
 import { viewFor } from '../view-for'
 import { fixture } from '../fixtures'
 
@@ -22,10 +22,10 @@ const value = (symbol?: string) => (symbol ? document.querySelector(`[data-symbo
 
 describe('column labels', () => {
   it('labels the common columns for people and falls back to the name with spaces', () => {
-    expect(columnLabel('target_consensus')).toBe('consensus target')
-    expect(columnLabel('days_to_cover')).toBe('days to cover')
+    expect(columnLabel('target_consensus')).toBe('Consensus target')
+    expect(columnLabel('days_to_cover')).toBe('Days to cover')
     expect(columnLabel('iv30')).toBe('IV30')
-    expect(columnLabel('something_else')).toBe('something else')
+    expect(columnLabel('something_else')).toBe('Something else')
   })
 })
 
@@ -131,5 +131,50 @@ describe('StatView', () => {
     render(<StatView widget={widget('quote', { symbols: ['NVDA'] })} frames={{ main: quote([]) }} />)
     expect(document.querySelector('[data-view="stat"]')).toBeNull()
     expect(screen.getByText('No data')).toBeTruthy()
+  })
+})
+
+describe('StatView, the taste round (change 2)', () => {
+  it('orders the cards by the symbols the widget asked for, not the frame order', () => {
+    const w = widget('quote', { symbols: ['NVDA', 'AMD', 'MU'] })
+    const f = quote([
+      ['MU', 199.6, 3.29, 1, 'REGULAR', null, null],
+      ['AMD', 250, -1, 1, 'REGULAR', null, null],
+      ['NVDA', 177.8, -3.48, 1, 'REGULAR', null, null],
+      ['SPY', 760, 0.1, 1, 'REGULAR', null, null],
+    ])
+    render(<StatView widget={w} frames={{ main: f }} />)
+    expect(Array.from(document.querySelectorAll('[data-symbol]')).map((el) => el.getAttribute('data-symbol'))).toEqual(['NVDA', 'AMD', 'MU', 'SPY'])
+    expect(orderStats([{ symbol: 'B' } as never, { symbol: 'A' } as never], ['a', 'b']).map((s) => s.symbol)).toEqual(['A', 'B'])
+    expect(symbolOrder(w)).toEqual(['NVDA', 'AMD', 'MU'])
+  })
+  it('renders several symbols as compact cards and one symbol as a capped hero with its details in a grid', () => {
+    const { widget: many, frame: f } = fixture('stat-quotes')
+    render(<StatView widget={many} frames={{ main: f }} />)
+    expect(document.querySelectorAll('.stat-card')).toHaveLength(4)
+    expect(document.querySelector('.stat-cards')).toBeTruthy()
+    cleanup()
+    const { widget: one, frame: q } = fixture('stat-quote')
+    render(<StatView widget={one} frames={{ main: q }} />)
+    expect(value()!.className).toContain('stat-hero')
+    expect(document.querySelector('[data-details]')).toBeTruthy()
+    expect(document.querySelector('.stat-card')).toBeNull()
+  })
+})
+
+describe('cardsFit (change 2: five cards in a short cell become one line per symbol)', () => {
+  it('fits four cards in a 340x190 cell and not five', () => {
+    expect(cardsFit(4, 340, 190)).toBe(true)
+    expect(cardsFit(5, 340, 190)).toBe(false)
+    expect(cardsFit(7, 1000, 190)).toBe(true)
+    expect(cardsFit(5, 0, 0)).toBe(true) // unmeasured: cards
+  })
+})
+
+describe('cardHeightFor (compact cards share a tall cell)', () => {
+  it('fills a tall row up to 128px and keeps 72px in a short one', () => {
+    expect(cardHeightFor(3, 480, 250)).toBe(128)
+    expect(cardHeightFor(4, 340, 190)).toBe(83)
+    expect(cardHeightFor(2, 340, 80)).toBe(72)
   })
 })

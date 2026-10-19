@@ -195,3 +195,22 @@ describe('layers', () => {
     expect(markerLayer('q', datasetFieldsFrom(quotes))).toBeUndefined()
   })
 })
+
+describe('curve over counts (taste round, change 14)', () => {
+  it('draws open interest and volume by strike as bars, IV as a line', () => {
+    const chain = frame([['strike', 'number'], ['open_interest', 'number'], ['volume', 'number'], ['implied_volatility', 'number']], [[340, 2310, 3203, 0.678], [342.5, 343, 559, 0.674]])
+    const counts = expandPreset({ preset: 'curve', x: 'strike', y: ['open_interest', 'volume'] }, ds({ main: chain }))
+    expect(counts[0]!.layers.map((l) => l.mark)).toEqual(['bar', 'bar'])
+    const iv = expandPreset({ preset: 'curve', x: 'strike', y: 'implied_volatility' }, ds({ main: chain }))
+    expect(iv[0]!.layers.map((l) => l.mark)).toEqual(['line'])
+  })
+})
+
+describe('curve x (taste round, change 14)', () => {
+  it('prefers a maturity column over the date every row carries', () => {
+    const yc = frame([['date', 'time'], ['maturity', 'string'], ['maturity_years', 'number'], ['rate', 'number']], [[1, '1M', 0.08, 4.1], [1, '2Y', 2, 3.9], [1, '10Y', 10, 4.3]], { rate: { unit: 'percent' } })
+    const panes = expandPreset({ preset: 'curve' }, ds({ main: yc }))
+    expect((panes[0]!.layers[0] as { x: string }).x).toBe('maturity_years')
+    expect(panes[0]!.x).toBe('number')
+  })
+})

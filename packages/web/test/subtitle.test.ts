@@ -161,11 +161,11 @@ describe('subtitleForWidget and describeDataset', () => {
     const w = widget({ main: { recipe: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '6mo' } }, events: { recipe: 'earnings', params: { symbols: ['MU'], from: '2026-01-01', to: '2026-12-31' } } }, { preset: 'price', candle: true, events: 'events' })
     expect(subtitleForWidget(w, {}, NOW)).toBe('MU · 1d · 6mo, candles · earnings markers')
   })
-  it('a route by its path and the params that matter, with the frame’s row count; a transform by what it derives from', () => {
-    expect(describeDataset({ connector: 'openbb', route: 'equity/price/quote', params: { symbol: ['NVDA', 'AMD'], provider: 'yfinance' } })).toBe('equity/price/quote · symbol=NVDA, AMD')
-    expect(describeDataset({ connector: 'openbb', route: 'equity/price/historical', params: { symbol: 'NVDA' } }, undefined, frame([['time', 'time'], ['close', 'number']], [[1, 1], [2, 2]]))).toBe('equity/price/historical · symbol=NVDA · 2 bars')
-    expect(describeDataset({ inputs: { price: { recipe: 'ohlcv', params: { symbols: ['NVDA'] } }, eps: { recipe: 'eps_history', params: { symbols: ['NVDA'] } } }, code: 'result = price' })).toBe('derived from ohlcv + eps_history · NVDA')
+  it('a route by its display name and the param values that matter, with the frame’s row count; a transform by what it derives from (change 11: no raw identifiers)', () => {
+    expect(describeDataset({ connector: 'openbb', route: 'equity/price/quote', params: { symbol: ['NVDA', 'AMD'], provider: 'yfinance' } })).toBe('Quote · NVDA, AMD')
+    expect(describeDataset({ connector: 'openbb', route: 'equity/price/historical', params: { symbol: 'NVDA' } }, undefined, frame([['time', 'time'], ['close', 'number']], [[1, 1], [2, 2]]))).toBe('Price history · NVDA · 2 bars')
+    expect(describeDataset({ inputs: { price: { recipe: 'ohlcv', params: { symbols: ['NVDA'] } }, eps: { recipe: 'eps_history', params: { symbols: ['NVDA'] } } }, code: 'result = price' })).toBe('NVDA · from prices and reported EPS')
     const w = widget({ main: { connector: 'openbb', route: 'economy/calendar', params: { start_date: '2026-10-19', end_date: '2026-10-24', country: 'united_states', provider: 'nasdaq' } } })
-    expect(subtitleForWidget(w, {}, NOW)).toBe('economy/calendar · start_date=2026-10-19 · end_date=2026-10-24 · country=united_states')
+    expect(subtitleForWidget(w, {}, NOW)).toBe('Economic calendar · Oct 19 · Oct 24 · United States')
   })
 })

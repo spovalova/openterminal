@@ -3,7 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { WIDE_COLUMNS, WIDE_VALUE, type Frame, type WidgetV2 } from '@terminal/core'
 
-import { FactsCard, factsControlOf, factsOf } from '../FactsCard'
+import { FactsCard, factsControlOf, factsOf, heroFact } from '../FactsCard'
 import { HeatmapView, buildHeatmap, cellColor, cellText } from '../HeatmapView'
 import { StatView } from '../StatView'
 import { viewFor } from '../view-for'
@@ -29,7 +29,7 @@ describe('FactsCard', () => {
     expect(value('volume').textContent).toBe('96,500,000')
     expect(value('sector').textContent).toBe('Consumer Cyclical')
     expect(screen.getByText('Market cap')).toBeTruthy() // the field label
-    expect(screen.getByText('exchange')).toBeTruthy() // a column without one: the name
+    expect(screen.getByText('Exchange')).toBeTruthy() // a column without one: the name in sentence case (change 11)
   })
 
   it('factsOf shows a dash for nulls and the first row of a longer frame; a table view yields the same control', () => {
@@ -125,5 +125,26 @@ describe('HeatmapView', () => {
     expect(root.getAttribute('data-x')).toBe('6')
     expect(root.getAttribute('data-y')).toBe('4')
     expect(root.querySelector('td[data-cell="Energy:Oct"]')!.textContent).toBe('+6.2%')
+  })
+})
+
+describe('FactsCard, the taste round (change 3)', () => {
+  it('sets one hero (the key field) large and every other field as label : value in a grid, enums in sentence case', () => {
+    const { widget, frames } = fixture('v2-facts')
+    render(<FactsCard widget={widget} frames={frames} />)
+    const card = document.querySelector('[data-view="facts"]')!
+    const hero = card.querySelector('[data-hero]')!
+    expect(hero.getAttribute('data-fact')).toBe('last_price')
+    expect(hero.querySelector('[data-field="value"]')!.className).toContain('facts-hero')
+    expect(card.querySelectorAll('[data-hero]')).toHaveLength(1)
+    // the rest are body-size rows, numbers in the mono stack
+    const pe = card.querySelector('[data-fact="pe"] [data-field="value"]')!
+    expect(pe.className).toContain('num')
+    expect(pe.className).not.toContain('facts-hero')
+    // the first numeric fact is the hero when nothing is marked key; a card of strings has none
+    const facts = factsOf(frames.main!, factsControlOf(widget, frames)!)
+    expect(heroFact(facts)!.column).toBe('last_price')
+    expect(heroFact(facts.filter((f) => f.format === 'text'))).toBeUndefined()
+    expect(heroFact(facts, { pe: { key: true } })!.column).toBe('pe')
   })
 })

@@ -76,8 +76,16 @@ describe('buildSystemPrompt (v2)', () => {
     expect(p).toContain('use stat for one or two headline numbers, facts for a snapshot with several, the reply or a chart marker for a single date or fact, a pivot through a transform')
     expect(p).toContain('four to six by default, fewer when the user asks for fewer')
     expect(p).toContain('it is not a floor. When the user asks for one or two widgets, build one or two.')
-    expect(p).toContain('the grid sizes by content: tables with six rows or fewer, stats and facts cards are one row tall, charts two')
+    expect(p).toContain('the grid has three equal columns and sizes by content: the lg hero is 2x2, every other chart is one cell (never taller than wide), tables with six rows or fewer, stats and facts cards are one row tall and never full width')
     expect(p).toContain('The first widget is the hero and should be lg')
+  })
+
+  it('states the desk-note voice: answer first, short, rounded, no system talk, chips after the sentence (taste round, changes 9 and 10)', () => {
+    const p = build()
+    expect(p).toContain('Write like a desk note, not a report')
+    expect(p).toContain('95M shares against 32M average')
+    expect(p).toContain('never name a data provider')
+    expect(p).toContain('never mid-sentence')
   })
 
   it('states the baseline rule: a period change is measured from the close before the period', () => {
@@ -101,7 +109,7 @@ describe('buildSystemPrompt (v2)', () => {
     expect(p).toContain('ot.prev_close(df, value="close", group="symbol")')
     expect(p).toContain('m = pd.merge_asof(p, e[["symbol", "time", "eps_ttm"]], on="time", by="symbol")')
     expect(p).toContain(JSON.stringify(TRANSFORM_EXAMPLE.inputs))
-    expect(p).toContain('"pe":{"unit":"ratio","label":"P/E (TTM)"}')
+    expect(p).toContain('"pe":{"unit":"ratio","label":"P/E (TTM)","key":true}')
     expect(p).toContain('E. "P/E over time for NVDA" (derived)')
     expect(p).toContain('"view":{"preset":"stat","column":"pe"}')
   })

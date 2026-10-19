@@ -191,6 +191,8 @@ recipes:
               session[(w == "bmo") | w.str.contains("pre|before")] = "bmo"
               session[(w == "amc") | w.str.contains("after|post")] = "amc"
               df["session"] = session
+              # The provider's own timing column is the same fact raw ("after-hours", "not-supplied"): one Session column.
+              df = df.drop(columns=[src])
           sort_by = [c for c in ("report_date", "date") if c in df.columns][:1]
           result = df.sort_values(sort_by) if sort_by else df
         columns:
