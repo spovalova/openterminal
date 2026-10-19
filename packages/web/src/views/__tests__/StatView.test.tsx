@@ -3,7 +3,7 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { type Frame, type WidgetV2 } from '@terminal/core'
 
-import { StatView, cardHeightFor, cardsFit, columnLabel, orderStats, statRows, symbolOrder } from '../StatView'
+import { StatView, balancedRows, cardHeightFor, cardsFit, cardsPerRow, columnLabel, detailRows, orderStats, statRows, symbolOrder } from '../StatView'
 import { viewFor } from '../view-for'
 import { fixture } from '../fixtures'
 
@@ -168,6 +168,52 @@ describe('cardsFit (change 2: five cards in a short cell become one line per sym
     expect(cardsFit(5, 340, 190)).toBe(false)
     expect(cardsFit(7, 1000, 190)).toBe(true)
     expect(cardsFit(5, 0, 0)).toBe(true) // unmeasured: cards
+  })
+})
+
+describe('balancedRows (change 2: no orphaned card)', () => {
+  it('splits cards into rows of near-equal length, longer rows first', () => {
+    const rows = (n: number, perRow: number) => balancedRows(Array.from({ length: n }, (_, i) => i), perRow).map((r) => r.length)
+    expect(rows(7, 6)).toEqual([4, 3]) // the morning watchlist at 1920: was six and one
+    expect(rows(7, 3)).toEqual([3, 2, 2]) // the Mag 7 at 1920: was three, three and one
+    expect(rows(4, 3)).toEqual([2, 2]) // four neoclouds: was three and one
+    expect(rows(4, 4)).toEqual([4])
+    expect(rows(3, 2)).toEqual([2, 1])
+    expect(rows(0, 3)).toEqual([])
+    expect(cardsPerRow(994)).toBe(6)
+    expect(cardsPerRow(100)).toBe(1)
+  })
+})
+
+describe('detailRows (companions in the headline unit)', () => {
+  const names = ['symbol', 'prev_close', 'open', 'high', 'low', 'volume', 'year_high', 'year_low', 'iv30', 'iv30_annual_high', 'iv30_annual_low', 'hv30_annual_high', 'hv30_annual_low']
+  const vol = {
+    columns: names.map((name) => ({ name, type: name === 'symbol' ? ('string' as const) : ('number' as const) })),
+    rows: [['TSLA', 354.72, 357.63, 369.47, 354.47, 24585212, 498.83, 297.38, 45.48, 60.73, 37.18, 69.8, 31.0]],
+    meta: { connector: 'openbb', fetchedAt: 0 },
+  } as unknown as Frame
+  it('puts the IV and HV ranges under IV30, never the stock price slots (the volatility card showed prev close and the day range)', () => {
+    expect(detailRows(vol, 'iv30', undefined, {}, 6, 'percent').map((d) => d.label)).toEqual(['IV30 high', 'IV30 low', 'HV30 high', 'HV30 low'])
+    // nor the stock's bid and ask, annotated dollar fields of the same snapshot
+    const withBid = { ...vol, columns: [...vol.columns, { name: 'bid', type: 'number' as const }], rows: [[...vol.rows[0]!, 367.61]] } as Frame
+    expect(detailRows(withBid, 'iv30', undefined, { bid: { label: 'Bid', unit: 'usd', format: 'price' } }, 6, 'percent').map((d) => d.label)).not.toContain('Bid')
+  })
+  it('keeps the quote slots under a price, in slot order', () => {
+    expect(detailRows(vol, 'prev_close', undefined, { prev_close: { unit: 'usd' } }, 6, 'price').map((d) => d.label)).toEqual(['Open', 'Day high', 'Day low', 'Volume', '52w high', '52w low'])
+  })
+  it('drops the price slots and dollar fields under a reading that is not a price (RSI showed "Open 551.97")', () => {
+    const rsi = { ...vol, columns: [...vol.columns, { name: 'rsi', type: 'number' as const }], rows: [[...vol.rows[0]!, 41.2]] } as Frame
+    expect(detailRows(rsi, 'rsi', undefined, {}, 6, 'price')).toEqual([])
+    expect(detailRows(rsi, 'rsi', undefined, { open: { label: 'Open', unit: 'usd' }, high: { label: 'High', format: 'price' }, volume: { label: 'Volume', unit: 'shares' } }, 6, 'price')).toEqual([])
+  })
+  it("keeps a transform's own dollar columns under a percent (the implied move's straddle and strike)", () => {
+    const move = {
+      columns: ['symbol', 'implied_move', 'atm_strike', 'underlying', 'straddle'].map((name) => ({ name, type: name === 'symbol' ? ('string' as const) : ('number' as const) })),
+      rows: [['TSLA', 6.65, 367.5, 367.41, 24.45]],
+      meta: { connector: 'transform', fetchedAt: 0 },
+    } as unknown as Frame
+    const fields = { implied_move: { unit: 'percent' }, atm_strike: { label: 'ATM strike', unit: 'usd' }, underlying: { label: 'Underlying', unit: 'usd' }, straddle: { label: 'ATM straddle', unit: 'usd' } }
+    expect(detailRows(move, 'implied_move', undefined, fields, 6, 'percent').map((d) => d.label)).toEqual(['ATM strike', 'Underlying', 'ATM straddle'])
   })
 })
 

@@ -110,6 +110,9 @@ const DETAIL_SLOTS: { label: string; names: readonly string[]; format: CellForma
 
 export type Detail = { label: string; text: string }
 
+/** A bar's or a quote's own fields, by name: what a non-price stat (IV30, RSI) must not borrow as companions. */
+const QUOTE_FIELD = /^(open|high|low|close|adj_close|volume|vwap|bid|ask|bid_size|ask_size|last|last_price|price|change|change_percent|prev_close|previous_close)$/i
+
 /**
  * For a stat over a time series (a macro rate, a derived P/E): where the series started in the frame's window, its
  * high and low, and the change from start to latest, so the headline has its range beside it. Empty for a frame
@@ -141,39 +144,56 @@ export function seriesDetails(frame: Frame, column: string, format: CellFormat):
 /**
  * Up to six details for a single-symbol card (the first row): the known quote fields in slot order, then any other
  * annotated numeric column (label and format from the field config) so a transform's stat shows its companions too.
+ * The price slots (prev close, the day's range, 52-week range) stand only under a price: under IV30 the card carries
+ * the IV and HV ranges, under an RSI or MACD reading the series' own start, high and low, never "Open 551.97".
+ * `headline` is the stat's own format when the field config has no unit (the volatility recipe's `iv30`).
  */
-export function detailRows(frame: Frame, column: string, change: string | undefined, fields: Record<string, { label?: string; format?: string; hidden?: boolean }> = {}, max = 6): Detail[] {
+export function detailRows(frame: Frame, column: string, change: string | undefined, fields: Record<string, { label?: string; format?: string; hidden?: boolean; unit?: string }> = {}, max = 6, headline?: CellFormat): Detail[] {
   // Over a time series the companions come from the newest row, like the headline ("Close 145.89" from two years ago
   // sat under today's P/E).
   const it = frame.columns.findIndex((c) => c.type === 'time')
   const row = it < 0 ? frame.rows[0] : frame.rows.reduce<unknown[] | undefined>((best, r) => (best === undefined || (r[it] as number) > (best[it] as number) ? r : best), undefined)
   if (!row) return []
-  const out: Detail[] = []
+  const unit = fields[column]?.unit
+  const headlineFormat: CellFormat = unit === 'percent' || unit === 'fraction' || headline === 'percent' ? 'percent' : unit === 'shares' || unit === 'count' ? 'compact' : 'price'
+  // The test the stat control uses for its change line (core presets): a price, a close, a last, a level, a dollar field.
+  const priceHeadline = headlineFormat === 'price' && (/price|close|last|value|rate|nav$/i.test(column) || unit === 'usd')
+  const out: (Detail & { slot?: CellFormat })[] = []
   const used = new Set<string>([column, ...(change ? [change] : [])])
   for (const slot of DETAIL_SLOTS) {
-    if (out.length >= max) break
+    if (!priceHeadline && (slot.format === 'price' || slot.format !== headlineFormat)) continue
     const name = slot.names.find((n) => columnIndex(frame, n) >= 0 && !used.has(n))
     if (!name) continue
     const v = row[columnIndex(frame, name)]
     if (typeof v !== 'number' || !Number.isFinite(v)) continue
     used.add(name)
-    out.push({ label: slot.label, text: formatCell(v, slot.format) })
+    out.push({ label: slot.label, text: formatCell(v, slot.format), slot: slot.format })
   }
   for (const c of frame.columns) {
-    if (out.length >= max) break
     if (c.type !== 'number' || used.has(c.name)) continue
     const f = fields[c.name]
     if (!f?.label || f.hidden) continue
+    // Under a reading that is not a price the stock's own quote fields are noise: bid and ask under IV30, the open, high
+    // and volume an RSI transform carried through from its bars ("High 554.41" beside the RSI's own "High 88.94"). A
+    // transform's own columns stay (the straddle, strike and underlying under an implied move).
+    if (!priceHeadline && (QUOTE_FIELD.test(c.name) || DETAIL_SLOTS.some((s) => s.names.includes(c.name)))) continue
     const v = row[columnIndex(frame, c.name)]
     if (typeof v !== 'number' || !Number.isFinite(v)) continue
     used.add(c.name)
     out.push({ label: f.label, text: formatCell(v, cellFormat((f.format as Parameters<typeof cellFormat>[0] | undefined) ?? 'price')) })
   }
-  // Companions that share the headline's unit come first: under IV30 the IV and HV ranges, under a price the day's range.
-  const unit = (fields[column] as { unit?: string } | undefined)?.unit
-  const slotUnit = (d: Detail) => DETAIL_SLOTS.find((s) => s.label === d.label)?.format
-  const headlineFormat = unit === 'percent' || unit === 'fraction' ? 'percent' : unit === 'shares' || unit === 'count' ? 'compact' : 'price'
-  return out.sort((a, b) => Number((slotUnit(b) ?? headlineFormat) === headlineFormat) - Number((slotUnit(a) ?? headlineFormat) === headlineFormat))
+  // Companions that share the headline's unit come first, sorted before the cut (the cut used to come first, so six
+  // price slots filled a volatility card before IV30 high and low were reached).
+  // Under a price the volume and the cap belong with the day's range (the quote card reads as before).
+  const same = (d: { slot?: CellFormat }) => {
+    const f = d.slot ?? headlineFormat
+    return f === headlineFormat || (headlineFormat === 'price' && f === 'compact')
+  }
+  return out
+    .map((d, i) => ({ d, i }))
+    .sort((a, b) => Number(same(b.d)) - Number(same(a.d)) || a.i - b.i)
+    .slice(0, max)
+    .map(({ d }) => ({ label: d.label, text: d.text }))
 }
 
 /** The extended-hours print is the pre-market price before the open and the after-hours price after the close (and once the market is closed). */
@@ -254,7 +274,11 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
     const s = stats[0]!
     // One symbol is a quote card: the headline, then up to six companion figures (prev close, range, volume, cap) in
     // a two- or three-column label:value grid, so a quote or volatility stat reads like a quote card at body size.
-    const details = frame ? [...seriesDetails(frame, column, stat ? cellFormat(stat.format) : 'price'), ...detailRows(frame, column, stat?.change, frame.meta.fields ?? {})].slice(0, 6) : []
+    const details = frame
+      ? [...seriesDetails(frame, column, stat ? cellFormat(stat.format) : 'price'), ...detailRows(frame, column, stat?.change, frame.meta.fields ?? {}, 6, stat ? cellFormat(stat.format) : undefined)]
+          .filter((d, i, all) => all.findIndex((x) => x.label === d.label) === i) // one "High": the series' own
+          .slice(0, 6)
+      : []
     return (
       <div data-view="stat" data-column={column} data-count={1} className="flex h-full w-full flex-col overflow-hidden p-3">
         <div className={clsx('flex flex-col gap-3', details.length > 0 ? 'flex-auto justify-between' : 'my-auto min-h-0')}>
@@ -301,9 +325,13 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
   return (
     <div ref={sizeRef} data-view="stat" data-column={column} data-count={stats.length} className="flex h-full w-full flex-col overflow-x-hidden overflow-y-auto p-2">
       <div className="stat-cards my-auto">
-        {stats.map((s) => (
-          <div key={s.symbol} data-symbol={s.symbol} className="stat-card flex min-w-0 flex-col justify-center overflow-hidden rounded-md border border-border bg-surface-2/50 px-3 py-2" style={cardHeight ? { height: cardHeight } : undefined}>
-            <StatBody stat={s} label={label} tick={ticks[s.symbol]} />
+        {balancedRows(stats, size ? cardsPerRow(size.width) : stats.length).map((row) => (
+          <div key={row[0]!.symbol} className="stat-card-row">
+            {row.map((s) => (
+              <div key={s.symbol} data-symbol={s.symbol} className="stat-card flex min-w-0 flex-col justify-center overflow-hidden rounded-md border border-border bg-surface-2/50 px-3 py-2" style={cardHeight ? { height: cardHeight } : undefined}>
+                <StatBody stat={s} label={label} tick={ticks[s.symbol]} />
+              </div>
+            ))}
           </div>
         ))}
       </div>
@@ -311,10 +339,34 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
   )
 }
 
+/** How many compact cards (136px wide at least, 8px gaps, 8px padding) one row of a cell this wide holds. */
+export function cardsPerRow(width: number): number {
+  return Math.max(1, Math.floor((width - 16 + 8) / (136 + 8)))
+}
+
+/**
+ * The cards in rows of near-equal length, longer rows first: seven cards four and three rather than six and one, three
+ * and two and two rather than three, three and one (change 2: a short last row is centred, never one orphaned card).
+ */
+export function balancedRows<T>(items: readonly T[], perRow: number): T[][] {
+  if (items.length === 0) return []
+  const rows = Math.ceil(items.length / Math.max(1, perRow))
+  const base = Math.floor(items.length / rows)
+  const extra = items.length % rows
+  const out: T[][] = []
+  let at = 0
+  for (let r = 0; r < rows; r++) {
+    const n = base + (r < extra ? 1 : 0)
+    out.push(items.slice(at, at + n))
+    at += n
+  }
+  return out
+}
+
 /** Whether `n` compact cards (136px wide at least, 72px tall, 8px gaps, 8px padding) fit a cell of this size. */
 export function cardsFit(n: number, width: number, height: number): boolean {
   if (width <= 0 || height <= 0) return true
-  const perRow = Math.max(1, Math.floor((width - 16 + 8) / (136 + 8)))
+  const perRow = cardsPerRow(width)
   const rows = Math.ceil(n / perRow)
   return rows * 72 + (rows - 1) * 8 + 16 <= height
 }
@@ -325,8 +377,7 @@ export function cardsFit(n: number, width: number, height: number): boolean {
  */
 export function cardHeightFor(n: number, width: number, height: number): number | undefined {
   if (width <= 0 || height <= 0) return undefined
-  const perRow = Math.max(1, Math.floor((width - 16 + 8) / (136 + 8)))
-  const rows = Math.ceil(n / perRow)
+  const rows = Math.ceil(n / cardsPerRow(width))
   return Math.max(72, Math.min(128, Math.floor((height - 16 - (rows - 1) * 8) / rows)))
 }
 

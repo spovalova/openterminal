@@ -71,7 +71,7 @@ function priceFormatFor(s: SeriesSpec): PriceFormat {
   }
 }
 
-type Badge = { id: string; color: string; text: string; top: number; side: 'right' | 'left' }
+type Badge = { id: string; color: string; text: string; top: number; side: 'right' | 'left'; /** A level's label ("Strike", "52w high"), drawn beside its badge. */ title?: string }
 /** An event pin: the bar's x, the bar's high (or low) y, and the marker kinds on that bar. */
 type Pin = { id: string; x: number; y: number; below: boolean; paneTop: number; items: { letter: string; color: string; kind: string }[] }
 /** Pin circle diameter and the stem between the bar and the circle. */
@@ -112,6 +112,17 @@ const MarkerPin: FC<{ pin: Pin }> = ({ pin }) => {
   )
 }
 type AxisBox = { right: { left: number; width: number }; left: { left: number; width: number } }
+
+/**
+ * Panes whose badge-carrying series are all bars (OI and volume by strike, signed bars): their histograms carry the
+ * last value. Elsewhere a histogram is secondary (volume under candles, the MACD histogram beside its lines) and does not.
+ */
+export function barOnlyPanes(series: readonly Pick<SeriesSpec, 'pane' | 'kind' | 'lastValue'>[]): Set<number> {
+  const out = new Set<number>()
+  for (const s of series) if (s.lastValue && s.kind === 'histogram') out.add(s.pane)
+  for (const s of series) if (s.kind !== 'histogram') out.delete(s.pane)
+  return out
+}
 
 /** Stack badges that would overlap (change 4): sorted by y, each at least BADGE_HEIGHT under the one above, the group kept inside the pane. */
 export function stackBadges<T extends { top: number }>(badges: T[], paneTop: number, paneHeight: number): T[] {
@@ -210,6 +221,9 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
       paneHeight.push(h)
       top += h + 1
     }
+    // The pane legends sit at the same tops. Measured here, after the chart has painted: read synchronously after a
+    // resize the panes still have their old heights, and the RSI legend landed on the MACD pane at 1920.
+    setTops((prev) => (prev.length === paneTop.length && prev.every((v, i) => v === paneTop[i]) ? prev : paneTop))
     const plotWidth = chart.timeScale().width()
     const widthOf = (side: 'right' | 'left') => {
       try {
@@ -222,8 +236,9 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
     setAxes({ right: { left: leftWidth + plotWidth, width: widthOf('right') }, left: { left: 0, width: leftWidth } })
     const groups = new Map<string, Badge[]>()
     const count = new Map<number, number>()
+    const bars = barOnlyPanes(seriesRef.current.map((x) => x.spec))
     for (const { api, spec: s } of seriesRef.current) {
-      if (!s.lastValue || s.kind === 'histogram' || s.last == null) continue
+      if (!s.lastValue || (s.kind === 'histogram' && !bars.has(s.pane)) || s.last == null) continue
       const n = count.get(s.pane) ?? 0
       if (n >= LAST_VALUE_MAX) continue
       count.set(s.pane, n + 1)
@@ -248,6 +263,27 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
       const list = groups.get(key) ?? []
       list.push({ id: s.id, color, text, top: (paneTop[s.pane] ?? 0) + y, side: s.side })
       groups.set(key, list)
+    }
+    // Levels (strikes, RSI 30/70, a target) carry their price on the axis too, stacked with the last values: the
+    // library drew their labels under the view's badges (the 360 strike under the 368.20 badge, RSI 30 under 41.20).
+    for (const { api, spec: s } of seriesRef.current) {
+      s.priceLines.forEach((l, k) => {
+        let y: number | null
+        try {
+          y = api.priceToCoordinate(l.price)
+        } catch {
+          y = null
+        }
+        const h = paneHeight[s.pane] ?? 0
+        if (y == null || !Number.isFinite(y) || y < 0 || (h > 0 && y > h)) return
+        const indexed = current.panes[s.pane]?.side[s.side]?.indexed
+        const first = indexed ? firstValue(s) : null
+        const text = indexed && first ? ((l.price / first) * 100).toFixed(2) : percentRef.current.has(s.id) ? `${l.price.toFixed(2)}%` : formatValue(l.price, s.format, s.precision)
+        const key = `${s.pane}:${s.side}`
+        const list = groups.get(key) ?? []
+        list.push({ id: `${s.id}|level|${k}`, color: l.color ?? levelColor, text, top: (paneTop[s.pane] ?? 0) + y, side: s.side, ...(l.label ? { title: l.label } : {}) })
+        groups.set(key, list)
+      })
     }
     // Event pins (change 12): a 14px circle with the letter inside, above the bar's high (below its low for a
     // below-bar marker) on a short stem; kinds on one bar stack; the first bar's pin is inset from the plot's edge.
@@ -291,7 +327,7 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
       const pane = Number(key.split(':')[0])
       out.push(...stackBadges(list, paneTop[pane] ?? 0, paneHeight[pane] ?? 0))
     }
-    setBadges((prev) => (prev.length === out.length && prev.every((b, i) => b.id === out[i]!.id && b.top === out[i]!.top && b.text === out[i]!.text && b.color === out[i]!.color) ? prev : out))
+    setBadges((prev) => (prev.length === out.length && prev.every((b, i) => b.id === out[i]!.id && b.top === out[i]!.top && b.text === out[i]!.text && b.color === out[i]!.color && b.title === out[i]!.title) ? prev : out))
   }, [])
   const scheduleBadges = useCallback(() => {
     if (typeof requestAnimationFrame === 'undefined') {
@@ -417,7 +453,8 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
         series.createPriceLine({ price: 0, color: zeroLineColor, lineWidth: 1, lineStyle: LineStyle.Solid, axisLabelVisible: false, title: '' })
       }
       for (const l of s.priceLines) {
-        series.createPriceLine({ price: l.price, color: l.color ?? levelColor, lineWidth: 1, lineStyle: LINE_STYLE[l.style], axisLabelVisible: true, title: l.label ?? '' })
+        // The label on the axis is the view's badge (stacked with the last values), not the library's.
+        series.createPriceLine({ price: l.price, color: l.color ?? levelColor, lineWidth: 1, lineStyle: LINE_STYLE[l.style], axisLabelVisible: false, title: '' })
       }
       // Event markers are drawn by the view (pins anchored to the bar, change 12), laid out with the badges.
       if (s.bands.length > 0) series.attachPrimitive(new BandPrimitive(s.bands))
@@ -460,7 +497,8 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
     return <EmptyState title="Nothing to chart" hint="The frame has no series the preset can draw." />
   }
 
-  const lastValueTotal = Math.min(LAST_VALUE_MAX * spec.panes.length, spec.series.filter((s) => s.lastValue && s.kind !== 'histogram').length)
+  const barPanes = barOnlyPanes(spec.series)
+  const lastValueTotal = Math.min(LAST_VALUE_MAX * spec.panes.length, spec.series.filter((s) => s.lastValue && (s.kind !== 'histogram' || barPanes.has(s.pane))).length)
   const hoverMarkers: MarkerSpec[] = hover ? spec.series.flatMap((s) => s.markers.filter((m) => horzKey(m.time) === hover.key)) : []
   const preset = view.preset
   const mainRows = legendSeries(spec, 0)
@@ -493,14 +531,25 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
         {badges.map((b) => {
           const box = axes[b.side]
           if (box.width <= 0) return null
+          const top = Math.round(b.top - BADGE_HEIGHT / 2)
           return (
-            <div
-              key={b.id}
-              data-badge=""
-              className="num pointer-events-none absolute z-10 flex items-center justify-center overflow-hidden text-[11px] leading-none font-medium text-bg"
-              style={{ left: box.left + 1, width: box.width - 1, top: Math.round(b.top - BADGE_HEIGHT / 2), height: BADGE_HEIGHT, background: b.color }}
-            >
-              {b.text}
+            <div key={b.id} className="contents">
+              <div
+                data-badge=""
+                className="num pointer-events-none absolute z-10 flex items-center justify-center overflow-hidden text-[11px] leading-none font-medium text-bg"
+                style={{ left: box.left + 1, width: box.width - 1, top, height: BADGE_HEIGHT, background: b.color }}
+              >
+                {b.text}
+              </div>
+              {b.title && (
+                <div
+                  data-badge-title=""
+                  className="pointer-events-none absolute z-10 flex items-center rounded-sm bg-surface/80 px-1 text-[10px] leading-none whitespace-nowrap text-fg-2"
+                  style={{ left: b.side === 'right' ? box.left - 2 : box.left + box.width + 2, transform: b.side === 'right' ? 'translateX(-100%)' : undefined, top, height: BADGE_HEIGHT }}
+                >
+                  {b.title}
+                </div>
+              )}
             </div>
           )
         })}

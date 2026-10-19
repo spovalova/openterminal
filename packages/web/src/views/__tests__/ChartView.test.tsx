@@ -288,7 +288,7 @@ describe('ChartView v2 presets', () => {
     expect(pins.every((p) => p.textContent === 'E' && p.getAttribute('data-kinds') === 'earnings')).toBe(true)
     // inset from the plot's left edge so a pin on the first bar is never clipped
     expect(pins.every((p) => parseFloat(p.style.left) >= 0)).toBe(true)
-    expect(chart!.series[0]!.stub.createPriceLine).toHaveBeenCalledWith(expect.objectContaining({ price: 200, axisLabelVisible: true }))
+    expect(chart!.series[0]!.stub.createPriceLine).toHaveBeenCalledWith(expect.objectContaining({ price: 200, axisLabelVisible: false })) // its label is a stacked badge (below)
     expect(chart!.series[0]!.stub.attachPrimitive).toHaveBeenCalledTimes(1)
     const chip = document.querySelector('[data-marker-kind="earnings"]')!
     expect(chip.textContent).toContain('E')

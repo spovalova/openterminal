@@ -32,7 +32,7 @@ body,
 /*
  * The stat view (taste round, change 2). One symbol is a quote card: the number is capped at 32px, never a 90px
  * slab, and its companions sit under it in a label:value grid. Several symbols are compact cards about 80px tall
- * (symbol · label / number / change) in a wrapping row that fills the width or centres a short last row.
+ * (symbol · label / number / change) in rows of near-equal length (StatView `balancedRows`), a short row centred.
  */
 .stat-hero {
   font-size: clamp(22px, 7cqw, 32px);
@@ -47,6 +47,11 @@ body,
 }
 .stat-cards {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.stat-card-row {
+  display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
@@ -57,12 +62,16 @@ body,
   min-height: 72px;
 }
 
-/* Two or three table rows as cards (TableView RowCards): one column per card, content height, centred when they fit. */
+/*
+ * Two or three table rows as cards (TableView RowCards): one column per card, content height, centred when they fit.
+ * `safe`: cards taller than the cell start at its top and scroll; plain `center` pushed the first card's labels up
+ * under the widget header, out of reach of the scroll (three earnings cards in a one-column cell at 1440).
+ */
 .row-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 8px;
-  align-content: center;
+  align-content: safe center;
 }
 
 /*

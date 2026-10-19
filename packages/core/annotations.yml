@@ -338,7 +338,7 @@ annotations:
   "yahoo:quoteSummary:defaultKeyStatistics.sharesShortPriorMonth": { unit: shares, format: compact, label: Prior, priority: 5 }
   "yahoo:quoteSummary:defaultKeyStatistics.shortRatio": { unit: days, format: ratio, label: Days to cover, priority: 3 }
   "yahoo:quoteSummary:defaultKeyStatistics.shortPercentOfFloat": { unit: fraction, label: "% float", priority: 4 }
-  "yahoo:quoteSummary:defaultKeyStatistics.dateShortInterest": { label: Settlement, priority: 1 }
+  "yahoo:quoteSummary:defaultKeyStatistics.dateShortInterest": { label: Settlement, priority: 7 }
   "yahoo:quoteSummary:defaultKeyStatistics.beta3Year": { unit: ratio, format: ratio, label: Beta (3y), priority: 6 }
   "yahoo:quoteSummary:financialData.currentPrice": { unit: usd, format: price, label: Price, priority: 3 }
   "yahoo:quoteSummary:financialData.targetMeanPrice": { unit: usd, format: price, label: Target, priority: 2, key: true }
