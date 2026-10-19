@@ -112,7 +112,7 @@ describe('ChartView v1 modes, preserved', () => {
     expect(chart!.factory).toBe('time')
     expect(chart!.chart.scales['right:0']!.mode).toBe(0)
     expect(chart!.series.map((s) => (s.definition as { type: string }).type)).toEqual(['Line', 'Line'])
-    expect(chart!.series.map((s) => (s.options as { color: string }).color)).toEqual(['#4c8dff', '#ff9f43'])
+    expect(chart!.series.map((s) => (s.options as { color: string }).color)).toEqual(['#0080ff', '#ff6a00'])
     // The library's own badges are off; the view draws stacked HTML badges on the axis (change 4) and reports the count.
     expect(chart!.series.every((s) => (s.options as { lastValueVisible: boolean }).lastValueVisible === false)).toBe(true)
     expect(chart!.series.every((s) => (s.options as { priceScaleId: string }).priceScaleId === 'right')).toBe(true)
@@ -246,7 +246,7 @@ describe('ChartView over macro frames', () => {
     render(<ChartView widget={widget} frames={frames} />)
     const [chart] = mock().charts
     expect(chart!.series.map((s) => (s.definition as { type: string }).type)).toEqual(['Line', 'Line', 'Line'])
-    expect(chart!.series.map((s) => (s.options as { color: string }).color)).toEqual(['#4c8dff', '#ff9f43', '#2ecc71'])
+    expect(chart!.series.map((s) => (s.options as { color: string }).color)).toEqual(['#0080ff', '#ff6a00', '#00ff80'])
     expect(chart!.chart.scales['right:0']!.mode).toBe(0)
     expect((chart!.options as { timeScale: { timeVisible: boolean } }).timeScale.timeVisible).toBe(false)
     const data = chart!.series[0]!.stub.setData.mock.calls[0]![0] as { time: unknown; value: number }[]

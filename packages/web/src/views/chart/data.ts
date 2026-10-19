@@ -5,7 +5,7 @@
  * never knows what the data means (PLAN.md section 17, "layers").
  */
 import { columnIndex, fieldLabel, type DatasetsFieldConfig, type Frame, type Layer, type Pane, type Scale } from '@openterminal/core'
-import { DOWN_COLOR, UP_COLOR, markerStyle, seriesPalette } from '@openterminal/ui'
+import { DOWN_COLOR, UP_COLOR, markerStyle, seriesPalette, toPureHue } from '@openterminal/ui'
 import type { BusinessDay, Time, UTCTimestamp } from 'lightweight-charts'
 import { withAlpha } from '../format'
 
@@ -254,10 +254,18 @@ export function nearest(keys: readonly number[], key: number): number | null {
   return Math.abs(a - key) <= Math.abs(key - b) ? a : b
 }
 
+/**
+ * A layer's own `color` (written by the agent or a recipe) snapped onto the pure-hue rule (PLAN.md section 6): a
+ * neutral stays, any other colour becomes the pure hue at its hue angle, and an unreadable one falls back to the palette.
+ */
+const pureLayerColors = (panes: readonly Pane[]): Pane[] =>
+  panes.map((p) => ({ ...p, layers: p.layers.map((l) => ('color' in l && l.color !== undefined ? ({ ...l, color: toPureHue(l.color) } as Layer) : l)) }))
+
 const MONTH_LABEL = (months: number): string => (months < 12 ? `${months}M` : months % 12 === 0 ? `${months / 12}Y` : `${(months / 12).toFixed(1)}Y`)
 
 /** Build the chart spec. `frames` holds the frames that have landed; layers over missing datasets are skipped. */
 export function buildChart(panes: readonly Pane[], frames: Record<string, Frame>, datasets: DatasetsFieldConfig, opts: BuildOptions = {}): ChartSpec {
+  panes = pureLayerColors(panes)
   const xType = panes[0]?.x ?? 'time'
   let x: XKind = 'number'
   if (xType === 'time') x = 'time'

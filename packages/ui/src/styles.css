@@ -45,40 +45,49 @@
   /* Reset Tailwind's default palette so only our tokens exist. */
   --color-*: initial;
 
-  /* Surfaces: page → panel → raised. */
-  --color-bg: #0b0c0e;
-  --color-surface: #141518;
-  --color-surface-2: #1b1d21;
-  --color-surface-3: #23262b;
+  /*
+   * Colour rule (PLAN.md section 6, 2026-10-19): every chromatic colour is a pure hue, "hue or spectral colors which
+   * has no white or black added, so pure pigment": one sRGB channel at 255, one at 0 (HSL saturation 100%, lightness
+   * 50%). Neutrals are true greys (R = G = B). A lighter or darker variant is the pure hue at a lower alpha over the
+   * background (`text-up/60`, `bg-accent/15`, color-mix with transparent), never a mix toward white, black or grey.
+   * packages/ui/test/pure-hue.test.ts fails on any other colour literal in packages/ui or packages/web.
+   */
+
+  /* Surfaces: page → panel → raised. True greys, the luminance of the old cool-tinted greys. */
+  --color-bg: #0c0c0c;
+  --color-surface: #151515;
+  --color-surface-2: #1d1d1d;
+  --color-surface-3: #262626;
 
   /* Hairlines. */
-  --color-border: #26282d;
-  --color-border-strong: #34373d;
+  --color-border: #282828;
+  --color-border-strong: #373737;
 
-  /* Ink. fg 14.8:1, fg-2 7.3:1, fg-3 4.3:1 on surface. */
-  --color-fg: #e6e7ea;
-  --color-fg-2: #a0a4ab;
-  --color-fg-3: #7a7f88;
+  /* Ink. fg 14.8:1, fg-2 7.3:1, fg-3 4.6:1 on surface. */
+  --color-fg: #e7e7e7;
+  --color-fg-2: #a4a4a4;
+  --color-fg-3: #7f7f7f;
 
-  /* One accent (violet, kept off the series palette). 5.8:1 on surface. */
-  --color-accent: #9085e9;
-  --color-accent-fg: #0b0c0e;
+  /* One accent: purple, hue 290°, off the series palette. 4.6:1 on surface (the bluer violets fall under 4.5:1 as text). */
+  --color-accent: #d400ff;
+  --color-accent-fg: #0c0c0c;
 
-  /* Direction. UP 7.6:1, DOWN 5.4:1 on surface. */
-  --color-up: #2fbf6b;
-  --color-down: #f0575a;
+  /* Direction: pure green (120°) and scarlet (10°). UP 13.3:1, DOWN 4.9:1 on surface (pure red #ff0000 is 4.6:1). */
+  --color-up: #00ff00;
+  --color-down: #ff2a00;
 
-  /* Categorical palette for multi-symbol series, fixed order, never cycled: blue, orange, teal, amber, violet,
-     magenta, cyan. Seven hues with no repeated green or orange (taste round, change 4; the Mag 7 are seven lines).
-     Validated with the dataviz validator on surface #141518 (dark band, chroma, adjacent CVD ΔE 8.4 protan /
-     17.3 tritan, normal-vision ΔE 19.7, contrast ≥ 3:1). */
-  --color-series-1: #3987e5;
-  --color-series-2: #d95926;
-  --color-series-3: #199e70;
-  --color-series-4: #c98500;
-  --color-series-5: #9085e9;
-  --color-series-6: #d55181;
-  --color-series-7: #1fa0bd;
+  /* Categorical palette for multi-symbol series, fixed order, never cycled: azure, orange, aquamarine, gold, violet, rose,
+     cyan. Seven pure hues (hue angles 205°, 30°, 165°, 50°, 275°, 325°, 190°). Dataviz validator, dark mode, surface
+     #151515: chroma, contrast ≥ 3:1 (violet lowest at 3.2:1), adjacent CVD ΔE 14.1 / normal 21.4, and all pairs CVD ΔE
+     9.3 / normal 16.9 (seven crossing lines), so it passes the all-pairs floors. It fails the dark lightness band by
+     construction: pure orange, aquamarine, gold and cyan sit at OKLCH L 0.73 to 0.89, and only black would bring them down. */
+  --color-series-1: #0095ff;
+  --color-series-2: #ff8000;
+  --color-series-3: #00ffbf;
+  --color-series-4: #ffd500;
+  --color-series-5: #9500ff;
+  --color-series-6: #ff0095;
+  --color-series-7: #00d5ff;
 
   /* 8px grid: spacing utilities step by 4px, so `2` is one unit. */
   --spacing: 4px;

@@ -74,9 +74,11 @@ describe('HeatmapView', () => {
     expect(h.max).toBe(1)
     expect(h.bound).toBe(1)
     expect(cellText(h, 0.72)).toBe('0.72')
-    expect(cellColor(h, 0)).toBe('#23262b') // the neutral midpoint
-    expect(cellColor(h, 1)).toBe('rgb(57, 135, 229)') // the positive pole (blue)
-    expect(cellColor(h, -1)).toBe('rgb(240, 87, 90)') // the negative pole (red)
+    // Pure hues at varying alpha over the neutral cell base (PLAN.md section 6, colour rule): zero shows no hue.
+    expect(cellColor(h, 0)).toBe('rgba(0, 149, 255, 0)') // the neutral midpoint
+    expect(cellColor(h, 1)).toBe('rgba(0, 149, 255, 0.75)') // the positive pole (azure) at the alpha cap
+    expect(cellColor(h, -1)).toBe('rgba(255, 42, 0, 0.75)') // the negative pole (scarlet) at the alpha cap
+    expect(cellColor(h, -0.5)).toBe('rgba(255, 42, 0, 0.375)')
     expect(cellColor(h, null)).toBeUndefined()
     render(<HeatmapView widget={widget} frames={frames} />)
     const root = document.querySelector('[data-view="heatmap"]')!
@@ -109,8 +111,8 @@ describe('HeatmapView', () => {
     expect(cellText(h, 2.5)).toBe('+2.5%')
     expect(cellText(h, -1.5)).toBe('-1.5%')
     expect(cellText(h, null)).toBe('—')
-    expect(cellColor(h, -1.5)).toBe('rgb(35, 38, 43)') // the low end of the sequential ramp is the surface
-    expect(cellColor(h, 2.5)).toBe('rgb(57, 135, 229)')
+    expect(cellColor(h, -1.5)).toBe('rgba(0, 149, 255, 0)') // the low end of the sequential ramp is the bare surface
+    expect(cellColor(h, 2.5)).toBe('rgba(0, 149, 255, 0.75)')
     const widget: WidgetV2 = { id: 'h', title: 'h', size: 'sm', data: { main: { recipe: 'x', params: {} } }, view: { preset: 'heatmap', x: 'sector', y: 'week', value: 'ret', palette: 'sequential' } }
     render(<HeatmapView widget={widget} frames={{ main: frame }} />)
     expect(document.querySelector('td[data-cell="Tech:W1"]')!.textContent).toBe('+2.5%')

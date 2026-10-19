@@ -1,7 +1,7 @@
 import { useMemo, type FC } from 'react'
 import clsx from 'clsx'
 import { WIDE_COLUMNS, WIDE_VALUE, columnIndex, type Frame, type Layer } from '@openterminal/core'
-import { EmptyState, divergingColor, divergingScale, sequentialColor, sequentialScale } from '@openterminal/ui'
+import { EmptyState, divergingColor, heatCell, heatLegend, sequentialColor } from '@openterminal/ui'
 import type { ViewProps } from './types'
 import { datasetsFor, expandView, primaryFrame } from './fields'
 import { formatValue } from './chart/data'
@@ -123,7 +123,7 @@ export const HeatmapView: FC<ViewProps> = ({ widget, frames }) => {
   if (!heat || heat.xs.length === 0 || heat.ys.length === 0) return <EmptyState title="Nothing to colour" hint="The frame has no group column with numeric columns beside it." />
 
   const dense = heat.ys.length > 8 || heat.xs.length > 12
-  const gradient = heat.palette === 'sequential' ? `linear-gradient(90deg, ${sequentialScale.low}, ${sequentialScale.high})` : `linear-gradient(90deg, ${divergingScale.negative}, ${divergingScale.neutral}, ${divergingScale.positive})`
+  const gradient = heatLegend(heat.palette)
   const lo = heat.palette === 'sequential' ? heat.min : -heat.bound
   const hi = heat.palette === 'sequential' ? heat.max : heat.bound
 
@@ -158,7 +158,7 @@ export const HeatmapView: FC<ViewProps> = ({ widget, frames }) => {
                       data-value={v ?? undefined}
                       title={`${x} · ${y} · ${cellText(heat, v)}`}
                       className={clsx('num h-7 truncate rounded-xs px-1 text-center', dense && 'text-[10px]', v == null ? 'text-fg-3' : 'text-fg')}
-                      style={bg ? { background: bg } : undefined}
+                      style={bg ? { background: heatCell(bg) } : undefined}
                     >
                       {heat.text ? cellText(heat, v) : ''}
                     </td>
@@ -173,7 +173,7 @@ export const HeatmapView: FC<ViewProps> = ({ widget, frames }) => {
         <span className="num">{cellText(heat, lo)}</span>
         <span aria-hidden="true" className="h-2 min-w-0 flex-1 rounded-xs" style={{ background: gradient, maxWidth: 220 }} />
         <span className="num">{cellText(heat, hi)}</span>
-        <span className="ml-auto truncate">{heat.palette === 'diverging' ? 'red negative · blue positive' : 'light low · dark high'}</span>
+        <span className="ml-auto truncate">{heat.palette === 'diverging' ? 'red negative · blue positive' : 'faint low · strong high'}</span>
       </div>
     </div>
   )
