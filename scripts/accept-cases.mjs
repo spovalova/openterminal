@@ -76,8 +76,10 @@ export const CASES = [
             { metrics: r('metrics', { symbols: NEOCLOUDS }) },
             `
 m = metrics.set_index("symbol")
-keep = [c for c in ["market_cap", "pe_ratio", "forward_pe", "enterprise_to_revenue", "revenue_growth", "gross_margin", "operating_margin", "profit_margin", "debt_to_equity", "return_on_equity", "price_return_1y", "beta"] if c in m.columns]
+labels = {"market_cap": "Market cap ($)", "pe_ratio": "P/E", "forward_pe": "Forward P/E", "enterprise_to_revenue": "EV / revenue", "revenue_growth": "Revenue growth %", "gross_margin": "Gross margin %", "operating_margin": "Operating margin %", "profit_margin": "Profit margin %", "debt_to_equity": "Debt / equity %", "return_on_equity": "ROE %", "price_return_1y": "1y return %", "beta": "Beta"}
+keep = [c for c in labels if c in m.columns]
 tbl = m[keep].T.reset_index().rename(columns={"index": "metric"})
+tbl["metric"] = tbl["metric"].map(labels)
 result = tbl
 `,
           ),
@@ -301,8 +303,8 @@ result = m[["time", "spread", "inverted"]]
     workspace: 'Morning check',
     widgets: [
       w('Watchlist pre-market', 'lg', { main: r('quote', { symbols: [...WATCHLIST, 'SPY', 'QQQ'] }) }, { preset: 'stat' }),
+      // Three columns, two rows, no scroll: the stat row (2x1), the chart with the reporting markers (1x2), the news (2x1).
       w('TSLA into the report', 'md', { main: r('ohlcv', { symbols: ['TSLA'], interval: '1d', range: '1mo' }), events: r('earnings', { symbols: WATCHLIST, from: '2026-10-19', to: '2026-11-02' }) }, { preset: 'price', candle: true, events: 'events' }),
-      w('Reporting in two weeks', 'sm', { main: r('earnings', { symbols: WATCHLIST, from: '2026-10-19', to: '2026-11-02' }) }, { preset: 'table', columns: ['symbol', 'report_date', 'reporting_time', 'eps_consensus'] }),
       w('Overnight news', 'md', { main: r('news', { symbols: WATCHLIST, limit: 20 }) }, { preset: 'table', columns: ['date', 'symbols', 'title', 'publisher'] }),
     ],
   },

@@ -3,7 +3,7 @@
  * frame once it has landed) and written once per kind. "NVDA · 5m · today", "4 symbols · 1d · 3mo,
  * rebased", "NVDA · Oct 23, 2026 · 7 DTE · underlying 182.43". Never typed by the agent or the user.
  */
-import { columnIndex, describeQuery, isWidgetV2, type AnyWidget, type Frame, type Widget } from '@terminal/core'
+import { columnIndex, describeQuery, isWidgetV2, type AnyQuery, type AnyWidget, type Frame, type Widget } from '@terminal/core'
 import { formatCell } from '@terminal/ui'
 
 /** Short labels for the macro series, shared with the series legend. */
@@ -249,7 +249,47 @@ export function subtitleForWidget(widget: AnyWidget, frames: Record<string, Fram
   const main = frames.main ?? Object.values(frames)[0]
   if (!isWidgetV2(widget)) return subtitleFor(widget, main, now)
   if (widget.query) return subtitleFor({ ...widget, query: widget.query, view: { type: 'table' } }, main, now)
-  const parts = Object.entries(widget.data).map(([name, q]) => (name === 'main' || Object.keys(widget.data).length === 1 ? describeQuery(q) : `${name}: ${describeQuery(q)}`))
-  if (main) parts.push(count(main.rows.length, 'row'))
+  const names = Object.keys(widget.data)
+  const primary = widget.view.data && widget.view.data in widget.data ? widget.view.data : names.includes('main') ? 'main' : names[0]!
+  const parts = [describeDataset(widget.data[primary]!)]
+  const extras = names.filter((n) => n !== primary)
+  if (main) parts.push(count(main.rows.length, main.columns.some((c) => c.name === 'time') ? 'bar' : 'row'))
+  if (extras.length > 0) parts.push([...new Set(extras.map((n) => markerName(widget.data[n]!)))].join(', '))
   return parts.filter(Boolean).join(SEP)
+}
+
+/**
+ * One dataset at a glance, the v1 subtitle style: a recipe by its param values ("CRWV · 1d · 3mo", "4 symbols · 1d · 1y"),
+ * a route by its path and the params that matter, a transform by what it derives from.
+ */
+export function describeDataset(q: AnyQuery): string {
+  const query = q as { recipe?: string; params?: Record<string, unknown>; connector?: string; route?: string; inputs?: Record<string, unknown> }
+  if (query.recipe) {
+    const p = query.params ?? {}
+    const values = Object.entries(p)
+      .filter(([k]) => k !== 'provider')
+      .map(([, v]) => (Array.isArray(v) ? symbolsLabel(v.map(String)) : v == null || v === '' ? '' : String(v)))
+      .filter(Boolean)
+    return [query.recipe, ...values].join(SEP)
+  }
+  if (query.route) {
+    const p = Object.entries(query.params ?? {}).filter(([k, v]) => k !== 'provider' && v != null && v !== '')
+    const shown = p.slice(0, 3).map(([k, v]) => `${k}=${Array.isArray(v) ? symbolsLabel(v.map(String)) : String(v)}`)
+    return [query.route, ...shown].join(SEP)
+  }
+  if (query.inputs) {
+    const ins = Object.values(query.inputs) as { recipe?: string; route?: string; params?: Record<string, unknown> }[]
+    const syms = [...new Set(ins.flatMap((i) => (Array.isArray(i.params?.symbols) ? (i.params!.symbols as unknown[]).map(String) : typeof i.params?.symbol === 'string' ? [i.params.symbol] : [])))]
+    const from = [...new Set(ins.map((i) => i.recipe ?? i.route ?? 'frames'))]
+    return `derived from ${from.join(' + ')}${syms.length ? SEP + symbolsLabel(syms) : ''}`
+  }
+  return describeQuery(q)
+}
+
+/** The short name of a secondary dataset in the subtitle: its recipe ("news markers"), route tail or "derived". */
+function markerName(q: unknown): string {
+  const query = q as { recipe?: string; route?: string; inputs?: unknown }
+  if (query.recipe) return `${query.recipe} markers`
+  if (query.route) return `${query.route.split('/').pop()} markers`
+  return 'derived markers'
 }

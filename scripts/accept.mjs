@@ -53,6 +53,11 @@ if (args.includes('--build')) {
   args.splice(args.indexOf('--build'), 1)
   const { CASES } = await import('./accept-cases.mjs')
   mkdirSync(runs, { recursive: true })
+  // A previous round's workspaces of the same names are replaced, so the tab bar does not fill with copies.
+  const existing = await (await fetch(`${BASE}/api/workspaces`)).json()
+  for (const ws of Array.isArray(existing) ? existing : []) {
+    if (CASES.some((c) => c.workspace === ws.name)) await fetch(`${BASE}/api/workspaces/${ws.id}`, { method: 'DELETE' })
+  }
   for (const c of CASES) {
     if (only.length && !only.includes(c.name) && !only.includes(`accept-${c.name}`)) continue
     const res = await fetch(`${BASE}/api/workspaces`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: c.workspace, widgets: c.widgets.map((w, i) => ({ id: `w${i + 1}`, ...w })) }) })

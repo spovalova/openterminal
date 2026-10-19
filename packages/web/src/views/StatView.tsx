@@ -38,9 +38,15 @@ export function statRows(frame: Frame, kind: Kind | undefined, column: string, c
   const legacy = kind ? (STAT_SECONDARY as Partial<Record<Kind, { column: string; label?: string }>>)[kind] : undefined
   const secondary = control?.change ? { column: control.change } : legacy
   const iSec = secondary && secondary.column !== column ? columnIndex(frame, secondary.column) : -1
-  const iState = kind === 'quote' ? columnIndex(frame, 'market_state') : -1
-  const iExt = kind === 'quote' ? columnIndex(frame, 'extended_price') : -1
-  const iExtPct = kind === 'quote' ? columnIndex(frame, 'extended_change_pct') : -1
+  // The extended-hours print: the v1 quote's `market_state`/`extended_*`, or yahoo's `marketState` with the pre- or
+  // post-market price and move (a v2 quote widget has no kind; the columns say what the frame is).
+  const iState = first(frame, ['market_state', 'marketState'])
+  const iExt = first(frame, ['extended_price'])
+  const iExtPct = first(frame, ['extended_change_pct'])
+  const iPre = first(frame, ['preMarketPrice'])
+  const iPrePct = first(frame, ['preMarketChangePercent'])
+  const iPost = first(frame, ['postMarketPrice'])
+  const iPostPct = first(frame, ['postMarketChangePercent'])
 
   const seen = new Set<string>()
   const out: Stat[] = []
@@ -57,15 +63,77 @@ export function statRows(frame: Frame, kind: Kind | undefined, column: string, c
       if (text !== EMPTY_CELL) sec = { text, dir: f === 'change' ? direction(v) : null, ...(secondary.label ? { label: secondary.label } : {}) }
     }
     let extended: Stat['extended'] = null
-    if (iState >= 0 && iExt >= 0) {
+    if (iState >= 0) {
       const state = row[iState]
-      const ext = num(row[iExt])
-      if (typeof state === 'string' && state && state !== 'REGULAR' && ext != null) {
-        const pct = iExtPct >= 0 ? row[iExtPct] : null
-        extended = { state: EXTENDED_LABEL[state] ?? state.toLowerCase(), price: formatCell(ext, 'price'), change: formatCell(pct, 'change'), dir: direction(pct) }
+      if (typeof state === 'string' && state && state !== 'REGULAR') {
+        const pre = /^PRE/.test(state)
+        const iPrice = iExt >= 0 ? iExt : pre ? iPre : iPost
+        const iPct = iExt >= 0 ? iExtPct : pre ? iPrePct : iPostPct
+        const ext = iPrice >= 0 ? num(row[iPrice]) : null
+        if (ext != null) {
+          const pct = iPct >= 0 ? row[iPct] : null
+          extended = { state: EXTENDED_LABEL[state] ?? state.toLowerCase(), price: formatCell(ext, 'price'), change: formatCell(pct, 'change'), dir: direction(pct) }
+        }
       }
     }
     out.push({ symbol, value, text: value == null ? EMPTY_CELL : formatCell(value, format), secondary: sec, extended })
+  }
+  return out
+}
+
+function first(frame: Frame, names: readonly string[]): number {
+  for (const n of names) {
+    const i = columnIndex(frame, n)
+    if (i >= 0) return i
+  }
+  return -1
+}
+
+/** Columns a single-symbol stat card shows under the headline, by name, first match per slot (the v1 quote and yahoo names). */
+const DETAIL_SLOTS: { label: string; names: readonly string[]; format: CellFormat }[] = [
+  { label: 'Prev close', names: ['prev_close', 'regularMarketPreviousClose', 'previous_close'], format: 'price' },
+  { label: 'Open', names: ['open', 'regularMarketOpen'], format: 'price' },
+  { label: 'Day high', names: ['high', 'regularMarketDayHigh', 'day_high'], format: 'price' },
+  { label: 'Day low', names: ['low', 'regularMarketDayLow', 'day_low'], format: 'price' },
+  { label: 'Volume', names: ['volume', 'regularMarketVolume'], format: 'compact' },
+  { label: 'Mkt cap', names: ['market_cap', 'marketCap'], format: 'compact' },
+  { label: '52w high', names: ['year_high', 'fiftyTwoWeekHigh'], format: 'price' },
+  { label: '52w low', names: ['year_low', 'fiftyTwoWeekLow'], format: 'price' },
+  { label: 'IV30 high', names: ['iv30_annual_high'], format: 'percent' },
+  { label: 'IV30 low', names: ['iv30_annual_low'], format: 'percent' },
+  { label: 'HV30 high', names: ['hv30_annual_high'], format: 'percent' },
+  { label: 'HV30 low', names: ['hv30_annual_low'], format: 'percent' },
+]
+
+export type Detail = { label: string; text: string }
+
+/**
+ * Up to six details for a single-symbol card (the first row): the known quote fields in slot order, then any other
+ * annotated numeric column (label and format from the field config) so a transform's stat shows its companions too.
+ */
+export function detailRows(frame: Frame, column: string, change: string | undefined, fields: Record<string, { label?: string; format?: string; hidden?: boolean }> = {}, max = 6): Detail[] {
+  const row = frame.rows[0]
+  if (!row) return []
+  const out: Detail[] = []
+  const used = new Set<string>([column, ...(change ? [change] : [])])
+  for (const slot of DETAIL_SLOTS) {
+    if (out.length >= max) break
+    const name = slot.names.find((n) => columnIndex(frame, n) >= 0 && !used.has(n))
+    if (!name) continue
+    const v = row[columnIndex(frame, name)]
+    if (typeof v !== 'number' || !Number.isFinite(v)) continue
+    used.add(name)
+    out.push({ label: slot.label, text: formatCell(v, slot.format) })
+  }
+  for (const c of frame.columns) {
+    if (out.length >= max) break
+    if (c.type !== 'number' || used.has(c.name)) continue
+    const f = fields[c.name]
+    if (!f?.label || f.hidden) continue
+    const v = row[columnIndex(frame, c.name)]
+    if (typeof v !== 'number' || !Number.isFinite(v)) continue
+    used.add(c.name)
+    out.push({ label: f.label, text: formatCell(v, cellFormat((f.format as Parameters<typeof cellFormat>[0] | undefined) ?? 'price')) })
   }
   return out
 }
@@ -122,9 +190,24 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
   const label = stat?.label && stat.label !== column ? stat.label : columnLabel(column)
   if (stats.length === 1) {
     const s = stats[0]!
+    // One symbol fills the card: the headline, then up to six companion figures (prev close, range, volume, cap),
+    // so a quote or volatility stat reads like a quote card rather than one number in a blank cell (section 17 fill rule).
+    const details = frame ? detailRows(frame, column, stat?.change, frame.meta.fields ?? {}) : []
     return (
-      <div data-view="stat" data-column={column} data-count={1} className="flex h-full w-full flex-col justify-center overflow-hidden p-3">
-        <StatBody stat={s} label={label} tick={ticks[s.symbol]} hero />
+      <div data-view="stat" data-column={column} data-count={1} className="flex h-full w-full flex-col justify-center gap-3 overflow-hidden p-3">
+        <div>
+          <StatBody stat={s} label={label} tick={ticks[s.symbol]} hero />
+        </div>
+        {details.length > 0 && (
+          <div data-details="" className="grid grid-cols-2 gap-x-4 gap-y-1.5 border-t border-border/60 pt-2 text-xs leading-4 @[420px]/widget:grid-cols-3">
+            {details.map((d) => (
+              <div key={d.label} className="flex min-w-0 items-baseline justify-between gap-2">
+                <span className="truncate text-fg-3">{d.label}</span>
+                <span className="num whitespace-nowrap text-fg-2">{d.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     )
   }

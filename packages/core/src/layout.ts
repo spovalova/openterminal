@@ -52,6 +52,7 @@ export function effectiveSpan(widget: LayoutWidget, columns: number, widgetCount
   const hint = widget.contentHint
   if (!hint) return { ...base, demoted: false }
   let rows = base.rows
+  let cols = base.cols
   switch (hint.kind) {
     case 'stat':
     case 'facts':
@@ -62,11 +63,15 @@ export function effectiveSpan(widget: LayoutWidget, columns: number, widgetCount
       break
     case 'chart':
       rows = widgetCount > TALL_CHART_MAX_WIDGETS ? base.rows : 2
+      // A tall non-hero chart (md) is one column wide in a three-column grid of three or more widgets: two 2x2 charts
+      // cannot share a band with the hero, so every md chart would otherwise take a full-width band of its own and a
+      // six-widget workspace would run five bands deep (phase 2; the Instinct reference tiles six charts three across).
+      if (rows === 2 && widget.size === 'md' && columns >= 3 && widgetCount >= 3) cols = 1
       break
     case 'chain':
       break
   }
-  return { cols: base.cols, rows, demoted: rows !== base.rows }
+  return { cols, rows, demoted: rows !== base.rows || cols !== base.cols }
 }
 
 /**
@@ -149,8 +154,11 @@ export function packLayout(widgets: readonly LayoutWidget[], columns: number): P
    * A free cell that only a short widget growing taller could ever fill: no later widget fits over it and every
    * neighbour that can grow into it is a short table, stat or facts card growing vertically.
    */
+  const freeCell = (r: number, c: number) => r >= 0 && c >= 0 && c < cols && r < grid.length && grid[r]![c] === -1
   const stranded = (r: number, c: number, placing: number, height: number): boolean => {
     if (fillableLater(r, c, placing)) return false
+    // A free row neighbour decides this cell's fate too: a sideways growth that reaches it continues into this one.
+    if (freeCell(r, c - 1) || freeCell(r, c + 1)) return false
     for (const n of neighbours(r, c)) {
       const g = growth(n, r, c, height)
       if (g && rank(n, g) < 2) return false

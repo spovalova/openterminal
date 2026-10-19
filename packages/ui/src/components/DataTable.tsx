@@ -38,7 +38,9 @@ const LONG_TEXT = 80
  * width and text columns share what is left, so a headline or a name gets the room and nothing scrolls
  * sideways. `symbol` is text but short.
  */
-const COLUMN_WIDTH: Partial<Record<CellFormat, number>> = { price: 76, change: 72, integer: 84, compact: 76, percent: 68, date: 88, time: 80, link: 56 }
+// A YYYY-MM-DD in the mono stack at the table's size is 84px plus the cell padding, so date and time take 104
+// (the bench v2 "2026-10…" defect); the number widths leave room for a two-word header.
+const COLUMN_WIDTH: Partial<Record<CellFormat, number>> = { price: 84, change: 80, integer: 88, compact: 80, percent: 76, date: 104, time: 104, link: 56 }
 const SYMBOL_WIDTH = 72
 
 export function columnWidth(name: string, format: CellFormat): number | undefined {
@@ -91,18 +93,19 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                   aria-sort={isActive ? (active.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
                   data-rank={priority?.[c.name] || undefined}
                   style={width ? { width } : undefined}
-                  className={clsx('h-7 border-b border-border px-2 text-xs font-medium whitespace-nowrap select-none', numeric ? 'text-right' : 'text-left')}
+                  className={clsx('min-h-7 border-b border-border px-2 py-1 align-bottom text-xs leading-4 font-medium select-none', numeric ? 'text-right' : 'text-left')}
                 >
                   <button
                     type="button"
                     onClick={() => click(c.name)}
                     className={clsx(
-                      'inline-flex max-w-full items-center gap-1 rounded-sm hover:text-fg',
-                      numeric && 'flex-row-reverse',
+                      'inline-flex max-w-full items-end gap-1 rounded-sm text-left hover:text-fg',
+                      numeric && 'flex-row-reverse text-right',
                       isActive ? 'text-fg' : 'text-fg-3',
                     )}
                   >
-                    <span className="truncate">{label(c.name, labels)}</span>
+                    {/* Two lines at most, wrapped at words: a header is never cut mid-word (section 17 checklist). */}
+                    <span className="line-clamp-2 break-words whitespace-normal">{label(c.name, labels)}</span>
                     <span aria-hidden className={clsx('text-[9px] leading-none', isActive ? 'text-accent' : 'opacity-0')}>
                       {active?.dir === 'desc' && isActive ? '▼' : '▲'}
                     </span>
@@ -127,10 +130,12 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                 // Numbers, dates, times and tickers are set in the mono stack (the `num` utility); prose stays sans.
                 const mono = numeric || f === 'date' || f === 'time' || c.name === 'symbol' || c.name === 'etf'
                 let content: React.ReactNode = text
-                if (f === 'text' && typeof v === 'string' && v.length > LONG_TEXT) {
-                  // max-width is ignored on table cells, so a paragraph (profile.description, a calendar event) is capped inside a block
+                const prose = f === 'text' && typeof v === 'string' && c.name !== 'symbol' && c.name !== 'etf'
+                if (prose && v.length > 12) {
+                  // Prose wraps to two lines at word boundaries instead of truncating mid-word (section 17 checklist); a
+                  // paragraph (profile.description, a calendar event) is still capped at 64ch per line with the full text on hover.
                   content = (
-                    <span className="block max-w-[64ch] truncate" title={v}>
+                    <span className={clsx('line-clamp-2 break-words whitespace-normal', v.length > LONG_TEXT && 'max-w-[64ch]')} title={v}>
                       {text}
                     </span>
                   )
@@ -154,7 +159,8 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                     data-rank={priority?.[c.name] || undefined}
                     data-mark={mark}
                     className={clsx(
-                      'h-7 truncate border-b border-border/60 px-2 whitespace-nowrap',
+                      'border-b border-border/60 px-2',
+                      prose ? 'min-h-7 py-1 align-top leading-4 whitespace-normal' : 'h-7 truncate whitespace-nowrap',
                       numeric ? 'text-right' : 'text-left',
                       mono && 'num',
                       dir === 'up' && 'text-up',

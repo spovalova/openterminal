@@ -366,11 +366,20 @@ export class ConnectorRegistry implements Registry {
   private async firstOf(routes: RecipeRouteQuery[], opts: RunOptions, what: string): Promise<Frame> {
     if (routes.length === 0) throw new RegistryError(`${what}: no route matches these params`)
     const causes: { connector: string; error: string }[] = []
+    let empty: Frame | undefined
     for (const r of routes) {
       try {
         const { rename, ...query } = r
         // The recipe's renames (`date` → `time` on the price routes) keep the kind's column names on every alternative.
-        return renameColumns(await this.run(query, opts), rename)
+        const frame = renameColumns(await this.run(query, opts), rename)
+        // An empty frame is not an answer when another alternative is left (yfinance's consensus answers [] for some
+        // symbols that yahoo's quoteSummary has); it is returned only when every alternative is empty.
+        if (frame.rows.length === 0 && r !== routes[routes.length - 1]) {
+          empty ??= frame
+          this.log(`[${r.connector}] ${r.route} answered no rows; trying the next alternative`)
+          continue
+        }
+        return frame
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         causes.push({ connector: r.connector, error: msg })
@@ -378,6 +387,7 @@ export class ConnectorRegistry implements Registry {
         if (opts.signal?.aborted) break
       }
     }
+    if (empty) return empty
     throw new RegistryError(`${what} failed on every route: ${causes.map((c) => `${c.connector}: ${c.error}`).join(' | ')}`, causes)
   }
 

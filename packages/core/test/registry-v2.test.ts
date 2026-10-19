@@ -272,6 +272,32 @@ describe('ConnectorRegistry.run (v2)', () => {
     expect(second.meta.lineage?.recipeVersion).not.toBe(first.meta.lineage?.recipeVersion)
     expect(await r.run(q)).toBe(second)
   })
+  it('tries the next alternative when a route answers no rows, and returns the empty frame only when every alternative is empty', async () => {
+    const log = vi.fn()
+    const r = new ConnectorRegistry({
+      recipes: [
+        { name: 'est', title: 'est', params: { type: 'object', properties: { symbols: { type: 'array', items: { type: 'string' } } }, required: ['symbols'] }, view: { preset: 'facts' }, routes: [{ connector: 'blank', route: 'equity/price/quote', params: { symbol: '{symbols}' } }, { connector: 'acme', route: 'equity/price/quote', params: { symbol: '{symbols}' } }] },
+        { name: 'none', title: 'none', params: { type: 'object', properties: { symbols: { type: 'array', items: { type: 'string' } } }, required: ['symbols'] }, view: { preset: 'facts' }, routes: [{ connector: 'blank', route: 'equity/price/quote', params: { symbol: '{symbols}' } }] },
+      ],
+      annotations,
+      log,
+    })
+    const blank = defineConnector({
+      name: 'blank',
+      config: z.object({}),
+      descriptors: () => [{ ...quoteDescriptor, connector: 'blank' }],
+      call: async () => inferFrame([], { connector: 'blank' }, { descriptor: quoteDescriptor }),
+    })
+    r.register(blank, {})
+    r.register(acme, {})
+    const f = await r.run({ recipe: 'est', params: { symbols: ['TSLA'] } })
+    expect(f.meta.connector).toBe('acme')
+    expect(f.rows).toHaveLength(1)
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('[blank] equity/price/quote answered no rows'))
+    const none = await r.run({ recipe: 'none', params: { symbols: ['TSLA'] } })
+    expect(none.rows).toHaveLength(0)
+    expect(none.meta.connector).toBe('blank')
+  })
   it('applies a recipe’s ttl and field overrides', async () => {
     const r = new ConnectorRegistry({
       recipes: [{ name: 'q', title: 'q', params: { type: 'object', properties: { symbols: { type: 'array', items: { type: 'string' } } }, required: ['symbols'] }, view: { preset: 'table' }, ttl: 5, fields: { last_price: { label: 'Last' } }, routes: [{ connector: 'acme', route: 'equity/price/quote', params: { symbol: '{symbols}' } }] }],
