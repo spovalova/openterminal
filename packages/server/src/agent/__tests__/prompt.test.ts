@@ -80,6 +80,14 @@ describe('buildSystemPrompt (v2)', () => {
     expect(p).toContain('The first widget is the hero and should be lg')
   })
 
+  it('states the desk-note voice: answer first, short, rounded, no system talk, chips after the sentence (taste round, changes 9 and 10)', () => {
+    const p = build()
+    expect(p).toContain('Write like a desk note, not a report')
+    expect(p).toContain('95M shares against 32M average')
+    expect(p).toContain('never name a data provider')
+    expect(p).toContain('never mid-sentence')
+  })
+
   it('states the baseline rule: a period change is measured from the close before the period', () => {
     const p = build()
     expect(p).toContain('measured from the last close before the period (the baselines above), so fetch one range longer than the period (1mo daily for "this week") so the baseline bar is among the preview rows')

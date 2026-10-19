@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { parseAnyWidget } from '@terminal/core'
 
-import { Reply, chipsToLinks } from '../Reply'
+import { Reply, chipsToLinks, chipsToParagraphEnd, markUnverified } from '../Reply'
 
 const w1 = parseAnyWidget({ id: 'w1', title: 'Mag 7 price, 2 years', size: 'lg', data: { main: { recipe: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '2y' } } }, view: { preset: 'price' } })
 
@@ -64,5 +64,28 @@ describe('Reply', () => {
     const { container } = render(<Reply text="MU is up **12" widgets={[]} streaming />)
     expect(container.querySelector('[aria-hidden]')).toBeTruthy()
     expect(container.querySelector('p')!.textContent).toBe('MU is up **12')
+  })
+})
+
+describe('chips at the end of the paragraph (taste round, change 9)', () => {
+  it('lifts mid-sentence chips to the paragraph end and closes up the stranded full stop', () => {
+    const text = 'Health care (XLV) led at 3.45% [[widget:a]] [[widget:b]] .\n\nNext paragraph [[widget:c]], with more.'
+    expect(chipsToParagraphEnd(text)).toBe('Health care (XLV) led at 3.45%. [[widget:a]] [[widget:b]]\n\nNext paragraph, with more. [[widget:c]]')
+  })
+  it('keeps list items on their own lines with their chips at each end', () => {
+    expect(chipsToParagraphEnd('- one [[widget:a]] here\n- two')).toBe('- one here [[widget:a]]\n- two')
+  })
+})
+
+describe('unverified figures (taste round, change 8)', () => {
+  it('wraps each unverified figure once, not inside a longer number or a chip', () => {
+    expect(markUnverified('Up 2.6% to 25.50, not 125.50. [[widget:w25.50]]', ['2.6%', '25.50'])).toBe('Up [2.6%](#unverified) to [25.50](#unverified), not 125.50. [[widget:w25.50]]')
+  })
+  it('renders them with a dotted underline and a hover, the rest as text', () => {
+    const { container } = render(<Reply text="CPI rose 2.6% on the year." widgets={[]} unverified={['2.6%']} />)
+    const el = container.querySelector('[data-unverified]')!
+    expect(el.textContent).toBe('2.6%')
+    expect(el.getAttribute('title')).toMatch(/Not found/)
+    expect(container.querySelector('a')).toBeNull()
   })
 })
