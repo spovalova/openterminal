@@ -82,8 +82,13 @@ function wordOf(token: string, first: boolean): string {
   return first ? word.charAt(0).toUpperCase() + word.slice(1) : word
 }
 
+/** Flag columns with a conventional short header (taste round 2, change 8: "Conv.", not "Is convertible"). */
+const FLAG_LABELS: Record<string, string> = { is_convertible: 'Conv.', is_callable: 'Callable', is_144a: '144A', is_etf: 'ETF', is_active: 'Active' }
+
 /** The display name for a column, series or param name that nobody labelled. */
 export function fieldLabel(name: string): string {
+  const flag = FLAG_LABELS[String(name).toLowerCase()]
+  if (flag) return flag
   const raw = splitName(String(name))
   let words = raw
   // "num_estimates" → "Estimates", "number_of_analysts" → "Analysts"; never empty.

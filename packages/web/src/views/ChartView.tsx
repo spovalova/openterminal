@@ -23,6 +23,7 @@ import type { ViewProps } from './types'
 import { withAlpha } from './format'
 import { datasetsFor, expandView, recipeOf, viewOf } from './fields'
 import { legendLabel } from './series-data'
+import { bondLabel } from '../subtitle'
 import { NEUTRAL_READING } from './StatView'
 import { useWidth } from './use-width'
 import { BandPrimitive } from './chart/band-primitive'
@@ -246,7 +247,8 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
   const spec = useMemo(() => {
     const datasets = datasetsFor(widget, frames)
     const panes = expandView(widget, frames)
-    return buildChart(panes, frames, datasets, { labels, groupLabel: (g: string) => legendLabel(g) })
+    // A FINRA bond symbol reads as the bond ("CRWV 9.25% 2030", round 2 change 8); an index by its name ("S&P 500").
+    return buildChart(panes, frames, datasets, { labels, groupLabel: (g: string) => bondLabel(g, widget.title) ?? legendLabel(g) })
   }, [widget, frames, labels])
   const percentUnits = useMemo(() => {
     // Series whose field carries a percent unit show their change in basis points (rates, yields).

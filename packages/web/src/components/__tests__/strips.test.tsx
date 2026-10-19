@@ -65,7 +65,7 @@ describe('ticker strip helpers', () => {
 describe('market strip', () => {
   it('describes the session from the clock module and names the next trading day when closed', () => {
     const regular = nyWallToUtc(2026, 10, 16, 10, 30) // a Friday, 10:30 ET
-    expect(marketLine(regular)).toEqual({ text: 'Friday 2026-10-16 10:30 ET, regular session', session: 'regular' })
+    expect(marketLine(regular)).toEqual({ text: 'Friday 2026-10-16 10:30 ET', session: 'regular' }) // round 2: the session is the coloured tag after it, once
     const saturday = nyWallToUtc(2026, 10, 17, 23, 40)
     expect(marketLine(saturday)).toEqual({ text: 'Saturday 2026-10-17 23:40 ET, market closed', session: 'closed', next: '2026-10-19' })
     const pre = nyWallToUtc(2026, 10, 19, 8, 0)
@@ -75,7 +75,8 @@ describe('market strip', () => {
   it('renders the line with the session label and dot', () => {
     render(<MarketStrip now={() => nyWallToUtc(2026, 10, 19, 17, 0)} />)
     const strip = document.querySelector('[data-market-strip]')!
-    expect(strip.textContent).toMatch(/Monday 2026-10-19 17:00 ET, after-hours session/)
+    expect(strip.textContent).toMatch(/Monday 2026-10-19 17:00 ET\s*after-hours/)
+    expect(strip.textContent).not.toMatch(/after-hours session/) // never twice (round 2, change 8)
     expect(strip.textContent).toMatch(/after-hours/)
     cleanup()
     render(<MarketStrip now={() => nyWallToUtc(2026, 10, 17, 12, 0)} />)

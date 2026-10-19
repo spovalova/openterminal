@@ -12,7 +12,7 @@ import { DataPage } from './pages/Data'
 import { isModKey, isTyping, MOD } from './platform'
 import { TerminalSocket } from './socket'
 import { SocketContext } from './socketContext'
-import { AppContext, initialState, layoutFor, reducer, workspaceState, type AppState } from './state'
+import { AppContext, initialState, isBlankWorkspace, layoutFor, reducer, workspaceState, type AppState } from './state'
 import { hasAnyFrame } from './state/frames'
 import { withViewTransition } from './transition'
 
@@ -69,7 +69,7 @@ export function App() {
         } catch {
           /* storage unavailable */
         }
-        if (remembered && workspaces.some((w) => w.id === remembered)) dispatch({ type: 'activate', id: remembered })
+        if (remembered && workspaces.some((w) => w.id === remembered && !isBlankWorkspace(w))) dispatch({ type: 'activate', id: remembered })
         if (workspaces.length === 0) {
           void api.createWorkspace().then((workspace) => {
             dispatch({ type: 'workspace', workspace })

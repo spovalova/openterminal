@@ -34,7 +34,7 @@ describe('subtitleForRecipe', () => {
     expect(sub('ohlcv', { symbols: ['SPY', 'QQQ'], interval: '1d', range: '5d' }, undefined, { preset: 'compare', normalize: false })).toBe('SPY, QQQ · 1d · 5d')
     expect(sub('ohlcv', { symbols: ['SPY'], interval: '1w', range: '2y' })).toBe('SPY · 1w · 2y')
     expect(sub('ohlcv', { symbols: ['SPY'], start: '2020-01-01' })).toBe('SPY · 1d · since Jan 1, 2020')
-    expect(sub('index', { symbol: '^GSPC', range: '3mo' })).toBe('^GSPC · 1d · 3mo')
+    expect(sub('index', { symbol: '^GSPC', range: '3mo' })).toBe('S&P 500 · 1d · 3mo') // round 2: an index by its name
   })
 
   it('quote: the symbols and the market state once the frame lands (v1 or yahoo column names)', () => {

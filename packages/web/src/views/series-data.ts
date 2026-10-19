@@ -2,7 +2,7 @@ import type { Frame } from '@openterminal/core'
 import { columnIndex, fieldLabel, preview } from '@openterminal/core'
 import type { BusinessDay, CandlestickData, HistogramData, LineData, Time, UTCTimestamp } from 'lightweight-charts'
 // Short labels for the macro series, shared with the widget sub-header; a symbol is its own label.
-import { MACRO_LABELS } from '../subtitle'
+import { INDEX_NAMES, MACRO_LABELS } from '../subtitle'
 
 export type Bar = { time: Time; open: number; high: number; low: number; close: number; volume: number | null }
 /** One line: the group key (a `symbol`, or a `series` name for macro frames) and its bars. */
@@ -125,6 +125,8 @@ export function legendLabel(group: string, labels?: Record<string, string>): str
  * stays as written; an identifier ("eps_ttm", "trailing_pe", "close") reads through fieldLabel.
  */
 export function displayName(name: string): string {
+  const index = INDEX_NAMES[name.toUpperCase()]
+  if (index) return index
   if (/^[A-Z0-9^][A-Z0-9.^=-]*$/.test(name)) return name
   if (/^[a-z]|_/.test(name)) return fieldLabel(name)
   return name

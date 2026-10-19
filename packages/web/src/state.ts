@@ -59,6 +59,15 @@ export const initialState: AppState = {
   sidebarOpen: true,
 }
 
+/**
+ * A workspace nobody used: the default name, no widgets, no messages (the "+" tab left empty). It is never restored
+ * as the active tab and its tab is hidden unless it is the one open (taste round 2, change 8: production restored an
+ * "Untitled" tab).
+ */
+export function isBlankWorkspace(w: Pick<Workspace, 'name' | 'widgets' | 'messages'>): boolean {
+  return /^untitled$/i.test(w.name.trim()) && w.widgets.length === 0 && w.messages.length === 0
+}
+
 export function initialWorkspaceState(workspace?: Workspace): WorkspaceState {
   const hasContent = !!workspace && (workspace.widgets.length > 0 || workspace.messages.length > 0)
   return {
@@ -90,7 +99,9 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'workspaces': {
       const ws: AppState['ws'] = {}
       for (const w of action.workspaces) ws[w.id] = state.ws[w.id] ?? initialWorkspaceState(w)
-      const activeId = action.workspaces.some((w) => w.id === state.activeId) ? state.activeId : (action.workspaces[0]?.id ?? null)
+      // A blank "Untitled" workspace (no widgets, no messages) is never the one restored (taste round 2, change 8).
+      const first = action.workspaces.find((w) => !isBlankWorkspace(w)) ?? action.workspaces[0]
+      const activeId = action.workspaces.some((w) => w.id === state.activeId) ? state.activeId : (first?.id ?? null)
       return { ...state, loaded: true, workspaces: action.workspaces, ws, activeId }
     }
     case 'workspace': {

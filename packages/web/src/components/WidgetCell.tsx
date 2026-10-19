@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Dialog, WidgetFrame } from '@openterminal/ui'
-import { widgetQueries, type AnyWidget } from '@openterminal/core'
+import type { AnyWidget } from '@openterminal/core'
 import { useActions } from '../actions'
 import { widgetDomId } from '../chips'
 import { useApp } from '../state'
@@ -33,7 +33,6 @@ export function WidgetCell({ widget, workspaceId, fit = 'fill', onNatural }: { w
   const subtitle = subtitleForWidget(widget, frames)
   const primary = primaryFrame(widget, frames)
   const ready = !!primary
-  const datasetCount = Object.keys(widgetQueries(widget)).length
   const heldAt = Object.values(frames).find((f) => f.meta.heldAt !== undefined)?.meta.heldAt
 
   useEffect(() => {
@@ -69,9 +68,8 @@ export function WidgetCell({ widget, workspaceId, fit = 'fill', onNatural }: { w
             <span data-held="" className="whitespace-nowrap text-fg-3" title="The data the reply was written from. Refresh for live data.">
               as of {asOfLabel(heldAt)}
             </span>
-          ) : datasetCount > 1 ? (
-            <span className="num">{datasetCount} datasets</span>
           ) : undefined
+          // (No "2 datasets" here: an internal count, round 2 change 8; the sub-header names the markers instead.)
         }
         onEdit={() => setEditing(true)}
         onRefresh={() => refreshWidget(widget.id, workspaceId)}
