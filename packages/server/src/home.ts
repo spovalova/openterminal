@@ -2,7 +2,8 @@
 // and kept everything in `~/.terminal` (config.yml, terminal.db, the catalog cache and liveness, recipes.yml); it now
 // uses `~/.openterminal`. The first start under the new name copies the old directory across before anything opens
 // the store, so the JSON → SQLite store migration and every later write happen in the new directory. Copy, never
-// move: the old directory stays as it was, plus a MIGRATED.txt note saying where the data went.
+// move: the old directory stays as it was, plus a MIGRATED.txt note saying where the data went. The same copy runs
+// from TERMINAL_HOME to OPENTERMINAL_HOME when both variables are set.
 import { chmodSync, cpSync, existsSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -79,14 +80,21 @@ export type ResolveHomeOptions = HomeMigrationOptions & {
 
 /**
  * The config directory, ready to open: `OPENTERMINAL_HOME`, else the deprecated `TERMINAL_HOME` (logged), else
- * `~/.openterminal`, which on first use is copied from `~/.terminal` when only the old directory exists. A directory
- * named by an environment variable is used as is and never migrated. Call this before `loadConfig` or `openStore`.
+ * `~/.openterminal`. The old directory is copied to the new one once, when the new one does not exist yet, for
+ * like pairs only: `~/.terminal` to `~/.openterminal` when neither variable is set, and `TERMINAL_HOME` to
+ * `OPENTERMINAL_HOME` when both are. `OPENTERMINAL_HOME` alone is used as is (a scratch directory stays empty), and
+ * so is `TERMINAL_HOME` alone. Call this before `loadConfig` or `openStore`.
  */
 export function resolveHome(env: NodeJS.ProcessEnv = process.env, opts: ResolveHomeOptions = {}): string {
   const log = opts.log ?? defaultLog
   const override = homeOverride(env)
+  if (override?.variable === 'OPENTERMINAL_HOME') {
+    const legacy = env.TERMINAL_HOME?.trim()
+    if (legacy) migrateLegacyHome(legacy, override.path, { ...opts, log })
+    return override.path
+  }
   if (override) {
-    if (override.variable === 'TERMINAL_HOME') log('TERMINAL_HOME is deprecated; set OPENTERMINAL_HOME instead')
+    log('TERMINAL_HOME is deprecated; set OPENTERMINAL_HOME instead')
     return override.path
   }
   // `os.homedir()` reads the process's HOME; the env's own HOME wins so `startServer({ env })` resolves against it.

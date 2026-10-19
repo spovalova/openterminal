@@ -33,4 +33,4 @@ Notes:
 
 - The pull removes `deploy/systemd/terminal.service`, so the old links point at nothing. If `disable` refuses because of that, stop the unit (still loaded until the `daemon-reload`) and remove its link by hand, then carry on from the `rm`: `systemctl --user stop terminal.service` and `rm ~/.config/systemd/user/default.target.wants/terminal.service`. Afterwards `ls ~/.config/systemd/user/default.target.wants/` should list `openterminal.service` and no `terminal.service`.
 - Until the switch, the old unit keeps working: `packages/cli/bin/terminal.js` is kept as a one-line import of `bin/openterminal.js`.
-- A `TERMINAL_HOME` in `~/terminal/.env` is still honoured (with a deprecation line in the journal) and skips the copy; rename it to `OPENTERMINAL_HOME`, or drop it to use `~/.openterminal`.
+- A `TERMINAL_HOME` in `~/terminal/.env` is still honoured (with a deprecation line in the journal) and skips the copy. To move off it, add `OPENTERMINAL_HOME=<new directory>` beside it: the first start copies the `TERMINAL_HOME` directory there the same way, and `TERMINAL_HOME` can then go. Or drop it to use `~/.openterminal`.

@@ -125,15 +125,32 @@ describe('migrateLegacyHome', () => {
 })
 
 describe('resolveHome', () => {
-  it('copies on the default path only: a directory named by OPENTERMINAL_HOME or TERMINAL_HOME is used as is', async () => {
+  it('uses OPENTERMINAL_HOME alone or TERMINAL_HOME alone as is, without copying ~/.terminal into it', async () => {
     await writeOldHome()
     const explicit = join(user, 'elsewhere')
     expect(resolveHome({ OPENTERMINAL_HOME: explicit }, { userHome: user, log })).toBe(explicit)
+    expect(existsSync(explicit)).toBe(false)
     expect(lines).toEqual([])
     expect(resolveHome({ TERMINAL_HOME: oldHome }, { userHome: user, log })).toBe(oldHome)
     expect(lines).toEqual(['TERMINAL_HOME is deprecated; set OPENTERMINAL_HOME instead'])
     expect(existsSync(newHome)).toBe(false)
     expect(existsSync(join(oldHome, MIGRATED_NOTE))).toBe(false)
+  })
+
+  it('copies TERMINAL_HOME to OPENTERMINAL_HOME once when both are set and the new one does not exist', async () => {
+    await writeOldHome()
+    const next = join(user, 'custom-new')
+    const env = { OPENTERMINAL_HOME: next, TERMINAL_HOME: oldHome }
+    expect(resolveHome(env, { userHome: user, log })).toBe(next)
+    expect(tree(next)).toEqual(tree(oldHome).filter((f) => f !== MIGRATED_NOTE))
+    expect(existsSync(join(oldHome, MIGRATED_NOTE))).toBe(true)
+    expect(existsSync(newHome)).toBe(false)
+    expect(lines).toEqual([`copied ${oldHome} to ${next}, the config directory's new name; ${oldHome} is left as it was, with ${MIGRATED_NOTE}`])
+    // the second start finds the new directory and copies nothing
+    writeFileSync(configPath(next), 'connectors: []\n')
+    expect(resolveHome(env, { userHome: user, log })).toBe(next)
+    expect(readFileSync(configPath(next), 'utf8')).toBe('connectors: []\n')
+    expect(lines).toHaveLength(1)
   })
 
   it('takes the user home from the env HOME, then copies once', async () => {
