@@ -30,8 +30,9 @@ describe('DataTable never scrolls sideways', () => {
     expect(columnWidth('symbol', 'text')).toBe(72)
     expect(columnWidth('headline', 'text')).toBeUndefined()
     const html = renderToString(createElement(DataTable, { columns, rows, formats: { price: 'price', time: 'time' } }))
-    // The rendered header is at least its longest word at 11px a character plus the arrow and padding: "price" is 87.
-    expect(html).toMatch(/<th[^>]*style="width:87px"[^>]*>/)
+    // The rendered column is its content's width (change 5): "878.84" in the mono face plus padding, at least the
+    // header's longest word, at most the format's fixed width (87 for "Price").
+    expect(html).toMatch(/<th[^>]*style="width:70px"[^>]*>/)
     expect(columnWidth('peak_weekly_close', 'price', 'Peak weekly close')).toBe(98)
   })
 
@@ -50,6 +51,6 @@ describe('DataTable never scrolls sideways', () => {
     expect(td).not.toContain('truncate')
     expect(html).toMatch(/<span class="line-clamp-2 break-words whitespace-normal" title="A headline that is long enough to need a tooltip">/)
     // Numbers, dates and tickers stay one line.
-    expect(html).toMatch(/<td class="border-b border-border\/60 px-2 h-7 truncate whitespace-nowrap text-right num/)
+    expect(html).toMatch(/<td class="border-b border-border\/60 px-2 h-7 truncate align-middle whitespace-nowrap text-right num/)
   })
 })

@@ -310,3 +310,16 @@ describe('rowHeightFor', () => {
     expect(rowHeightFor(0, 740)).toBe(MIN_ROW_HEIGHT)
   })
 })
+
+describe('a wide compare table keeps two grid columns (taste round)', () => {
+  it('does not demote a five-column md table to one column in a three-column grid', () => {
+    const widgets = [
+      { size: 'lg' as const, contentHint: { kind: 'chart' as const } },
+      { size: 'md' as const, contentHint: { kind: 'table' as const, rows: 12, columns: 6 } },
+      { size: 'sm' as const, contentHint: { kind: 'stat' as const } },
+      { size: 'md' as const, contentHint: { kind: 'table' as const, rows: 20 } },
+    ]
+    const out = packLayout(widgets, 3)
+    expect(out[1]!.cols).toBeGreaterThanOrEqual(2)
+  })
+})

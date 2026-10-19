@@ -8,7 +8,7 @@ vi.mock('@terminal/ui', async () => {
   return makeUiMock()
 })
 
-import { TableView, extremesFor, projectFrame, sortRows } from '../TableView'
+import { ONE_SIGNED, TableView, extremesFor, pivotMetricColumn, projectFrame, rowExtremesFor, sortRows } from '../TableView'
 import { viewFor } from '../view-for'
 import { RECIPE_FIXTURES, fixture } from '../fixtures'
 import { controlOf } from '../fields'
@@ -142,7 +142,8 @@ describe('TableView from the table control (v2)', () => {
     expect(table.getAttribute('data-labels')).toContain('"pe":"P/E"')
     expect(table.getAttribute('data-highlight')).toBe('NVDA')
     const marks = JSON.parse(table.getAttribute('data-marks')!) as Record<string, Record<string, string>>
-    expect(marks.NVDA).toMatchObject({ pe: 'worst', fcf_margin: 'best', market_cap: 'best' }) // a lower P/E is better
+    expect(marks.NVDA).toMatchObject({ pe: 'worst', fcf_margin: 'best' }) // a lower P/E is better
+    expect(marks.NVDA!.market_cap).toBeUndefined() // an absolute level is never marked (change 6)
     expect(marks.IREN).toMatchObject({ pe: 'best', gross_margin: 'best' })
     expect(marks.NBIS).toMatchObject({ revenue_growth: 'best', fcf_margin: 'worst', debt_to_equity: 'best' }) // lower leverage is better
     expect(marks.CRWV).toMatchObject({ debt_to_equity: 'worst' })
@@ -159,6 +160,23 @@ describe('TableView from the table control (v2)', () => {
     expect(extremesFor({ ...projected, rows: projected.rows.slice(0, 1) }, ['pe'], { pe: 'price' }).size).toBe(0)
   })
 
+  it('marks only comparative columns, never absolute ones, and skips a multiple under one (change 6)', () => {
+    const frame = { columns: [{ name: 'symbol', type: 'string' as const }, { name: 'eps', type: 'number' as const }, { name: 'close', type: 'number' as const }, { name: 'forward_pe', type: 'number' as const }, { name: 'num_analysts', type: 'number' as const }], rows: [['A', 1.2, 100, 0.01, 20], ['B', 0.8, 50, 12, 11], ['C', 1.0, 70, 20, 38]] }
+    const ex = extremesFor(frame, ['symbol', 'eps', 'close', 'forward_pe', 'num_analysts'], { symbol: 'text', eps: 'price', close: 'price', forward_pe: 'ratio', num_analysts: 'integer' })
+    const marked = new Set([...ex.values()].flatMap((m) => Object.keys(m)))
+    expect([...marked]).toEqual(['forward_pe'])
+    expect(ex.get(frame.rows[1]!)).toEqual({ forward_pe: 'best' }) // 0.01 is an artefact, not the cheapest
+  })
+
+  it('marks across each row of a pivoted compare table by the metric (change 6)', () => {
+    const frame = { columns: [{ name: 'metric', type: 'string' as const }, { name: 'CRWV', type: 'number' as const }, { name: 'NBIS', type: 'number' as const }, { name: 'IREN', type: 'number' as const }], rows: [['Market cap ($bn)', 30, 20, 10], ['Forward P/E', 80, -23, 40], ['Gross margin %', 70, 60, 85]] }
+    expect(pivotMetricColumn(frame)).toBe('metric')
+    const ex = rowExtremesFor(frame, 'metric', ['CRWV', 'NBIS', 'IREN'])
+    expect(ex.get(frame.rows[0]!)).toBeUndefined()
+    expect(ex.get(frame.rows[1]!)).toEqual({ IREN: 'best', CRWV: 'worst' })
+    expect(ex.get(frame.rows[2]!)).toEqual({ IREN: 'best', NBIS: 'worst' })
+  })
+
   it('a table over one row renders the facts card (product rule 8)', () => {
     const { widget, frames } = fixture('v2-table-one-row')
     render(<TableView widget={widget} frames={frames} />)
@@ -171,5 +189,12 @@ describe('TableView from the table control (v2)', () => {
     render(<TableView widget={c2.widget} frames={one(c2.frame)} />)
     expect(document.querySelector('[data-view="facts"]')).toBeTruthy()
     expect(document.querySelector('[data-fact="symbol"] [data-field="value"]')!.textContent).toBe('TSLA')
+  })
+})
+
+describe('red and green restraint (change 7)', () => {
+  it('a column whose sign is fixed by construction is not a signed move', () => {
+    for (const c of ['vs_52w_high', 'pct_from_high', 'move_to_be_pct', 'delta', 'max_drawdown_pct']) expect(ONE_SIGNED.test(c), c).toBe(true)
+    for (const c of ['change_pct', 'return_pct', 'eps_surprise_pct']) expect(ONE_SIGNED.test(c), c).toBe(false)
   })
 })

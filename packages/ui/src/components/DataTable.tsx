@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type FC } from 'react'
 import clsx from 'clsx'
-import type { Column } from '@terminal/core'
+import { fieldLabel, type Column } from '@terminal/core'
 import { direction, formatCell, inferFormats, isNumericFormat, sortRows, type CellFormat, type SortDir } from '../format.js'
 import { ExternalIcon } from './icons.js'
 
@@ -26,7 +26,7 @@ export type DataTableProps = {
   now?: number
   /** The row to highlight (the table control's `highlight`): an accent wash and `data-highlight`. */
   highlightRow?: (row: unknown[]) => boolean
-  /** Best and worst marks per cell (compare tables): a faint up or down wash under the cell's own colour. */
+  /** Best and worst marks per cell (compare tables): a 2px up or down bar on the cell's left edge and bold weight. */
   cellMark?: (row: unknown[], column: string) => 'best' | 'worst' | undefined
 }
 
@@ -53,8 +53,106 @@ export function columnWidth(name: string, format: CellFormat, header?: string): 
   return Math.max(base, longest * 11 + 32)
 }
 
-function label(name: string, labels?: Record<string, string>): string {
-  return labels?.[name] ?? name.replace(/_/g, ' ')
+/** A header in sentence case from its display name (taste round, change 5): an annotated label, else `fieldLabel`, never the raw name. */
+export function label(name: string, labels?: Record<string, string>): string {
+  const given = labels?.[name]
+  if (given) return /^[a-z]/.test(given) && !/[A-Z]/.test(given) ? given.charAt(0).toUpperCase() + given.slice(1) : given
+  return fieldLabel(name)
+}
+
+/** What a format adds to a header that would otherwise repeat its neighbour's ("Entry" twice becomes "Entry date", "Entry price"). */
+const QUALIFIER: Partial<Record<CellFormat, string>> = { date: 'date', time: 'time', price: 'price', percent: '%', change: '%', integer: 'count', compact: 'value' }
+
+/** Header labels for the visible columns with duplicates told apart by their format. */
+export function headerLabels(columns: readonly Column[], fmts: Record<string, CellFormat>, labels?: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {}
+  const seen = new Map<string, number>()
+  for (const c of columns) {
+    const l = label(c.name, labels)
+    out[c.name] = l
+    seen.set(l.toLowerCase(), (seen.get(l.toLowerCase()) ?? 0) + 1)
+  }
+  for (const c of columns) {
+    const l = out[c.name]!
+    if ((seen.get(l.toLowerCase()) ?? 0) < 2) continue
+    const q = QUALIFIER[fmts[c.name] ?? 'text']
+    if (q && !l.toLowerCase().endsWith(q)) out[c.name] = `${l} ${q}`
+  }
+  return out
+}
+
+/**
+ * One number format per column (change 5): a compact column whose values all sit under a million prints them
+ * grouped ("2,310", "619.40"), so "1.94K" never stands beside "2,310"; compact is for millions and billions.
+ */
+export function uniformFormats(columns: readonly Column[], rows: readonly unknown[][], fmts: Record<string, CellFormat>): Record<string, CellFormat> {
+  const out = { ...fmts }
+  columns.forEach((c, i) => {
+    if (out[c.name] !== 'compact') return
+    let max = 0
+    let whole = true
+    for (const row of rows) {
+      const v = row[i]
+      if (typeof v !== 'number' || !Number.isFinite(v)) continue
+      max = Math.max(max, Math.abs(v))
+      if (!Number.isInteger(v)) whole = false
+    }
+    if (max < 1e6) out[c.name] = whole ? 'integer' : 'price'
+  })
+  return out
+}
+
+/**
+ * Content widths for fixed-format columns: the longest formatted value in the mono face plus padding, at least the
+ * header's longest word and at most the format's fixed width, so "5.46" does not sit in an 84px column.
+ */
+export function numberWidths(columns: readonly Column[], rows: readonly unknown[][], fmts: Record<string, CellFormat>, headers: Record<string, string>, now: number): Record<string, number> {
+  const out: Record<string, number> = {}
+  columns.forEach((c, i) => {
+    const f = fmts[c.name] ?? 'text'
+    const fixed = columnWidth(c.name, f, headers[c.name])
+    if (fixed === undefined || f === 'link') return
+    let longest = 0
+    for (const row of rows) longest = Math.max(longest, formatCell(row[i], f, now).length)
+    const head = headers[c.name] ?? ''
+    const word = Math.max(...head.split(/\s+/).map((w) => w.length)) * 7.4 + 30
+    // The header on one line when that costs at most 128px ("Op cash flow", "EPS est."), else wrapped at words.
+    const line = head.length * 7 + 30
+    const content = longest * MONO_CHAR + 20
+    out[c.name] = Math.round(Math.max(word, Math.min(Math.max(fixed, 128), Math.max(line, content), Math.max(fixed, line <= 128 ? line : 0, content))))
+  })
+  return out
+}
+
+/** Average glyph width at the table's 14px: the sans face for names, the mono face for tickers. */
+const SANS_CHAR = 7.4
+const MONO_CHAR = 8.4
+/** A text column whose longest value is under this many characters is sized to it; longer text (headlines) shares what is left. */
+const SHORT_TEXT = 48
+const TEXT_COLUMN_MAX = 360
+
+/**
+ * Content widths for short text columns (names, pairs, metrics, sessions): the longest value or header plus the
+ * cell padding, capped. Columns are then left-packed and a filler column takes the rest of the row, so a two-column
+ * table never puts 900px between a pair and its value (change 5). Prose columns are left flexible.
+ */
+export function textWidths(columns: readonly Column[], rows: readonly unknown[][], fmts: Record<string, CellFormat>, headers: Record<string, string>): Record<string, number> {
+  const out: Record<string, number> = {}
+  columns.forEach((c, i) => {
+    const f = fmts[c.name] ?? 'text'
+    if (f !== 'text' || c.name === 'symbol' || c.name === 'etf') return
+    let longest = 0
+    for (const row of rows) {
+      const v = row[i]
+      if (v == null) continue
+      longest = Math.max(longest, String(v).length)
+      if (longest > SHORT_TEXT) return
+    }
+    const mono = /^(symbol|ticker|pair|etf)$/i.test(c.name)
+    const header = (headers[c.name] ?? c.name).length * 7 + 32
+    out[c.name] = Math.min(TEXT_COLUMN_MAX, Math.max(header, Math.ceil(longest * (mono ? MONO_CHAR : SANS_CHAR)) + 24))
+  })
+  return out
 }
 
 /**
@@ -71,9 +169,9 @@ const TEXT_COLUMN_MIN = 120
  * column fit. The container queries in styles.css approximate this per rank; the measurement is exact, so a
  * `table-layout: fixed` table never has its columns shrunk below their widths (which cut a six-letter header in two).
  */
-export function columnsThatFit(columns: readonly Column[], width: number | undefined, fmts: Record<string, CellFormat>, priority?: Record<string, number>, labels?: Record<string, string>): Column[] {
+export function columnsThatFit(columns: readonly Column[], width: number | undefined, fmts: Record<string, CellFormat>, priority?: Record<string, number>, labels?: Record<string, string>, sized?: Record<string, number>): Column[] {
   if (!width || width <= 0) return [...columns]
-  const need = (c: Column) => columnWidth(c.name, fmts[c.name] ?? 'text', label(c.name, labels)) ?? TEXT_COLUMN_MIN
+  const need = (c: Column) => sized?.[c.name] ?? columnWidth(c.name, fmts[c.name] ?? 'text', label(c.name, labels)) ?? TEXT_COLUMN_MIN
   const total = (cols: readonly Column[]) => cols.reduce((n, c) => n + need(c), 0)
   const visible = [...columns]
   while (visible.length > 1 && total(visible) > width) {
@@ -96,7 +194,7 @@ export function columnsThatFit(columns: readonly Column[], width: number | undef
 export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, onSort, labels, priority, stickyHeader = true, className, now, highlightRow, cellMark }) => {
   const [internal, setInternal] = useState<{ column: string; dir: SortDir } | undefined>(undefined)
   const active = sort ?? internal
-  const fmts = useMemo(() => ({ ...inferFormats(columns), ...formats }), [columns, formats])
+  const fmts = useMemo(() => uniformFormats(columns, rows, { ...inferFormats(columns), ...formats }), [columns, rows, formats])
   const nowMs = now ?? Date.now()
   const [width, setWidth] = useState<number | undefined>(undefined)
   const wrap = useCallback((el: HTMLDivElement | null) => {
@@ -106,8 +204,26 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
     const ro = new ResizeObserver(update)
     ro.observe(el)
   }, [])
-  const visible = useMemo(() => columnsThatFit(columns, width, fmts, priority, labels), [columns, width, fmts, priority, labels])
+  const allHeaders = useMemo(() => headerLabels(columns, fmts, labels), [columns, fmts, labels])
+  // Every column at its content width (change 5): numbers at their longest formatted value, short text at its longest value.
+  const sized = useMemo(() => ({ ...numberWidths(columns, rows, fmts, allHeaders, nowMs), ...textWidths(columns, rows, fmts, allHeaders) }), [columns, rows, fmts, allHeaders, nowMs])
+  const visible = useMemo(() => columnsThatFit(columns, width, fmts, priority, labels, sized), [columns, width, fmts, priority, labels, sized])
   const indexOf = useMemo(() => new Map(columns.map((c, i) => [c.name, i])), [columns])
+  const headers = useMemo(() => headerLabels(visible, fmts, labels), [visible, fmts, labels])
+  // Left-pack (change 5): when every column has a width (fixed formats and short text sized to content) and they fit,
+  // a filler column takes the rest; otherwise prose columns share the remainder as before.
+  const widths = useMemo(() => {
+    const text = textWidths(columns, rows, fmts, headers)
+    const nums = numberWidths(columns, rows, fmts, headers, nowMs)
+    const out: Record<string, number | undefined> = {}
+    for (const c of visible) out[c.name] = nums[c.name] ?? columnWidth(c.name, fmts[c.name] ?? 'text', headers[c.name]) ?? text[c.name]
+    const all = visible.every((c) => out[c.name] !== undefined)
+    const sum = visible.reduce((n, c) => n + (out[c.name] ?? 0), 0)
+    const fits = width === undefined || sum <= width
+    // Short text keeps its content width only when every column is sized and the row fits; otherwise text shares the rest.
+    if (!all || !fits) for (const c of visible) if (text[c.name] !== undefined && (fmts[c.name] ?? 'text') === 'text') out[c.name] = undefined
+    return { of: out, filler: all && width !== undefined && sum < width }
+  }, [columns, rows, fmts, headers, visible, width, nowMs])
 
   const sorted = useMemo(() => {
     if (!active) return rows
@@ -133,7 +249,7 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
               const f = fmts[c.name] ?? 'text'
               const numeric = isNumericFormat(f)
               const isActive = active?.column === c.name
-              const width = columnWidth(c.name, f, label(c.name, labels))
+              const width = widths.of[c.name]
               return (
                 <th
                   key={c.name}
@@ -153,7 +269,7 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                     )}
                   >
                     {/* Two lines at most, wrapped at words: a header is never cut mid-word (section 17 checklist). */}
-                    <span className="line-clamp-2 min-w-0 flex-1 break-normal whitespace-normal">{label(c.name, labels)}</span>
+                    <span className="line-clamp-2 min-w-0 flex-1 break-normal whitespace-normal">{headers[c.name]}</span>
                     <span aria-hidden className={clsx('text-[9px] leading-none', isActive ? 'text-accent' : 'opacity-0')}>
                       {active?.dir === 'desc' && isActive ? '▼' : '▲'}
                     </span>
@@ -161,6 +277,7 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                 </th>
               )
             })}
+            {widths.filler && <th aria-hidden data-filler="" className="border-b border-border p-0" />}
           </tr>
         </thead>
         <tbody>
@@ -208,15 +325,17 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                     data-mark={mark}
                     className={clsx(
                       'border-b border-border/60 px-2',
-                      prose ? 'min-h-7 py-1 align-top leading-4 whitespace-normal' : 'h-7 truncate whitespace-nowrap',
+                      // Every cell is vertically centred (change 5): a two-line name or a session label sits on the row's middle.
+                      prose ? 'min-h-7 py-1 align-middle leading-4 whitespace-normal' : 'h-7 truncate align-middle whitespace-nowrap',
                       numeric ? 'text-right' : 'text-left',
                       mono && 'num',
                       dir === 'up' && 'text-up',
                       dir === 'down' && 'text-down',
                       text === '—' && 'text-fg-3',
                       c.name === 'symbol' && 'font-medium text-fg',
-                      mark === 'best' && 'bg-up/15 font-semibold',
-                      mark === 'worst' && 'bg-down/15 font-semibold',
+                      // Best and worst as a 2px bar on the cell's left edge and bold weight, never a fill under coloured text (change 6).
+                      mark === 'best' && 'font-semibold shadow-[inset_2px_0_0_0_var(--color-up)]',
+                      mark === 'worst' && 'font-semibold shadow-[inset_2px_0_0_0_var(--color-down)]',
                     )}
                     title={typeof v === 'string' && v.length > 12 ? v : undefined}
                   >
@@ -224,6 +343,7 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
                   </td>
                 )
               })}
+              {widths.filler && <td aria-hidden data-filler="" className="border-b border-border/60 p-0" />}
             </tr>
             )
           })}

@@ -16,5 +16,6 @@ export function contentHintFor(widget: AnyWidget, frames: Record<string, Frame>)
   else if (view.preset === 'stat') kind = 'stat'
   else if (view.preset === 'facts') kind = 'facts'
   else kind = 'chain'
-  return rows === undefined ? { kind } : { kind, rows }
+  const columns = kind === 'table' ? frame?.columns.length : undefined
+  return { kind, ...(rows === undefined ? {} : { rows }), ...(columns === undefined ? {} : { columns }) }
 }

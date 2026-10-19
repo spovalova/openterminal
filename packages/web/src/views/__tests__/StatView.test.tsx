@@ -3,7 +3,7 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { type Frame, type WidgetV2 } from '@terminal/core'
 
-import { StatView, columnLabel, orderStats, statRows, symbolOrder } from '../StatView'
+import { StatView, cardsFit, columnLabel, orderStats, statRows, symbolOrder } from '../StatView'
 import { viewFor } from '../view-for'
 import { fixture } from '../fixtures'
 
@@ -159,5 +159,14 @@ describe('StatView, the taste round (change 2)', () => {
     expect(value()!.className).toContain('stat-hero')
     expect(document.querySelector('[data-details]')).toBeTruthy()
     expect(document.querySelector('.stat-card')).toBeNull()
+  })
+})
+
+describe('cardsFit (change 2: five cards in a short cell become one line per symbol)', () => {
+  it('fits four cards in a 340x190 cell and not five', () => {
+    expect(cardsFit(4, 340, 190)).toBe(true)
+    expect(cardsFit(5, 340, 190)).toBe(false)
+    expect(cardsFit(7, 1000, 190)).toBe(true)
+    expect(cardsFit(5, 0, 0)).toBe(true) // unmeasured: cards
   })
 })

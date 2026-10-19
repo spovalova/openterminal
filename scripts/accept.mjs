@@ -156,7 +156,11 @@ const measure = () => {
       contentBottom = Math.max(contentBottom, Math.min(r.bottom, bodyRect.bottom))
     }
     let tableRows = null
-    if (kind === 'chart') for (const c of body.querySelectorAll('canvas')) consider(c)
+    if (kind === 'chart') {
+      for (const c of body.querySelectorAll('canvas')) consider(c)
+      // The price pane's legend sits above the plot (taste round, change 4): it is the chart's content too.
+      for (const l of body.querySelectorAll('[data-legend]')) consider(l)
+    }
     else if (kind === 'table' || kind === 'chain' || kind === 'heatmap') {
       const table = body.querySelector('table')
       if (table) {
@@ -259,7 +263,8 @@ function score(m, facts) {
   return { pass: keys.every((k) => !fails[k]), result }
 }
 
-const browser = await chromium.launch({ channel: 'chromium' })
+// CHROMIUM_PATH points at a Chromium build when the Playwright cache holds a different revision than the library expects.
+const browser = await chromium.launch({ channel: 'chromium', ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}) })
 const rows = []
 for (const [width, height] of viewports) {
   const viewport = `${width}x${height}`

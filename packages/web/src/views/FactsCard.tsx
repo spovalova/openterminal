@@ -3,7 +3,7 @@ import clsx from 'clsx'
 import { columnIndex, controlFor, enumLabel, type FactsControl, type Frame } from '@terminal/core'
 import { EMPTY_CELL, EmptyState, direction, formatCell, type CellFormat } from '@terminal/ui'
 import type { ViewProps } from './types'
-import { cellFormat } from './TableView'
+import { ONE_SIGNED, cellFormat } from './TableView'
 import { datasetsFor, primaryFrame, viewOf } from './fields'
 import { columnLabel } from './labels'
 
@@ -21,7 +21,7 @@ export function factsOf(frame: Frame, control: FactsControl, row = 0): Fact[] {
     const raw = r[i]
     // A string that reads as an enum (`after-hours`, `buy`, `not-supplied`) gets its display reading (change 11).
     const text = format === 'text' && typeof raw === 'string' ? enumLabel(formatCell(raw, format)) : formatCell(raw, format)
-    out.push({ column, label: control.labels[column] ?? columnLabel(column), text, format, dir: format === 'change' ? direction(raw) : null, raw })
+    out.push({ column, label: control.labels[column] ?? columnLabel(column), text, format, dir: format === 'change' && !ONE_SIGNED.test(column) ? direction(raw) : null, raw })
   }
   return out
 }
@@ -62,7 +62,9 @@ export const FactsCard: FC<ViewProps> = ({ widget, frames }) => {
   const rest = facts.filter((f) => f !== hero)
   return (
     <div data-view="facts" data-count={facts.length} className="facts-card flex h-full w-full flex-col overflow-x-hidden overflow-y-auto p-3">
-      <div className="my-auto flex min-h-0 flex-col gap-2.5">
+      {/* The hero anchors the top and the grid the foot when the cell is taller than the card (a 1920 row), so the card
+          reads as one block filling its cell rather than a strip floating in the middle; centred when there is one part. */}
+      <div className={clsx('flex flex-col gap-2.5', hero && rest.length > 0 ? 'flex-auto justify-between' : 'my-auto min-h-0')}>
         {hero && (
           <div data-fact={hero.column} data-hero="" className="flex min-w-0 flex-col">
             <div className="truncate text-xs leading-4 text-fg-3" title={hero.label}>

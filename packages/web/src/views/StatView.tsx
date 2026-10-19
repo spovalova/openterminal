@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FC } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FC } from 'react'
 import clsx from 'clsx'
 import { columnIndex, type Frame, type StatControl } from '@terminal/core'
 import { EMPTY_CELL, EmptyState, direction, formatCell, type CellFormat } from '@terminal/ui'
@@ -237,6 +237,8 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
   const column = stat?.column ?? ''
   const stats = useMemo(() => (frame && stat ? orderStats(statRows(frame, column, stat), symbolOrder(widget)) : []), [frame, stat, column, widget])
   const ticks = useTicks(stats)
+  const [sizeRef, size] = useSize()
+  const dense = stats.length > 1 && size != null && !cardsFit(stats.length, size.width, size.height)
 
   if (stats.length === 0) {
     return <EmptyState title="No data" hint="The query returned no rows for these symbols." />
@@ -251,7 +253,7 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
     const details = frame ? [...seriesDetails(frame, column, stat ? cellFormat(stat.format) : 'price'), ...detailRows(frame, column, stat?.change, frame.meta.fields ?? {})].slice(0, 6) : []
     return (
       <div data-view="stat" data-column={column} data-count={1} className="flex h-full w-full flex-col overflow-hidden p-3">
-        <div className="my-auto flex min-h-0 flex-col gap-3">
+        <div className={clsx('flex flex-col gap-3', details.length > 0 ? 'flex-auto justify-between' : 'my-auto min-h-0')}>
           <div>
             <StatBody stat={s} label={label} tick={ticks[s.symbol]} hero />
           </div>
@@ -269,8 +271,31 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
       </div>
     )
   }
+  if (dense) {
+    // More symbols than compact cards fit the cell (five in a 340x190 cell): one line per symbol, ticker · value ·
+    // change, so nothing scrolls or clips under the foot (taste round, change 2).
+    return (
+      <div ref={sizeRef} data-view="stat" data-column={column} data-count={stats.length} data-dense="" className="flex h-full w-full flex-col overflow-x-hidden overflow-y-auto px-3 py-1.5">
+        <div className="my-auto flex flex-col">
+          {stats.map((s) => (
+            <div key={s.symbol} data-symbol={s.symbol} className="flex min-w-0 items-baseline gap-3 border-b border-border/50 py-1 text-sm leading-5 last:border-b-0">
+              <span data-field="symbol" className="num w-14 shrink-0 truncate font-semibold text-fg">
+                {s.symbol}
+              </span>
+              <span key={ticks[s.symbol]?.n ?? 0} data-field="value" data-tick={ticks[s.symbol]?.dir} className={clsx('num ml-auto font-semibold', s.value == null ? 'text-fg-3' : 'text-fg')}>
+                {s.text}
+              </span>
+              <span data-field="secondary" className={clsx('num w-20 shrink-0 text-right', dirClass(s.secondary?.dir ?? null))}>
+                {s.secondary?.text ?? ''}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
   return (
-    <div data-view="stat" data-column={column} data-count={stats.length} className="flex h-full w-full flex-col overflow-x-hidden overflow-y-auto p-2">
+    <div ref={sizeRef} data-view="stat" data-column={column} data-count={stats.length} className="flex h-full w-full flex-col overflow-x-hidden overflow-y-auto p-2">
       <div className="stat-cards my-auto">
         {stats.map((s) => (
           <div key={s.symbol} data-symbol={s.symbol} className="stat-card flex min-w-0 flex-col justify-center overflow-hidden rounded-md border border-border bg-surface-2/50 px-3 py-2">
@@ -280,6 +305,26 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
       </div>
     </div>
   )
+}
+
+/** Whether `n` compact cards (136px wide at least, 72px tall, 8px gaps, 8px padding) fit a cell of this size. */
+export function cardsFit(n: number, width: number, height: number): boolean {
+  if (width <= 0 || height <= 0) return true
+  const perRow = Math.max(1, Math.floor((width - 16 + 8) / (136 + 8)))
+  const rows = Math.ceil(n / perRow)
+  return rows * 72 + (rows - 1) * 8 + 16 <= height
+}
+
+/** The element's content size, measured (undefined until the first layout, so tests and server rendering keep the cards). */
+function useSize(): [(el: HTMLDivElement | null) => void, { width: number; height: number } | undefined] {
+  const [size, setSize] = useState<{ width: number; height: number } | undefined>(undefined)
+  const ref = useCallback((el: HTMLDivElement | null) => {
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const update = () => setSize((prev) => (prev && prev.width === el.clientWidth && prev.height === el.clientHeight ? prev : { width: el.clientWidth, height: el.clientHeight }))
+    update()
+    new ResizeObserver(update).observe(el)
+  }, [])
+  return [ref, size]
 }
 
 const dirClass = (dir: 'up' | 'down' | null) => (dir === 'up' ? 'text-up' : dir === 'down' ? 'text-down' : 'text-fg-2')

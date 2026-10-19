@@ -34,7 +34,10 @@ export function spanFor(size: Size, columns: number): { cols: number; rows: numb
  * What a widget will show, so the packer can size by content (PLAN.md section 17, "size by content"):
  * `rows` is the frame's row count when known; `kind` is what the view renders.
  */
-export type ContentHint = { rows?: number; kind: 'table' | 'chart' | 'stat' | 'facts' | 'chain' }
+export type ContentHint = { rows?: number; kind: 'table' | 'chart' | 'stat' | 'facts' | 'chain'; /** Columns the table shows (taste round: a five-column compare table needs two grid columns). */ columns?: number }
+
+/** A table with this many columns or more keeps its two grid columns: at one column it sheds the symbols it compares. */
+export const WIDE_TABLE_COLUMNS = 5
 export type LayoutWidget = { size: Size; contentHint?: ContentHint }
 
 /** Tables with this many rows or fewer are one row tall. */
@@ -129,7 +132,7 @@ export function packLayout(widgets: readonly LayoutWidget[], columns: number): P
     if (kind === 'chart' && s.demoted && w.size === 'md') {
       const b = spanFor(w.size, cols)
       alternatives.push({ i, span: { cols: b.cols, rows: Math.min(b.rows, b.cols), demoted: false } })
-    } else if (kind && kind !== 'chart' && kind !== 'chain' && s.cols === 2 && cols >= 3 && s.rows === 1) {
+    } else if (kind && kind !== 'chart' && kind !== 'chain' && s.cols === 2 && cols >= 3 && s.rows === 1 && !(kind === 'table' && (w.contentHint?.columns ?? 0) >= WIDE_TABLE_COLUMNS)) {
       alternatives.push({ i, span: { cols: 1, rows: 1, demoted: true } })
     }
   })
