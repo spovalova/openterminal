@@ -8,7 +8,7 @@
  * Type. UI text is Geist (Fontsource, variable weight, OFL). Numbers and code are monospace: a locally
  * installed Berkeley Mono wins when the reader has it (paid, never committed); the bundled fallback is
  * Ioskeley Mono (an Iosevka build in the same spirit, OFL, vendored in ./fonts/ioskeley). Vite bundles
- * every file, so `npx terminal` serves them from localhost and nothing is fetched from a CDN.
+ * every file, so `npx openterminal` serves them from localhost and nothing is fetched from a CDN.
  */
 @import "@fontsource-variable/geist";
 

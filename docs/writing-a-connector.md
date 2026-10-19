@@ -116,11 +116,11 @@ If your source has an official SDK (yahoo-finance2) you may use it instead of `h
 "shape:quote:changePercent": { unit: fraction, format: change, label: "Chg %", priority: 2 }
 ```
 
-The registry applies them to every route frame: a `fraction` is multiplied by 100 and stamped `percent`, so previews, tables and the agent never see a fraction. A column without an annotation is shown as-is and the prompt tells the agent it carries no unit guarantee. Add annotations for every field a recipe's view names; the core test `annotations.test.ts` checks that. Users add their own in `~/.terminal/annotations.yml`.
+The registry applies them to every route frame: a `fraction` is multiplied by 100 and stamped `percent`, so previews, tables and the agent never see a fraction. A column without an annotation is shown as-is and the prompt tells the agent it carries no unit guarantee. Add annotations for every field a recipe's view names; the core test `annotations.test.ts` checks that. Users add their own in `~/.openterminal/annotations.yml`.
 
 ## Recipes
 
-A recipe is a saved query: a title template, a param schema (JSON schema), a preset and size, and ordered route alternatives with param mappings, optionally a data graph with a pandas step. The built-in ones are in `packages/core/recipes.yml`; promote any widget to a user recipe from the Data page and it lands in `~/.terminal/recipes.yml`. To make a recipe reach your connector, add a route alternative:
+A recipe is a saved query: a title template, a param schema (JSON schema), a preset and size, and ordered route alternatives with param mappings, optionally a data graph with a pandas step. The built-in ones are in `packages/core/recipes.yml`; promote any widget to a user recipe from the Data page and it lands in `~/.openterminal/recipes.yml`. To make a recipe reach your connector, add a route alternative:
 
 ```yaml
   - name: quote
@@ -234,7 +234,7 @@ And a route alternative on the `quote` and `ohlcv` recipes (with `rename: { date
 
 ## An OpenAPI document
 
-A source that describes itself needs no descriptor file. `descriptorsFromOpenApi(doc, connector, { prefix, skipParams, resultsKey })` turns an OpenAPI document into descriptors: one per GET route whose 200 response is a results envelope, per-provider param variants collapsed to one entry with a `providers` list, `date`/`date-time` fields typed `time`. The OpenBB connector (`connectors/openbb/src/descriptors.ts`) fetches `${baseUrl}/openapi.json` in `descriptors(ctx)`, caches the result under `~/.terminal/catalog/<name>.json` keyed by the document's version and a fingerprint of its paths, and serves the cache when the API is down. Its `call` is forty lines: `GET /api/v1/<route>?…` with the validated params (arrays joined by commas, `provider` passed through, params the chosen provider does not take dropped) and the `results` list through `inferFrame`. A new OpenAPI-described source is that file with a different base URL and envelope rule.
+A source that describes itself needs no descriptor file. `descriptorsFromOpenApi(doc, connector, { prefix, skipParams, resultsKey })` turns an OpenAPI document into descriptors: one per GET route whose 200 response is a results envelope, per-provider param variants collapsed to one entry with a `providers` list, `date`/`date-time` fields typed `time`. The OpenBB connector (`connectors/openbb/src/descriptors.ts`) fetches `${baseUrl}/openapi.json` in `descriptors(ctx)`, caches the result under `~/.openterminal/catalog/<name>.json` keyed by the document's version and a fingerprint of its paths, and serves the cache when the API is down. Its `call` is forty lines: `GET /api/v1/<route>?…` with the validated params (arrays joined by commas, `provider` passed through, params the chosen provider does not take dropped) and the `results` list through `inferFrame`. A new OpenAPI-described source is that file with a different base URL and envelope rule.
 
 ## Health (optional)
 
@@ -261,10 +261,10 @@ A recipe tries its route alternatives in order and falls through when `call` thr
 
 ## Config
 
-Connectors are listed in `~/.terminal/config.yml` (override the directory with `TERMINAL_HOME`). Order is routing priority for the Data page's catalog display; the recipes name their own order.
+Connectors are listed in `~/.openterminal/config.yml` (override the directory with `OPENTERMINAL_HOME`). Order is routing priority for the Data page's catalog display; the recipes name their own order.
 
 ```yaml
-# ~/.terminal/config.yml
+# ~/.openterminal/config.yml
 llm:
   provider: anthropic           # or openai
   model: claude-opus-5-5

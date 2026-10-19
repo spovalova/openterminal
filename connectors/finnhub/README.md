@@ -4,7 +4,7 @@ Three [Finnhub](https://finnhub.io) REST paths as routes, answered through core'
 
 ## Getting a key
 
-Register at <https://finnhub.io/register>; the API key is shown on the dashboard immediately, no card needed. Put it in `~/.terminal/config.yml` under `connectors: [{ name: finnhub, config: { apiKey: ... } }]`, or paste it on the app's Data page. The free tier allows 60 calls per minute (30 per second burst), US-listed symbols only, and company news with day granularity for the last year. Every route here costs one call per symbol; the connector keeps itself under 30 requests per second and retries a `429` once after one second, but the registry cache is what keeps repeated refreshes cheap.
+Register at <https://finnhub.io/register>; the API key is shown on the dashboard immediately, no card needed. Put it in `~/.openterminal/config.yml` under `connectors: [{ name: finnhub, config: { apiKey: ... } }]`, or paste it on the app's Data page. The free tier allows 60 calls per minute (30 per second burst), US-listed symbols only, and company news with day granularity for the last year. Every route here costs one call per symbol; the connector keeps itself under 30 requests per second and retries a `429` once after one second, but the registry cache is what keeps repeated refreshes cheap.
 
 ## What each route returns
 
