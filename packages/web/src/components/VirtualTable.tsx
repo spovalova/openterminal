@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState, type FC } from 'react'
 import clsx from 'clsx'
-import { columnWidth, direction, formatCell, inferFormats, isNumericFormat, sortRows, type DataTableProps } from '@terminal/ui'
+import { columnWidth, direction, formatCell, inferFormats, isNumericFormat, sortRows, type DataTableProps } from '@openterminal/ui'
 
 export type VirtualTableProps = DataTableProps & {
   /** Fixed row height in px (the DataTable's `h-7` rows are 28px). */

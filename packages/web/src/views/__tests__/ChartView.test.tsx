@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { preview, type Frame, type WidgetV2 } from '@terminal/core'
+import { preview, type Frame, type WidgetV2 } from '@openterminal/core'
 import { DOWN, UP } from './mocks'
 
 const charts = vi.hoisted(() => ({ current: null as null | ReturnType<typeof import('./mocks')['makeChartsMock']> }))
@@ -10,7 +10,7 @@ vi.mock('lightweight-charts', async () => {
   charts.current = makeChartsMock()
   return charts.current.module
 })
-vi.mock('@terminal/ui', async () => {
+vi.mock('@openterminal/ui', async () => {
   const { makeUiMock } = await import('./mocks')
   return makeUiMock()
 })

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { Frame, WidgetV2 } from '@terminal/core'
+import type { Frame, WidgetV2 } from '@openterminal/core'
 
 import { ChainView, buildChain, hintWidth, inTheMoney, sideColumns } from '../ChainView'
 import { TableView } from '../TableView'

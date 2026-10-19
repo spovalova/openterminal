@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import { cleanup, render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { WidgetV2Schema, isWidgetV2, preview } from '@terminal/core'
+import { WidgetV2Schema, isWidgetV2, preview } from '@openterminal/core'
 
 vi.mock('lightweight-charts', async () => {
   const { makeChartsMock } = await import('./mocks')
   return makeChartsMock().module
 })
-vi.mock('@terminal/ui', async () => {
+vi.mock('@openterminal/ui', async () => {
   const { makeUiMock } = await import('./mocks')
   return makeUiMock()
 })

@@ -1,6 +1,6 @@
 // An AgentRunner that never calls an LLM: two fake steps, then use case A's widget set (PLAN.md section 5) as
 // recipe widgets. Used when no LLM key is configured and in tests.
-import type { AgentRunner, Message, ServerMsg, Step, WidgetV2 } from '@terminal/core'
+import type { AgentRunner, Message, ServerMsg, Step, WidgetV2 } from '@openterminal/core'
 
 export const STUB_SYMBOLS = ['MU', 'SNDK', 'WDC', 'STX'] as const
 export const STUB_WORKSPACE_NAME = 'Memory'
@@ -26,7 +26,7 @@ export function stubWidgets(now: Date = new Date()): WidgetV2[] {
 export const STUB_REPLY =
   'No LLM key is configured, so this is a canned workspace for "What\'s happening with memory?": ' +
   'MU, SNDK, WDC, and STX over three months, MU daily, a basket snapshot, upcoming earnings, and news. ' +
-  'Add an LLM key to ~/.terminal/config.yml to get real answers. [[widget:memory-3mo]] [[widget:memory-news]]'
+  'Add an LLM key to ~/.openterminal/config.yml to get real answers. [[widget:memory-3mo]] [[widget:memory-news]]'
 
 export type StubAgentOptions = {
   now?: () => Date

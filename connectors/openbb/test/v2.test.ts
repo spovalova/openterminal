@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { frameToObjects, parseParams, type Descriptor, type OpenApiDoc } from '@terminal/core'
+import { frameToObjects, parseParams, type Descriptor, type OpenApiDoc } from '@openterminal/core'
 import openbb from '../src/index.js'
 import { applicableParams, callRoute, defaultProvider, fillSymbol, singleSymbol, toQuery, withProvider } from '../src/call.js'
 import { defaultCatalogPath, descriptorsFor, fingerprintOpenApi, loadDescriptors, readCatalogCache, resetDescriptors } from '../src/descriptors.js'
@@ -27,6 +27,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers()
   rmSync(home, { recursive: true, force: true })
+  delete process.env.OPENTERMINAL_HOME
   delete process.env.TERMINAL_HOME
 })
 
@@ -107,8 +108,9 @@ describe('descriptors()', () => {
     const b = await descriptorsFor(fakeCtx({}).ctx, { catalogPath }) // same base URL: no fetch
     expect(b).toBe(a)
 
-    process.env.TERMINAL_HOME = home
+    process.env.OPENTERMINAL_HOME = home
     expect(defaultCatalogPath()).toBe(catalogPath)
+    expect(defaultCatalogPath({ TERMINAL_HOME: home })).toBe(catalogPath)
     resetDescriptors()
     const all = await openbb.descriptors(fakeCtx({ [OPENAPI_URL]: openapi() }).ctx)
     expect(all).toHaveLength(38)
@@ -237,7 +239,7 @@ describe('call()', () => {
     expect(down.calls.filter((c) => c.includes('/equity/price/quote'))).toHaveLength(1)
   })
   it('the connector routes every call to callRoute, and a provider named in config.yml for the route is the default', async () => {
-    process.env.TERMINAL_HOME = home
+    process.env.OPENTERMINAL_HOME = home
     const { ctx } = fakeCtx({
       [OPENAPI_URL]: openapi(),
       [url('/equity/price/quote', { symbol: 'MU,SNDK', provider: 'yfinance' })]: fixture('quote-MU-SNDK'),

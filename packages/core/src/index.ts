@@ -9,7 +9,7 @@ export * from './cache.js'
 export * from './registry.js'
 export * from './protocol.js'
 // Descriptors, catalog, queries, fields and shapes, annotations, recipes, layers and presets, clock, transforms,
-// inference. Browser-safe; the YAML loaders are in '@terminal/core/node'.
+// inference. Browser-safe; the YAML loaders are in '@openterminal/core/node'.
 export * from './descriptor.js'
 export * from './descriptor-openapi.js'
 export * from './catalog.js'

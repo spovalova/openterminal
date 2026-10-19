@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FC } from 'react'
 import clsx from 'clsx'
-import { columnIndex, type Frame } from '@terminal/core'
-import { IconButton, formatCell } from '@terminal/ui'
+import { columnIndex, type Frame } from '@openterminal/core'
+import { IconButton, formatCell } from '@openterminal/ui'
 import { api } from '../api'
 
 /** Short labels for the default strip; anything else shows its symbol. */

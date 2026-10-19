@@ -1,6 +1,6 @@
 // App state: workspaces, the active tab, per-workspace run status, frames keyed by workspace, widget and dataset. Reducers for every ServerMsg.
 import { createContext, useContext, type Dispatch } from 'react'
-import type { Frame, Message, ServerMsg, Step, Workspace } from '@terminal/core'
+import type { Frame, Message, ServerMsg, Step, Workspace } from '@openterminal/core'
 import type { Health } from './api'
 import type { SocketStatus } from './socket'
 import { dropWidgetFrames, putFrame, putFrameError, type FrameErrors, type FrameEvent, type FrameStore } from './state/frames'

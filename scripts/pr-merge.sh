@@ -6,7 +6,7 @@
 #
 # - Uses a merge commit (keeps each PR's history). Prints one line per PR.
 # - --deploy: in the main checkout, fetch, fast-forward `main` to the remote, and run
-#   deploy/redeploy.sh (rebuild the web app, restart terminal.service on 4242).
+#   deploy/redeploy.sh (rebuild the web app, restart openterminal.service on 4242).
 # - Reads GH_PAT from the main checkout's gitignored .env; never prints it.
 set -euo pipefail
 

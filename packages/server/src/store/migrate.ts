@@ -1,10 +1,11 @@
-// One-time migration from the JSON store (`~/.terminal/workspaces/<id>.json`) into SQLite. v1 widgets are read
-// through `migrateWidget` (`{ kind, params }` becomes `{ recipe: kind, params }` under `main`, the view becomes a
-// preset), which `WorkspaceSchema` applies on parse; v2 widgets pass through. The JSON directory is renamed to a backup
-// beside the database, and a marker in `settings` stops the migration from running twice.
+// One-time migration from the JSON store (`~/.openterminal/workspaces/<id>.json`; home.ts copies `~/.terminal` there
+// first) into SQLite. v1 widgets are read through `migrateWidget` (`{ kind, params }` becomes `{ recipe: kind, params }`
+// under `main`, the view becomes a preset), which `WorkspaceSchema` applies on parse; v2 widgets pass through. The JSON
+// directory is renamed to a backup beside the database, and a marker in `settings` stops the migration from running
+// twice.
 import { existsSync, readdirSync, readFileSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
-import { WorkspaceSchema, isLegacyWidget, type Workspace } from '@terminal/core'
+import { WorkspaceSchema, isLegacyWidget, type Workspace } from '@openterminal/core'
 import type { SqliteStore } from './sqlite.js'
 import { ID_RE } from './types.js'
 

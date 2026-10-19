@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { HttpError, type Ctx } from '@terminal/core'
+import { HttpError, type Ctx } from '@openterminal/core'
 import { resetLimiter, type Config } from '../src/finnhub-api.js'
 
 export const TOKEN = 'test-token'

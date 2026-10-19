@@ -7,9 +7,9 @@
 // the shape (e)'s store keeps per connector: `{ connector, version, descriptors, generatedAt }` plus the fingerprint.
 import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { createHttp, descriptorsFromOpenApi, parseDescriptors, type Ctx, type Descriptor, type OpenApiDoc } from '@terminal/core'
+import { createHttp, descriptorsFromOpenApi, parseDescriptors, type Ctx, type Descriptor, type OpenApiDoc } from '@openterminal/core'
+import { openterminalHome } from '@openterminal/core/node'
 import { ConfigSchema, DEFAULT_BASE_URL, authHeaders, isConnectionFailure, isDown, markDown, markUp, notRunning, type Config } from './openbb-api.js'
 
 export const CATALOG_FILE = 'openbb.json'
@@ -27,10 +27,9 @@ export type CatalogCache = {
   descriptors: Descriptor[]
 }
 
-/** `$TERMINAL_HOME/catalog/openbb.json`, or `~/.terminal/catalog/openbb.json`. */
+/** `<home>/catalog/openbb.json`: `$OPENTERMINAL_HOME` (or the deprecated `$TERMINAL_HOME`), else `~/.openterminal`. */
 export function defaultCatalogPath(env: NodeJS.ProcessEnv = process.env): string {
-  const home = env.TERMINAL_HOME?.trim()
-  return join(home && home.length > 0 ? home : join(homedir(), '.terminal'), 'catalog', CATALOG_FILE)
+  return join(openterminalHome(env), 'catalog', CATALOG_FILE)
 }
 
 /** The cache key of an OpenAPI document: its version and a hash of what the generator reads. */
@@ -75,7 +74,7 @@ export function writeCatalogCache(path: string, cache: CatalogCache): void {
 }
 
 export type LoadOptions = {
-  /** Where the cache lives; defaults to `$TERMINAL_HOME/catalog/openbb.json`. */
+  /** Where the cache lives; defaults to `<home>/catalog/openbb.json` (`defaultCatalogPath`). */
   catalogPath?: string
   now?: () => number
   timeoutMs?: number

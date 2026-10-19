@@ -5,7 +5,7 @@
 // template) so `{ recipe: 'quote', params }` resolves without recipes.yml, whose routes name openbb, yahoo and finnhub.
 // `fakeConnector()` is the five-route connector the server tests share (search, quote, ohlcv, news, earnings).
 import { z } from 'zod'
-import { defineConnector, inferFrame, parseRecipes, type Connector, type Descriptor, type DescriptorParam, type Frame, type JsonSchemaObject, type Recipe, type ViewV2 } from '@terminal/core'
+import { defineConnector, inferFrame, parseRecipes, type Connector, type Descriptor, type DescriptorParam, type Frame, type JsonSchemaObject, type Recipe, type ViewV2 } from '@openterminal/core'
 
 export type Row = Record<string, unknown>
 export type FakeRoute = {

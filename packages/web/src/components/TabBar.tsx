@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Dialog, Tabs } from '@terminal/ui'
+import { Button, Dialog, Tabs } from '@openterminal/ui'
 import { useActions } from '../actions'
 import { useApp } from '../state'
 

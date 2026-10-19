@@ -18,7 +18,7 @@ import {
   type PriceFormat,
   type SeriesType,
 } from 'lightweight-charts'
-import { DOWN_COLOR, EmptyState, UP_COLOR, chartTheme, levelColor, zeroLineColor } from '@terminal/ui'
+import { DOWN_COLOR, EmptyState, UP_COLOR, chartTheme, levelColor, zeroLineColor } from '@openterminal/ui'
 import type { ViewProps } from './types'
 import { withAlpha } from './format'
 import { datasetsFor, expandView, recipeOf, viewOf } from './fields'

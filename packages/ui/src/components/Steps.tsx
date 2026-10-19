@@ -1,6 +1,6 @@
 import type { FC } from 'react'
 import clsx from 'clsx'
-import type { Step } from '@terminal/core'
+import type { Step } from '@openterminal/core'
 import { formatDuration } from '../format.js'
 import { ChevronIcon } from './icons.js'
 

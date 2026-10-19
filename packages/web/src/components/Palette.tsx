@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Command } from 'cmdk'
-import { Dialog } from '@terminal/ui'
+import { Dialog } from '@openterminal/ui'
 import { useActions } from '../actions'
 import { TICKER_RE } from '../platform'
 import { useApp } from '../state'

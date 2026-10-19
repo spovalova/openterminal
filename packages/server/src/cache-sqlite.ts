@@ -1,7 +1,7 @@
 // The persistent frame cache (PLAN.md section 17, "Store on SQLite"): `Cache` over the store's frames table, keyed
 // by `canonicalKey`, so a restart does not refetch two years of bars. A small in-memory front keeps the hot frames
 // parsed; TTL expiry is enforced on read; a row cap and a per-frame byte cap bound the file.
-import { cacheKey, type AnyQuery, type Cache, type Frame } from '@terminal/core'
+import { cacheKey, type AnyQuery, type Cache, type Frame } from '@openterminal/core'
 import type { Store } from './store/index.js'
 
 export type SqliteCacheOptions = {

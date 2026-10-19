@@ -1,5 +1,5 @@
 [Unit]
-Description=terminal (production, http://127.0.0.1:4242)
+Description=Open Terminal (production, http://127.0.0.1:4242)
 After=network-online.target openbb-api.service
 Wants=openbb-api.service
 
@@ -12,7 +12,8 @@ Environment=NODE_ENV=production
 Environment=PORT=4242
 # ANTHROPIC_API_KEY / FINNHUB_API_KEY etc. Gitignored; keys never enter the repo.
 EnvironmentFile=-%h/terminal/.env
-ExecStart=%h/.local/bin/node packages/cli/bin/terminal.js --no-open
+# Config and data in ~/.openterminal, copied once from ~/.terminal on the first start after the rename.
+ExecStart=%h/.local/bin/node packages/cli/bin/openterminal.js --no-open
 Restart=always
 RestartSec=3
 StandardOutput=journal

@@ -24,8 +24,8 @@ import {
   type Descriptor,
   type Frame,
   type TransformOutput,
-} from '@terminal/core'
-import { builtinAnnotations, builtinRecipes } from '@terminal/core/node'
+} from '@openterminal/core'
+import { builtinAnnotations, builtinRecipes } from '@openterminal/core/node'
 import { z } from 'zod'
 import { createTransformEngine, fromColumnar, toColumnar, vendoredWheels, type ServerTransformEngine } from '../src/transform/index.js'
 

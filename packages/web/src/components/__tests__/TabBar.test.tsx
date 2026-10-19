@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { createWorkspace, type Workspace } from '@terminal/core'
+import { createWorkspace, type Workspace } from '@openterminal/core'
 import { AppContext, initialState, reducer, type Action, type AppState } from '../../state'
 import { SocketContext } from '../../socketContext'
 import { useReducer } from 'react'

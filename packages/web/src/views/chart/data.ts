@@ -4,8 +4,8 @@
  * and bands, with the legend rows and the x-axis kind. The renderer (ChartView) only walks the result; it
  * never knows what the data means (PLAN.md section 17, "layers").
  */
-import { columnIndex, fieldLabel, type DatasetsFieldConfig, type Frame, type Layer, type Pane, type Scale } from '@terminal/core'
-import { DOWN_COLOR, UP_COLOR, markerStyle, seriesPalette } from '@terminal/ui'
+import { columnIndex, fieldLabel, type DatasetsFieldConfig, type Frame, type Layer, type Pane, type Scale } from '@openterminal/core'
+import { DOWN_COLOR, UP_COLOR, markerStyle, seriesPalette } from '@openterminal/ui'
 import type { BusinessDay, Time, UTCTimestamp } from 'lightweight-charts'
 import { withAlpha } from '../format'
 

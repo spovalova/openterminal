@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { IconButton, PromptBox, Steps } from '@terminal/ui'
-import type { Message, Workspace } from '@terminal/core'
+import { IconButton, PromptBox, Steps } from '@openterminal/ui'
+import type { Message, Workspace } from '@openterminal/core'
 import { useActions } from '../actions'
 import { MOD } from '../platform'
 import { useApp, type WorkspaceState } from '../state'

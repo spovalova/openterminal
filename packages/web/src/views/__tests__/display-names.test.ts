@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { displayText } from '@terminal/ui'
+import { displayText } from '@openterminal/ui'
 import { displayName, legendLabel } from '../series-data'
 import { formatValue, markerKindLabel } from '../chart/data'
 

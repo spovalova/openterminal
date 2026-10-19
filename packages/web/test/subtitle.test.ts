@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import type { Frame, WidgetV2 } from '@terminal/core'
-import { builtinRecipes } from '@terminal/core/node'
+import type { Frame, WidgetV2 } from '@openterminal/core'
+import { builtinRecipes } from '@openterminal/core/node'
 import { describeDataset, shortDate, subtitleForRecipe, subtitleForWidget, symbolsLabel } from '../src/subtitle'
 
 /** 2026-10-16 14:00 UTC, the morning every fixture was recorded. */

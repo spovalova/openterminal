@@ -1,11 +1,13 @@
-// ~/.terminal/config.yml: the LLM key and the connector list in priority order.
-// The directory is overridable with TERMINAL_HOME. Created with defaults on first run.
+// ~/.openterminal/config.yml: the LLM key and the connector list in priority order.
+// The directory is overridable with OPENTERMINAL_HOME (see home.ts). Created with defaults on first run.
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { Document, parse, parseDocument, isMap, isSeq, YAMLSeq } from 'yaml'
 import { z } from 'zod'
 import { DEFAULT_MODEL } from './agent/index.js'
+import { resolveHome } from './home.js'
+
+export { openterminalHome } from '@openterminal/core/node'
 
 export const PROVIDERS = ['anthropic', 'openai'] as const
 export type Provider = (typeof PROVIDERS)[number]
@@ -34,7 +36,7 @@ export const ConfigSchema = z.object({
 })
 export type Config = z.output<typeof ConfigSchema>
 
-export const DEFAULT_CONFIG_YML = `# terminal config. Keys never leave this machine.
+export const DEFAULT_CONFIG_YML = `# Open Terminal config. Keys never leave this machine.
 #
 # llm: the model that turns prompts into workspaces. Leave empty to use
 # ANTHROPIC_API_KEY / OPENAI_API_KEY from the environment, or fill it in:
@@ -53,12 +55,6 @@ connectors:
   - name: openbb
   - name: yahoo
 `
-
-/** `TERMINAL_HOME` or `~/.terminal`. */
-export function terminalHome(env: NodeJS.ProcessEnv = process.env): string {
-  const override = env.TERMINAL_HOME?.trim()
-  return override && override.length > 0 ? override : join(homedir(), '.terminal')
-}
 
 export function configPath(home: string): string {
   return join(home, 'config.yml')
@@ -85,7 +81,7 @@ export type LoadConfigOptions = { home?: string; env?: NodeJS.ProcessEnv }
  */
 export function loadConfig(opts: LoadConfigOptions = {}): Config {
   const env = opts.env ?? process.env
-  const home = opts.home ?? terminalHome(env)
+  const home = opts.home ?? resolveHome(env)
   const file = ensureHome(home)
   const raw = parse(readFileSync(file, 'utf8')) as unknown
   return normalizeConfig(raw, env, file)

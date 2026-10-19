@@ -5,7 +5,7 @@
  * frame carries the field config the runner stamps from the annotations (`meta.fields`), so the views here render
  * through the same pipeline as a live frame.
  */
-import { parseAnyWidget, type Column, type FieldConfig, type Frame, type WidgetV2, type WidgetV2Input } from '@terminal/core'
+import { parseAnyWidget, type Column, type FieldConfig, type Frame, type WidgetV2, type WidgetV2Input } from '@openterminal/core'
 import { V2_FIXTURES, type FixtureV2 } from './v2'
 
 /** A widget with its frames per dataset; `frame` is the primary (`main`) one. */

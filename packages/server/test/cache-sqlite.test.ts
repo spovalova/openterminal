@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ConnectorRegistry, type AnyQuery, type Frame } from '@terminal/core'
+import { ConnectorRegistry, type AnyQuery, type Frame } from '@openterminal/core'
 import { SqliteCache } from '../src/cache-sqlite.js'
 import { SqliteStore } from '../src/store/index.js'
 import { fakeConnector, type Call } from './fake-connector.js'

@@ -1,4 +1,4 @@
-// @terminal/server: config, connectors, store, executor, HTTP + WebSocket app, and startServer.
+// @openterminal/server: config, connectors, store, executor, HTTP + WebSocket app, and startServer.
 export { startServer, DEFAULT_PORT, DEFAULT_WEB_DIST, type StartOptions, type RunningServer } from './main.js'
 export { createApp, type App, type AppDeps, type InflightRun } from './app.js'
 export {
@@ -6,7 +6,7 @@ export {
   normalizeConfig,
   saveConnectorConfig,
   resolvedLlm,
-  terminalHome,
+  openterminalHome,
   configPath,
   workspacesDir,
   ensureHome,
@@ -22,6 +22,7 @@ export {
   type Provider,
   type LoadConfigOptions,
 } from './config.js'
+export { resolveHome, migrateLegacyHome, migratedNote, MIGRATED_NOTE, type HomeMigration, type HomeMigrationOptions, type ResolveHomeOptions } from './home.js'
 export { BUILTIN_CONNECTORS, builtinConnector, buildRegistry, connectorNeedsKey, describeConnectors, type ConnectorInfo, type BuildRegistryOptions } from './connectors.js'
 export {
   WorkspaceStore,

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { type Frame, type WidgetV2 } from '@terminal/core'
+import { type Frame, type WidgetV2 } from '@openterminal/core'
 
 import { StatView, cardHeightFor, cardsFit, columnLabel, orderStats, statRows, symbolOrder } from '../StatView'
 import { viewFor } from '../view-for'

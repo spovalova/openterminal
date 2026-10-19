@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import { WidgetV2Schema, type Step, type WidgetV2 } from '@terminal/core'
+import { WidgetV2Schema, type Step, type WidgetV2 } from '@openterminal/core'
 import { PreviewMemory, contentHintFor } from '../previews.js'
 import { FindRouteInput, ONE_ROW_TABLE_MESSAGE, QueryToolInput, SetWorkspaceInput, TransformToolInput, createTools, layoutNote, resolveQueryInput, validateWidgets, type ValidateContext } from '../tools.js'
 import { createFakeRegistry } from './helpers.js'

@@ -1,5 +1,5 @@
 import type { FC, ReactNode } from 'react'
-import type { DescriptorParam } from '@terminal/core'
+import type { DescriptorParam } from '@openterminal/core'
 
 /** Columns whose values are tickers: upper-cased on input. */
 const TICKER_FIELDS = new Set(['symbol', 'symbols', 'tickers'])

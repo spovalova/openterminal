@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { preview, type Frame } from '@terminal/core'
+import { preview, type Frame } from '@openterminal/core'
 import { BARE_INTEGER_MIN, extractNumbers, maskNonFigures, verifyReply, type PreviewRecord } from '../src/verify.js'
 
 /** A quote frame as the v2 runner annotates it: change_percent already percent, last_price usd. */

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
-import { Button, Kbd } from '@terminal/ui'
+import { Button, Kbd } from '@openterminal/ui'
 import { api } from './api'
 import { EmptyView } from './components/EmptyView'
 import { Grid } from './components/Grid'

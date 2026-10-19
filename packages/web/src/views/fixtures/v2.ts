@@ -3,7 +3,7 @@
  * (`meta.fields` from the annotations, a `lineage`). Built the way `packages/core/test/presets.test.ts` builds
  * its frames; the numbers are synthetic but plausible.
  */
-import { parseAnyWidget, type Column, type FieldConfig, type Frame, type WidgetV2, type WidgetV2Input } from '@terminal/core'
+import { parseAnyWidget, type Column, type FieldConfig, type Frame, type WidgetV2, type WidgetV2Input } from '@openterminal/core'
 
 export type FixtureV2 = { id: string; note: string; widget: WidgetV2; frames: Record<string, Frame>; frame: Frame }
 

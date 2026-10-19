@@ -1,5 +1,5 @@
 {
-  "name": "@terminal/connector-openbb",
+  "name": "@openterminal/connector-openbb",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
-    "@terminal/core": "workspace:*",
+    "@openterminal/core": "workspace:*",
     "zod": "^4.6.7"
   },
   "devDependencies": {

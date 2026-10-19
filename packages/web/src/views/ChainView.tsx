@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, type FC } from 'react'
 import clsx from 'clsx'
-import { columnIndex, type Frame, type Size } from '@terminal/core'
+import { columnIndex, type Frame, type Size } from '@openterminal/core'
 import { useWidth } from './use-width'
-import { EMPTY_CELL, EmptyState, formatCell } from '@terminal/ui'
+import { EMPTY_CELL, EmptyState, formatCell } from '@openterminal/ui'
 import type { ViewProps } from './types'
 import { primaryFrame } from './fields'
 

@@ -1,7 +1,7 @@
 // quote, company-news and calendar/earnings as routes (PLAN.md section 17), answered from the recorded fixtures
 // through inferFrame. No network.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DescriptorSchema, frameToObjects, parseParams, type Descriptor } from '@terminal/core'
+import { DescriptorSchema, frameToObjects, parseParams, type Descriptor } from '@openterminal/core'
 import finnhub from '../src/index.js'
 import { callFinnhub, finnhubDescriptors, secondsToMs, FINNHUB_ROUTES } from '../src/call.js'
 import { fakeCtx, fixture, NOW, status, TOKEN } from './helpers.js'

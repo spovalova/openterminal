@@ -1,5 +1,5 @@
 // Promote to recipe (PLAN.md section 17, feature 11): a widget the user likes becomes a user recipe. Pure, tested.
-import { DEFAULT_DATASET, RecipeSchema, isRecipeQuery, isRouteQuery, isTransformQuery, widgetQueries, type AnyQuery, type AnyWidget, type JsonSchemaObject, type Recipe, type RecipeDataset, type RecipeRoute } from '@terminal/core'
+import { DEFAULT_DATASET, RecipeSchema, isRecipeQuery, isRouteQuery, isTransformQuery, widgetQueries, type AnyQuery, type AnyWidget, type JsonSchemaObject, type Recipe, type RecipeDataset, type RecipeRoute } from '@openterminal/core'
 import { z } from 'zod'
 
 /** Params that become recipe params (templated) when promoting a route; everything else stays literal. */

@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { Ctx } from '@terminal/core'
+import type { Ctx } from '@openterminal/core'
 import type { ChartResultArray, OptionsOptions, OptionsResult, Quote, QuoteSummaryResult, SearchResult, YahooClient } from '../src/client.js'
 
 const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
