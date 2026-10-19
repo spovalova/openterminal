@@ -22,7 +22,7 @@ import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const base = process.env.BASE ?? 'http://127.0.0.1:4242'
-const args = process.argv.slice(2)
+const args = process.argv.slice(2).filter((a) => a !== '--') // pnpm passes the `--` separator through
 const flag = (name) => {
   const i = args.indexOf(name)
   return i === -1 ? undefined : args.splice(i, 2)[1]

@@ -27,6 +27,8 @@ export const LineageSchema = z.object({
   params: z.record(z.string(), z.unknown()).optional(),
   provider: z.string().optional(),
   recipe: z.string().optional(),
+  /** A hash of the recipe definition that produced the frame; a cached frame from an older definition is a miss. */
+  recipeVersion: z.string().optional(),
   /** Transform inputs: dataset name → that input's lineage. */
   inputs: z.record(z.string(), z.unknown()).optional(),
   code: z.string().optional(),

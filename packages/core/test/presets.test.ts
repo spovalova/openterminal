@@ -139,6 +139,15 @@ describe('controlFor', () => {
     expect(controlFor({ preset: 'stat', column: 'volume' }, ds({ main: quotes }))).toMatchObject({ column: 'volume', format: 'compact', change: 'change_percent' })
     expect(controlFor({ preset: 'stat' }, ds({ main: frame([['name', 'string']], [['x']]) }))).toBeUndefined()
   })
+  it('stat: without a conventional change column, the annotated day change (percent, format change) is the change line', () => {
+    const yq = frame([['symbol', 'string'], ['regularMarketPrice', 'number'], ['regularMarketChangePercent', 'number'], ['preMarketChangePercent', 'number'], ['marketState', 'string']], [['NVDA', 180, -5.6, 0.4, 'CLOSED']], {
+      regularMarketPrice: { unit: 'usd', key: true, label: 'Last', priority: 1 },
+      regularMarketChangePercent: { unit: 'percent', format: 'change', label: 'Chg %', priority: 2 },
+      preMarketChangePercent: { unit: 'percent', format: 'change', label: 'Pre %', priority: 4 },
+    })
+    const c = controlFor({ preset: 'stat', column: 'last_price', change: 'change_percent' }, ds({ main: yq }))
+    expect(c).toMatchObject({ kind: 'stat', column: 'regularMarketPrice', change: 'regularMarketChangePercent' })
+  })
   it('facts and chain and chart', () => {
     expect(controlFor({ preset: 'facts', columns: ['symbol', 'last_price'] }, ds({ main: quotes }))).toMatchObject({ kind: 'facts', columns: ['symbol', 'last_price'], formats: { last_price: 'price' } })
     expect(controlFor({ preset: 'chain' }, ds({ main: chain }))).toEqual({ kind: 'chain', data: 'main' })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { KIND_NAMES, applyAnnotations, controlFor, datasetFieldsFrom, expandRecipe, parseRecipes, recipeDatasets, recipeDescriptor, recipeParams, recipeParamsSchema, recipeSummaryLines, renderValue, titleFor, validateRecipe, type Frame, type Recipe } from '../src/index.js'
+import { KIND_NAMES, RECIPE_PARAMS_INPUT, applyAnnotations, controlFor, datasetFieldsFrom, expandRecipe, parseRecipes, recipeDatasets, recipeDescriptor, recipeParams, recipeParamsFrame, recipeParamsSchema, recipeRouteAlternatives, recipeSummaryLines, renameColumns, renderValue, titleFor, validateRecipe, type Frame, type Recipe } from '../src/index.js'
 import { builtinAnnotations, builtinRecipes } from '../src/node.js'
 
 const recipes = builtinRecipes()
@@ -14,13 +14,13 @@ describe('recipes.yml', () => {
     for (const r of recipes) expect(validateRecipe(r), r.name).toEqual([])
   })
   it('uses the exact OpenBB routes and providers the v1 handlers called', () => {
-    const first = (name: string) => {
-      const ds = recipeDatasets(by(name)).main!
-      return 'routes' in ds ? ds.routes[0]! : undefined
-    }
+    const first = (name: string) => recipeRouteAlternatives(by(name))[0]
+    // quote is the exception since phase 2: yahoo's quote comes first (it carries the day change and the market
+    // state; OpenBB's yfinance quote has neither), with the OpenBB route as the fallback.
+    expect(first('quote')).toMatchObject({ connector: 'yahoo', route: 'quote' })
+    expect(recipeDatasets(by('quote')).main!).toMatchObject({ routes: [{ connector: 'yahoo' }, { connector: 'openbb', route: 'equity/price/quote', provider: 'yfinance' }, { connector: 'finnhub' }] })
     const expected: Record<string, [string, string]> = {
       search: ['equity/search', 'nasdaq'],
-      quote: ['equity/price/quote', 'yfinance'],
       ohlcv: ['equity/price/historical', 'yfinance'],
       news: ['news/company', 'nasdaq'],
       earnings: ['equity/calendar/earnings', 'nasdaq'],
@@ -45,11 +45,11 @@ describe('recipes.yml', () => {
     }
     // financials joins the three statements the handler fetched; macro picks its route by series.
     expect(Object.keys(recipeDatasets(by('financials')))).toEqual(['income', 'cash', 'balance', 'main'])
-    const macroRoutes = (recipeDatasets(by('macro')).main as { routes: { route: string }[] }).routes.map((r) => r.route)
+    const macroRoutes = recipeRouteAlternatives(by('macro')).map((r) => r.route)
     expect(macroRoutes).toEqual(['fixedincome/government/treasury_rates', 'fixedincome/rate/effr', 'fixedincome/rate/sofr', 'economy/money_measures', 'economy/cpi', 'economy/unemployment'])
   })
   it('names the yahoo and finnhub endpoints the fallbacks wrap', () => {
-    const routesOf = (name: string, connector: string) => (recipeDatasets(by(name)).main as { routes: { connector: string; route: string }[] }).routes.filter((r) => r.connector === connector).map((r) => r.route)
+    const routesOf = (name: string, connector: string) => recipeRouteAlternatives(by(name)).filter((r) => r.connector === connector).map((r) => r.route)
     expect(routesOf('quote', 'yahoo')).toEqual(['quote'])
     expect(routesOf('ohlcv', 'yahoo')).toEqual(['chart'])
     expect(routesOf('options', 'yahoo')).toEqual(['options'])
@@ -64,7 +64,8 @@ describe('recipes.yml', () => {
   it('gives every recipe a preset the shape of its frame supports and a size', () => {
     expect(by('ohlcv').view.preset).toBe('price')
     expect(by('options').view.preset).toBe('chain')
-    expect(by('quote').view).toMatchObject({ preset: 'stat', column: 'last_price' })
+    expect(by('quote').view).toMatchObject({ preset: 'stat' }) // the key field and the annotated day change pick the columns on every route
+    expect(by('volatility').view).toMatchObject({ preset: 'stat', column: 'iv30' })
     expect(by('profile').view.preset).toBe('facts')
     expect(by('yield_curve').view).toMatchObject({ preset: 'curve', x: 'maturity_years' })
     expect(recipes.every((r) => r.size)).toBe(true)
@@ -88,7 +89,7 @@ describe('expandRecipe', () => {
   })
   it('expands a multi-dataset recipe with a transform main', () => {
     const e = expandRecipe(by('financials'), { symbols: ['NVDA'], period: 'annual' })
-    expect(e.routes).toEqual([])
+    expect(e.routes).toEqual((e.data.income as { routes: unknown[] }).routes) // main is a transform: the first route dataset's alternatives stand in
     expect(e.data.income).toMatchObject({ routes: [{ route: 'equity/fundamental/income', params: { symbol: 'NVDA', period: 'annual', limit: 4, provider: 'yfinance' } }] })
     expect(e.data.main).toMatchObject({ transform: { inputs: ['income', 'cash', 'balance'] } })
     expect((e.data.main as { transform: { code: string } }).transform.code).toContain('result =')
@@ -148,6 +149,45 @@ describe('recipe helpers', () => {
     expect(() => parseRecipes([{ ...base, title: 'ok', routes: undefined, data: { main: { inputs: ['ghost'], code: 'result = ghost' } } }])).toThrow(/transform input "ghost"/)
     expect(() => parseRecipes([{ name: 'Bad Name', title: 't', params: {}, view: { preset: 'table' }, routes: [{ connector: 'c', route: 'r' }] }])).toThrow()
     expect(() => parseRecipes([{ name: 'noroutes', title: 't', params: {}, view: { preset: 'table' } }])).toThrow(/needs `routes`/)
+  })
+  it('options, earnings and macro are data graphs whose main transform reads the reserved `params` input (one expiration, the requested symbols, one series)', () => {
+    for (const name of ['options', 'earnings', 'macro']) {
+      const ds = recipeDatasets(by(name))
+      expect(Object.keys(ds), name).toEqual(['raw', 'main'])
+      const main = ds.main!
+      if (!('inputs' in main)) throw new Error(`${name} main is not a transform`)
+      expect(main.inputs).toEqual(['raw', RECIPE_PARAMS_INPUT])
+      expect(validateRecipe(by(name))).toEqual([])
+    }
+    const x = expandRecipe(by('options'), { symbol: 'TSLA', expiration: '2026-10-23', type: 'put' })
+    expect(x.routes).toEqual((x.data.raw as { routes: unknown[] }).routes) // main is a transform: raw's alternatives stand in
+    expect(x.data.raw).toMatchObject({ routes: [{ connector: 'openbb', route: 'derivatives/options/chains', params: { symbol: 'TSLA', provider: 'cboe' } }, { connector: 'yahoo', route: 'options' }] })
+    expect(x.params).toEqual({ symbol: 'TSLA', expiration: '2026-10-23', type: 'put', strikes: 10 })
+    const macro = expandRecipe(by('macro'), { series: 'fed_funds' })
+    expect('routes' in macro.data.raw! && macro.data.raw.routes.map((r) => r.route)).toEqual(['fixedincome/rate/effr'])
+    // The params frame: one row, one column per param, arrays joined.
+    const pf = recipeParamsFrame({ symbols: ['NVDA', 'AMD'], from: '2026-10-19', strikes: 10, both: true, nothing: undefined }, 5)
+    expect(pf.columns).toEqual([{ name: 'symbols', type: 'string' }, { name: 'from', type: 'string' }, { name: 'strikes', type: 'number' }, { name: 'both', type: 'boolean' }])
+    expect(pf.rows).toEqual([['NVDA, AMD', '2026-10-19', 10, true]])
+    expect(pf.meta).toEqual({ connector: 'recipe', fetchedAt: 5, ttl: 0 })
+    // `params` is not a dataset name a recipe may define, but it is always a valid input.
+    const ok: Recipe = { name: 'x', title: 't', params: { type: 'object', properties: { a: { type: 'string' } } }, view: { preset: 'table' }, data: { raw: { routes: [{ connector: 'c', route: 'r', params: {} }] }, main: { inputs: ['raw', 'params'], code: 'result = raw' } } }
+    expect(validateRecipe(ok)).toEqual([])
+  })
+  it('ohlcv and index rename the providers’ `date` to the kind’s `time` on every route, and renameColumns applies it to columns and field config', () => {
+    for (const name of ['ohlcv', 'index']) {
+      const ds = recipeDatasets(by(name)).main!
+      if (!('routes' in ds)) throw new Error()
+      for (const r of ds.routes) expect(r.rename, `${name} ${r.connector}`).toEqual({ date: 'time' })
+    }
+    const x = expandRecipe(by('ohlcv'), { symbols: ['NVDA'] })
+    expect(x.routes[0]).toMatchObject({ connector: 'openbb', rename: { date: 'time' } })
+    const f: Frame = { columns: [{ name: 'date', type: 'time' }, { name: 'close', type: 'number' }], rows: [[1, 2]], meta: { connector: 'c', fetchedAt: 0, ttl: 0, fields: { date: { label: 'Date' } } } }
+    const out = renameColumns(f, { date: 'time' })
+    expect(out.columns.map((c) => c.name)).toEqual(['time', 'close'])
+    expect(out.meta.fields).toEqual({ time: { label: 'Date' } })
+    expect(renameColumns(f, { nope: 'time' })).toBe(f)
+    expect(renameColumns({ ...f, columns: [...f.columns, { name: 'time', type: 'time' }] }, { date: 'time' }).columns.map((c) => c.name)).toEqual(['date', 'close', 'time'])
   })
   it('dividends renders a table on both of its routes (OpenBB ex_dividend_date/amount, yahoo date/dividends.amount)', () => {
     const rules = builtinAnnotations()

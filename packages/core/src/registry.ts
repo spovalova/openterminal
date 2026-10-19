@@ -7,7 +7,7 @@ import type { FieldConfig } from './fields.js'
 import type { Frame, Lineage } from './frame.js'
 import { KINDS, KIND_NAMES, MS, parseQuery, ttlFor, type Kind, type Query, type QueryInput } from './kinds.js'
 import { isLegacyQuery, isRecipeQuery, isRouteQuery, isTransformQuery, QueryV2Schema, type AnyQueryInput, type RecipeQuery, type RouteQuery, type TransformQuery } from './query.js'
-import { expandRecipe, recipeMap, type Recipe } from './recipes.js'
+import { RECIPE_PARAMS_INPUT, expandRecipe, recipeMap, recipeParamsFrame, recipeVersion, renameColumns, type Recipe, type RecipeRouteQuery } from './recipes.js'
 import { checkTransformInputs, checkTransformOutput, isTransformError, type TransformEngine } from './transform.js'
 import { globToRegExp } from './annotations.js'
 
@@ -130,6 +130,7 @@ export class ConnectorRegistry implements Registry {
   private readonly log: (msg: string) => void
   private recipeList: Recipe[]
   private recipeIndex: Map<string, Recipe>
+  private readonly recipeVersions = new Map<string, string>()
   private annotationRules: readonly AnnotationRule[]
   private transformEngine?: TransformEngine
   private readonly now: () => number
@@ -182,6 +183,7 @@ export class ConnectorRegistry implements Registry {
   setRecipes(recipes: readonly Recipe[]): void {
     this.recipeList = [...recipes]
     this.recipeIndex = recipeMap(this.recipeList)
+    this.recipeVersions.clear()
   }
 
   setAnnotations(rules: readonly AnnotationRule[]): void {
@@ -250,7 +252,9 @@ export class ConnectorRegistry implements Registry {
     const q = QueryV2Schema.parse(input)
     if (!opts.bypassCache) {
       const hit = this.cache?.get(q)
-      if (hit) return hit
+      // A recipe frame cached under an older recipe definition (the persistent cache outlives recipes.yml edits) is a miss.
+      const stale = hit && isRecipeQuery(q) && hit.meta.lineage?.recipeVersion !== this.recipeVersionOf(q.recipe)
+      if (hit && !stale) return hit
     }
     let frame: Frame
     if (isTransformQuery(q)) frame = await this.runTransform(q, opts)
@@ -315,7 +319,8 @@ export class ConnectorRegistry implements Registry {
     const recipe = this.recipeIndex.get(q.recipe)
     if (!recipe) throw new RegistryError(`unknown recipe "${q.recipe}"${this.recipeList.length ? ` (known: ${this.recipeList.map((r) => r.name).join(', ')})` : ''}`)
     const expanded = expandRecipe(recipe, q.params ?? {}, { now: this.now() })
-    const frames: Record<string, Frame> = {}
+    // `params` is bound for the recipe's transforms as a one-row frame of the validated params.
+    const frames: Record<string, Frame> = { [RECIPE_PARAMS_INPUT]: recipeParamsFrame(expanded.params, this.now()) }
     const pending = new Set(Object.keys(expanded.data))
     // Datasets resolve in dependency order: routes first, then transforms whose inputs are ready.
     while (pending.size > 0) {
@@ -342,16 +347,30 @@ export class ConnectorRegistry implements Registry {
     const fields: Record<string, FieldConfig> = { ...(main.meta.fields ?? {}) }
     for (const [name, cfg] of Object.entries(recipe.fields ?? {})) fields[name] = { ...(fields[name] ?? {}), ...cfg }
     const ttl = recipe.ttl ?? main.meta.ttl
-    return { ...main, meta: { ...main.meta, ttl, fields, lineage: { ...(main.meta.lineage ?? {}), recipe: recipe.name } } }
+    return { ...main, meta: { ...main.meta, ttl, fields, lineage: { ...(main.meta.lineage ?? {}), recipe: recipe.name, recipeVersion: this.recipeVersionOf(recipe.name) } } }
+  }
+
+  /** `recipeVersion` of a loaded recipe, memoised until `setRecipes`; undefined for an unknown name. */
+  private recipeVersionOf(name: string): string | undefined {
+    const r = this.recipeIndex.get(name)
+    if (!r) return undefined
+    let v = this.recipeVersions.get(name)
+    if (!v) {
+      v = recipeVersion(r)
+      this.recipeVersions.set(name, v)
+    }
+    return v
   }
 
   /** The first alternative that answers; a RegistryError with every cause when none does. */
-  private async firstOf(routes: RouteQuery[], opts: RunOptions, what: string): Promise<Frame> {
+  private async firstOf(routes: RecipeRouteQuery[], opts: RunOptions, what: string): Promise<Frame> {
     if (routes.length === 0) throw new RegistryError(`${what}: no route matches these params`)
     const causes: { connector: string; error: string }[] = []
     for (const r of routes) {
       try {
-        return await this.run(r, opts)
+        const { rename, ...query } = r
+        // The recipe's renames (`date` → `time` on the price routes) keep the kind's column names on every alternative.
+        return renameColumns(await this.run(query, opts), rename)
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         causes.push({ connector: r.connector, error: msg })

@@ -350,7 +350,12 @@ export function controlFor(view: ViewV2, datasets: DatasetsFieldConfig): Control
     case 'stat': {
       const column = view.column && names.includes(view.column) ? view.column : keyField(ds.fields, ds.shape.numeric) ?? ds.shape.numeric[0]
       if (!column) return undefined
-      const change = view.change ?? [`${column}_change_pct`, `${column}_change_percent`, 'change_pct', 'change_percent'].find((c) => c !== column && names.includes(c))
+      // The change line: the named column, the conventional names, else the annotated day change (a percent column
+      // with the `change` format: yahoo's regularMarketChangePercent, finnhub's dp), so the stat works on every quote route.
+      const change =
+        (view.change && names.includes(view.change) ? view.change : undefined) ??
+        [`${column}_change_pct`, `${column}_change_percent`, 'change_pct', 'change_percent'].find((c) => c !== column && names.includes(c)) ??
+        names.find((c) => c !== column && ds.fields[c]?.format === 'change' && (ds.fields[c]?.unit === 'percent' || ds.fields[c]?.unit === 'fraction') && !/^(pre|post)/i.test(c))
       const c: StatControl = { kind: 'stat', data: name, column, format: defaultFormat(ds.fields[column] ?? {}, typeOf(column)), label: ds.fields[column]?.label ?? column }
       if (ds.shape.group) c.group = ds.shape.group
       if (change) c.change = change
