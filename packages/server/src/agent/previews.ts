@@ -44,6 +44,19 @@ export class PreviewMemory {
     return seen
   }
 
+  /**
+   * Record a result that carries the preview, fields and lineage rather than the frame ((b)'s transform tool): the
+   * preview rows stand in as the frame sample for the preset checks, and `rowCount` is the preview's.
+   */
+  rememberResult(query: AnyQuery, result: { preview: Preview; fields?: Record<string, FieldConfig>; lineage?: Frame['meta']['lineage'] }, fetchedAt = Date.now()): SeenPreview {
+    const key = canonicalKey(query)
+    const meta: Frame['meta'] = { connector: 'transform', fetchedAt, ttl: 0, ...(result.fields ? { fields: result.fields } : {}), ...(result.lineage ? { lineage: result.lineage } : {}) }
+    const frame: Frame = { columns: result.preview.columns, rows: result.preview.rows, meta }
+    const seen: SeenPreview = { key, query, frame, preview: result.preview, rowCount: result.preview.rowCount, label: describeQuery(query), ...(result.fields ? { fields: result.fields } : {}) }
+    this.byKey.set(key, seen)
+    return seen
+  }
+
   get(query: AnyQuery): SeenPreview | undefined {
     return this.byKey.get(canonicalKey(query))
   }

@@ -3,13 +3,14 @@ import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { serve, type ServerType } from '@hono/node-server'
-import type { AgentRunner, Registry } from '@terminal/core'
+import { ConnectorRegistry, type AgentRunner, type Registry } from '@terminal/core'
 import { createAgentRunner } from './agent/index.js'
 import { createApp, type App } from './app.js'
 import { loadConfig, resolvedLlm, terminalHome, workspacesDir, type Config } from './config.js'
 import { buildRegistry } from './connectors.js'
 import { JsonFileRunLog } from './runlog.js'
 import { WorkspaceStore } from './store.js'
+import { createTransformEngine, type ServerTransformEngine } from './transform/index.js'
 import { createStubAgentRunner } from './stub-agent.js'
 
 export const DEFAULT_PORT = 4242
@@ -83,6 +84,14 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
     const s = serve({ fetch: app.fetch, port, hostname }, () => resolveServer(s))
   })
   injectWebSocket(server)
+  // The transform engine (phase 1 (b)): one Pyodide worker, warmed after listen so the first prompt does not pay the
+  // cold start. A server started with an injected registry (tests) runs without one.
+  let transform: ServerTransformEngine | undefined
+  if (!opts.registry && registry instanceof ConnectorRegistry) {
+    transform = createTransformEngine({ log })
+    registry.setTransformEngine(transform)
+    void transform.warmup().catch((err: unknown) => log(`transform engine warmup failed: ${err instanceof Error ? err.message : String(err)}`))
+  }
   const address = server.address()
   const boundPort = typeof address === 'object' && address ? address.port : port
   const url = `http://${hostname === '0.0.0.0' ? 'localhost' : hostname}:${boundPort}`
@@ -97,12 +106,14 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
     store,
     config,
     llm: real,
-    close: () =>
-      new Promise<void>((resolveClose, reject) => {
+    close: async () => {
+      await transform?.close()
+      await new Promise<void>((resolveClose, reject) => {
         for (const client of wss.clients) client.terminate()
         wss.close()
         server.close((err) => (err ? reject(err) : resolveClose()))
-      }),
+      })
+    },
   }
 }
 

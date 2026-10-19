@@ -6,7 +6,6 @@ import {
   KIND_NAMES,
   PREVIEW_MAX_ROWS,
   SizeSchema,
-  TransformFailed,
   ViewSchema,
   ViewV2Schema,
   WidgetV2Schema,
@@ -34,6 +33,7 @@ import {
   type WidgetV2,
 } from '@terminal/core'
 import { PreviewMemory, contentHintFor, previewResult, primaryDatasetOf, type PreviewResult } from './previews.js'
+import { TRANSFORM_TOOL_DESCRIPTION, TransformToolInput, runTransformTool, type TransformToolResult } from './tools-transform.js'
 
 /** Hard cap of tool calls per prompt, including set_workspace. */
 export const MAX_TOOL_CALLS = 10
@@ -92,11 +92,7 @@ export type QueryToolInputT = z.input<typeof QueryToolInput>
 
 const openQuery = z.record(z.string(), z.unknown())
 
-export const TransformToolInput = z.object({
-  inputs: z.record(z.string().regex(/^[a-z_][a-z0-9_]*$/i, 'input names are Python identifiers'), openQuery).describe('name → query ({ recipe, params } | { connector, route, params }); each is bound as a pandas DataFrame of that name.'),
-  code: z.string().min(1).max(20_000).describe('Python that assigns `result`, a DataFrame. pandas as pd, numpy as np and the ot helpers are in scope.'),
-  columns: z.record(z.string().min(1), FieldConfigSchema).optional().describe('Unit and label for columns the script created, e.g. { pe: { unit: "ratio", label: "P/E (TTM)" } }.'),
-})
+export { TransformToolInput }
 export type TransformToolInputT = z.input<typeof TransformToolInput>
 
 /** A widget: v2 (`data` + preset `view`) or v1 (`query` + typed `view`), ids optional. */
@@ -401,41 +397,21 @@ export function createTools(deps: ToolDeps) {
     },
   })
 
+  // (b)'s tool body (tools-transform.ts) behind this run's budget and step hooks; a successful result also goes into the
+  // preview memory so reply verification and set_workspace's checks see transform previews like any query's.
   const transform = tool({
-    description: [
-      'Derive a frame from one or more frames with Python (pandas): inputs are queries (already-run ones are cache hits), each bound as a DataFrame of that name with time columns as tz-aware America/New_York datetimes; the script assigns `result`, a DataFrame.',
-      'Returns the preview of the result like `query`, or { error, traceback } to fix in the next call. Declare units and labels for new columns in `columns`. A widget may hold the same { inputs, code, columns } as a dataset.',
-      'Use it for joins, windows, ratios, rebasing, spreads, indicators, correlation, screens over a fetched universe, and to slice a long frame (tail, a date range, top-N) into the preview.',
-    ].join(' '),
+    description: TRANSFORM_TOOL_DESCRIPTION,
     inputSchema: TransformToolInput,
-    execute: async (input): Promise<QueryToolResult> => {
-      const t0 = now()
-      const head = `transform(${Object.keys(input.inputs).join(', ')})`
-      const over = charge('transform', input, head)
-      if (over) return { ok: false, error: over }
-      let q: AnyQuery
-      try {
-        const inputs: Record<string, AnyQuery> = {}
-        for (const [name, sub] of Object.entries(input.inputs)) inputs[name] = parseAnyQuery(sub)
-        q = { inputs, code: input.code, ...(input.columns ? { columns: input.columns } : {}) }
-      } catch (err) {
-        const error = `invalid transform inputs: ${errorMessage(err)}`
-        deps.onStep({ tool: 'transform', args: input, summary: `${head} · failed`, ms: now() - t0, error })
-        return { ok: false, error }
+    execute: async (input): Promise<TransformToolResult> => {
+      const res = await runTransformTool({ registry: deps.registry, signal: deps.signal, onStep: deps.onStep, charge: (args, summary) => charge('transform', args, summary), now }, input)
+      if (res.ok) {
+        try {
+          memory.rememberResult(parseAnyQuery(input), { preview: res.preview, fields: res.fields, lineage: res.lineage }, now())
+        } catch {
+          // the body validated the input already; nothing to record if it somehow does not parse here
+        }
       }
-      try {
-        const frame = await deps.registry.run(q, { signal: deps.signal })
-        const seen = memory.remember(q, frame)
-        deps.onStep({ tool: 'transform', args: q, summary: querySummary(q, frame.rows.length), ms: now() - t0 })
-        const shown = seen.preview.rows.length
-        const note = `${head}: ${seen.rowCount} rows${shown < seen.rowCount ? `, first ${shown} shown` : ''}. A widget holding this transform renders the full result; its preview carries the code and inputs as lineage.`
-        return previewResult(seen, note)
-      } catch (err) {
-        const error = errorMessage(err)
-        const traceback = err instanceof TransformFailed ? err.traceback : undefined
-        deps.onStep({ tool: 'transform', args: q, summary: querySummary(q, undefined, true), ms: now() - t0, error })
-        return { ok: false, error: `${head} failed: ${error}`, ...(traceback ? { traceback } : {}) }
-      }
+      return res
     },
   })
 

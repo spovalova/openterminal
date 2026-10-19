@@ -208,9 +208,9 @@ describe('find_route and transform tools', () => {
     const tools = createTools({ registry, workspaceId: 'ws1', answerable: registry.kinds(), recipes: registry.recipes(), memory, signal: new AbortController().signal, emit: () => {}, onStep: (s) => steps.push(s), onWidgets: () => {}, budget: { used: 0, max: 10 } })
     const res = (await tools.transform.execute!({ inputs: { q: { recipe: 'quote', params: { symbols: ['MU'] } } }, code: 'result = q' }, { toolCallId: 't1', messages: [] } as never)) as { ok: false; error: string }
     expect(res.ok).toBe(false)
-    expect(res.error).toContain('transform(q) failed: transforms are not available: no transform engine is configured')
+    expect(res.error).toContain('transform failed: transforms are not available: no transform engine is configured')
     expect(steps[0]).toMatchObject({ tool: 'transform', summary: 'transform(q) · failed' })
     const bad = (await tools.transform.execute!({ inputs: { q: { nope: 1 } }, code: 'result = q' }, { toolCallId: 't2', messages: [] } as never)) as { ok: false; error: string }
-    expect(bad.error).toContain('invalid transform inputs')
+    expect(bad.error).toContain('invalid transform')
   })
 })
