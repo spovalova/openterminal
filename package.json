@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "query": "tsx scripts/query.ts",
+    "probe": "tsx scripts/probe-catalog.ts",
     "bench": "node scripts/prompt-bench.mjs"
   },
   "devDependencies": {
