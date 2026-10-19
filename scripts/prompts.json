@@ -25,5 +25,18 @@
   { "name": "rates-week", "group": "v2", "prompt": "Where are treasury yields heading and what's on the macro calendar this week?" },
   { "name": "tsla-puts", "group": "v2", "prompt": "TSLA puts for next Friday, what's IV like and where is the open interest?" },
   { "name": "tsla-earnings", "group": "v2", "prompt": "TSLA reports soon. How did it react to the last few reports and what's expected this time?" },
-  { "name": "cheap-tech", "group": "v2", "prompt": "Screen for large cap tech trading under 20x earnings." }
+  { "name": "cheap-tech", "group": "v2", "prompt": "Screen for large cap tech trading under 20x earnings." },
+
+  { "name": "accept-crwv", "group": "v2-accept", "prompt": "Why is CRWV down?" },
+  { "name": "accept-neoclouds", "group": "v2-accept", "prompt": "Compare the neoclouds" },
+  { "name": "accept-spx", "group": "v2-accept", "prompt": "What's happening to the S&P last week?" },
+  { "name": "accept-tsla-puts", "group": "v2-accept", "prompt": "TSLA puts for next Friday" },
+  { "name": "accept-tsla-earnings", "group": "v2-accept", "prompt": "TSLA earnings reactions" },
+  { "name": "accept-cheap-tech", "group": "v2-accept", "prompt": "Large-cap tech under 20x" },
+  { "name": "accept-nvda-pe", "group": "v2-accept", "prompt": "P/E over time for NVDA" },
+  { "name": "accept-amd-rsi", "group": "v2-accept", "prompt": "RSI and MACD on AMD" },
+  { "name": "accept-curve", "group": "v2-accept", "prompt": "10y minus 2y and the curve today" },
+  { "name": "accept-morning", "group": "v2-accept", "prompt": "Morning check on my watchlist: NVDA, AMD, MU, TSLA, AAPL" },
+  { "name": "accept-mag7-corr", "group": "v2-accept", "prompt": "Correlation of the Mag 7 over 6 months" },
+  { "name": "accept-spy-backtest", "group": "v2-accept", "prompt": "Backtest a 50/200 SMA cross on SPY since 2020" }
 ]

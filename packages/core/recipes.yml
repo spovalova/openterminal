@@ -273,7 +273,9 @@ recipes:
         symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
         limit: { type: integer, minimum: 1, maximum: 60, default: 12 }
       required: [symbols]
-    view: { preset: table, columns: [ex_dividend_date, amount] }
+    # No column list: the OpenBB frame is `symbol, ex_dividend_date, amount` and yahoo's fallback is
+    # `symbol, date, dividends.amount`, so the columns come from the annotations' priorities and both render.
+    view: { preset: table, sort: { column: ex_dividend_date, dir: desc } }
     size: sm
     ttl: 86400000
     routes:

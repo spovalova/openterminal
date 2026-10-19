@@ -119,6 +119,21 @@ describe('controlFor', () => {
     })
     expect(controlFor({ preset: 'table', columns: ['symbol', 'nope', 'last_price'] }, ds({ main: quotes }))).toMatchObject({ columns: ['symbol', 'last_price'] })
   })
+  it('table: a column list that names nothing in the frame falls back to the priority order, never an empty table', () => {
+    const c = controlFor({ preset: 'table', columns: ['ex_dividend_date', 'amount'] }, ds({ main: frame([['symbol', 'string'], ['date', 'time'], ['dividends.amount', 'number']], [['AAPL', 1, 0.25]], { 'dividends.amount': { unit: 'usd', priority: 2 } }) }))
+    expect(c?.kind).toBe('table')
+    if (c?.kind !== 'table') throw new Error()
+    expect([...c.columns].sort()).toEqual(['date', 'dividends.amount', 'symbol'])
+    // A partial match keeps what matched.
+    const partial = controlFor({ preset: 'table', columns: ['symbol', 'nope'] }, ds({ main: quotes }))
+    expect(partial?.kind === 'table' && partial.columns).toEqual(['symbol'])
+  })
+  it('table: a sort on a date column the frame names differently falls back to the time column', () => {
+    const c = controlFor({ preset: 'table', sort: { column: 'ex_dividend_date', dir: 'desc' } }, ds({ main: frame([['symbol', 'string'], ['date', 'time'], ['amount', 'number']], [['AAPL', 1, 0.25]]) }))
+    expect(c?.kind === 'table' && c.sort).toEqual({ column: 'date', dir: 'desc' })
+    const none = controlFor({ preset: 'table', sort: { column: 'weight', dir: 'desc' } }, ds({ main: quotes }))
+    expect(none?.kind === 'table' && none.sort).toBeUndefined()
+  })
   it('stat: the key field, its change column and format', () => {
     expect(controlFor({ preset: 'stat' }, ds({ main: quotes }))).toEqual({ kind: 'stat', data: 'main', column: 'last_price', group: 'symbol', change: 'change_percent', format: 'price', label: 'Last', unit: 'usd' })
     expect(controlFor({ preset: 'stat', column: 'volume' }, ds({ main: quotes }))).toMatchObject({ column: 'volume', format: 'compact', change: 'change_percent' })

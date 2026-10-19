@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { FrameSchema } from './frame.js'
 import { MessageSchema, StepSchema, type Workspace, type Message } from './workspace.js'
-import { DEFAULT_DATASET, WidgetSchema } from './widget.js'
+import { AnyWidgetSchema, DEFAULT_DATASET } from './widget.js'
 
 /** One WebSocket per client. */
 export const ClientMsgSchema = z.discriminatedUnion('t', [
@@ -21,7 +21,8 @@ export type ClientMsg = z.infer<typeof ClientMsgSchema>
 export const ServerMsgSchema = z.discriminatedUnion('t', [
   z.object({ t: z.literal('started'), workspaceId: z.string() }),
   z.object({ t: z.literal('step'), workspaceId: z.string(), step: StepSchema }),
-  z.object({ t: z.literal('widgets'), workspaceId: z.string(), widgets: z.array(WidgetSchema), name: z.string().optional() }),
+  /** v2 (phase 2 integration): the agent's set is `WidgetV2[]`; v1 widgets still pass during the coexistence. */
+  z.object({ t: z.literal('widgets'), workspaceId: z.string(), widgets: z.array(AnyWidgetSchema), name: z.string().optional() }),
   z.object({ t: z.literal('frame'), widgetId: z.string(), frame: FrameSchema, workspaceId: z.string().optional(), dataset: z.string().optional() }),
   z.object({ t: z.literal('frameError'), widgetId: z.string(), error: z.string(), workspaceId: z.string().optional(), dataset: z.string().optional() }),
   z.object({ t: z.literal('delta'), workspaceId: z.string(), text: z.string() }),

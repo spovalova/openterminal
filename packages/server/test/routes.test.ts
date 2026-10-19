@@ -75,6 +75,20 @@ describe('routes', () => {
     expect((await app.request('/api/widgets/missing/frame')).status).toBe(404)
   })
 
+  it('GET /api/widgets/:id/frame?workspace= looks the widget up in that workspace (ids repeat across workspaces)', async () => {
+    const widgets = stubWidgets()
+    const a = await body(await app.request('/api/workspaces', json({ name: 'A', widgets })))
+    const other = widgets.map((w) => (w.id === 'memory-snapshot' ? { ...w, query: { kind: 'quote', params: { symbols: ['ZZZ'] } } } : w))
+    const b = await body(await app.request('/api/workspaces', json({ name: 'B', widgets: other })))
+    const fromA = await body(await app.request(`/api/widgets/memory-snapshot/frame?workspace=${a.id}`))
+    const fromB = await body(await app.request(`/api/widgets/memory-snapshot/frame?workspace=${b.id}`))
+    expect(fromA.rows).toHaveLength(4)
+    expect(fromB.rows).toHaveLength(1)
+    expect(fromB.rows[0][0]).toBe('ZZZ')
+    expect((await app.request(`/api/widgets/memory-snapshot/frame?workspace=nope`)).status).toBe(404)
+    expect((await app.request(`/api/widgets/nope/frame?workspace=${a.id}`)).status).toBe(404)
+  })
+
   it('GET /api/connectors lists built-ins with status and key requirement', async () => {
     const list = await body(await app.request('/api/connectors'))
     const names = list.map((c: { name: string }) => c.name)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { KIND_NAMES, expandRecipe, parseRecipes, recipeDatasets, recipeDescriptor, recipeParams, recipeParamsSchema, recipeSummaryLines, renderValue, titleFor, validateRecipe, type Recipe } from '../src/index.js'
-import { builtinRecipes } from '../src/node.js'
+import { KIND_NAMES, applyAnnotations, controlFor, datasetFieldsFrom, expandRecipe, parseRecipes, recipeDatasets, recipeDescriptor, recipeParams, recipeParamsSchema, recipeSummaryLines, renderValue, titleFor, validateRecipe, type Frame, type Recipe } from '../src/index.js'
+import { builtinAnnotations, builtinRecipes } from '../src/node.js'
 
 const recipes = builtinRecipes()
 const by = (name: string) => recipes.find((r) => r.name === name)!
@@ -148,6 +148,21 @@ describe('recipe helpers', () => {
     expect(() => parseRecipes([{ ...base, title: 'ok', routes: undefined, data: { main: { inputs: ['ghost'], code: 'result = ghost' } } }])).toThrow(/transform input "ghost"/)
     expect(() => parseRecipes([{ name: 'Bad Name', title: 't', params: {}, view: { preset: 'table' }, routes: [{ connector: 'c', route: 'r' }] }])).toThrow()
     expect(() => parseRecipes([{ name: 'noroutes', title: 't', params: {}, view: { preset: 'table' } }])).toThrow(/needs `routes`/)
+  })
+  it('dividends renders a table on both of its routes (OpenBB ex_dividend_date/amount, yahoo date/dividends.amount)', () => {
+    const rules = builtinAnnotations()
+    const mk = (connector: string, route: string, columns: [string, Frame['columns'][number]['type']][], row: unknown[]): Frame =>
+      applyAnnotations({ columns: columns.map(([name, type]) => ({ name, type })), rows: [row, row], meta: { connector, fetchedAt: 0, ttl: 0 } }, { connector, route }, rules)
+    const openbb = mk('openbb', 'equity/fundamental/dividends', [['symbol', 'string'], ['ex_dividend_date', 'time'], ['amount', 'number']], ['AAPL', 1, 0.27])
+    const yahoo = mk('yahoo', 'chart', [['symbol', 'string'], ['date', 'time'], ['dividends.amount', 'number']], ['AAPL', 1, 0.25])
+    for (const f of [openbb, yahoo]) {
+      const c = controlFor(by('dividends').view, { main: datasetFieldsFrom(f) })
+      expect(c?.kind).toBe('table')
+      if (c?.kind !== 'table') throw new Error()
+      expect(c.columns.length).toBeGreaterThanOrEqual(2)
+      expect(c.columns.some((n) => /amount/.test(n))).toBe(true)
+      expect(c.sort).toMatchObject({ dir: 'desc' })
+    }
   })
   it('writes the prompt lines', () => {
     const lines = recipeSummaryLines([by('ohlcv'), by('quote')])

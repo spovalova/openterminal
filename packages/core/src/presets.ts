@@ -334,10 +334,15 @@ export function controlFor(view: ViewV2, datasets: DatasetsFieldConfig): Control
   const labels = (cols: string[]) => Object.fromEntries(cols.flatMap((c) => (ds.fields[c]?.label ? [[c, ds.fields[c]!.label!]] : [])))
   switch (view.preset) {
     case 'table': {
-      const columns = (view.columns ?? orderByPriority(names, ds.fields)).filter((c) => names.includes(c))
+      // A column list that names nothing in the frame (a recipe's list written for another connector's fields, a
+      // fallback route) falls back to the priority order rather than an empty table (phase 2 integration).
+      const picked = view.columns?.filter((c) => names.includes(c)) ?? []
+      const columns = picked.length > 0 ? picked : orderByPriority(names, ds.fields)
       const colorize = view.colorize ?? columns.filter((c) => /percent|change/.test(defaultFormat(ds.fields[c] ?? {}, typeOf(c))) || /_pct$|^change/.test(c))
       const control: TableControl = { kind: 'table', data: name, columns, formats: formats(columns), labels: labels(columns), colorize, extremes: view.extremes ?? false }
-      if (view.sort && names.includes(view.sort.column)) control.sort = view.sort
+      // A sort on a date column the frame names differently (ex_dividend_date vs date) falls back to the time column.
+      const sortColumn = view.sort ? (names.includes(view.sort.column) ? view.sort.column : /date|time/i.test(view.sort.column) ? ds.shape.time : undefined) : undefined
+      if (view.sort && sortColumn) control.sort = { column: sortColumn, dir: view.sort.dir }
       if (view.highlight !== undefined) control.highlight = { column: ds.shape.group ?? names[0] ?? '', value: view.highlight }
       if (view.limit) control.limit = view.limit
       return control

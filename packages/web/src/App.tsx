@@ -106,16 +106,16 @@ export function App() {
       /* storage unavailable */
     }
     if (activeWs.status === 'streaming') return
-    // Focus makes the server push every frame of this workspace, scoped by workspace. The HTTP route looks a widget up
-    // by id alone, and ids repeat across workspaces, so it is only the fallback while the socket is down, and a frame
-    // whose columns are not this widget's kind is dropped in favour of a scoped refresh.
+    // Focus makes the server push every frame of this workspace, scoped by workspace. The HTTP route is the fallback
+    // while the socket is down; it is asked by workspace and widget (ids repeat across workspaces), and a frame whose
+    // columns are not this widget's kind is still dropped in favour of a scoped refresh.
     if (state.socket === 'open') return
     const s = stateRef.current
     const workspaceId = activeWorkspace?.id
     for (const widget of activeWorkspace?.widgets ?? []) {
       if (hasAnyFrame(s.frames, workspaceId, widget.id) || hasAnyFrame(s.frameErrors, workspaceId, widget.id)) continue
       void api
-        .widgetFrame(widget.id)
+        .widgetFrame(widget.id, workspaceId ? { workspaceId } : {})
         .then((frame) => {
           if (frameMatches(widget, frame)) dispatch({ type: 'frameLoaded', widgetId: widget.id, frame, ...(workspaceId ? { workspaceId } : {}) })
           else socket.refresh(widget.id, workspaceId)

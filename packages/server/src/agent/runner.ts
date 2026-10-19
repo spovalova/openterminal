@@ -99,8 +99,7 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
         ...(catalog ? { catalog } : {}),
         memory,
         signal,
-        // The `widgets` message carries v2 widgets; the protocol type still says v1 until the integration bot
-        // switches it to AnyWidgetSchema (docs/notes/v2-contracts.md). The server validates and logs a drop until then.
+        // The `widgets` message carries v2 widgets; the protocol's `widgets` member is `AnyWidgetSchema` since phase 2.
         emit: (m) => emit(m as ServerMsg),
         onStep: (step) => {
           steps.push(step)

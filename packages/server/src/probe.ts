@@ -1,11 +1,18 @@
-// The catalog probe (PLAN.md section 17): one call per route with default params and a sample symbol, eight at
-// a time, the result recorded as the route's liveness on the catalog and in the liveness store. Run from
-// `scripts/probe-catalog.ts` and, in-process, from (e)'s `POST /api/catalog/probe`.
+// The catalog probe (PLAN.md section 17): one call per route with default params and a sample symbol, four at
+// a time (OpenBB serves blocking provider calls on one event loop; eight stalled it and the 8 GB box OOM-killed it,
+// docs/notes/openbb-probe.md part 3), the result recorded as the route's liveness on the catalog and in the
+// liveness store. Run from `scripts/probe-catalog.ts` and, in-process, from (e)'s `POST /api/catalog/probe`.
 import { lastWeek, validateParams, type Catalog, type ConnectorRegistry, type Descriptor, type DescriptorParam, type Frame } from '@terminal/core'
 import { livenessOf, livenessRow, type LivenessRow, type LivenessStore } from './liveness.js'
 
-/** What every route is asked for when it needs a value: a liquid name, last week, the US. */
-export const SAMPLE = { symbol: 'NVDA', query: 'nvidia', country: 'united_states', etf: 'SPY', index: '^GSPC', currency: 'EURUSD', crypto: 'BTCUSD' } as const
+/**
+ * What every route is asked for when it needs a value: a liquid name, last week, the US; for the FINRA bond routes an
+ * issuer and a CUSIP (CoreWeave's 9.25% 2030s), because `fixedincome/corporate/bond_prices` with no filter is FINRA's
+ * whole universe and times out (docs/notes/openbb-probe.md part 3).
+ */
+export const SAMPLE = { symbol: 'NVDA', query: 'nvidia', country: 'united_states', etf: 'SPY', index: '^GSPC', currency: 'EURUSD', crypto: 'BTCUSD', issuer: 'coreweave', cusip: '21873SAB4' } as const
+/** The default number of routes in flight; `pnpm probe --concurrency=` and the probe route's body override it. */
+export const PROBE_CONCURRENCY = 4
 
 /**
  * OpenBB providers that answer without a key on this machine (docs/notes/openbb-probe.md), in the order the probe
@@ -30,6 +37,8 @@ export function sampleValue(p: DescriptorParam, descriptor: Descriptor, now: num
     return list(SAMPLE.symbol)
   }
   if (/^(query|q|term|search|text)$/.test(name)) return SAMPLE.query
+  if (name === 'issuer_name') return SAMPLE.issuer
+  if (name === 'cusip') return list(SAMPLE.cusip)
   if (/^modules$/.test(name)) return ['price']
   if (/country/.test(name)) return inEnum(SAMPLE.country) ? list(SAMPLE.country) : p.enum ? list(p.enum[0]!) : list(SAMPLE.country)
   if (p.type === 'date') {
@@ -55,7 +64,9 @@ export function sampleValue(p: DescriptorParam, descriptor: Descriptor, now: num
 export function sampleParams(descriptor: Descriptor, now: number = Date.now()): SampleResult {
   const params: Record<string, unknown> = {}
   for (const p of descriptor.params) {
-    const wanted = p.required || /^(symbol|symbols|query|q)$/.test(p.name)
+    // Optional params worth sending: a symbol or query (routes answer better with one) and FINRA's issuer filter
+    // (without it bond_prices is the whole TRACE universe and times out).
+    const wanted = p.required || /^(symbol|symbols|query|q|issuer_name)$/.test(p.name)
     if (!wanted) continue
     const v = sampleValue(p, descriptor, now)
     if (v === undefined) {
@@ -216,7 +227,7 @@ export async function probeCatalog(registry: ConnectorRegistry, catalog: Catalog
   const log = opts.log ?? (() => {})
   let targets = catalog.all().filter((d) => (!opts.connectors || opts.connectors.includes(d.connector)) && (!opts.match || opts.match(d)))
   if (opts.limit !== undefined) targets = targets.slice(0, opts.limit)
-  const concurrency = Math.max(1, opts.concurrency ?? 8)
+  const concurrency = Math.max(1, opts.concurrency ?? PROBE_CONCURRENCY)
   const results: ProbeResult[] = new Array<ProbeResult>(targets.length)
   const queue = targets.map((_, i) => i)
   const dead = new Set<string>()

@@ -248,11 +248,28 @@ annotations:
   "openbb:fixedincome/rate/sofr:rate": { unit: fraction, label: SOFR, priority: 1, key: true }
   "openbb:fixedincome/rate/sofr:volume": { unit: usd, format: compact, label: Volume ($bn), priority: 6 }
   "openbb:fixedincome/spreads/tcm:rate": { unit: fraction, label: Spread, priority: 1 }
+  # FINRA TRACE (provider finra) sends percents, not fractions: coupon_rate 9.25, last_sale_yield 13.63,
+  # price_change_percent 1.15 (checked live 2026-10-19 on issuer_name=coreweave; phase 2 correction, the seed said
+  # fraction and the preview showed 925). Price is per 100 of par.
   "openbb:fixedincome/corporate/bond_prices:price": { unit: usd, format: price, label: Price, priority: 2 }
-  "openbb:fixedincome/corporate/bond_prices:yield_to_maturity": { unit: fraction, label: YTM, priority: 1, key: true }
-  "openbb:fixedincome/corporate/bond_prices:coupon_rate": { unit: fraction, label: Coupon, priority: 3 }
+  "openbb:fixedincome/corporate/bond_prices:yield_to_maturity": { unit: percent, label: YTM, priority: 1 }
+  "openbb:fixedincome/corporate/bond_prices:last_sale_yield": { unit: percent, label: Yield, priority: 1, key: true }
+  "openbb:fixedincome/corporate/bond_prices:coupon_rate": { unit: percent, label: Coupon, priority: 3 }
   "openbb:fixedincome/corporate/bond_prices:maturity_date": { label: Maturity, priority: 2 }
+  "openbb:fixedincome/corporate/bond_prices:price_change": { unit: usd, format: change, label: Chg, priority: 6 }
+  "openbb:fixedincome/corporate/bond_prices:price_change_percent": { unit: percent, format: change, label: "Chg %", priority: 4 }
+  "openbb:fixedincome/corporate/bond_prices:last_trade_date": { label: Last trade, priority: 5 }
+  "openbb:fixedincome/corporate/bond_prices:moodys_rating": { label: Moody's, priority: 4 }
+  "openbb:fixedincome/corporate/bond_prices:sp_rating": { label: S&P, priority: 4 }
+  "openbb:fixedincome/corporate/bond_prices:issuer_name": { label: Issuer, priority: 3 }
+  "openbb:fixedincome/corporate/bond_prices:cusip": { label: CUSIP, priority: 2 }
+  "openbb:fixedincome/corporate/bond_prices:call_date": { label: Call date, priority: 7 }
+  "openbb:fixedincome/corporate/bond_prices:grade": { label: Grade, priority: 7 }
   "openbb:fixedincome/corporate/bond_prices:volume": { unit: count, format: compact, label: Volume, priority: 5 }
+  "openbb:finra/fixedincome/bond_historical:date": { label: Date, priority: 1 }
+  "openbb:finra/fixedincome/bond_historical:price": { unit: usd, format: price, label: Price, priority: 2 }
+  "openbb:finra/fixedincome/bond_historical:last_sale_yield": { unit: percent, label: Yield, priority: 1, key: true }
+  "openbb:finra/fixedincome/bond_historical:cusip": { label: CUSIP, priority: 3 }
   "openbb:economy/money_measures:m2": { unit: usd, format: compact, label: M2, priority: 1, key: true }
   "openbb:economy/money_measures:m1": { unit: usd, format: compact, label: M1, priority: 2 }
   "openbb:economy/money_measures:month": { label: Month, priority: 1 }

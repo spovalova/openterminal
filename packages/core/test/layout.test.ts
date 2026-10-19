@@ -57,6 +57,64 @@ describe('effectiveSpan (size by content)', () => {
   })
 })
 
+describe('packLayout prefers stretching a chart over a short table (phase 2, from the (d) report)', () => {
+  const hint = (size: Size, contentHint: ContentHint) => ({ size, contentHint })
+  it('a three-row table is not pulled up beside the hero when the cell under it would be a hole: the hero chart grows across instead', () => {
+    // lg chart, sm earnings table (3 rows), md chart, md news table (12 rows): the (d) screenshot.
+    const widgets = [hint('lg', { kind: 'chart', rows: 60 }), hint('sm', { kind: 'table', rows: 3 }), hint('md', { kind: 'chart', rows: 60 }), hint('md', { kind: 'table', rows: 12 })]
+    const p = packLayout(widgets, 3)
+    expect(hasHoles(p, 3)).toBe(false)
+    expect(p[0]).toMatchObject({ col: 0, row: 0, cols: 3, rows: 2, stretched: true })
+    expect(p[1]!.rows).toBe(1)
+    expect(p[2]!.rows).toBe(2)
+    expect(p[3]!.rows).toBe(1)
+  })
+  it('a short table still sits beside the hero when a later one-cell widget fills the cell under it', () => {
+    const widgets = [hint('lg', { kind: 'chart' }), hint('sm', { kind: 'table', rows: 3 }), hint('sm', { kind: 'stat', rows: 4 }), hint('md', { kind: 'table', rows: 20 })]
+    const p = packLayout(widgets, 3)
+    expect(hasHoles(p, 3)).toBe(false)
+    expect(cells(p).slice(0, 3)).toEqual([
+      [0, 0, 2, 2],
+      [2, 0, 1, 1],
+      [2, 1, 1, 1],
+    ])
+    expect(p.slice(0, 3).every((x) => !x.stretched)).toBe(true)
+  })
+  it('with only a hero and a short table, the hero takes the width and the table takes a row', () => {
+    const p = packLayout([hint('lg', { kind: 'chart' }), hint('sm', { kind: 'table', rows: 3 })], 3)
+    expect(cells(p)).toEqual([
+      [0, 0, 3, 2],
+      [0, 2, 3, 1],
+    ])
+  })
+  it('when a hole has a chart and a short widget as neighbours, the chart grows; a short widget grows sideways before taller', () => {
+    // The hole at (2,2) has the four-row table to its left (short, sideways), the facts card above it (short, taller)
+    // and the twelve-row table below it (fills its height): the long table grows up.
+    const widgets = [hint('lg', { kind: 'chart' }), hint('lg', { kind: 'table', rows: 4 }), hint('sm', { kind: 'stat', rows: 1 }), hint('md', { kind: 'table', rows: 12 }), hint('sm', { kind: 'facts', rows: 1 })]
+    const p = packLayout(widgets, 3)
+    expect(hasHoles(p, 3)).toBe(false)
+    expect(p[2]!.rows).toBe(1)
+    expect(p[4]!.rows).toBe(1)
+    expect(p[1]!.rows).toBe(1)
+  })
+  it('never stretches a stat, a facts card or a short table taller when any other neighbour can grow, over random hinted sets', () => {
+    const kinds: ContentHint[] = [{ kind: 'chart', rows: 50 }, { kind: 'table', rows: 3 }, { kind: 'table', rows: 20 }, { kind: 'stat', rows: 2 }, { kind: 'facts', rows: 1 }, { kind: 'chain', rows: 40 }]
+    const all: Size[] = ['lg', 'md', 'sm']
+    let seed = 7
+    const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648
+    for (let trial = 0; trial < 300; trial++) {
+      const n = 1 + Math.floor(rnd() * 7)
+      const widgets = Array.from({ length: n }, () => ({ size: all[Math.floor(rnd() * 3)]!, contentHint: kinds[Math.floor(rnd() * kinds.length)]! }))
+      for (const columns of [2, 3]) {
+        const p = packLayout(widgets, columns)
+        expect(p, JSON.stringify(widgets)).toHaveLength(n)
+        expect(hasHoles(p, columns), JSON.stringify(widgets)).toBe(false)
+        for (const x of p) expect(x.col + x.cols).toBeLessThanOrEqual(columns)
+      }
+    }
+  })
+})
+
 describe('spanFor', () => {
   it('clamps the size span to the column count', () => {
     expect(spanFor('lg', 3)).toEqual({ cols: 2, rows: 2 })

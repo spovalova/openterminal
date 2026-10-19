@@ -83,8 +83,14 @@ export const api = {
     request(`/api/workspaces/${encodeURIComponent(id)}`, { method: 'PATCH', json: patch }).then(parseWorkspace),
   deleteWorkspace: (id: string) => request<void>(`/api/workspaces/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
-  widgetFrame: async (widgetId: string, dataset?: string): Promise<Frame> =>
-    FrameSchema.parse(await request(`/api/widgets/${encodeURIComponent(widgetId)}/frame${dataset ? `?dataset=${encodeURIComponent(dataset)}` : ''}`)),
+  /** One dataset's frame; `workspaceId` scopes the lookup because widget ids repeat across workspaces. */
+  widgetFrame: async (widgetId: string, opts: { workspaceId?: string; dataset?: string } = {}): Promise<Frame> => {
+    const p = new URLSearchParams()
+    if (opts.workspaceId) p.set('workspace', opts.workspaceId)
+    if (opts.dataset) p.set('dataset', opts.dataset)
+    const qs = p.toString()
+    return FrameSchema.parse(await request(`/api/widgets/${encodeURIComponent(widgetId)}/frame${qs ? `?${qs}` : ''}`))
+  },
 
   connectors: () => request<RegisteredConnector[]>('/api/connectors'),
   setConnectorConfig: (name: string, config: Record<string, unknown>) =>

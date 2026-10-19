@@ -19,7 +19,7 @@ import { builtinAnnotations, builtinRecipes } from '@terminal/core/node'
 import { loadConfig, terminalHome, workspacesDir } from '../packages/server/src/config.js'
 import { builtinConnector } from '../packages/server/src/connectors.js'
 import { applyLiveness, livenessStoreOver } from '../packages/server/src/liveness.js'
-import { probeCatalog, renderSummary, sampleParams } from '../packages/server/src/probe.js'
+import { PROBE_CONCURRENCY, probeCatalog, renderSummary, sampleParams } from '../packages/server/src/probe.js'
 import { openStore } from '../packages/server/src/store/index.js'
 
 const args = new Map<string, string>()
@@ -75,7 +75,7 @@ const connectors = args.get('connector')?.split(',').map((s) => s.trim()).filter
 const matchGlob = args.get('match')
 const match = matchGlob ? (d: { route: string }) => globToRegExp(matchGlob).test(d.route) || d.route === matchGlob : undefined
 const summary = await probeCatalog(registry, catalog, {
-  concurrency: Number(args.get('concurrency') ?? 8),
+  concurrency: Number(args.get('concurrency') ?? PROBE_CONCURRENCY),
   timeoutMs: Number(args.get('timeout') ?? 20_000),
   limit: args.has('limit') ? Number(args.get('limit')) : undefined,
   connectors,

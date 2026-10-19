@@ -3,6 +3,18 @@ import { ClientMsgSchema, DEFAULT_DATASET, ServerMsgSchema, StepSchema, frameDat
 
 const frame: Frame = { columns: [{ name: 'x', type: 'number' }], rows: [[1]], meta: { connector: 'c', fetchedAt: 0, ttl: 0 } }
 
+describe('widgets message', () => {
+  it('carries v2 widgets (data graph and preset) beside v1 ones (phase 2 integration: the agent emits WidgetV2[])', () => {
+    const v2 = { id: 'w1', title: 'NVDA', size: 'lg', data: { main: { recipe: 'ohlcv', params: { symbols: ['NVDA'] } } }, view: { preset: 'price', candle: true } }
+    const v1 = { id: 'w2', title: 'Quotes', size: 'sm', query: { kind: 'quote', params: { symbols: ['NVDA'] } }, view: { type: 'table' } }
+    const m = ServerMsgSchema.parse({ t: 'widgets', workspaceId: 'ws', widgets: [v2, v1], name: 'NVDA' })
+    if (m.t !== 'widgets') throw new Error()
+    expect(m.widgets).toHaveLength(2)
+    expect('data' in m.widgets[0]! && m.widgets[0].view).toMatchObject({ preset: 'price' })
+    expect(() => ServerMsgSchema.parse({ t: 'widgets', workspaceId: 'ws', widgets: [{ id: 'w1', title: 'x', size: 'lg', view: { preset: 'price' } }] })).toThrow()
+  })
+})
+
 describe('frame messages', () => {
   it('reads the v1 frame message and defaults the dataset to main', () => {
     const m = ServerMsgSchema.parse({ t: 'frame', widgetId: 'w1', frame })

@@ -42,9 +42,8 @@ export const MAX_TOOL_CALLS = 10
 export type ToolBudget = { used: number; max: number }
 
 /**
- * The `widgets` message with v2 widgets. The protocol's `widgets` message still carries `WidgetSchema` (v1) until the
- * integration bot switches it to `AnyWidgetSchema` (docs/notes/v2-contracts.md, "not in core yet"); the server drops
- * and logs this message until then, and the tools' result still tells the model the ids it applied.
+ * The `widgets` message with v2 widgets. Since phase 2 the protocol's `widgets` message carries `AnyWidgetSchema`, so
+ * this is a narrowing of `ServerMsg`'s `widgets` member (kept as a named type for the tools' `emit`).
  */
 export type WidgetsV2Msg = { t: 'widgets'; workspaceId: string; widgets: WidgetV2[]; name?: string }
 
