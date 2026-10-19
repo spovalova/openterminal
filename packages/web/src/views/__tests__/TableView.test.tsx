@@ -177,6 +177,14 @@ describe('TableView from the table control (v2)', () => {
     expect(ex.get(frame.rows[2]!)).toEqual({ IREN: 'best', NBIS: 'worst' })
   })
 
+  it('treats symbol columns typed as strings by a row of words as numbers (a pivot with a Rating row)', () => {
+    const frame = { columns: [{ name: 'metric', type: 'string' as const }, { name: 'CRWV', type: 'string' as const }, { name: 'NBIS', type: 'string' as const }], rows: [['EV/Revenue', 10.53, 35.06], ['Gross margin %', 70, 60], ['Market cap ($B)', 33.86, 42.01], ['Upside to target (%)', 128.99, 71.39], ['Rating', 'buy', 'buy']] }
+    expect(pivotMetricColumn(frame)).toBe('metric')
+    const ex = rowExtremesFor(frame, 'metric', ['CRWV', 'NBIS'])
+    expect(ex.get(frame.rows[0]!)).toEqual({ CRWV: 'best', NBIS: 'worst' })
+    expect(ex.get(frame.rows[4]!)).toBeUndefined()
+  })
+
   it('a table over one row renders the facts card (product rule 8)', () => {
     const { widget, frames } = fixture('v2-table-one-row')
     render(<TableView widget={widget} frames={frames} />)

@@ -113,7 +113,11 @@ export function numberWidths(columns: readonly Column[], rows: readonly unknown[
     const fixed = columnWidth(c.name, f, headers[c.name])
     if (fixed === undefined || f === 'link') return
     let longest = 0
-    for (const row of rows) longest = Math.max(longest, formatCell(row[i], f, now).length)
+    for (const row of rows) {
+      const v = row[i]
+      const word = typeof v === 'string' && v.trim() !== '' && !Number.isFinite(Number(v))
+      longest = Math.max(longest, word ? displayText(v).length : formatCell(v, f, now).length)
+    }
     const head = headers[c.name] ?? ''
     const word = Math.max(...head.split(/\s+/).map((w) => w.length)) * 7.4 + 30
     // The header on one line when that costs at most 128px ("Op cash flow", "EPS est."), else wrapped at words.
@@ -299,7 +303,9 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
               {visible.map((c) => {
                 const f = fmts[c.name] ?? 'text'
                 const v = row[indexOf.get(c.name)!]
-                const text = f === 'text' && typeof v === 'string' && c.name !== 'symbol' && c.name !== 'etf' ? displayText(v) : formatCell(v, f, nowMs)
+                // A word in a numeric column (a pivot's "Rating" row: "Buy" under CRWV) shows as the word, not an em dash.
+                const word = typeof v === 'string' && isNumericFormat(f) && v.trim() !== '' && !Number.isFinite(Number(v))
+                const text = (f === 'text' || word) && typeof v === 'string' && c.name !== 'symbol' && c.name !== 'etf' ? displayText(v) : formatCell(v, f, nowMs)
                 const dir = f === 'change' ? direction(v) : null
                 const mark = cellMark?.(row, c.name)
                 const numeric = isNumericFormat(f)

@@ -1,10 +1,11 @@
 import { useMemo, useState, type FC } from 'react'
 import clsx from 'clsx'
 import { columnIndex, controlFor, type Column, type Format, type Frame, type TableControl } from '@terminal/core'
-import { DataTable, EMPTY_CELL, EmptyState, direction, formatCell, type CellFormat } from '@terminal/ui'
+import { DataTable, EMPTY_CELL, EmptyState, direction, displayText, formatCell, type CellFormat } from '@terminal/ui'
 import type { ViewProps } from './types'
 import { VirtualTable } from '../components/VirtualTable'
 import { FactsCard } from './FactsCard'
+import { columnLabel } from './labels'
 import { controlOf, datasetsFor, emptyHintFor, primaryFrame, viewOf } from './fields'
 
 export type SortSpec = { column: string; dir: 'asc' | 'desc' }
@@ -155,10 +156,26 @@ export function rowExtremesFor(frame: Pick<Frame, 'columns' | 'rows'>, metricCol
 }
 
 /** A pivoted compare table: a text `metric` column first and numeric columns after it, one per symbol. */
-export function pivotMetricColumn(frame: Pick<Frame, 'columns'>): string | undefined {
+export function pivotMetricColumn(frame: Pick<Frame, 'columns' | 'rows'>): string | undefined {
   const first = frame.columns[0]
   if (!first || first.type !== 'string' || !/^(metric|field|item|measure|line)$/i.test(first.name)) return undefined
-  return frame.columns.slice(1).every((c) => c.type === 'number') && frame.columns.length >= 3 ? first.name : undefined
+  // Symbol columns are numbers, or mostly numbers when the pivot carries a row of words (a "Rating" row makes pandas
+  // type every symbol column as object).
+  const rest = frame.columns.slice(1).map((_, i) => i + 1)
+  return rest.length >= 2 && rest.every((i) => frame.columns[i]!.type === 'number' || mostlyNumeric(frame.rows, i)) ? first.name : undefined
+}
+
+/** At least four in five of a column's non-empty cells are numbers. */
+export function mostlyNumeric(rows: readonly unknown[][], i: number): boolean {
+  let n = 0
+  let num = 0
+  for (const r of rows) {
+    const v = r[i]
+    if (v == null || v === '') continue
+    n++
+    if (typeof v === 'number' || (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v)))) num++
+  }
+  return n > 0 && num / n >= 0.8
 }
 
 /** The frame projected onto the control's columns, in its order. */
@@ -182,7 +199,14 @@ export const TableView: FC<ViewProps> = ({ widget, frames }) => {
   const sort = state?.key === sortKey ? state.sort : table?.sort
 
   const projected = useMemo(() => (frame && table ? projectFrame(frame, table.columns) : frame), [frame, table])
-  const formats = useMemo(() => formatsOf(table), [table])
+  const formats = useMemo(() => {
+    const out = formatsOf(table)
+    // An object column of numbers (a pivot with a row of words) reads as numbers: right-aligned, two decimals (change 5).
+    if (projected) projected.columns.forEach((c, i) => {
+      if (out[c.name] === 'text' && c.type === 'string' && c.name !== projected.columns[0]?.name && mostlyNumeric(projected.rows, i)) out[c.name] = 'price'
+    })
+    return out
+  }, [table, projected])
   const extremes = useMemo(() => {
     if (!projected || !table) return undefined
     // A pivoted compare table (metrics as rows) marks across each row whether or not the control asked (the compare recipe's shape).
@@ -249,12 +273,13 @@ const RowCards: FC<{ frame: Frame; rows: unknown[][]; formats: Record<string, Ce
               {rest.map((c) => {
                 const v = row[columnIndex(frame, c)]
                 const f = formats[c] ?? 'text'
-                const text = formatCell(v, f)
+                const text = f === 'text' && typeof v === 'string' ? displayText(v) : formatCell(v, f)
                 const dir = f === 'change' ? direction(v) : null
                 return (
                   <div key={c} className="flex min-w-0 flex-col">
-                    <span className="truncate text-fg-3" title={labels[c] ?? c}>
-                      {labels[c] ?? c.replace(/_/g, ' ')}
+                    {/* Display names, wrapped at words rather than cut (change 11: "num estimates", "previous report date"). */}
+                    <span className="line-clamp-2 break-words text-fg-3" title={labels[c] ?? columnLabel(c)}>
+                      {labels[c] ?? columnLabel(c)}
                     </span>
                     <span className={clsx('line-clamp-2 break-words', f !== 'text' && 'num', text === EMPTY_CELL ? 'text-fg-3' : dir === 'up' ? 'text-up' : dir === 'down' ? 'text-down' : 'text-fg')} title={typeof v === 'string' ? v : undefined}>
                       {text}

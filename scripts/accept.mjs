@@ -279,9 +279,16 @@ for (const [width, height] of viewports) {
     await page.goto(BASE, { waitUntil: 'networkidle' })
     // The first page load can write its own remembered workspace back after ours (the first case screenshotted the
     // previous session's tab): check what the app settled on and reload until it is the case's workspace.
-    for (let i = 0; i < 3; i++) {
-      const active = await page.evaluate(() => localStorage.getItem('terminal.activeWorkspace'))
-      if (active === c.workspaceId) break
+    for (let i = 0; i < 4; i++) {
+      const name = c.stored?.name ?? c.workspaceName
+      // The app can still be restoring when storage already holds our id: wait for the selected tab to name the workspace.
+      const shown = name
+        ? await page
+            .waitForFunction((n) => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent?.includes(n), name, { timeout: 5_000 })
+            .then(() => true)
+            .catch(() => false)
+        : (await page.evaluate(() => localStorage.getItem('terminal.activeWorkspace'))) === c.workspaceId
+      if (shown) break
       await page.evaluate((id) => localStorage.setItem('terminal.activeWorkspace', id), c.workspaceId)
       await page.goto(BASE, { waitUntil: 'networkidle' })
     }

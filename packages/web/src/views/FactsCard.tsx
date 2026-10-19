@@ -81,14 +81,15 @@ export const FactsCard: FC<ViewProps> = ({ widget, frames }) => {
               const long = typeof f.raw === 'string' && f.raw.length > 24
               return (
                 <div key={f.column} data-fact={f.column} className="flex min-w-0 items-baseline justify-between gap-2">
-                  <span className="truncate text-fg-3" title={f.label}>
+                  {/* The label wraps at words and the value never gives way: "Median next-day move 8.20%", not "Median next-day mo… 8.…". */}
+                  <span className="line-clamp-2 min-w-0 break-words text-fg-3" title={f.label}>
                     {f.label}
                   </span>
                   <span
                     data-field="value"
                     title={long ? String(f.raw) : undefined}
                     className={clsx(
-                      'min-w-0 truncate text-right',
+                      long ? 'min-w-0 truncate text-right' : 'shrink-0 text-right whitespace-nowrap',
                       f.format !== 'text' && f.format !== 'link' && 'num',
                       f.text === EMPTY_CELL ? 'text-fg-3' : f.dir === 'up' ? 'text-up' : f.dir === 'down' ? 'text-down' : 'text-fg',
                     )}

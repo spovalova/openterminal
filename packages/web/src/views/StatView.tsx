@@ -265,7 +265,7 @@ export const StatView: FC<ViewProps> = ({ widget, frames }) => {
             <div data-details="" className="grid grid-cols-2 gap-x-5 gap-y-1.5 border-t border-border/60 pt-2.5 text-xs leading-5 @[360px]/widget:grid-cols-3">
               {details.map((d) => (
                 <div key={d.label} className="flex min-w-0 items-baseline justify-between gap-2">
-                  <span className="truncate text-fg-3">{d.label}</span>
+                  <span className="line-clamp-2 min-w-0 break-words text-fg-3">{d.label}</span>
                   <span className="num whitespace-nowrap text-fg-2">{d.text}</span>
                 </div>
               ))}
