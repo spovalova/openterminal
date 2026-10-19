@@ -16,7 +16,7 @@ import {
   type Recipe,
   type ServerMsg,
   type Step,
-} from '@terminal/core'
+} from '@openterminal/core'
 import { saveConnectorConfig } from './config.js'
 import { builtinConnector, connectorNeedsKey, describeConnectors, type ConnectorInfo } from './connectors.js'
 import { Executor, PROVIDER_OVERRIDES_KEY, Poller, errorMessage, type ProviderOverrides } from './executor.js'
@@ -35,7 +35,7 @@ export type AppDeps = {
   now?: () => number
   /** Built web app to serve in production (static files, SPA fallback). Ignored when the directory does not exist. */
   webDist?: string
-  /** The built-in recipes (from `@terminal/core/node`); the data routes list them beside the user's. */
+  /** The built-in recipes (from `@openterminal/core/node`); the data routes list them beside the user's. */
   builtinRecipes?: () => Recipe[]
   /** (a)'s catalog probe, when wired in; `POST /api/catalog/probe` answers 501 without it. */
   probe?: ProbeFn

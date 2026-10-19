@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ConnectorRegistry, WIDGET_CHIP_RE, WidgetV2Schema, type ServerMsg, type WidgetV2 } from '@terminal/core'
+import { ConnectorRegistry, WIDGET_CHIP_RE, WidgetV2Schema, type ServerMsg, type WidgetV2 } from '@openterminal/core'
 import { MemoryRunLog } from '../../runlog.js'
 import { createRunner, AgentAbortError } from '../runner.js'
 import { MAX_TOOL_CALLS } from '../tools.js'

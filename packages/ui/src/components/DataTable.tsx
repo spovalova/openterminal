@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type FC } from 'react'
 import clsx from 'clsx'
-import { enumLabel, fieldLabel, type Column } from '@terminal/core'
+import { enumLabel, fieldLabel, type Column } from '@openterminal/core'
 import { direction, formatCell, inferFormats, isNumericFormat, sortRows, type CellFormat, type SortDir } from '../format.js'
 import { ExternalIcon } from './icons.js'
 

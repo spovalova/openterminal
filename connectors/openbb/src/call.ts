@@ -1,7 +1,7 @@
 // OpenBB `call(route, params, ctx)` (PLAN.md section 17): one GET per route, the `results` list through core's
 // `inferFrame` with the route's descriptor. No unit conversion here: frames carry provider values and the
 // annotations say what they are.
-import { inferFrame, type Ctx, type Descriptor, type Frame, type ValidatedParams } from '@terminal/core'
+import { inferFrame, type Ctx, type Descriptor, type Frame, type ValidatedParams } from '@openterminal/core'
 import { descriptorFor, type LoadOptions } from './descriptors.js'
 import { get, type Config } from './openbb-api.js'
 

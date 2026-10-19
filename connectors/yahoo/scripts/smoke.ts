@@ -1,7 +1,7 @@
 // Live smoke: one frame per yahoo-finance2 route through a core ConnectorRegistry (MU, NVDA, SPY, SMH). Not a test.
 // From connectors/yahoo: pnpm smoke
-import { ConnectorRegistry, MemoryCache, type Frame, type RouteQuery } from '@terminal/core'
-import { builtinAnnotations } from '@terminal/core/node'
+import { ConnectorRegistry, MemoryCache, type Frame, type RouteQuery } from '@openterminal/core'
+import { builtinAnnotations } from '@openterminal/core/node'
 import yahoo from '../src/index.js'
 
 const registry = new ConnectorRegistry({ cache: new MemoryCache(), log: (m) => console.error(m), annotations: builtinAnnotations() })

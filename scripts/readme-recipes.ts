@@ -2,8 +2,8 @@
 // README cannot drift from packages/core/recipes.yml. `pnpm readme:recipes` rewrites it; `--check` exits 1 when the
 // README is stale (packages/core/test/readme-recipes.test.ts runs the same comparison).
 import { readFileSync, writeFileSync } from 'node:fs'
-import { recipesMarkdownTable } from '@terminal/core'
-import { builtinRecipes } from '@terminal/core/node'
+import { recipesMarkdownTable } from '@openterminal/core'
+import { builtinRecipes } from '@openterminal/core/node'
 
 export const START = '<!-- recipes:start -->'
 export const END = '<!-- recipes:end -->'

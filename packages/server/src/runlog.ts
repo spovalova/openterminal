@@ -4,7 +4,7 @@
 import { appendFile, mkdir, readFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { z } from 'zod'
-import { StepSchema, VerificationSchema } from '@terminal/core'
+import { StepSchema, VerificationSchema } from '@openterminal/core'
 
 export const RunLogRowSchema = z.object({
   id: z.string().min(1),

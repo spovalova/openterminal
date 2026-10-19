@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { Catalog, type Descriptor } from '@terminal/core'
+import { Catalog, type Descriptor } from '@openterminal/core'
 import { FileLivenessStore, MemoryLivenessStore, applyLiveness, livenessOf, livenessPath, livenessRow, livenessStoreOver, openLivenessStore, type LivenessRow } from '../src/liveness.js'
 import { WorkspaceStore } from '../src/store/index.js'
 

@@ -1,6 +1,6 @@
 // The store interface (PLAN.md section 17, phase 1 (e)). SQLite implements it (`sqlite.ts`); the JSON store
 // (`json.ts`) keeps the same interface with in-memory extras until the one-time migration has run.
-import type { AnyWidget, Descriptor, Frame, Liveness, Message, Recipe, Step, Workspace } from '@terminal/core'
+import type { AnyWidget, Descriptor, Frame, Liveness, Message, Recipe, Step, Workspace } from '@openterminal/core'
 
 export type WorkspaceInit = { name?: string; widgets?: AnyWidget[]; messages?: Message[] }
 export type WorkspacePatch = { name?: string; widgets?: AnyWidget[]; messages?: Message[] }

@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { HttpError, type Ctx } from '@terminal/core'
+import { HttpError, type Ctx } from '@openterminal/core'
 import { ConfigSchema, resetBreaker, type Config } from '../src/openbb-api.js'
 
 export const BASE = 'http://127.0.0.1:6900/api/v1'

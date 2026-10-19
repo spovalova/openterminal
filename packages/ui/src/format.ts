@@ -1,4 +1,4 @@
-import type { Column } from '@terminal/core'
+import type { Column } from '@openterminal/core'
 
 /**
  * How a cell renders.

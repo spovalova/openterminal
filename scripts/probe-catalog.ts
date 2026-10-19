@@ -14,8 +14,8 @@
 // goes to docs/notes/openbb-probe.md by hand.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { ConnectorRegistry, DescriptorSchema, MemoryCache, descriptorsFromOpenApi, globToRegExp } from '@terminal/core'
-import { builtinAnnotations, builtinRecipes } from '@terminal/core/node'
+import { ConnectorRegistry, DescriptorSchema, MemoryCache, descriptorsFromOpenApi, globToRegExp } from '@openterminal/core'
+import { builtinAnnotations, builtinRecipes } from '@openterminal/core/node'
 import { loadConfig, terminalHome, workspacesDir } from '../packages/server/src/config.js'
 import { builtinConnector } from '../packages/server/src/connectors.js'
 import { applyLiveness, livenessStoreOver } from '../packages/server/src/liveness.js'

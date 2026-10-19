@@ -14,7 +14,7 @@ import {
   type Frame,
   type Preview,
   type WidgetV2,
-} from '@terminal/core'
+} from '@openterminal/core'
 import type { PreviewRecord } from '../verify.js'
 
 export type SeenPreview = PreviewRecord & {

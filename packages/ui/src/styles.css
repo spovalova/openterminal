@@ -1,5 +1,5 @@
 /*
- * @terminal/ui design tokens. Dark only. The web app imports this file once.
+ * @openterminal/ui design tokens. Dark only. The web app imports this file once.
  * The same values live in src/tokens.ts for JS consumers (chart theme, views).
  */
 @import "tailwindcss";

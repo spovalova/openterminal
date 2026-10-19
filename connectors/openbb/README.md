@@ -1,4 +1,4 @@
-# @terminal/connector-openbb
+# @openterminal/connector-openbb
 
 Every GET route of a locally running [OpenBB Platform](https://docs.openbb.co/platform) REST API, as routes in the catalog (PLAN.md section 17). OpenBB is the on-ramp to its providers: yfinance, nasdaq, cboe, sec, finra, federal_reserve, oecd, bls, cftc, deribit, famafrench, tmx, us_treasury and more with no key; FMP, Polygon, Intrinio, Tiingo, FRED, EIA, Benzinga and others with keys you set on the OpenBB side.
 
@@ -53,6 +53,6 @@ pnpm query openbb equity/price/quote symbol=NVDA provider=yfinance
 ## Develop
 
 ```sh
-pnpm --filter @terminal/connector-openbb test     # fixtures only, no network (the generator over a recorded openapi.json, call over recorded results)
-pnpm --filter @terminal/connector-openbb smoke    # against a running openbb-api: one frame per route the recipes name
+pnpm --filter @openterminal/connector-openbb test     # fixtures only, no network (the generator over a recorded openapi.json, call over recorded results)
+pnpm --filter @openterminal/connector-openbb smoke    # against a running openbb-api: one frame per route the recipes name
 ```

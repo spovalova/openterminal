@@ -1,7 +1,7 @@
 // The five yahoo-finance2 endpoints as routes (PLAN.md section 17), answered from the recorded fixtures through
 // inferFrame. No network: the fake client replays the fixtures.
 import { describe, expect, it } from 'vitest'
-import { DescriptorSchema, parseParams, type Descriptor } from '@terminal/core'
+import { DescriptorSchema, parseParams, type Descriptor } from '@openterminal/core'
 import { createYahooConnector } from '../src/index.js'
 import { chartRowsV2, daysBetween, flattenDeep, makeCall, pickExpiration, summaryRows, yahooDescriptors, YAHOO_ROUTES } from '../src/call.js'
 import { fakeClient, objects, testCtx, V12_NOW } from './helpers.js'

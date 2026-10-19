@@ -162,7 +162,7 @@ The whole plugin surface is one function. A connector is a package whose default
 
 ```ts
 import { z } from 'zod'
-import { defineConnector, inferFrame, parseDescriptors } from '@terminal/core'
+import { defineConnector, inferFrame, parseDescriptors } from '@openterminal/core'
 import descriptors from './descriptors.json' with { type: 'json' }
 
 export default defineConnector({

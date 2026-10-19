@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { createHttp, descriptorsFromOpenApi, parseDescriptors, type Ctx, type Descriptor, type OpenApiDoc } from '@terminal/core'
+import { createHttp, descriptorsFromOpenApi, parseDescriptors, type Ctx, type Descriptor, type OpenApiDoc } from '@openterminal/core'
 import { ConfigSchema, DEFAULT_BASE_URL, authHeaders, isConnectionFailure, isDown, markDown, markUp, notRunning, type Config } from './openbb-api.js'
 
 export const CATALOG_FILE = 'openbb.json'

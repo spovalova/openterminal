@@ -1,6 +1,6 @@
 // An AgentRunner that never calls an LLM: two fake steps, then use case A's widget set (PLAN.md section 5) as
 // recipe widgets. Used when no LLM key is configured and in tests.
-import type { AgentRunner, Message, ServerMsg, Step, WidgetV2 } from '@terminal/core'
+import type { AgentRunner, Message, ServerMsg, Step, WidgetV2 } from '@openterminal/core'
 
 export const STUB_SYMBOLS = ['MU', 'SNDK', 'WDC', 'STX'] as const
 export const STUB_WORKSPACE_NAME = 'Memory'

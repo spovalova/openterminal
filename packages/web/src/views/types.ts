@@ -1,4 +1,4 @@
-import type { AnyWidget, Frame } from '@terminal/core'
+import type { AnyWidget, Frame } from '@openterminal/core'
 
 /**
  * Props every view receives: the widget (v1 `{ query, view }` or v2 `{ data, view: { preset } }`) and one frame

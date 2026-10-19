@@ -1,4 +1,4 @@
-import { fieldLabel } from '@terminal/core'
+import { fieldLabel } from '@openterminal/core'
 
 /**
  * Human labels for columns the annotations did not label (a transform's output, a route nobody annotated yet):

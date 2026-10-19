@@ -1,5 +1,5 @@
 // Reply text carries [[widget:<id>]] tokens; the web app renders them as chips.
-import { WIDGET_CHIP_RE } from '@terminal/core'
+import { WIDGET_CHIP_RE } from '@openterminal/core'
 
 export type ReplyPart = { type: 'text'; text: string } | { type: 'chip'; id: string }
 

@@ -6,7 +6,7 @@ import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { DatabaseSync, type StatementSync } from 'node:sqlite'
 import { nanoid } from 'nanoid'
-import { AnyWidgetSchema, FrameSchema, MessageSchema, RecipeSchema, WorkspaceSchema, createWorkspace, type AnyWidget, type Frame, type Message, type Recipe, type Workspace } from '@terminal/core'
+import { AnyWidgetSchema, FrameSchema, MessageSchema, RecipeSchema, WorkspaceSchema, createWorkspace, type AnyWidget, type Frame, type Message, type Recipe, type Workspace } from '@openterminal/core'
 import { z } from 'zod'
 import { ID_RE, type CatalogCacheRow, type LivenessRow, type RunLogRow, type Store, type WorkspaceInit, type WorkspacePatch } from './types.js'
 

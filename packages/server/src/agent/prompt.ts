@@ -13,7 +13,7 @@ import {
   type Recipe,
   type Size,
   type Workspace,
-} from '@terminal/core'
+} from '@openterminal/core'
 
 export type PromptInput = {
   /** The recipes the registry resolves (`registry.recipes()`); listed as the saved queries to reach for first. */

@@ -9,9 +9,9 @@
 // graph has a transform (options, earnings, news, …) start the Pyodide engine, which takes about twenty seconds cold.
 // `pnpm query --help` lists every recipe with its params.
 import { existsSync } from 'node:fs'
-import { ConnectorRegistry, MemoryCache, describeDescriptor, recipeParams, recipeSummaryLines, type AnyQuery, type Recipe } from '@terminal/core'
-import { builtinAnnotations, builtinRecipes } from '@terminal/core/node'
-import yahoo from '@terminal/connector-yahoo'
+import { ConnectorRegistry, MemoryCache, describeDescriptor, recipeParams, recipeSummaryLines, type AnyQuery, type Recipe } from '@openterminal/core'
+import { builtinAnnotations, builtinRecipes } from '@openterminal/core/node'
+import yahoo from '@openterminal/connector-yahoo'
 import { configPath, loadConfig, terminalHome } from '../packages/server/src/config.js'
 import { BUILTIN_CONNECTORS, buildRegistry } from '../packages/server/src/connectors.js'
 import { loadUserRecipes } from '../packages/server/src/routes-data.js'

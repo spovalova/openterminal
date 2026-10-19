@@ -183,7 +183,7 @@ export const App: FC = () => {
   return (
     <div className="mx-auto flex max-w-[1400px] flex-col gap-10 px-4 py-6">
       <header className="flex items-baseline gap-3">
-        <h1 className="text-lg font-medium">@terminal/ui</h1>
+        <h1 className="text-lg font-medium">@openterminal/ui</h1>
         <span className="text-xs text-fg-3">every component, every state, dark only</span>
       </header>
 

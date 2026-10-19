@@ -4,7 +4,7 @@
 // beside the database, and a marker in `settings` stops the migration from running twice.
 import { existsSync, readdirSync, readFileSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
-import { WorkspaceSchema, isLegacyWidget, type Workspace } from '@terminal/core'
+import { WorkspaceSchema, isLegacyWidget, type Workspace } from '@openterminal/core'
 import type { SqliteStore } from './sqlite.js'
 import { ID_RE } from './types.js'
 

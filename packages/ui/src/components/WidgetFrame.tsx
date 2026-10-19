@@ -1,6 +1,6 @@
 import type { FC, PropsWithChildren, ReactNode } from 'react'
 import clsx from 'clsx'
-import type { Size } from '@terminal/core'
+import type { Size } from '@openterminal/core'
 import { IconButton } from './IconButton.js'
 import { Skeleton } from './Skeleton.js'
 import { EmptyState } from './EmptyState.js'

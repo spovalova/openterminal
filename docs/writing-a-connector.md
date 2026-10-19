@@ -6,12 +6,12 @@ Contents: [the contract](#the-contract) · [descriptors](#descriptors) · [call 
 
 ## The contract
 
-One helper, `defineConnector`, imported from `@terminal/core`:
+One helper, `defineConnector`, imported from `@openterminal/core`:
 
 ```ts
 // connectors/shape/src/index.ts
 import { z } from 'zod'
-import { defineConnector, inferFrame, parseDescriptors } from '@terminal/core'
+import { defineConnector, inferFrame, parseDescriptors } from '@openterminal/core'
 import descriptors from './descriptors.json' with { type: 'json' }
 
 export default defineConnector({
@@ -187,7 +187,7 @@ The connector:
 // connectors/example/src/index.ts
 import { readFileSync } from 'node:fs'
 import { z } from 'zod'
-import { defineConnector, inferFrame, parseDescriptors, type Descriptor } from '@terminal/core'
+import { defineConnector, inferFrame, parseDescriptors, type Descriptor } from '@openterminal/core'
 
 const BASE = 'https://api.example-quotes.dev/v1'
 let memo: Descriptor[] | undefined
@@ -290,8 +290,8 @@ Tests never hit the network. Record a real response once into `test/fixtures/`, 
 ```ts
 // connectors/example/test/quote.test.ts
 import { describe, expect, it } from 'vitest'
-import { ConnectorRegistry, frameToObjects, type Http } from '@terminal/core'
-import { builtinAnnotations } from '@terminal/core/node'
+import { ConnectorRegistry, frameToObjects, type Http } from '@openterminal/core'
+import { builtinAnnotations } from '@openterminal/core/node'
 import example from '../src/index.js'
 import quoteMU from './fixtures/quote-MU.json'
 
@@ -326,11 +326,11 @@ describe('example quote', () => {
 })
 ```
 
-`pnpm test` at the repo root runs every `connectors/*/test/**/*.test.ts` through Vitest. To record fixtures, write a one-off script under `scripts/` that calls the live API with a real key and writes the JSON body; keep fixtures small and strip anything personal. Never commit a key. `pnpm --filter @terminal/connector-<name> smoke` is the convention for a live run.
+`pnpm test` at the repo root runs every `connectors/*/test/**/*.test.ts` through Vitest. To record fixtures, write a one-off script under `scripts/` that calls the live API with a real key and writes the JSON body; keep fixtures small and strip anything personal. Never commit a key. `pnpm --filter @openterminal/connector-<name> smoke` is the convention for a live run.
 
 ## Package layout and registration
 
-Connector packages live under `connectors/<name>` and are named `@terminal/connector-<name>`. The default export of `src/index.ts` is the connector.
+Connector packages live under `connectors/<name>` and are named `@openterminal/connector-<name>`. The default export of `src/index.ts` is the connector.
 
 ```
 connectors/example/
@@ -345,7 +345,7 @@ connectors/example/
 
 ```json
 {
-  "name": "@terminal/connector-example",
+  "name": "@openterminal/connector-example",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -353,12 +353,12 @@ connectors/example/
   "types": "./src/index.ts",
   "exports": { ".": "./src/index.ts" },
   "scripts": { "typecheck": "tsc -p tsconfig.json", "test": "vitest run" },
-  "dependencies": { "@terminal/core": "workspace:*", "zod": "^4.6.7" },
+  "dependencies": { "@openterminal/core": "workspace:*", "zod": "^4.6.7" },
   "devDependencies": { "@types/node": "^22.0.0", "typescript": "~5.9.0", "vitest": "^5.0.5" }
 }
 ```
 
-The server does not discover connectors; it holds a built-in map from config name to module in `packages/server/src/connectors.ts`. To make `example` loadable from `config.yml`, add it there and add `"@terminal/connector-example": "workspace:*"` to `packages/server/package.json`. Discovery through a plugin loader is planned for later; `defineConnector` is the stable contract.
+The server does not discover connectors; it holds a built-in map from config name to module in `packages/server/src/connectors.ts`. To make `example` loadable from `config.yml`, add it there and add `"@openterminal/connector-example": "workspace:*"` to `packages/server/package.json`. Discovery through a plugin loader is planned for later; `defineConnector` is the stable contract.
 
 Checklist before opening a pull request:
 

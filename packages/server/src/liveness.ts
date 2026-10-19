@@ -6,7 +6,7 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { z } from 'zod'
-import { descriptorKey, LivenessSchema, type Catalog, type DescriptorRef, type Liveness } from '@terminal/core'
+import { descriptorKey, LivenessSchema, type Catalog, type DescriptorRef, type Liveness } from '@openterminal/core'
 import { terminalHome } from './config.js'
 
 export const LivenessRowSchema = LivenessSchema.extend({ connector: z.string().min(1), route: z.string().min(1) })

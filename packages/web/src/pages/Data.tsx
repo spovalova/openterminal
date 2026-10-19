@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FC } from 'react'
 import clsx from 'clsx'
-import { Button, Dialog, IconButton, Spinner } from '@terminal/ui'
-import { recipeParams, type CatalogHit, type Descriptor, type Recipe, type RegisteredConnector, type Workspace } from '@terminal/core'
+import { Button, Dialog, IconButton, Spinner } from '@openterminal/ui'
+import { recipeParams, type CatalogHit, type Descriptor, type Recipe, type RegisteredConnector, type Workspace } from '@openterminal/core'
 import { api, type CatalogStats, type ConnectorCatalog, type StoreInfo } from '../api'
 import { parseRecipeText, recipeFromWidget } from './recipe-promote'
 

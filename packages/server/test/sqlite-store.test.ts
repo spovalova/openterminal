@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { isWidgetV2, type Frame, type Recipe } from '@terminal/core'
+import { isWidgetV2, type Frame, type Recipe } from '@openterminal/core'
 import { SqliteStore, migrateJsonStore, migrateWorkspaceDoc, openStore, MIGRATION_KEY } from '../src/store/index.js'
 import { stubWidgets } from '../src/stub-agent.js'
 

@@ -9,7 +9,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@terminal/server": "workspace:*",
+    "@openterminal/server": "workspace:*",
     "open": "^11.0.4",
     "tsx": "^4.23.15"
   },

@@ -23,7 +23,7 @@ import {
   type Recipe,
   type Registry,
   type ConnectorRegistry,
-} from '@terminal/core'
+} from '@openterminal/core'
 import { PROVIDER_OVERRIDES_KEY, errorMessage, withProviderOverrides, type ProviderOverrides } from './executor.js'
 import type { LivenessRow, Store } from './store/index.js'
 

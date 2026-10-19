@@ -1,6 +1,6 @@
 /**
  * Local formatting helpers for the series legend.
- * Cell formatting in tables belongs to DataTable (@terminal/ui); only price and percent live here.
+ * Cell formatting in tables belongs to DataTable (@openterminal/ui); only price and percent live here.
  */
 
 const price2 = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })

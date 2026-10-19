@@ -1,6 +1,6 @@
 // Live smoke test: `FINNHUB_API_KEY=... pnpm smoke`. Hits the real API and prints one frame per route.
-import { ConnectorRegistry, type RouteQuery } from '@terminal/core'
-import { builtinAnnotations } from '@terminal/core/node'
+import { ConnectorRegistry, type RouteQuery } from '@openterminal/core'
+import { builtinAnnotations } from '@openterminal/core/node'
 import finnhub from '../src/index.js'
 
 const apiKey = process.env.FINNHUB_API_KEY

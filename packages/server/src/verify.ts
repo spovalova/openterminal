@@ -4,7 +4,7 @@
 // preview value within half a unit of its last digit; a percent matches a percent column directly or a fraction
 // column times 100; signs are ignored because the prose carries the direction ("down 11.9%" against -11.91).
 // Dates, times, years, widget chip ids and small bare counts ("7 reports", "30-day") are not figures and are skipped.
-import type { FieldConfig, Preview, Verification } from '@terminal/core'
+import type { FieldConfig, Preview, Verification } from '@openterminal/core'
 
 /** One preview the agent received this run, with the field config of its columns when the frame carried one. */
 export type PreviewRecord = {

@@ -1,5 +1,5 @@
-// CLI entry: parse flags, start @terminal/server, open the browser.
-import { startServer, DEFAULT_PORT } from '@terminal/server'
+// CLI entry: parse flags, start @openterminal/server, open the browser.
+import { startServer, DEFAULT_PORT } from '@openterminal/server'
 
 export type CliOptions = { port: number; open: boolean; help: boolean }
 

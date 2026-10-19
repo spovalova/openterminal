@@ -2,7 +2,7 @@
 // as routes, answered through core's `inferFrame`. No unit conversion here: frames carry Yahoo's values
 // (fractions where Yahoo sends fractions) and the annotations say what they are.
 import { readFileSync } from 'node:fs'
-import { inferFrame, parseDescriptors, type CallHandler, type Descriptor, type Frame, type ValidatedParams } from '@terminal/core'
+import { inferFrame, parseDescriptors, type CallHandler, type Descriptor, type Frame, type ValidatedParams } from '@openterminal/core'
 import type { ChartOptions, ChartResultArray, OptionsResult, QuoteSummaryModules, QuoteSummaryResult, YahooClient } from './client.js'
 import { fanOut, normalizeSymbols } from './fanout.js'
 import { nyDate, utcDate } from './time.js'

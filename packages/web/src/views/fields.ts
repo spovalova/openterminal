@@ -4,7 +4,7 @@
  * runner stamped from the annotations (and a recipe's or transform's own `columns`), and the overrides are the
  * widget's `fields`. Every view reads its spec through `expandPreset` / `controlFor` over this.
  */
-import { DEFAULT_DATASET, controlFor, detectShape, expandPreset, mergeFieldConfig, type AnyWidget, type Control, type DatasetFields, type DatasetsFieldConfig, type Frame, type Pane, type ViewV2 } from '@terminal/core'
+import { DEFAULT_DATASET, controlFor, detectShape, expandPreset, mergeFieldConfig, type AnyWidget, type Control, type DatasetFields, type DatasetsFieldConfig, type Frame, type Pane, type ViewV2 } from '@openterminal/core'
 
 /** The widget's view: a preset with options. */
 export function viewOf(widget: AnyWidget): ViewV2 {

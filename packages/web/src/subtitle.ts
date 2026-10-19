@@ -4,8 +4,8 @@
  * rebased", "NVDA · Oct 23, 2026 · 4 DTE · underlying 213.75". A route or a transform describes itself by its path
  * or its inputs. Never typed by the agent or the user.
  */
-import { DEFAULT_DATASET, columnIndex, describeQuery, enumLabel, fieldLabel, type AnyQuery, type AnyWidget, type Frame, type ViewV2 } from '@terminal/core'
-import { formatCell } from '@terminal/ui'
+import { DEFAULT_DATASET, columnIndex, describeQuery, enumLabel, fieldLabel, type AnyQuery, type AnyWidget, type Frame, type ViewV2 } from '@openterminal/core'
+import { formatCell } from '@openterminal/ui'
 
 /** Short labels for the macro series, shared with the series legend. */
 export const MACRO_LABELS: Record<string, string> = {

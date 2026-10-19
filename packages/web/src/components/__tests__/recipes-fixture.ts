@@ -1,5 +1,5 @@
 // A few built-in recipes in the shape `GET /api/recipes` returns, for jsdom tests (the YAML loader is Node-only).
-import type { Recipe } from '@terminal/core'
+import type { Recipe } from '@openterminal/core'
 
 const symbols = { type: 'array', items: { type: 'string' }, minItems: 1, description: 'Ticker symbols' } as const
 

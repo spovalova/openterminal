@@ -4,7 +4,7 @@
  * with the same id must never render under this one. A frame message without a `workspaceId` lands under the
  * bare key and is read as a fallback.
  */
-import { DEFAULT_DATASET, frameKey, widgetQueries, type AnyWidget, type Frame, type FrameRef } from '@terminal/core'
+import { DEFAULT_DATASET, frameKey, widgetQueries, type AnyWidget, type Frame, type FrameRef } from '@openterminal/core'
 
 export type FrameStore = Record<string, Frame>
 export type FrameErrors = Record<string, string>

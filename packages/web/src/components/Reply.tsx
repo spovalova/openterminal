@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import Markdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Chip } from '@terminal/ui'
-import { WIDGET_CHIP_RE, type AnyWidget } from '@terminal/core'
+import { Chip } from '@openterminal/ui'
+import { WIDGET_CHIP_RE, type AnyWidget } from '@openterminal/core'
 import { highlightWidget } from '../chips'
 
 /** Link target that marks a chip; never a real URL, so the default URL sanitiser lets it through. */

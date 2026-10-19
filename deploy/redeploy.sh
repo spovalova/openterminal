@@ -4,6 +4,6 @@
 set -eu
 cd "$(dirname "$0")/.."
 pnpm install --frozen-lockfile
-pnpm --filter @terminal/web build
+pnpm --filter @openterminal/web build
 systemctl --user restart terminal.service
 systemctl --user --no-pager --lines=5 status terminal.service

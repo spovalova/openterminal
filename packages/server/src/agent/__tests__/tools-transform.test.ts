@@ -1,7 +1,7 @@
 // The transform tool body over a fake registry: validation, the preview with lineage and fields, the traceback path,
 // the budget hook and the step summaries. The engine itself is tested in packages/server/test/transform.test.ts.
 import { describe, expect, it } from 'vitest'
-import { TransformFailed, type Frame, type Registry, type Step } from '@terminal/core'
+import { TransformFailed, type Frame, type Registry, type Step } from '@openterminal/core'
 import { createTransformTool, runTransformTool, transformSummary, TransformToolInput, TRANSFORM_TOOL_DESCRIPTION, type TransformToolInputT } from '../tools-transform.js'
 
 const frame: Frame = {

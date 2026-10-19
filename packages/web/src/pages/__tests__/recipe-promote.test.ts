@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { parseAnyWidget, type AnyWidget } from '@terminal/core'
-import { builtinRecipes } from '@terminal/core/node'
+import { parseAnyWidget, type AnyWidget } from '@openterminal/core'
+import { builtinRecipes } from '@openterminal/core/node'
 import { parseRecipeText, recipeFromWidget, recipeNameFrom } from '../recipe-promote'
 
 const builtin = builtinRecipes()

@@ -1,4 +1,4 @@
-# @terminal/connector-finnhub
+# @openterminal/connector-finnhub
 
 Three [Finnhub](https://finnhub.io) REST paths as routes, answered through core's `inferFrame`: `quote`, `company-news`, `calendar/earnings`. It is the reference connector for a REST API described by a descriptor file: `src/descriptors.json` says what the routes take and return, `src/call.ts` is the three calls, `src/finnhub-api.ts` is the HTTP plumbing (URL building, rate limiting, one retry on 429).
 

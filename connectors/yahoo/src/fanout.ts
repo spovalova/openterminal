@@ -1,4 +1,4 @@
-import type { Ctx } from '@terminal/core'
+import type { Ctx } from '@openterminal/core'
 
 export function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err)

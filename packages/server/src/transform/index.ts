@@ -25,7 +25,7 @@ import {
   type TransformEngine,
   type TransformOutput,
   type TransformRunOptions,
-} from '@terminal/core'
+} from '@openterminal/core'
 import type { ColumnarFrame, RunRequest, RuntimeResult, WorkerData, WorkerMessage } from './protocol.js'
 
 export type { ColumnarFrame } from './protocol.js'

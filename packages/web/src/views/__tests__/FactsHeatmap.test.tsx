@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { WIDE_COLUMNS, WIDE_VALUE, type Frame, type WidgetV2 } from '@terminal/core'
+import { WIDE_COLUMNS, WIDE_VALUE, type Frame, type WidgetV2 } from '@openterminal/core'
 
 import { FactsCard, factsControlOf, factsOf, heroFact } from '../FactsCard'
 import { HeatmapView, buildHeatmap, cellColor, cellText } from '../HeatmapView'

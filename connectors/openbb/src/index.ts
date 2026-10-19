@@ -1,7 +1,7 @@
 // OpenBB Platform connector: every GET route of a local `openbb-api` (PLAN.md section 17), described by its own
 // OpenAPI document and answered through core's `inferFrame`. Keyless by default (yfinance, nasdaq, sec, finra, cboe,
 // federal_reserve, oecd, …); keyed providers are configured on the OpenBB side. See README.md.
-import { defineConnector } from '@terminal/core'
+import { defineConnector } from '@openterminal/core'
 import { callRoute } from './call.js'
 import { descriptorsFor } from './descriptors.js'
 import { ConfigSchema, probeProviders, type Config } from './openbb-api.js'

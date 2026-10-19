@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createWorkspace, frameKey, type Frame, type ServerMsg, type WidgetV2 } from '@terminal/core'
+import { createWorkspace, frameKey, type Frame, type ServerMsg, type WidgetV2 } from '@openterminal/core'
 
 const quoteFrame = (rows: unknown[][] = []): Frame => ({ columns: [{ name: 'symbol', type: 'string' }, { name: 'price', type: 'number' }], rows, meta: { connector: 'yahoo', fetchedAt: 0, ttl: 10_000 } })
 const barsFrame = (): Frame => ({ columns: [{ name: 'symbol', type: 'string' }, { name: 'time', type: 'time' }, { name: 'close', type: 'number' }], rows: [], meta: { connector: 'yahoo', fetchedAt: 0, ttl: 600_000 } })

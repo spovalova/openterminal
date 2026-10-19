@@ -1,5 +1,5 @@
-import type { Frame } from '@terminal/core'
-import { columnIndex, fieldLabel, preview } from '@terminal/core'
+import type { Frame } from '@openterminal/core'
+import { columnIndex, fieldLabel, preview } from '@openterminal/core'
 import type { BusinessDay, CandlestickData, HistogramData, LineData, Time, UTCTimestamp } from 'lightweight-charts'
 // Short labels for the macro series, shared with the widget sub-header; a symbol is its own label.
 import { MACRO_LABELS } from '../subtitle'

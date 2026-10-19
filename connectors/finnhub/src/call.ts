@@ -2,7 +2,7 @@
 // name, answered through core's `inferFrame`. Finnhub stamps seconds; the frame convention is epoch ms, so the
 // two time fields are scaled here and nothing else is touched. The kind handlers in index.ts are untouched.
 import { readFileSync } from 'node:fs'
-import { inferFrame, parseDescriptors, type CallHandler, type Descriptor, type Frame, type ValidatedParams } from '@terminal/core'
+import { inferFrame, parseDescriptors, type CallHandler, type Descriptor, type Frame, type ValidatedParams } from '@openterminal/core'
 import { get, type Config, type FinnhubEarningsCalendar, type FinnhubNewsItem, type FinnhubQuote } from './finnhub-api.js'
 
 type Row = Record<string, unknown>

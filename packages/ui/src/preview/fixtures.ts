@@ -1,4 +1,4 @@
-import type { Column, Step } from '@terminal/core'
+import type { Column, Step } from '@openterminal/core'
 
 export const quoteColumns: Column[] = [
   { name: 'symbol', type: 'string' },

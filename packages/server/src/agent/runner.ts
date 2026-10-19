@@ -1,6 +1,6 @@
 import { streamText, stepCountIs, type LanguageModel, type ModelMessage, type TextStreamPart } from 'ai'
 import { nanoid } from 'nanoid'
-import { TOOL_NAMES, type AgentRunner, type Catalog, type Message, type Registry, type ServerMsg, type Step, type Verification, type WidgetV2 } from '@terminal/core'
+import { TOOL_NAMES, type AgentRunner, type Catalog, type Message, type Registry, type ServerMsg, type Step, type Verification, type WidgetV2 } from '@openterminal/core'
 import { runCost, type ModelPricing, type RunLog, type RunLogRow } from '../runlog.js'
 import { plainProse } from '../plain.js'
 import { verificationOf, verifyReply } from '../verify.js'

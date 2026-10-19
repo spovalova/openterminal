@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { Frame } from '@terminal/core'
+import type { Frame } from '@openterminal/core'
 
-vi.mock('@terminal/ui', async () => {
+vi.mock('@openterminal/ui', async () => {
   const { makeUiMock } = await import('./mocks')
   return makeUiMock()
 })

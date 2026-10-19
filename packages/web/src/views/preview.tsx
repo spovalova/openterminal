@@ -1,6 +1,6 @@
 import type { FC } from 'react'
 import clsx from 'clsx'
-import { WidgetFrame, sizeClass } from '@terminal/ui'
+import { WidgetFrame, sizeClass } from '@openterminal/ui'
 import { subtitleForWidget } from '../subtitle'
 import { FETCHED_AT, FIXTURES, type Fixture } from './fixtures'
 import { viewFor } from './view-for'

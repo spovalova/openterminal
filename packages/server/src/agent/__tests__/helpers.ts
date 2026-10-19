@@ -1,7 +1,7 @@
 // Test helpers for the agent loop: a routes connector with canned frames (and the recipes that route to it) and a
 // scripted mock model. No network, no real LLM.
 import { MockLanguageModelV4, convertArrayToReadableStream } from 'ai/test'
-import { ConnectorRegistry, createWorkspace, type ServerMsg, type Workspace } from '@terminal/core'
+import { ConnectorRegistry, createWorkspace, type ServerMsg, type Workspace } from '@openterminal/core'
 import { FAKE_ROUTES, recipesForRoutes, routesConnector, type Call, type FakeRoute, type Row } from '../../../test/fake-connector.js'
 
 // Spec types, derived from the mock so this file needs no direct dependency on @ai-sdk/provider.

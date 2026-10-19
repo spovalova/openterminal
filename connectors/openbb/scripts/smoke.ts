@@ -1,8 +1,8 @@
 // Live smoke test against a running `openbb-api`: `pnpm smoke` (OPENBB_URL overrides the base URL). Prints one frame
 // per route the built-in recipes name, with row counts and timings. `pnpm smoke equity/price/quote` runs only that
 // route. Not a test: `pnpm test` replays fixtures.
-import { ConnectorRegistry, type RouteQuery } from '@terminal/core'
-import { builtinAnnotations } from '@terminal/core/node'
+import { ConnectorRegistry, type RouteQuery } from '@openterminal/core'
+import { builtinAnnotations } from '@openterminal/core/node'
 import openbb from '../src/index.js'
 
 const baseUrl = process.env.OPENBB_URL ?? 'http://127.0.0.1:6900'

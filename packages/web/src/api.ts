@@ -10,7 +10,7 @@ import {
   type Recipe,
   type RegisteredConnector,
   type Workspace,
-} from '@terminal/core'
+} from '@openterminal/core'
 
 export class ApiError extends Error {
   constructor(
