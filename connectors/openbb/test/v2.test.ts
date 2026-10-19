@@ -8,7 +8,7 @@ import { frameToObjects, parseParams, type Descriptor, type OpenApiDoc } from '@
 import openbb from '../src/index.js'
 import { applicableParams, callRoute, defaultProvider, fillSymbol, singleSymbol, toQuery, withProvider } from '../src/call.js'
 import { defaultCatalogPath, descriptorsFor, fingerprintOpenApi, loadDescriptors, readCatalogCache, resetDescriptors } from '../src/descriptors.js'
-import { BREAKER_MS, buildUrl, isDown, resetBreaker } from '../src/openbb-api.js'
+import { BREAKER_MS, buildUrl, describeHttpError, get, isDown, resetBreaker } from '../src/openbb-api.js'
 import { BASE, NOW, connectionRefused, fakeCtx, fixture, status } from './helpers.js'
 
 const OPENAPI_URL = 'http://127.0.0.1:6900/openapi.json'
@@ -111,10 +111,8 @@ describe('descriptors()', () => {
     expect(defaultCatalogPath()).toBe(catalogPath)
     resetDescriptors()
     const all = await openbb.descriptors(fakeCtx({ [OPENAPI_URL]: openapi() }).ctx)
-    expect(all).toHaveLength(38 + 22)
-    expect(all.filter((d) => d.route === 'quote')).toHaveLength(1)
+    expect(all).toHaveLength(38)
     expect(all.find((d) => d.route === 'equity/price/quote')!.providers).toEqual(['cboe', 'nasdaq', 'tmx', 'yfinance'])
-    expect(openbb.mode).toBe('both')
   })
 })
 
@@ -238,16 +236,75 @@ describe('call()', () => {
     await expect(callRoute('equity/price/quote', { symbol: ['MU'] }, down.ctx, { catalogPath })).rejects.toThrow(/not running/)
     expect(down.calls.filter((c) => c.includes('/equity/price/quote'))).toHaveLength(1)
   })
-  it('the connector routes a v2 route to call() and a kind name to the v1 handler', async () => {
+  it('the connector routes every call to callRoute, and a provider named in config.yml for the route is the default', async () => {
     process.env.TERMINAL_HOME = home
     const { ctx } = fakeCtx({
       [OPENAPI_URL]: openapi(),
       [url('/equity/price/quote', { symbol: 'MU,SNDK', provider: 'yfinance' })]: fixture('quote-MU-SNDK'),
     })
-    const v2 = await openbb.call('equity/price/quote', { symbol: ['MU', 'SNDK'], provider: 'yfinance' }, ctx)
-    expect(v2.columns.map((c) => c.name)).toContain('last_price')
-    const v1 = await openbb.call('quote', { symbols: ['MU', 'SNDK'] }, ctx)
-    expect(v1.columns.map((c) => c.name)).toEqual(['symbol', 'price', 'change_pct', 'volume', 'market_state', 'extended_price', 'extended_change_pct'])
-    expect(frameToObjects(v1).find((r) => r.symbol === 'MU')).toMatchObject({ price: 878.84, change_pct: -5.6269 })
+    const frame = await openbb.call('equity/price/quote', { symbol: ['MU', 'SNDK'], provider: 'yfinance' }, ctx)
+    expect(frame.columns.map((c) => c.name)).toContain('last_price')
+    expect(frameToObjects(frame).find((r) => r.symbol === 'MU')).toMatchObject({ last_price: 878.84 })
+    const configured = fakeCtx({ [OPENAPI_URL]: openapi(), [url('/equity/price/quote', { provider: 'cboe', symbol: 'MU' })]: fixture('quote-MU-SNDK') }, { providers: { 'equity/price/quote': 'cboe' } })
+    await openbb.call('equity/price/quote', { symbol: ['MU'] }, configured.ctx)
+    expect(configured.calls.some((c) => c.includes('provider=cboe'))).toBe(true)
+    // a configured provider the route does not list is ignored in favour of the keyless default
+    const ignored = fakeCtx({ [OPENAPI_URL]: openapi(), [url('/equity/price/quote', { provider: 'yfinance', symbol: 'MU' })]: fixture('quote-MU-SNDK') }, { providers: { 'equity/price/quote': 'nope' } })
+    await openbb.call('equity/price/quote', { symbol: ['MU'] }, ignored.ctx)
+    expect(ignored.calls.some((c) => c.includes('provider=yfinance'))).toBe(true)
+  })
+})
+
+describe('definition', () => {
+  it('needs no key, defaults to the local API, and takes a provider per route', () => {
+    const parsed = openbb.config.parse({})
+    expect(parsed.baseUrl).toBe('http://127.0.0.1:6900')
+    expect(parsed.providers).toEqual({})
+    expect(openbb.config.parse({ providers: { 'equity/price/quote': 'fmp' } }).providers).toEqual({ 'equity/price/quote': 'fmp' })
+    expect(openbb.config.safeParse({ baseUrl: 'not a url' }).success).toBe(false)
+    expect(openbb.config.safeParse({ providers: { x: '' } }).success).toBe(false)
+  })
+})
+
+describe('get', () => {
+  it('unwraps the envelope, treats 204 as empty, and explains FastAPI errors', async () => {
+    const { ctx, inits } = fakeCtx({
+      [`${BASE}/a?provider=x`]: { results: [{ k: 1 }], provider: 'x' },
+      [`${BASE}/b?provider=x`]: '',
+      [`${BASE}/c?provider=x`]: status(422, JSON.stringify({ detail: [{ msg: "Input should be 'cboe' or 'yfinance'", loc: ['query', 'provider'] }] }), `${BASE}/c`),
+    })
+    expect(await get(ctx, '/a', { provider: 'x' })).toEqual([{ k: 1 }])
+    expect(await get(ctx, '/b', { provider: 'x' })).toEqual([])
+    await expect(get(ctx, '/c', { provider: 'x' })).rejects.toThrow("OpenBB 422 on /c: Input should be 'cboe' or 'yfinance'")
+    expect(inits[0]?.signal).toBeInstanceOf(AbortSignal)
+  })
+  it('sends basic auth when configured', async () => {
+    const { ctx, inits } = fakeCtx({ [`${BASE}/a`]: { results: [] } }, { username: 'u', password: 'p' })
+    await get(ctx, '/a', {})
+    expect((inits[0]?.headers as Record<string, string>).Authorization).toBe(`Basic ${Buffer.from('u:p').toString('base64')}`)
+  })
+  it('trips the breaker on a connection failure so later calls fail fast, then retries after the window', async () => {
+    const { ctx, calls, logs } = fakeCtx({ [`${BASE}/a`]: connectionRefused() })
+    await expect(get(ctx, '/a', {})).rejects.toThrow('OpenBB API not running at http://127.0.0.1:6900')
+    expect(isDown()).toBe(true)
+    await expect(get(ctx, '/a', {})).rejects.toThrow(/pip install/)
+    expect(calls).toHaveLength(1)
+    expect(logs[0]).toMatch(/skipping it for 30s/)
+    vi.setSystemTime(NOW + BREAKER_MS + 1)
+    await expect(get(ctx, '/a', {})).rejects.toThrow(/not running/)
+    expect(calls).toHaveLength(2)
+  })
+  it('keeps a readable message for a plain string detail and builds URLs under /api/v1 without empty params', () => {
+    expect(describeHttpError(status(500, JSON.stringify({ detail: 'boom' }), `${BASE}/equity/price/quote?x=1`))).toBe('OpenBB 500 on /equity/price/quote: boom')
+    expect(buildUrl('http://h:1/', '/equity/search', { query: 'micron', provider: 'nasdaq', limit: undefined })).toBe('http://h:1/api/v1/equity/search?query=micron&provider=nasdaq')
+  })
+})
+
+describe('health', () => {
+  it('lists providers when the API answers and tells the user how to start it when it does not', async () => {
+    const up = fakeCtx({ [`${BASE}/coverage/providers`]: fixture('providers') })
+    expect(await openbb.health!(up.ctx)).toBe('OpenBB API at http://127.0.0.1:6900 · 3 providers (yfinance, nasdaq, cboe)')
+    const down = fakeCtx({ [`${BASE}/coverage/providers`]: connectionRefused() })
+    await expect(openbb.health!(down.ctx)).rejects.toThrow(/not running at http:\/\/127\.0\.0\.1:6900\. Install and start it:\npip install "openbb\[routers\]" openbb-yfinance\nopenbb-api/)
   })
 })

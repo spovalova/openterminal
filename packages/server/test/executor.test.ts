@@ -1,39 +1,40 @@
 import { describe, expect, it } from 'vitest'
-import { ConnectorRegistry, MemoryCache, migrateWidget, type AnyWidget, type ServerMsg, type Widget } from '@terminal/core'
-import { builtinRecipes } from '@terminal/core/node'
+import { ConnectorRegistry, MemoryCache, type ServerMsg, type WidgetV2 } from '@terminal/core'
 import { Executor, nextExpiry, withProviderOverrides } from '../src/executor.js'
-import { fakeConnector } from './fake-connector.js'
+import { fakeConnector, fakeRecipes, type Call } from './fake-connector.js'
 
 function setup() {
-  const calls: { kind: string; params: unknown }[] = []
-  const registry = new ConnectorRegistry({ cache: new MemoryCache(), recipes: builtinRecipes() })
+  const calls: Call[] = []
+  const registry = new ConnectorRegistry({ cache: new MemoryCache(), recipes: fakeRecipes() })
   registry.register(fakeConnector({ calls }), {})
   const sent: ServerMsg[] = []
   const executor = new Executor(registry, { log: () => {} })
   return { registry, executor, sent, emit: (m: ServerMsg) => sent.push(m), calls }
 }
 
-const v1: Widget = { id: 'q', title: 'Quote', size: 'sm', query: { kind: 'quote', params: { symbols: ['MU', 'STX'] } }, view: { type: 'table' } }
+const quote: WidgetV2 = { id: 'q', title: 'Quote', size: 'sm', data: { main: { recipe: 'quote', params: { symbols: ['MU', 'STX'] } } }, view: { preset: 'table' } }
 
-describe('Executor over v1 and v2 widgets', () => {
-  it('a v1 widget emits one frame without a dataset field', async () => {
-    const { executor, emit, sent } = setup()
-    const frames = await executor.run(v1, emit, { workspaceId: 'ws1' })
+describe('Executor', () => {
+  it('a one-dataset widget emits one frame without a dataset field', async () => {
+    const { executor, emit, sent, calls } = setup()
+    const frames = await executor.run(quote, emit, { workspaceId: 'ws1' })
     expect(Object.keys(frames!)).toEqual(['main'])
     expect(sent).toHaveLength(1)
     expect(sent[0]).toMatchObject({ t: 'frame', widgetId: 'q', workspaceId: 'ws1' })
     expect(sent[0]).not.toHaveProperty('dataset')
+    expect(calls.map((c) => c.route)).toEqual(['quote'])
+    expect((await executor.frameFor(quote)).rows).toHaveLength(2)
   })
 
-  it('a v2 widget emits one frame per dataset and a frameError for the one that fails', async () => {
+  it('a data graph emits one frame per dataset and a frameError for the one that fails', async () => {
     const { executor, emit, sent } = setup()
-    const w: AnyWidget = {
+    const w: WidgetV2 = {
       id: 'g',
       title: 'Graph',
       size: 'md',
       data: {
         main: { connector: 'fake', route: 'quote', params: { symbols: ['MU'] } },
-        bars: { kind: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '3mo' } },
+        bars: { recipe: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '3mo' } },
         broken: { connector: 'fake', route: 'nope', params: {} },
       },
       view: { preset: 'table' },
@@ -50,14 +51,13 @@ describe('Executor over v1 and v2 widgets', () => {
     await expect(executor.frameFor(w, { dataset: 'x' })).rejects.toThrow(/no dataset "x"/)
   })
 
-  it('a migrated widget whose recipe route is not served yet falls back to its v1 query for main', async () => {
-    const { executor, emit, sent, calls } = setup()
-    const migrated = migrateWidget(v1) // main: { recipe: 'quote' } → openbb/yahoo/finnhub routes, none registered here
-    const frames = await executor.run(migrated, emit, { workspaceId: 'ws1' })
-    expect(Object.keys(frames!)).toEqual(['main'])
-    expect(sent.map((m) => m.t)).toEqual(['frame'])
-    expect(calls.map((c) => c.kind)).toEqual(['quote'])
-    expect((await executor.frameFor(migrated)).rows).toHaveLength(2)
+  it('a recipe nobody serves is a frameError, not a silent fallback', async () => {
+    const { executor, emit, sent } = setup()
+    const w: WidgetV2 = { ...quote, data: { main: { recipe: 'holdings', params: { symbol: 'SMH' } } } }
+    const frames = await executor.run(w, emit, { workspaceId: 'ws1' })
+    expect(frames).toBeUndefined()
+    expect(sent.map((m) => m.t)).toEqual(['frameError'])
+    expect((sent[0] as { error: string }).error).toMatch(/unknown recipe "holdings"/)
   })
 
   it('nextExpiry is the soonest frame expiry; provider overrides fill in missing providers only', () => {
@@ -70,7 +70,7 @@ describe('Executor over v1 and v2 widgets', () => {
     expect(params(withProviderOverrides({ connector: 'openbb', route: 'news/company', params: {} }, overrides))).toEqual({})
     const t = withProviderOverrides({ inputs: { q: { connector: 'openbb', route: 'equity/price/quote', params: {} } }, code: 'result = q' }, overrides)
     expect('inputs' in t && (t.inputs.q as { params: Record<string, unknown> }).params.provider).toBe('fmp')
-    const kind = { kind: 'quote' as const, params: { symbols: ['MU'] } }
-    expect(withProviderOverrides(kind, overrides)).toBe(kind)
+    const recipe = { recipe: 'quote', params: { symbols: ['MU'] } }
+    expect(withProviderOverrides(recipe, overrides)).toBe(recipe)
   })
 })

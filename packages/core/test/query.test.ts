@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AnyQuerySchema, QueryV2Schema, anyQuerySymbols, cacheKey, canonicalKey, describeQuery, isLegacyQuery, isRecipeQuery, isRouteQuery, isTransformQuery, legacyToRecipe, parseAnyQuery, parseQuery, resolveRecipe, type Recipe } from '../src/index.js'
+import { AnyQuerySchema, QueryV2Schema, anyQuerySymbols, cacheKey, canonicalKey, describeQuery, isRecipeQuery, isRouteQuery, isTransformQuery, parseAnyQuery, resolveRecipe, type Recipe } from '../src/index.js'
 import { builtinRecipes } from '../src/node.js'
 
 const route = { connector: 'openbb', route: 'equity/price/quote', params: { symbol: ['NVDA'] } }
@@ -7,13 +7,13 @@ const recipe = { recipe: 'quote', params: { symbols: ['NVDA'] } }
 const transform = { inputs: { price: route, eps: recipe }, code: 'result = price', columns: { pe: { unit: 'ratio', label: 'P/E' } } }
 
 describe('query schemas', () => {
-  it('parses the three v2 shapes and tells them apart', () => {
+  it('parses the three shapes and tells them apart', () => {
     expect(isRouteQuery(QueryV2Schema.parse(route))).toBe(true)
     expect(isRecipeQuery(QueryV2Schema.parse(recipe))).toBe(true)
     const t = QueryV2Schema.parse(transform)
     expect(isTransformQuery(t)).toBe(true)
     expect(isRouteQuery(t)).toBe(false)
-    expect(isLegacyQuery(t)).toBe(false)
+    expect(isRecipeQuery(t)).toBe(false)
   })
   it('defaults params to {} and rejects bad input names and empty code', () => {
     expect(QueryV2Schema.parse({ connector: 'openbb', route: 'x' })).toEqual({ connector: 'openbb', route: 'x', params: {} })
@@ -22,31 +22,25 @@ describe('query schemas', () => {
     expect(() => QueryV2Schema.parse({ inputs: { a: route }, code: '' })).toThrow()
     expect(() => QueryV2Schema.parse({ inputs: { a: route }, code: 'x', columns: { pe: { unit: 'lightyears' } } })).toThrow()
   })
-  it('keeps the v1 kind query working through AnyQuerySchema and parseAnyQuery', () => {
-    const legacy = parseAnyQuery({ kind: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '3mo' } })
-    expect(isLegacyQuery(legacy)).toBe(true)
-    expect(legacy).toEqual(parseQuery({ kind: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '3mo' } }))
-    expect(AnyQuerySchema.parse({ kind: 'news', params: { symbols: ['MU'] } })).toMatchObject({ kind: 'news', params: { limit: 20 } })
-    expect(isLegacyQuery(AnyQuerySchema.parse(route))).toBe(false)
-    expect(() => parseAnyQuery({ kind: 'nope', params: {} })).toThrow()
+  it('refuses the v1 kind query shape: a kind is the recipe of the same name now', () => {
+    expect(() => parseAnyQuery({ kind: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '3mo' } })).toThrow()
+    expect(AnyQuerySchema.safeParse({ kind: 'news', params: { symbols: ['MU'] } }).success).toBe(false)
+    expect(parseAnyQuery({ recipe: 'news', params: { symbols: ['MU'] } })).toEqual({ recipe: 'news', params: { symbols: ['MU'] } })
   })
-  it('nests queries inside transform inputs, legacy ones included', () => {
+  it('nests queries inside transform inputs', () => {
     const t = QueryV2Schema.parse({ inputs: { a: { inputs: { b: route }, code: 'result = b' } }, code: 'result = a' })
     expect(isTransformQuery((t as { inputs: Record<string, unknown> }).inputs.a)).toBe(true)
-    const legacyInside = AnyQuerySchema.parse({ inputs: { p: { kind: 'quote', params: { symbols: ['MU'] } } }, code: 'result = p' })
-    expect(isTransformQuery(legacyInside)).toBe(true)
+    expect(() => AnyQuerySchema.parse({ inputs: { p: { kind: 'quote', params: { symbols: ['MU'] } } }, code: 'result = p' })).toThrow()
   })
 })
 
 describe('canonicalKey', () => {
-  it('is stable across param order and equals v1 cacheKey for kind queries', () => {
+  it('is stable across param order; cacheKey is canonicalKey', () => {
     const a = canonicalKey({ connector: 'openbb', route: 'equity/price/historical', params: { symbol: 'NVDA', interval: '1d' } })
     const b = canonicalKey({ connector: 'openbb', route: 'equity/price/historical', params: { interval: '1d', symbol: 'NVDA' } })
     expect(a).toBe(b)
     expect(a).toBe('route:openbb/equity/price/historical:{"interval":"1d","symbol":"NVDA"}')
-    const legacy = parseQuery({ kind: 'quote', params: { symbols: ['MU'] } })
-    expect(canonicalKey(legacy)).toBe('quote:{"symbols":["MU"]}')
-    expect(cacheKey(legacy)).toBe(canonicalKey(legacy))
+    expect(cacheKey(recipe)).toBe(canonicalKey(recipe))
   })
   it('drops null and empty params but keeps array order', () => {
     expect(canonicalKey({ connector: 'o', route: 'r', params: { b: null, a: '', c: ['Z', 'A'] } })).toBe('route:o/r:{"c":["Z","A"]}')
@@ -62,18 +56,9 @@ describe('canonicalKey', () => {
   })
 })
 
-describe('legacyToRecipe and resolveRecipe', () => {
+describe('resolveRecipe', () => {
   const recipes: Recipe[] = builtinRecipes()
-  it('maps every one of the 22 kinds to a recipe of the same name', () => {
-    const names = new Set(recipes.map((r) => r.name))
-    for (const kind of ['search', 'quote', 'ohlcv', 'news', 'earnings', 'profile', 'metrics', 'financials', 'estimates', 'eps_history', 'dividends', 'insiders', 'institutions', 'short_interest', 'options', 'volatility', 'calendar', 'ipos', 'movers', 'holdings', 'macro', 'yield_curve'] as const) {
-      const q = legacyToRecipe({ kind, params: {} })
-      expect(q.recipe).toBe(kind)
-      expect(names.has(q.recipe)).toBe(true)
-    }
-    expect(legacyToRecipe(parseQuery({ kind: 'quote', params: { symbols: ['MU'] } }))).toEqual({ recipe: 'quote', params: { symbols: ['MU'] } })
-  })
-  it('resolves a recipe to ordered route alternatives with the kind’s exact routes', () => {
+  it('resolves a recipe to ordered route alternatives with the exact routes the v1 kind handlers called', () => {
     const alts = resolveRecipe(recipes, { recipe: 'quote', params: { symbols: ['NVDA', 'AMD'] } })
     // yahoo first since phase 2 (it carries the day change and market state); the OpenBB route is the fallback.
     expect(alts.map((a) => `${a.connector} ${a.route}`)).toEqual(['yahoo quote', 'openbb equity/price/quote', 'finnhub quote'])
@@ -113,6 +98,5 @@ describe('query helpers', () => {
     expect(describeQuery({ connector: 'openbb', route: 'equity/price/quote', params: { symbol: ['NVDA', 'AMD'] } })).toBe('openbb equity/price/quote symbol=NVDA,AMD')
     expect(describeQuery({ recipe: 'quote', params: {} })).toBe('recipe quote')
     expect(describeQuery(QueryV2Schema.parse(transform))).toBe('transform(price, eps)')
-    expect(describeQuery(parseQuery({ kind: 'quote', params: { symbols: ['MU'] } }))).toBe('quote symbols=MU')
   })
 })

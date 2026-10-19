@@ -1,9 +1,10 @@
 /**
- * The widget sub-header: what the query is about, at a glance, derived from the widget's query (and the
- * frame once it has landed) and written once per kind. "NVDA · 5m · today", "4 symbols · 1d · 3mo,
- * rebased", "NVDA · Oct 23, 2026 · 7 DTE · underlying 182.43". Never typed by the agent or the user.
+ * The widget sub-header: what the query is about, at a glance, derived from the widget's primary dataset (and its
+ * frame once it has landed), written once per built-in recipe. "NVDA · 5m · today, candles", "4 symbols · 1d · 3mo,
+ * rebased", "NVDA · Oct 23, 2026 · 4 DTE · underlying 213.75". A route or a transform describes itself by its path
+ * or its inputs. Never typed by the agent or the user.
  */
-import { columnIndex, describeQuery, isWidgetV2, type AnyQuery, type AnyWidget, type Frame, type Widget } from '@terminal/core'
+import { DEFAULT_DATASET, columnIndex, describeQuery, type AnyQuery, type AnyWidget, type Frame, type ViewV2 } from '@terminal/core'
 import { formatCell } from '@terminal/ui'
 
 /** Short labels for the macro series, shared with the series legend. */
@@ -37,9 +38,10 @@ const MARKET_STATE: Record<string, string> = {
   CLOSED: 'closed',
 }
 
-/** "2026-10-23" → "Oct 23" (this year) or "Oct 23, 2025"; anything else passes through. */
-export function shortDate(iso: string | null | undefined, now: number): string {
-  if (!iso) return ''
+/** "2026-10-23" → "Oct 23" (this year) or "Oct 23, 2025"; an epoch-ms time is read as a New York date; anything else passes through. */
+export function shortDate(value: string | number | null | undefined, now: number): string {
+  if (value === null || value === undefined || value === '') return ''
+  const iso = typeof value === 'number' ? new Date(value).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }) : value
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
   if (!m) return iso
   const year = Number(m[1])
@@ -57,9 +59,9 @@ function count(n: number, singular: string, plural = `${singular}s`): string {
   return `${n} ${n === 1 ? singular : plural}`
 }
 
-/** "last 3h", "last 2 days", from the oldest `time` in the frame to now; empty without a time column or rows. */
+/** "last 3h", "last 2 days", from the oldest time in the frame to now; empty without a time column or rows. */
 function spanLabel(frame: Frame, now: number): string {
-  const i = columnIndex(frame, 'time')
+  const i = frame.columns.findIndex((c) => c.type === 'time')
   if (i < 0) return ''
   let oldest = Infinity
   for (const row of frame.rows) {
@@ -72,17 +74,20 @@ function spanLabel(frame: Frame, now: number): string {
   return `last ${count(Math.round(hours / 24), 'day')}`
 }
 
-function cell(frame: Frame | undefined, column: string, rowIndex = 0): unknown {
+/** The first row's cell in the first of these columns that the frame has. */
+function cell(frame: Frame | undefined, columns: readonly string[], rowIndex = 0): unknown {
   if (!frame) return undefined
-  const i = columnIndex(frame, column)
-  if (i < 0) return undefined
-  return frame.rows[rowIndex]?.[i]
+  for (const column of columns) {
+    const i = columnIndex(frame, column)
+    if (i >= 0) return frame.rows[rowIndex]?.[i]
+  }
+  return undefined
 }
 
 /** The most common non-null value of a string column, for one word about the whole frame (the market state). */
-function commonValue(frame: Frame | undefined, column: string): string | undefined {
+function commonValue(frame: Frame | undefined, columns: readonly string[]): string | undefined {
   if (!frame) return undefined
-  const i = columnIndex(frame, column)
+  const i = columns.map((c) => columnIndex(frame, c)).find((x) => x >= 0) ?? -1
   if (i < 0) return undefined
   const tally = new Map<string, number>()
   for (const row of frame.rows) {
@@ -102,49 +107,62 @@ function commonValue(frame: Frame | undefined, column: string): string | undefin
 
 const RANGE_LABEL: Record<string, string> = { '1d': 'today' }
 
-/** The sub-header for a widget. `frame` is the frame its query produced, when it has landed; `now` is for dates and windows. */
-export function subtitleFor(widget: Widget, frame?: Frame, now: number = Date.now()): string {
-  const q = widget.query
+type Params = Record<string, unknown>
+const list = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : typeof v === 'string' && v ? v.split(',').map((s) => s.trim()).filter(Boolean) : [])
+const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)
+const numberOf = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
+
+/**
+ * The sub-header for a recipe dataset: the params that matter for that recipe, then what the frame says once it has
+ * landed. `view` adds the chart flags (rebased, candles). Unknown recipes fall back to the param values.
+ */
+export function subtitleForRecipe(recipe: string, params: Params, view: ViewV2 | undefined, frame: Frame | undefined, now: number): string {
   const rows = frame?.rows.length ?? 0
+  const symbols = list(params.symbols)
+  const symbol = str(params.symbol) ?? symbols[0] ?? ''
+  const limit = numberOf(params.limit)
   const parts: string[] = []
-  switch (q.kind) {
+  switch (recipe) {
     case 'search': {
-      parts.push(count(q.params.q.length, 'query', 'queries'))
+      parts.push(str(params.q) ?? '')
       if (frame) parts.push(count(rows, 'match', 'matches'))
       break
     }
     case 'quote': {
-      parts.push(symbolsLabel(q.params.symbols))
-      const state = commonValue(frame, 'market_state')
+      parts.push(symbolsLabel(symbols))
+      const state = commonValue(frame, ['market_state', 'marketState'])
       if (state) parts.push(MARKET_STATE[state] ?? state.toLowerCase())
       break
     }
-    case 'ohlcv': {
-      parts.push(symbolsLabel(q.params.symbols), q.params.interval)
-      let range = RANGE_LABEL[q.params.range] ?? q.params.range
-      if (widget.view.type === 'series' && widget.view.normalize) range += ', rebased'
-      else if (widget.view.type === 'series' && widget.view.candle) range += ', candles'
+    case 'ohlcv':
+    case 'index': {
+      parts.push(recipe === 'index' ? symbol : symbolsLabel(symbols), str(params.interval) ?? '1d')
+      const start = str(params.start)
+      let range = start ? `since ${shortDate(start, now)}` : (RANGE_LABEL[str(params.range) ?? ''] ?? str(params.range) ?? '3mo')
+      if (view?.preset === 'compare' && view.normalize !== false) range += ', rebased'
+      else if (view?.preset === 'price' && view.candle) range += ', candles'
       parts.push(range)
       break
     }
     case 'news': {
-      parts.push(symbolsLabel(q.params.symbols))
+      parts.push(symbolsLabel(symbols))
       if (frame) {
         parts.push(count(rows, 'headline'))
         const span = spanLabel(frame, now)
         if (span) parts.push(span)
-      } else parts.push(`up to ${q.params.limit}`)
+      } else if (limit) parts.push(`up to ${limit}`)
       break
     }
     case 'earnings': {
-      parts.push(symbolsLabel(q.params.symbols), window(q.params.from, q.params.to, now))
+      parts.push(symbolsLabel(symbols))
+      if (str(params.from) && str(params.to)) parts.push(window(str(params.from)!, str(params.to)!, now))
       if (frame) parts.push(count(rows, 'date'))
       break
     }
     case 'profile': {
-      parts.push(symbolsLabel(q.params.symbols))
-      if (frame && q.params.symbols.length === 1) {
-        for (const c of ['sector', 'exchange']) {
+      parts.push(symbolsLabel(symbols))
+      if (frame && symbols.length === 1) {
+        for (const c of [['sector'], ['stock_exchange', 'exchange']]) {
           const v = cell(frame, c)
           if (typeof v === 'string' && v) parts.push(v)
         }
@@ -152,133 +170,146 @@ export function subtitleFor(widget: Widget, frame?: Frame, now: number = Date.no
       break
     }
     case 'metrics': {
-      parts.push(symbolsLabel(q.params.symbols), 'multiples and margins')
+      parts.push(symbolsLabel(symbols), 'multiples and margins')
       break
     }
     case 'financials': {
-      parts.push(symbolsLabel(q.params.symbols), q.params.period === 'annual' ? 'annual' : 'quarterly')
-      parts.push(frame ? count(rows, 'period') : `last ${q.params.limit}`)
+      parts.push(symbolsLabel(symbols), params.period === 'annual' ? 'annual' : 'quarterly')
+      parts.push(frame ? count(rows, 'period') : `last ${limit ?? 4}`)
       break
     }
     case 'estimates': {
-      parts.push(symbolsLabel(q.params.symbols))
-      const analysts = cell(frame, 'analysts')
-      if (q.params.symbols.length === 1 && typeof analysts === 'number') parts.push(count(analysts, 'analyst'))
+      parts.push(symbolsLabel(symbols))
+      const analysts = cell(frame, ['number_of_analysts', 'analysts'])
+      if (symbols.length === 1 && typeof analysts === 'number') parts.push(count(analysts, 'analyst'))
       else parts.push('consensus')
       break
     }
     case 'eps_history': {
-      parts.push(symbolsLabel(q.params.symbols), frame ? count(rows, 'report') : `last ${q.params.limit}`)
+      parts.push(symbolsLabel(symbols), frame ? count(rows, 'report') : `last ${limit ?? 8}`)
       break
     }
     case 'dividends': {
-      parts.push(symbolsLabel(q.params.symbols), frame ? count(rows, 'payment') : `last ${q.params.limit}`)
+      parts.push(symbolsLabel(symbols), frame ? count(rows, 'payment') : `last ${limit ?? 12}`)
       break
     }
     case 'insiders': {
-      parts.push(symbolsLabel(q.params.symbols), frame ? count(rows, 'transaction') : `last ${q.params.limit}`)
+      parts.push(symbolsLabel(symbols), frame ? count(rows, 'transaction') : `last ${limit ?? 20}`)
       break
     }
     case 'institutions': {
-      parts.push(symbolsLabel(q.params.symbols), frame ? `top ${count(rows, 'holder')}` : `top ${q.params.limit}`)
+      parts.push(symbolsLabel(symbols), frame ? `top ${count(rows, 'holder')}` : `top ${limit ?? 20}`)
       break
     }
     case 'short_interest': {
-      parts.push(symbolsLabel(q.params.symbols))
-      const latest = cell(frame, 'date')
-      if (typeof latest === 'string' && latest) parts.push(`latest ${shortDate(latest, now)}`)
-      else parts.push(`last ${count(q.params.limit, 'report')}`)
+      parts.push(symbolsLabel(symbols))
+      const latest = cell(frame, ['settlement_date', 'date'])
+      if ((typeof latest === 'string' || typeof latest === 'number') && latest) parts.push(`latest ${shortDate(latest, now)}`)
+      else parts.push(`last ${count(limit ?? 12, 'report')}`)
       break
     }
     case 'options': {
-      parts.push(q.params.symbol)
-      const expiration = cell(frame, 'expiration')
-      const dte = cell(frame, 'dte')
-      const underlying = cell(frame, 'underlying_price')
-      if (typeof expiration === 'string' && expiration) parts.push(shortDate(expiration, now))
-      else parts.push(q.params.expiration ? `on or after ${shortDate(q.params.expiration, now)}` : 'nearest expiration')
+      parts.push(symbol)
+      const expiration = cell(frame, ['expiration'])
+      const dte = cell(frame, ['dte'])
+      const underlying = cell(frame, ['underlying_price', 'underlyingPrice'])
+      if ((typeof expiration === 'string' || typeof expiration === 'number') && expiration) parts.push(shortDate(expiration, now))
+      else parts.push(str(params.expiration) ? `on or after ${shortDate(str(params.expiration)!, now)}` : 'nearest expiration')
       if (typeof dte === 'number') parts.push(`${dte} DTE`)
       if (typeof underlying === 'number') parts.push(`underlying ${formatCell(underlying, 'price')}`)
-      if (q.params.type !== 'both') parts.push(`${q.params.type}s only`)
+      if (params.type === 'call' || params.type === 'put') parts.push(`${params.type}s only`)
       break
     }
     case 'volatility': {
-      parts.push(symbolsLabel(q.params.symbols), '30-day IV and realized')
+      parts.push(symbolsLabel(symbols), '30-day IV and realized')
       break
     }
     case 'calendar': {
-      parts.push(window(q.params.from, q.params.to, now), q.params.country)
+      if (str(params.from) && str(params.to)) parts.push(window(str(params.from)!, str(params.to)!, now))
+      parts.push(str(params.country) ?? 'United States')
       if (frame) parts.push(count(rows, 'event'))
       break
     }
     case 'ipos': {
-      parts.push(window(q.params.from, q.params.to, now))
+      if (str(params.from) && str(params.to)) parts.push(window(str(params.from)!, str(params.to)!, now))
       if (frame) parts.push(count(rows, 'IPO'))
       break
     }
     case 'movers': {
-      parts.push(q.params.list === 'active' ? 'most active' : q.params.list, `top ${q.params.limit}`)
-      if (q.params.min_price > 0) parts.push(`over $${q.params.min_price}`)
+      const which = str(params.list) ?? 'gainers'
+      parts.push(which === 'active' ? 'most active' : which, `top ${limit ?? 20}`)
+      const minPrice = numberOf(params.min_price) ?? 5
+      if (minPrice > 0) parts.push(`over $${minPrice}`)
+      break
+    }
+    case 'screener': {
+      for (const k of ['sector', 'industry', 'preset']) if (str(params[k])) parts.push(str(params[k])!.replace(/[-_]/g, ' '))
+      if (parts.length === 0) parts.push('whole market')
+      if (frame) parts.push(count(rows, 'name'))
       break
     }
     case 'holdings': {
-      parts.push(q.params.symbol, frame ? `top ${count(rows, 'holding')}` : 'top holdings')
+      parts.push(symbol, frame ? `top ${count(rows, 'holding')}` : 'top holdings')
       break
     }
     case 'macro': {
-      parts.push(q.params.series.map((s) => MACRO_LABELS[s] ?? s).join(', '), q.params.range)
+      const series = str(params.series) ?? ''
+      parts.push(MACRO_LABELS[series] ?? series, str(params.range) ?? '1y')
       break
     }
     case 'yield_curve': {
-      const date = cell(frame, 'date')
-      if (typeof date === 'string' && date) parts.push(shortDate(date, now))
-      else parts.push(q.params.date ? shortDate(q.params.date, now) : 'latest')
+      const date = cell(frame, ['date'])
+      if ((typeof date === 'string' || typeof date === 'number') && date) parts.push(shortDate(date, now))
+      else parts.push(str(params.date) ? shortDate(str(params.date)!, now) : 'latest')
       if (frame) parts.push(count(rows, 'maturity', 'maturities'))
       break
+    }
+    default: {
+      parts.push(...Object.values(params).map((v) => (Array.isArray(v) ? symbolsLabel(v.map(String)) : v == null || v === '' ? '' : String(v))))
+      if (frame) parts.push(count(rows, 'row'))
     }
   }
   return parts.filter(Boolean).join(SEP)
 }
 
 /**
- * The sub-header for any widget. A v1 widget (or a v2 widget migrated from one, which keeps its `query`) uses the
- * per-kind rule above over its `main` frame. A native v2 widget describes its datasets (`describeQuery`) and the
- * primary frame's row count; the route summary from the catalog replaces this when (e)'s Data tab lands.
+ * The sub-header for a widget: its primary dataset (the one the view names, else `main`, else the first) described as
+ * above, plus the other datasets as markers ("earnings markers"). A multi-dataset macro widget lists its series.
  */
 export function subtitleForWidget(widget: AnyWidget, frames: Record<string, Frame> = {}, now: number = Date.now()): string {
-  const main = frames.main ?? Object.values(frames)[0]
-  if (!isWidgetV2(widget)) return subtitleFor(widget, main, now)
-  if (widget.query) return subtitleFor({ ...widget, query: widget.query, view: { type: 'table' } }, main, now)
   const names = Object.keys(widget.data)
-  const primary = widget.view.data && widget.view.data in widget.data ? widget.view.data : names.includes('main') ? 'main' : names[0]!
-  const parts = [describeDataset(widget.data[primary]!)]
+  const primary = widget.view.data && widget.view.data in widget.data ? widget.view.data : names.includes(DEFAULT_DATASET) ? DEFAULT_DATASET : names[0]!
+  const q = widget.data[primary]!
+  const frame = frames[primary] ?? frames[DEFAULT_DATASET] ?? Object.values(frames)[0]
   const extras = names.filter((n) => n !== primary)
-  if (main) parts.push(count(main.rows.length, main.columns.some((c) => c.name === 'time') ? 'bar' : 'row'))
+  const parts: string[] = []
+  const macroSeries = names.map((n) => widget.data[n]).filter((d): d is AnyQuery & { recipe: string; params: Params } => !!d && 'recipe' in d && d.recipe === 'macro')
+  if (macroSeries.length > 1 && macroSeries.length === names.length) {
+    // one macro dataset per series: "10Y, 2Y, Fed funds · 1y"
+    parts.push(macroSeries.map((d) => MACRO_LABELS[String(d.params.series)] ?? String(d.params.series)).join(', '), str(macroSeries[0]!.params.range) ?? '1y')
+    return parts.join(SEP)
+  }
+  parts.push(describeDataset(q, widget.view, frame, now))
   if (extras.length > 0) parts.push([...new Set(extras.map((n) => markerName(widget.data[n]!)))].join(', '))
   return parts.filter(Boolean).join(SEP)
 }
 
 /**
- * One dataset at a glance, the v1 subtitle style: a recipe by its param values ("CRWV · 1d · 3mo", "4 symbols · 1d · 1y"),
- * a route by its path and the params that matter, a transform by what it derives from.
+ * One dataset at a glance: a recipe by its params and frame ("CRWV · 1d · 3mo", "4 symbols · regular session"), a
+ * route by its path and the params that matter, a transform by what it derives from.
  */
-export function describeDataset(q: AnyQuery): string {
-  const query = q as { recipe?: string; params?: Record<string, unknown>; connector?: string; route?: string; inputs?: Record<string, unknown> }
-  if (query.recipe) {
-    const p = query.params ?? {}
-    const values = Object.entries(p)
-      .filter(([k]) => k !== 'provider')
-      .map(([, v]) => (Array.isArray(v) ? symbolsLabel(v.map(String)) : v == null || v === '' ? '' : String(v)))
-      .filter(Boolean)
-    return [query.recipe, ...values].join(SEP)
-  }
+export function describeDataset(q: AnyQuery, view?: ViewV2, frame?: Frame, now: number = Date.now()): string {
+  const query = q as { recipe?: string; params?: Params; connector?: string; route?: string; inputs?: Record<string, unknown> }
+  if (query.recipe) return subtitleForRecipe(query.recipe, query.params ?? {}, view, frame, now)
   if (query.route) {
     const p = Object.entries(query.params ?? {}).filter(([k, v]) => k !== 'provider' && v != null && v !== '')
     const shown = p.slice(0, 3).map(([k, v]) => `${k}=${Array.isArray(v) ? symbolsLabel(v.map(String)) : String(v)}`)
-    return [query.route, ...shown].join(SEP)
+    const parts = [query.route, ...shown]
+    if (frame) parts.push(count(frame.rows.length, frame.columns.some((c) => c.type === 'time') ? 'bar' : 'row'))
+    return parts.join(SEP)
   }
   if (query.inputs) {
-    const ins = Object.values(query.inputs) as { recipe?: string; route?: string; params?: Record<string, unknown> }[]
+    const ins = Object.values(query.inputs) as { recipe?: string; route?: string; params?: Params }[]
     const syms = [...new Set(ins.flatMap((i) => (Array.isArray(i.params?.symbols) ? (i.params!.symbols as unknown[]).map(String) : typeof i.params?.symbol === 'string' ? [i.params.symbol] : [])))]
     const from = [...new Set(ins.map((i) => i.recipe ?? i.route ?? 'frames'))]
     return `derived from ${from.join(' + ')}${syms.length ? SEP + symbolsLabel(syms) : ''}`

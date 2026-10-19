@@ -1,57 +1,60 @@
 /**
  * The field config pipeline for a widget (PLAN.md section 17, "the widget model"): for every dataset,
- * `mergeFieldConfig(detectShape(columns, rows), annotations, overrides)`, where the annotations are the frame's
- * stamped `meta.fields` (v2) or the v1 kind tables (`legacyFieldConfig`), and the overrides the widget's `fields`.
- * Every view reads its spec through `expandPreset` / `controlFor` over this; nothing reads a kind past this file.
+ * `mergeFieldConfig(detectShape(columns, rows), frame.meta.fields, widget.fields)`, where `meta.fields` is what the
+ * runner stamped from the annotations (and a recipe's or transform's own `columns`), and the overrides are the
+ * widget's `fields`. Every view reads its spec through `expandPreset` / `controlFor` over this.
  */
-import {
-  DEFAULT_DATASET,
-  controlFor,
-  detectShape,
-  expandPreset,
-  isWidgetV2,
-  mergeFieldConfig,
-  migrateView,
-  type AnyWidget,
-  type Control,
-  type DatasetFields,
-  type DatasetsFieldConfig,
-  type Frame,
-  type Kind,
-  type Pane,
-  type ViewV2,
-} from '@terminal/core'
-import { MACRO_AMOUNTS, legacyFieldConfig } from './legacy'
+import { DEFAULT_DATASET, controlFor, detectShape, expandPreset, mergeFieldConfig, type AnyWidget, type Control, type DatasetFields, type DatasetsFieldConfig, type Frame, type Pane, type ViewV2 } from '@terminal/core'
 
-/**
- * The v2 view of a widget: its own preset, or the v1 view migrated. A v1 candle chart drew a volume histogram
- * under the candles, so its `price` preset keeps `volume: true` (the migration in core maps the schema; the look
- * is the renderer's to preserve).
- */
+/** The widget's view: a preset with options. */
 export function viewOf(widget: AnyWidget): ViewV2 {
-  if (isWidgetV2(widget)) return widget.view
-  const view = migrateView(widget.view, widget.query)
-  if (view.preset === 'price' && view.candle && widget.query.kind === 'ohlcv') return { ...view, volume: true }
-  return view
+  return widget.view
 }
 
-/** The v1 kind behind a widget, when it has one (a v1 widget, or a v2 widget migrated from one). */
-export function kindOf(widget: AnyWidget): Kind | undefined {
-  return widget.query?.kind
+/** The recipe behind a widget's primary dataset, when it is a recipe query (what the empty states and subtitles key on). */
+export function recipeOf(widget: AnyWidget): string | undefined {
+  const name = widget.view.data && widget.view.data in widget.data ? widget.view.data : DEFAULT_DATASET in widget.data ? DEFAULT_DATASET : Object.keys(widget.data)[0]
+  const q = name ? widget.data[name] : undefined
+  return q && 'recipe' in q && typeof q.recipe === 'string' ? q.recipe : undefined
 }
 
-/** Field config for one frame of a widget: shape roles under the annotations under the widget's overrides. */
+/** What an empty frame means for each built-in recipe; the generic line for routes and transforms. */
+export const EMPTY_HINT: Record<string, string> = {
+  search: 'No symbols matched the query.',
+  quote: 'No quotes came back for these symbols.',
+  ohlcv: 'No price bars came back for this range.',
+  index: 'No price bars came back for this range.',
+  news: 'No headlines in this window.',
+  earnings: 'No earnings dates in this window.',
+  profile: 'No profile came back for these symbols.',
+  metrics: 'No metrics came back for these symbols.',
+  financials: 'No statements came back for these symbols.',
+  estimates: 'No analyst estimates for these symbols.',
+  eps_history: 'No reported earnings for these symbols.',
+  dividends: 'No dividends on record for these symbols.',
+  insiders: 'No insider transactions on record.',
+  institutions: 'No institutional holders on record.',
+  short_interest: 'No short interest reports for these symbols.',
+  options: 'No contracts matched this expiration and strike window.',
+  volatility: 'No volatility data for these symbols.',
+  calendar: 'No scheduled releases in this window.',
+  ipos: 'No IPOs in this window.',
+  movers: 'No movers right now.',
+  screener: 'No names passed the screen.',
+  holdings: 'No holdings reported for this fund.',
+  macro: 'No observations in this range.',
+  yield_curve: 'No curve for this date.',
+}
+
+export function emptyHintFor(widget: AnyWidget): string {
+  const recipe = recipeOf(widget)
+  return (recipe && EMPTY_HINT[recipe]) || 'The query returned no rows.'
+}
+
+/** Field config for one frame of a widget: shape roles under the frame's stamped config under the widget's overrides. */
 export function datasetFields(widget: AnyWidget, frame: Frame): DatasetFields {
   const shape = detectShape(frame.columns, frame.rows.slice(0, 500))
-  const kind = kindOf(widget)
-  const annotations = frame.meta.fields ?? (kind ? legacyFieldConfig(kind, frame.columns) : {})
-  // A v1 macro frame's `value` is a rate for every series but the dollar amounts (M2): the unit the kind never carried.
-  if (!frame.meta.fields && kind === 'macro') {
-    const amounts = shape.groups.length > 0 && shape.groups.every((g) => MACRO_AMOUNTS.has(g))
-    annotations.value = amounts ? { unit: 'usd', format: 'compact', label: 'Value' } : { unit: 'percent', format: 'percent', label: 'Rate' }
-  }
-  const overrides = isWidgetV2(widget) ? (widget.fields ?? {}) : {}
-  const fields = mergeFieldConfig(shape, annotations, overrides)
+  const fields = mergeFieldConfig(shape, frame.meta.fields ?? {}, widget.fields ?? {})
   // A numeric column with no unit and no format: whole numbers (counts, row ids, contract sizes) read as integers,
   // anything else as a number with two decimals (core's default); the values decide, since nobody annotated them.
   for (const c of frame.columns) {

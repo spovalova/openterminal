@@ -6,15 +6,15 @@ import WebSocket from 'ws'
 import { ConnectorRegistry, MemoryCache, type ServerMsg } from '@terminal/core'
 import { startServer, type RunningServer } from '../src/main.js'
 import { createStubAgentRunner } from '../src/stub-agent.js'
-import { fakeConnector } from './fake-connector.js'
+import { fakeConnector, fakeRecipes, type Call } from './fake-connector.js'
 
 let home: string
 let running: RunningServer
-const calls: { kind: string; params: unknown }[] = []
+const calls: Call[] = []
 
 beforeAll(async () => {
   home = mkdtempSync(join(tmpdir(), 'terminal-ws-'))
-  const registry = new ConnectorRegistry({ cache: new MemoryCache() })
+  const registry = new ConnectorRegistry({ cache: new MemoryCache(), recipes: fakeRecipes() })
   registry.register(fakeConnector({ calls }), {})
   running = await startServer({ home, port: 0, env: {}, registry, agent: createStubAgentRunner(), webDist: false, log: () => {} })
 })
@@ -95,11 +95,11 @@ describe('websocket', () => {
     const { id } = await createWorkspace()
     ws.send(JSON.stringify({ t: 'prompt', workspaceId: id, text: 'memory' }))
     await next((m) => m.t === 'done')
-    const before = calls.filter((c) => c.kind === 'quote').length
+    const before = calls.filter((c) => c.route === 'quote').length
     ws.send(JSON.stringify({ t: 'refresh', widgetId: 'memory-snapshot' }))
-    const frame = await next((m) => m.t === 'frame' && m.widgetId === 'memory-snapshot' && calls.filter((c) => c.kind === 'quote').length > before)
+    const frame = await next((m) => m.t === 'frame' && m.widgetId === 'memory-snapshot' && calls.filter((c) => c.route === 'quote').length > before)
     expect(frame.t).toBe('frame')
-    expect(calls.filter((c) => c.kind === 'quote').length).toBe(before + 1)
+    expect(calls.filter((c) => c.route === 'quote').length).toBe(before + 1)
     ws.send(JSON.stringify({ t: 'refresh', widgetId: 'does-not-exist' }))
     const err = await next((m) => m.t === 'frameError' && m.widgetId === 'does-not-exist')
     expect(err.t === 'frameError' && err.error).toMatch(/not found/)

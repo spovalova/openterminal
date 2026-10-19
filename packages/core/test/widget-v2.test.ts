@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { AnyWidgetSchema, ViewV2Schema, WidgetSchema, WidgetV2Schema, isWidgetV2, migrateView, migrateWidget, parseAnyWidget, parseWidget, widgetQueries } from '../src/index.js'
+import { AnyWidgetSchema, ViewV2Schema, WidgetV2Schema, isWidgetV2, migrateView, migrateWidget, parseAnyWidget, widgetQueries } from '../src/index.js'
 
 const ohlcv = (symbols: string[]) => ({ kind: 'ohlcv', params: { symbols, interval: '1d', range: '3mo' } })
-const v1 = (query: unknown, view: unknown, size = 'md') => parseWidget({ id: 'w1', title: 'T', size, query, view })
+/** A widget as the v1 store wrote it. */
+const v1 = (query: unknown, view: unknown, size = 'md') => ({ id: 'w1', title: 'T', size, query, view })
 
 describe('WidgetV2Schema', () => {
   it('accepts a single-node graph with a preset and field overrides', () => {
@@ -21,17 +22,18 @@ describe('WidgetV2Schema', () => {
       price: { connector: 'openbb', route: 'equity/price/historical', params: { symbol: 'NVDA' } },
       eps: { recipe: 'eps_history', params: { symbols: ['NVDA'] } },
       pe: { inputs: { price: { connector: 'openbb', route: 'equity/price/historical', params: { symbol: 'NVDA' } }, eps: { recipe: 'eps_history', params: { symbols: ['NVDA'] } } }, code: 'result = price' },
-      events: { kind: 'earnings', params: { symbols: ['NVDA'], from: '2026-01-01', to: '2026-12-31' } },
+      events: { recipe: 'earnings', params: { symbols: ['NVDA'], from: '2026-01-01', to: '2026-12-31' } },
     }
     expect(() => WidgetV2Schema.parse({ id: 'w', title: 'P/E', size: 'lg', data, view: { preset: 'price', data: 'pe', events: 'events' } })).not.toThrow()
     expect(() => WidgetV2Schema.parse({ id: 'w', title: 'P/E', size: 'lg', data, view: { preset: 'price', data: 'nope' } })).toThrow(/view\.data names dataset/)
     expect(() => WidgetV2Schema.parse({ id: 'w', title: 'P/E', size: 'lg', data, view: { preset: 'price', events: 'ghost' } })).toThrow(/view\.events/)
     expect(() => WidgetV2Schema.parse({ id: 'w', title: 'P/E', size: 'lg', data, view: { preset: 'price', levels: 'ghost' } })).toThrow(/view\.levels/)
   })
-  it('rejects an empty graph, bad dataset names and unknown presets', () => {
+  it('rejects an empty graph, bad dataset names, unknown presets and a v1 kind query as a dataset', () => {
     expect(() => WidgetV2Schema.parse({ id: 'w', title: 'x', size: 'sm', data: {}, view: { preset: 'table' } })).toThrow(/at least one dataset/)
     expect(() => WidgetV2Schema.parse({ id: 'w', title: 'x', size: 'sm', data: { 'bad-name': { recipe: 'quote' } }, view: { preset: 'table' } })).toThrow()
     expect(() => WidgetV2Schema.parse({ id: 'w', title: 'x', size: 'sm', data: { main: { recipe: 'quote' } }, view: { preset: 'gauge' } })).toThrow()
+    expect(() => WidgetV2Schema.parse({ id: 'w', title: 'x', size: 'sm', data: { main: { kind: 'quote', params: { symbols: ['MU'] } } }, view: { preset: 'table' } })).toThrow()
   })
   it('validates every preset’s options', () => {
     expect(ViewV2Schema.parse({ preset: 'compare', normalize: true, labels: { NVDA: 'Nvidia' } })).toEqual({ preset: 'compare', normalize: true, labels: { NVDA: 'Nvidia' } })
@@ -49,41 +51,45 @@ describe('WidgetV2Schema', () => {
   })
 })
 
-describe('migrateWidget', () => {
-  it('maps the v1 views to presets', () => {
-    expect(migrateView({ type: 'table' }, v1(ohlcv(['MU']), { type: 'table' }).query)).toEqual({ preset: 'table' })
-    expect(migrateView({ type: 'chain' }, v1({ kind: 'options', params: { symbol: 'MU' } }, { type: 'chain' }).query)).toEqual({ preset: 'chain' })
-    expect(migrateView({ type: 'stat', column: 'pe' }, v1({ kind: 'metrics', params: { symbols: ['MU'] } }, { type: 'stat' }).query)).toEqual({ preset: 'stat', column: 'pe' })
-    expect(migrateView({ type: 'series', candle: true }, v1(ohlcv(['MU']), { type: 'table' }).query)).toEqual({ preset: 'price', candle: true })
-    expect(migrateView({ type: 'series', normalize: true, labels: { MU: 'Micron' } }, v1(ohlcv(['MU', 'WDC']), { type: 'table' }).query)).toEqual({ preset: 'compare', normalize: true, labels: { MU: 'Micron' } })
-    expect(migrateView({ type: 'series' }, v1(ohlcv(['MU']), { type: 'table' }).query)).toEqual({ preset: 'price' })
-    expect(migrateView({ type: 'series' }, v1(ohlcv(['MU', 'WDC']), { type: 'table' }).query)).toEqual({ preset: 'compare', normalize: false })
+describe('migrateWidget (the v1 JSON shape → a recipe widget)', () => {
+  const q = (kind: string, params: Record<string, unknown>) => ({ kind, params })
+  it('maps the v1 views to presets; a candle chart keeps its volume pane', () => {
+    expect(migrateView({ type: 'table' }, q('ohlcv', {}))).toEqual({ preset: 'table' })
+    expect(migrateView({ type: 'chain' }, q('options', { symbol: 'MU' }))).toEqual({ preset: 'chain' })
+    expect(migrateView({ type: 'stat', column: 'pe' }, q('metrics', { symbols: ['MU'] }))).toEqual({ preset: 'stat', column: 'pe' })
+    expect(migrateView({ type: 'stat' }, q('quote', { symbols: ['MU'] }))).toEqual({ preset: 'stat' })
+    expect(migrateView({ type: 'series', candle: true }, q('ohlcv', { symbols: ['MU'] }))).toEqual({ preset: 'price', candle: true, volume: true })
+    expect(migrateView({ type: 'series', normalize: true, labels: { MU: 'Micron' } }, q('ohlcv', { symbols: ['MU', 'WDC'] }))).toEqual({ preset: 'compare', normalize: true, labels: { MU: 'Micron' } })
+    expect(migrateView({ type: 'series' }, q('ohlcv', { symbols: ['MU'] }))).toEqual({ preset: 'price' })
+    expect(migrateView({ type: 'series' }, q('ohlcv', { symbols: ['MU', 'WDC'] }))).toEqual({ preset: 'compare', normalize: false })
+    expect(migrateView({ type: 'series' }, q('macro', { series: ['sofr'] }))).toEqual({ preset: 'compare', normalize: false })
   })
-  it('moves the query under data.main as the recipe of the same name and keeps the v1 query readable', () => {
+  it('moves the query under data.main as the recipe of the same name, params untouched', () => {
     const w = migrateWidget(v1(ohlcv(['MU', 'SNDK']), { type: 'series', normalize: true }, 'lg'))
     expect(w).toEqual({
       id: 'w1', title: 'T', size: 'lg',
       data: { main: { recipe: 'ohlcv', params: { symbols: ['MU', 'SNDK'], interval: '1d', range: '3mo' } } },
       view: { preset: 'compare', normalize: true },
-      query: { kind: 'ohlcv', params: { symbols: ['MU', 'SNDK'], interval: '1d', range: '3mo' } },
     })
     expect(() => WidgetV2Schema.parse(w)).not.toThrow()
+    // params are not validated here: the recipe does that when the widget runs
+    expect(migrateWidget(v1(q('quote', { symbols: [] }), { type: 'table' })).data.main).toEqual({ recipe: 'quote', params: { symbols: [] } })
   })
   it('splits a multi-series macro query into one dataset per series', () => {
-    const w = migrateWidget(v1({ kind: 'macro', params: { series: ['treasury_10y', 'fed_funds'], range: '1y' } }, { type: 'series' }))
+    const w = migrateWidget(v1(q('macro', { series: ['treasury_10y', 'fed_funds'], range: '1y' }), { type: 'series' }))
     expect(w.data).toEqual({ treasury_10y: { recipe: 'macro', params: { series: 'treasury_10y', range: '1y' } }, fed_funds: { recipe: 'macro', params: { series: 'fed_funds', range: '1y' } } })
     expect(w.view).toEqual({ preset: 'compare', normalize: false })
-    const one = migrateWidget(v1({ kind: 'macro', params: { series: ['sofr'] } }, { type: 'series' }))
-    expect(one.data).toEqual({ main: { recipe: 'macro', params: { series: 'sofr', range: '1y' } } })
+    const one = migrateWidget(v1(q('macro', { series: ['sofr'] }), { type: 'series' }))
+    expect(one.data).toEqual({ main: { recipe: 'macro', params: { series: 'sofr' } } })
   })
-  it('parseAnyWidget accepts v1 and v2 and returns v2; v1 keeps validating as before', () => {
+  it('parseAnyWidget and AnyWidgetSchema read both shapes and return a v2 widget', () => {
     const v2 = parseAnyWidget({ id: 'w', title: 'x', size: 'sm', data: { main: { recipe: 'quote', params: { symbols: ['MU'] } } }, view: { preset: 'stat' } })
     expect(isWidgetV2(v2)).toBe(true)
     const migrated = parseAnyWidget({ id: 'w', title: 'x', size: 'sm', query: { kind: 'quote', params: { symbols: ['MU'] } }, view: { type: 'table' } })
     expect(migrated.data.main).toEqual({ recipe: 'quote', params: { symbols: ['MU'] } })
-    expect(() => parseAnyWidget({ id: 'w', title: 'x', size: 'sm', query: ohlcv(['MU', 'WDC']), view: { type: 'series', candle: true } })).toThrow(/exactly one symbol/)
-    expect(AnyWidgetSchema.safeParse({ id: 'w', title: 'x', size: 'sm', query: ohlcv(['MU']), view: { type: 'table' } }).success).toBe(true)
-    expect(WidgetSchema.safeParse({ id: 'w', title: 'x', size: 'sm', data: {}, view: { preset: 'table' } }).success).toBe(false)
-    expect(widgetQueries(v1(ohlcv(['MU']), { type: 'table' }))).toEqual({ main: { kind: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '3mo' } } })
+    const stored = v1(ohlcv(['MU']), { type: 'table' }, 'sm')
+    expect(AnyWidgetSchema.parse(stored)).toEqual(migrateWidget(stored))
+    expect(AnyWidgetSchema.safeParse({ id: 'w', title: 'x', size: 'sm', view: { preset: 'table' } }).success).toBe(false)
+    expect(() => parseAnyWidget({ id: 'w', title: 'x', size: 'sm', query: { kind: 'quote' }, view: { type: 'nope' } })).toThrow()
   })
 })

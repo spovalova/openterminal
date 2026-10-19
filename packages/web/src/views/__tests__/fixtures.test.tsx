@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { KINDS, WidgetSchema, WidgetV2Schema, isWidgetV2, preview } from '@terminal/core'
+import { WidgetV2Schema, isWidgetV2, preview } from '@terminal/core'
 
 vi.mock('lightweight-charts', async () => {
   const { makeChartsMock } = await import('./mocks')
@@ -12,10 +12,10 @@ vi.mock('@terminal/ui', async () => {
   return makeUiMock()
 })
 
-import { FIXTURES, V1_FIXTURES } from '../fixtures'
+import { FIXTURES, RECIPE_FIXTURES } from '../fixtures'
 import { V2_FIXTURES } from '../fixtures/v2'
 import { ViewsGallery } from '../preview'
-import { viewOf } from '../fields'
+import { recipeOf, viewOf } from '../fields'
 import { contentHintFor } from '../content-hint'
 
 afterEach(cleanup)
@@ -26,16 +26,17 @@ describe('fixtures', () => {
     for (const id of ['A1', 'A2', 'A3', 'A4', 'A5', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4']) expect(ids).toContain(id)
   })
 
-  it('cover the v1.2 views: a chain, macro on series, and the new tables', () => {
+  it('cover the chain, macro on compare (one dataset per series), and the tables', () => {
     const ids = FIXTURES.map((f) => f.id)
     for (const id of ['options', 'macro', 'financials', 'insiders', 'calendar', 'movers', 'volatility']) expect(ids).toContain(id)
-    const options = V1_FIXTURES.find((f) => f.id === 'options')!
-    expect(options.widget.view.type).toBe('chain')
+    const options = RECIPE_FIXTURES.find((f) => f.id === 'options')!
+    expect(options.widget.view.preset).toBe('chain')
     expect(new Set(options.frame.rows.map((r) => r[3])).size).toBe(20) // 10 strikes each side
     expect(new Set(options.frame.rows.map((r) => r[1])).size).toBe(1) // one expiration
-    const macro = V1_FIXTURES.find((f) => f.id === 'macro')!
-    expect(macro.widget.view.type).toBe('series')
-    expect(Object.keys(preview(macro.frame).stats)).toEqual(['treasury_10y', 'treasury_2y', 'fed_funds'])
+    const macro = FIXTURES.find((f) => f.id === 'macro')!
+    expect(macro.widget.view.preset).toBe('compare')
+    expect(Object.keys(macro.frames)).toEqual(['treasury_10y', 'treasury_2y', 'fed_funds'])
+    for (const [series, frame] of Object.entries(macro.frames)) expect(Object.keys(preview(frame).stats)).toEqual([series])
   })
 
   it('cover every v2 preset (PLAN.md section 17), as valid v2 widgets with one frame per dataset', () => {
@@ -61,10 +62,13 @@ describe('fixtures', () => {
     expect(FIXTURES.every((f) => f.frames.main === f.frame || Object.values(f.frames).includes(f.frame))).toBe(true)
   })
 
-  for (const f of V1_FIXTURES) {
-    it(`${f.id}: widget is valid and the frame matches the ${f.widget.query.kind} columns`, () => {
-      expect(WidgetSchema.safeParse(f.widget).success).toBe(true)
-      expect(f.frame.columns).toEqual(KINDS[f.widget.query.kind].columns)
+  for (const f of RECIPE_FIXTURES) {
+    it(`${f.id}: a valid recipe widget whose frame carries field config and typed cells`, () => {
+      expect(WidgetV2Schema.safeParse(f.widget).success).toBe(true)
+      const recipe = recipeOf(f.widget)!
+      expect(recipe).toBeTruthy()
+      expect(f.frame.meta.lineage).toEqual({ recipe })
+      expect(Object.keys(f.frame.meta.fields ?? {}).length).toBeGreaterThan(0)
       expect(f.frame.rows.length).toBeGreaterThan(0)
       for (const row of f.frame.rows) {
         expect(row).toHaveLength(f.frame.columns.length)
@@ -74,16 +78,17 @@ describe('fixtures', () => {
           expect(typeof v).toBe(c.type === 'time' ? 'number' : c.type)
         })
       }
-      if (f.widget.query.kind === 'ohlcv') {
+      if (recipe === 'ohlcv') {
         // sorted by symbol then time, as the frame contract promises
+        const symbols = (f.widget.data.main as unknown as { params: { symbols: string[] } }).params.symbols
         const keys = f.frame.rows.map((r) => [r[0] as string, r[1] as number] as const)
         const sorted = [...keys].sort((a, b) => a[0].localeCompare(b[0]) || a[1] - b[1])
         const bySymbolOrder = [...new Set(keys.map((k) => k[0]))]
         const sortedWithFirstSeen = [...keys].sort((a, b) => bySymbolOrder.indexOf(a[0]) - bySymbolOrder.indexOf(b[0]) || a[1] - b[1])
         expect(keys).toEqual(sortedWithFirstSeen)
         expect(sorted.length).toBe(keys.length)
-        expect(f.widget.query.params.symbols).toEqual(bySymbolOrder)
-        expect(Object.keys(preview(f.frame).stats)).toEqual(f.widget.query.params.symbols)
+        expect(symbols).toEqual(bySymbolOrder)
+        expect(Object.keys(preview(f.frame).stats)).toEqual(symbols)
       }
     })
   }

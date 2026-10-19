@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { parseWidget, type AnyWidget } from '@terminal/core'
+import { parseAnyWidget, type AnyWidget } from '@terminal/core'
 import { builtinRecipes } from '@terminal/core/node'
 import { parseRecipeText, recipeFromWidget, recipeNameFrom } from '../recipe-promote'
 
@@ -23,11 +23,11 @@ describe('promote a widget to a recipe', () => {
     expect(r.data?.main && 'routes' in r.data.main && r.data.main.routes.map((x) => `${x.connector} ${x.route}`)).toEqual(['yahoo quote', 'openbb equity/price/quote', 'finnhub quote'])
   })
 
-  it('a v1 kind widget promotes through the recipe of the same name', () => {
-    const v1 = parseWidget({ id: 'w1', title: 'MU daily', size: 'md', query: { kind: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '6mo' } }, view: { type: 'series', candle: true } })
+  it('a widget stored in the v1 JSON shape promotes through the recipe of the same name once migrated', () => {
+    const v1 = parseAnyWidget({ id: 'w1', title: 'MU daily', size: 'md', query: { kind: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '6mo' } }, view: { type: 'series', candle: true } })
     const r = recipeFromWidget(v1, builtin)
     expect(r.params.properties?.range).toMatchObject({ default: '6mo' })
-    expect(r.view).toEqual({ preset: 'table' }) // a v1 view has no preset; the floor
+    expect(r.view).toEqual({ preset: 'price', candle: true, volume: true })
     expect(r.data?.main && 'routes' in r.data.main && r.data.main.routes[0]?.route).toBe('equity/price/historical')
   })
 

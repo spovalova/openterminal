@@ -4,7 +4,7 @@ import { ColumnTypeSchema, type Column } from './frame.js'
 /**
  * The descriptor (PLAN.md section 17): one entry per route of a connector. Replaces the kind as the unit of data.
  * OpenBB's are generated from its OpenAPI document (`descriptorsFromOpenApi`); yahoo and finnhub ship a file in
- * the same format; v1 connectors get theirs derived from the kind catalog (`descriptorFromKind`).
+ * the same format.
  */
 
 export const PARAM_TYPES = ['string', 'number', 'integer', 'boolean', 'date', 'string[]'] as const

@@ -4,13 +4,14 @@ import { ClientMsgSchema, DEFAULT_DATASET, ServerMsgSchema, StepSchema, frameDat
 const frame: Frame = { columns: [{ name: 'x', type: 'number' }], rows: [[1]], meta: { connector: 'c', fetchedAt: 0, ttl: 0 } }
 
 describe('widgets message', () => {
-  it('carries v2 widgets (data graph and preset) beside v1 ones (phase 2 integration: the agent emits WidgetV2[])', () => {
+  it('carries widgets (data graph and preset); a v1 shape is migrated on parse', () => {
     const v2 = { id: 'w1', title: 'NVDA', size: 'lg', data: { main: { recipe: 'ohlcv', params: { symbols: ['NVDA'] } } }, view: { preset: 'price', candle: true } }
     const v1 = { id: 'w2', title: 'Quotes', size: 'sm', query: { kind: 'quote', params: { symbols: ['NVDA'] } }, view: { type: 'table' } }
     const m = ServerMsgSchema.parse({ t: 'widgets', workspaceId: 'ws', widgets: [v2, v1], name: 'NVDA' })
     if (m.t !== 'widgets') throw new Error()
     expect(m.widgets).toHaveLength(2)
-    expect('data' in m.widgets[0]! && m.widgets[0].view).toMatchObject({ preset: 'price' })
+    expect(m.widgets[0]!.view).toMatchObject({ preset: 'price' })
+    expect(m.widgets[1]).toEqual({ id: 'w2', title: 'Quotes', size: 'sm', data: { main: { recipe: 'quote', params: { symbols: ['NVDA'] } } }, view: { preset: 'table' } })
     expect(() => ServerMsgSchema.parse({ t: 'widgets', workspaceId: 'ws', widgets: [{ id: 'w1', title: 'x', size: 'lg', view: { preset: 'price' } }] })).toThrow()
   })
 })

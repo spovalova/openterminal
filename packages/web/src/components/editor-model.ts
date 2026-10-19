@@ -5,42 +5,29 @@ import { z } from 'zod'
 import {
   DATASET_NAME_RE,
   DEFAULT_DATASET,
-  KINDS,
-  KIND_NAMES,
   PRESET_NAMES,
   TRANSFORM_EXAMPLE,
   ViewV2Schema,
-  WidgetSchema,
   WidgetV2Schema,
-  canonicalKey,
   datasetFieldsFrom,
-  descriptorFromKind,
   detectShape,
-  isLegacyQuery,
   isRecipeQuery,
   isRouteQuery,
   isTransformQuery,
-  isWidgetV2,
-  migrateView,
   presetsFor,
   type AnyQuery,
   type AnyWidget,
   type DatasetsFieldConfig,
-  type DescriptorParam,
   type FieldOverrides,
   type Frame,
-  type Kind,
   type PresetName,
-  type Query,
   type Size,
   type TransformQuery,
-  type View,
   type ViewV2,
-  type Widget,
   type WidgetV2,
 } from '@terminal/core'
 
-export type DatasetKind = 'recipe' | 'route' | 'transform' | 'kind'
+export type DatasetKind = 'recipe' | 'route' | 'transform'
 
 export type EditorDraft = {
   id: string
@@ -50,10 +37,6 @@ export type EditorDraft = {
   data: Record<string, AnyQuery>
   view: ViewV2
   fields?: FieldOverrides
-  /** The v1 query a migrated widget carries; kept while `main` is untouched (see `toWidget`). */
-  query?: Query
-  /** `canonicalKey(data.main)` when the draft was opened, to know whether `main` changed. */
-  mainKeyAtOpen?: string
 }
 
 export const TABS = ['data', 'transform', 'view'] as const
@@ -63,7 +46,7 @@ export function datasetKind(q: AnyQuery): DatasetKind {
   if (isTransformQuery(q)) return 'transform'
   if (isRecipeQuery(q)) return 'recipe'
   if (isRouteQuery(q)) return 'route'
-  return 'kind'
+  throw new Error('unrecognised query shape')
 }
 
 export function newWidgetId(): string {
@@ -76,29 +59,17 @@ export function emptyDraft(): EditorDraft {
   return { id: newWidgetId(), title: '', size: 'md', data: { [DEFAULT_DATASET]: { recipe: 'quote', params: { symbols: ['NVDA'] } } }, view: { preset: 'stat' } }
 }
 
-/**
- * The draft for an existing widget. A v1 widget's query becomes the `main` dataset as it is (a `{ kind, params }`
- * query is a valid dataset until phase 3, and it keeps the v1 execution path), its view becomes the preset.
- */
+/** The draft for an existing widget: its data graph, preset and field overrides as they are. */
 export function draftFrom(widget: AnyWidget): EditorDraft {
-  if (isWidgetV2(widget)) {
-    const main = widget.data[DEFAULT_DATASET]
-    const d: EditorDraft = { id: widget.id, title: widget.title, size: widget.size, data: { ...widget.data }, view: widget.view }
-    if (widget.fields) d.fields = widget.fields
-    if (widget.query) d.query = widget.query
-    if (main) d.mainKeyAtOpen = canonicalKey(main)
-    return d
-  }
-  return { id: widget.id, title: widget.title, size: widget.size, data: { [DEFAULT_DATASET]: widget.query }, view: migrateView(widget.view, widget.query) }
+  const d: EditorDraft = { id: widget.id, title: widget.title, size: widget.size, data: { ...widget.data }, view: widget.view }
+  if (widget.fields) d.fields = widget.fields
+  return d
 }
 
-/** The widget to save: a v2 widget validated by `WidgetV2Schema`. Throws ZodError. */
+/** The widget to save, validated by `WidgetV2Schema`. Throws ZodError. */
 export function toWidget(draft: EditorDraft): WidgetV2 {
-  const main = draft.data[DEFAULT_DATASET]
-  const keepQuery = draft.query && main && draft.mainKeyAtOpen !== undefined && canonicalKey(main) === draft.mainKeyAtOpen
   const input: Record<string, unknown> = { id: draft.id, title: draft.title.trim(), size: draft.size, data: syncTransformInputs(draft.data), view: draft.view }
   if (draft.fields && Object.keys(draft.fields).length > 0) input.fields = draft.fields
-  if (keepQuery) input.query = draft.query
   return WidgetV2Schema.parse(input)
 }
 
@@ -295,61 +266,6 @@ export function switchPreset(view: ViewV2, preset: PresetName): ViewV2 {
   for (const [k, v] of Object.entries(view)) if (k !== 'preset' && keep.has(k)) next[k] = v
   const parsed = ViewV2Schema.safeParse(next)
   return parsed.success ? parsed.data : ({ preset } as ViewV2)
-}
-
-// ---- v1 params as descriptor params (the data tab's form for a `{ kind, params }` dataset) ----
-
-export function kindParams(kind: Kind): DescriptorParam[] {
-  return descriptorFromKind('v1', kind).params
-}
-
-export const KIND_LIST: readonly Kind[] = KIND_NAMES
-
-export function kindDescription(kind: Kind): string {
-  return KINDS[kind].description
-}
-
-// ---- rendering v2 widgets with the v1 views during the coexistence ----
-
-/** The v1 kind query behind a widget: its `main` dataset when that is a kind query, else the query a migrated widget kept. */
-export function legacyQueryOf(widget: AnyWidget): Query | undefined {
-  if (!isWidgetV2(widget)) return widget.query
-  const main = widget.data[DEFAULT_DATASET]
-  if (main && isLegacyQuery(main)) return main
-  return widget.query
-}
-
-/** The v1 view a preset maps back to, when the v1 renderers can draw it. */
-export function v1ViewFrom(view: ViewV2): View | undefined {
-  switch (view.preset) {
-    case 'table':
-      return { type: 'table' }
-    case 'chain':
-      return { type: 'chain' }
-    case 'stat':
-      return view.column ? { type: 'stat', column: view.column } : { type: 'stat' }
-    case 'price':
-      return { type: 'series', ...(view.candle ? { candle: true } : {}), ...(view.labels ? { labels: view.labels } : {}) }
-    case 'compare':
-      return { type: 'series', ...(view.normalize !== false ? { normalize: true } : {}), ...(view.labels ? { labels: view.labels } : {}) }
-    default:
-      return undefined
-  }
-}
-
-/**
- * A v2 widget as the v1 widget the current renderers understand, when its main data is a kind query (or a migrated
- * widget's kept query) and the preset has a v1 view. Undefined otherwise: the cell falls back to a table.
- */
-export function asV1Widget(widget: AnyWidget): Widget | undefined {
-  if (!isWidgetV2(widget)) return widget
-  const query = legacyQueryOf(widget)
-  const view = v1ViewFrom(widget.view)
-  if (!query || !view) return undefined
-  const candidate = { id: widget.id, title: widget.title, size: widget.size, query, view }
-  let parsed = WidgetSchema.safeParse(candidate)
-  if (!parsed.success && view.type !== 'table') parsed = WidgetSchema.safeParse({ ...candidate, view: { type: 'table' } })
-  return parsed.success ? parsed.data : undefined
 }
 
 export { TABS as EDITOR_TABS }

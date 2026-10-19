@@ -5,7 +5,7 @@ import { EMPTY_CELL, EmptyState, direction, formatCell, type CellFormat } from '
 import type { ViewProps } from './types'
 import { cellFormat } from './TableView'
 import { datasetsFor, primaryFrame, viewOf } from './fields'
-import { columnLabel } from './legacy'
+import { columnLabel } from './labels'
 
 export type Fact = { column: string; label: string; text: string; format: CellFormat; dir: 'up' | 'down' | null; raw: unknown }
 

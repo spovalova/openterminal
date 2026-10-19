@@ -1,16 +1,16 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { KINDS, type Frame, type Kind } from '@terminal/core'
+import type { Frame } from '@terminal/core'
 
 vi.mock('@terminal/ui', async () => {
   const { makeUiMock } = await import('./mocks')
   return makeUiMock()
 })
 
-import { TableView, defaultSortFor, extremesFor, formatsFor, projectFrame, sortRows } from '../TableView'
+import { TableView, extremesFor, projectFrame, sortRows } from '../TableView'
 import { viewFor } from '../view-for'
-import { fixture } from '../fixtures'
+import { RECIPE_FIXTURES, fixture } from '../fixtures'
 import { controlOf } from '../fields'
 
 afterEach(cleanup)
@@ -36,46 +36,29 @@ function renderedRows(): Record<string, unknown>[] {
   })
 }
 
-describe('TableView formats (v1 kinds through legacy field config)', () => {
-  const expected: Partial<Record<Kind, Record<string, string>>> = {
-    quote: { symbol: 'text', price: 'price', change_pct: 'change', volume: 'integer', market_state: 'text', extended_price: 'price', extended_change_pct: 'change' },
-    news: { time: 'time', headline: 'text', source: 'text', url: 'link', symbol: 'text' },
-    earnings: { symbol: 'text', date: 'date', session: 'text', eps_estimate: 'price' },
-    search: { query: 'text', symbol: 'text', name: 'text', exchange: 'text' },
-    ohlcv: { symbol: 'text', time: 'time', open: 'price', high: 'price', low: 'price', close: 'price', volume: 'integer' },
-    financials: {
-      symbol: 'text',
-      period_ending: 'date',
-      revenue: 'compact',
-      gross_profit: 'compact',
-      operating_income: 'compact',
-      net_income: 'compact',
-      eps: 'price',
-      operating_cash_flow: 'compact',
-      capex: 'compact',
-      free_cash_flow: 'compact',
-      cash: 'compact',
-      debt: 'compact',
-      shares: 'compact',
-    },
-    movers: { symbol: 'text', name: 'text', price: 'price', change_pct: 'change', volume: 'integer' },
-    volatility: { symbol: 'text', iv30: 'percent', iv30_high: 'percent', iv30_low: 'percent', iv_rank: 'price', hv30: 'percent', hv30_high: 'percent', hv30_low: 'percent', year_high: 'price', year_low: 'price' },
-    insiders: { symbol: 'text', date: 'date', name: 'text', title: 'text', action: 'text', shares: 'compact', price: 'price', value: 'compact', url: 'link' },
-  }
-  const sample: Partial<Record<Kind, string>> = { quote: 'A3', news: 'A5', earnings: 'A4', search: 'search', ohlcv: 'C4', financials: 'financials', movers: 'movers', volatility: 'volatility', insiders: 'insiders' }
-
-  for (const kind of Object.keys(expected) as Kind[]) {
-    it(`maps every ${kind} column to a CellFormat`, () => {
-      expect(formatsFor(kind, KINDS[kind].columns)).toEqual(expected[kind])
-      const { widget, frame } = fixture(sample[kind]!)
-      render(<TableView widget={widget} frames={one(frame)} />)
-      expect(renderedFormats()).toEqual(expected[kind])
-      // hides nothing: every frame column is shown (in priority order now, so compare as sets)
-      expect(Object.keys(renderedFormats()).sort()).toEqual(frame.columns.map((c) => c.name).sort())
+describe('TableView formats from the frame’s field config', () => {
+  const tableFixtures = RECIPE_FIXTURES.filter((f) => f.widget.view.preset === 'table' && f.frame.rows.length > 3)
+  for (const f of tableFixtures) {
+    it(`${f.id}: every column renders with the format its annotation implies`, () => {
+      render(<TableView widget={f.widget} frames={one(f.frame)} />)
+      const formats = renderedFormats()
+      // every frame column is shown (in priority order, so compare as sets)
+      expect(Object.keys(formats).sort()).toEqual(f.frame.columns.map((c) => c.name).sort())
+      for (const [name, fmt] of Object.entries(formats)) {
+        const column = f.frame.columns.find((c) => c.name === name)!
+        if (/^(change_pct|extended_change_pct|upside_pct|surprise_pct|eps_growth_y|revenue_growth|earnings_growth)$/.test(name)) expect(fmt, `${f.id}.${name}`).toBe('change')
+        else expect(fmt, `${f.id}.${name}`).not.toBe('change')
+        if (/volume$|^(market_cap|revenue|net_income|value|offer_amount|shares)$/.test(name)) expect(fmt, `${f.id}.${name}`).toBe('compact')
+        if (/margin$|_yield$|^iv$|^iv30|^hv30|^weight$|^rate$/.test(name)) expect(fmt, `${f.id}.${name}`).toBe('percent')
+        if (/^(price|close|open|high|low|strike|bid|ask|eps_estimate|eps)$/.test(name)) expect(fmt, `${f.id}.${name}`).toBe('price')
+        if (name === 'url') expect(fmt).toBe('link')
+        if (column.type === 'time') expect(fmt, `${f.id}.${name}`).toBe('time')
+        if (column.type === 'string' && name !== 'url') expect(fmt, `${f.id}.${name}`).toBe('text')
+      }
     })
   }
 
-  it('orders columns by the kind\'s priority (the table control), the first three always shown', () => {
+  it('orders columns by the field config priority (the table control), the first three always shown', () => {
     const { widget, frame } = fixture('A5') // news
     render(<TableView widget={widget} frames={one(frame)} />)
     expect(renderedColumns()).toEqual(['headline', 'time', 'source', 'symbol', 'url'])
@@ -85,57 +68,29 @@ describe('TableView formats (v1 kinds through legacy field config)', () => {
   })
 })
 
-describe('TableView formats for every kind', () => {
-  it('uses change only for signed moves, percent for levels, compact for amounts, integer for volumes', () => {
-    for (const kind of Object.keys(KINDS) as Kind[]) {
-      const f = formatsFor(kind, KINDS[kind].columns)
-      for (const [name, fmt] of Object.entries(f)) {
-        if (/^(change_pct|extended_change_pct|upside_pct|surprise_pct|eps_growth_y|revenue_growth|earnings_growth)$/.test(name)) expect(fmt, `${kind}.${name}`).toBe('change')
-        else expect(fmt, `${kind}.${name}`).not.toBe('change')
-        if (/volume$/.test(name)) expect(fmt, `${kind}.${name}`).toBe('integer')
-        if (kind !== 'macro' && /^(market_cap|revenue|net_income|value|offer_amount|shares)$/.test(name)) expect(fmt, `${kind}.${name}`).toBe('compact')
-        if (/margin$|_yield$|^iv$|^weight$|^rate$/.test(name)) expect(fmt, `${kind}.${name}`).toBe('percent')
-      }
-    }
-  })
-})
-
 describe('TableView default sort', () => {
-  it('news sorts by time descending', () => {
-    expect(defaultSortFor('news')).toEqual({ column: 'time', dir: 'desc' })
+  it('the view’s sort applies (the news recipe sorts newest first); a view without one keeps the frame order', () => {
     const { widget, frame } = fixture('C3')
-    render(<TableView widget={widget} frames={one(frame)} />)
+    const sorted = { ...widget, view: { preset: 'table' as const, sort: { column: 'time', dir: 'desc' as const } } }
+    render(<TableView widget={sorted} frames={one(frame)} />)
     expect(renderedSort()).toEqual({ column: 'time', dir: 'desc' })
     const times = renderedRows().map((r) => r.time as number)
     expect(times).toEqual([...times].sort((a, b) => b - a))
-  })
-
-  it('earnings sorts by date ascending', () => {
-    expect(defaultSortFor('earnings')).toEqual({ column: 'date', dir: 'asc' })
-    const { widget, frame } = fixture('A4')
-    render(<TableView widget={widget} frames={one(frame)} />)
-    expect(renderedRows().map((r) => r.symbol)).toEqual(['STX', 'WDC', 'SNDK', 'MU'])
-  })
-
-  it('quote sorts by symbol', () => {
-    expect(defaultSortFor('quote')).toEqual({ column: 'symbol', dir: 'asc' })
-    const { widget, frame } = fixture('B3')
-    render(<TableView widget={widget} frames={one(frame)} />)
-    expect(renderedRows().map((r) => r.symbol)).toEqual(['AMD', 'AVGO', 'NVDA', 'SMH', 'SPY', 'TSM'])
-  })
-
-  it('ohlcv sorts by time descending; search keeps connector order', () => {
-    expect(defaultSortFor('ohlcv')).toEqual({ column: 'time', dir: 'desc' })
-    expect(defaultSortFor('search')).toBeUndefined()
-    const { widget, frame } = fixture('C4')
-    render(<TableView widget={widget} frames={one(frame)} />)
-    const times = renderedRows().map((r) => r.time as number)
-    expect(times[0]).toBe(Math.max(...times))
     cleanup()
     const s = fixture('search')
     render(<TableView widget={s.widget} frames={one(s.frame)} />)
     expect(renderedSort()).toBeNull()
     expect(renderedRows().map((r) => r.symbol)).toEqual(s.frame.rows.map((r) => r[1]))
+  })
+
+  it('an ascending sort on a date column and a symbol sort', () => {
+    const a4 = fixture('A4')
+    render(<TableView widget={{ ...a4.widget, view: { preset: 'table', sort: { column: 'date', dir: 'asc' } } }} frames={one(a4.frame)} />)
+    expect(renderedRows().map((r) => r.symbol)).toEqual(['STX', 'WDC', 'SNDK', 'MU'])
+    cleanup()
+    const b3 = fixture('B3')
+    render(<TableView widget={{ ...b3.widget, view: { preset: 'table', sort: { column: 'symbol', dir: 'asc' } } }} frames={one(b3.frame)} />)
+    expect(renderedRows().map((r) => r.symbol)).toEqual(['AMD', 'AVGO', 'NVDA', 'SMH', 'SPY', 'TSM'])
   })
 
   it('sinks nulls to the bottom in both directions and keeps the sort stable', () => {
@@ -169,9 +124,9 @@ describe('TableView column sort', () => {
     expect(screen.queryByTestId('data-table')).toBeNull()
   })
 
-  it('viewFor picks TableView for table views and table presets', () => {
-    expect(viewFor({ type: 'table' })).toBe(TableView)
+  it('viewFor picks TableView for table presets', () => {
     expect(viewFor({ preset: 'table' })).toBe(TableView)
+    expect(viewFor(fixture('A3').widget)).toBe(TableView)
   })
 })
 
@@ -212,7 +167,7 @@ describe('TableView from the table control (v2)', () => {
     expect(card).toBeTruthy()
     expect(card.getAttribute('data-count')).toBe('12')
     cleanup()
-    const c2 = fixture('C2') // v1 earnings with one row: the same rule
+    const c2 = fixture('C2') // earnings with one row: the same rule
     render(<TableView widget={c2.widget} frames={one(c2.frame)} />)
     expect(document.querySelector('[data-view="facts"]')).toBeTruthy()
     expect(document.querySelector('[data-fact="symbol"] [data-field="value"]')!.textContent).toBe('TSLA')

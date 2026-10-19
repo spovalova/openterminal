@@ -1,33 +1,20 @@
-// Yahoo Finance connector via yahoo-finance2. No API key. v1: search, quote, ohlcv, earnings;
-// v1.2 fallbacks: profile, metrics, estimates, eps_history, dividends, insiders, institutions, short_interest, options, holdings.
+// Yahoo Finance connector via yahoo-finance2. No API key. The five endpoints the library wraps (search, quote, chart,
+// options, quoteSummary) are the connector's routes (descriptors.json), answered through core's `inferFrame`;
+// the recipes in packages/core/recipes.yml say which modules and params each one asks for.
 import { z } from 'zod'
 import { defineConnector, type Connector } from '@terminal/core'
 import { makeCall, yahooDescriptors } from './call.js'
 import { defaultClient, type YahooClient } from './client.js'
-import { makeDividends } from './dividends.js'
-import { makeEarnings } from './earnings.js'
-import { makeEpsHistory } from './eps-history.js'
-import { makeEstimates } from './estimates.js'
-import { makeHoldings } from './holdings.js'
-import { makeInsiders } from './insiders.js'
-import { makeInstitutions } from './institutions.js'
-import { makeMetrics } from './metrics.js'
-import { makeOhlcv } from './ohlcv.js'
-import { makeOptions } from './options.js'
-import { makeProfile } from './profile.js'
-import { makeQuote } from './quote.js'
-import { makeSearch } from './search.js'
-import { makeShortInterest } from './short-interest.js'
 
 export type { YahooClient } from './client.js'
 export { createYahooClient, wrapClient, retryOn429, isRateLimited } from './client.js'
-export { rangeToPeriod, sessionStart, toYahooInterval, nyDate, utcDate } from './time.js'
-export { yahooDescriptors, makeCall, summaryRows, chartRowsV2, optionRows, flattenDeep, YAHOO_ROUTES, type YahooRoute } from './call.js'
+export { nyDate, nyMidnight, nyParts, utcDate } from './time.js'
+export { yahooDescriptors, makeCall, summaryRows, chartRowsV2, optionRows, flattenDeep, pickExpiration, daysBetween, YAHOO_ROUTES, type YahooRoute } from './call.js'
 
 export type YahooConnectorDeps = {
   /** Library seam; defaults to the shared live client. Tests inject a fake. */
   client?: YahooClient
-  /** Clock for range → period mapping, the dividend lookback, and option expirations; defaults to Date.now. */
+  /** Clock for option expirations; defaults to Date.now. */
   now?: () => Date
 }
 
@@ -40,25 +27,8 @@ export function createYahooConnector(deps: YahooConnectorDeps = {}): Connector<z
   return defineConnector({
     name: 'yahoo',
     config: YahooConfig,
-    // v2 (PLAN.md section 17): the five yahoo-finance2 endpoints as routes (descriptors.json) through inferFrame. The kind handlers below stay for v1.
     descriptors: () => yahooDescriptors(),
     call: makeCall(client, now),
-    queries: {
-      search: makeSearch(client),
-      quote: makeQuote(client),
-      ohlcv: makeOhlcv(client, now),
-      earnings: makeEarnings(client),
-      profile: makeProfile(client),
-      metrics: makeMetrics(client),
-      estimates: makeEstimates(client),
-      eps_history: makeEpsHistory(client),
-      dividends: makeDividends(client, now),
-      insiders: makeInsiders(client),
-      institutions: makeInstitutions(client),
-      short_interest: makeShortInterest(client),
-      options: makeOptions(client, now),
-      holdings: makeHoldings(client),
-    },
   })
 }
 

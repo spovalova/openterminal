@@ -1,9 +1,9 @@
-// v2 (PLAN.md section 17): the five yahoo-finance2 endpoints as routes, answered from the recorded fixtures
-// through inferFrame. No network: the fake client replays the fixtures.
+// The five yahoo-finance2 endpoints as routes (PLAN.md section 17), answered from the recorded fixtures through
+// inferFrame. No network: the fake client replays the fixtures.
 import { describe, expect, it } from 'vitest'
 import { DescriptorSchema, parseParams, type Descriptor } from '@terminal/core'
 import { createYahooConnector } from '../src/index.js'
-import { chartRowsV2, flattenDeep, makeCall, summaryRows, yahooDescriptors, YAHOO_ROUTES } from '../src/call.js'
+import { chartRowsV2, daysBetween, flattenDeep, makeCall, pickExpiration, summaryRows, yahooDescriptors, YAHOO_ROUTES } from '../src/call.js'
 import { fakeClient, objects, testCtx, V12_NOW } from './helpers.js'
 
 const descriptors = yahooDescriptors()
@@ -25,17 +25,27 @@ async function run(route: string, params: Record<string, unknown>, overrides: Pa
 }
 
 describe('descriptors.json', () => {
-  it('holds exactly the five yahoo-finance2 endpoints the recipes name, all valid, and the connector exposes them beside its kinds', async () => {
+  it('holds exactly the five yahoo-finance2 endpoints the recipes name, all valid, and the connector exposes them', async () => {
     expect(descriptors.map((d) => d.route)).toEqual([...YAHOO_ROUTES])
     expect(descriptors.every((d) => DescriptorSchema.safeParse(d).success && d.connector === 'yahoo' && d.providers.length === 0)).toBe(true)
     expect(by('chart').params.map((p) => `${p.name}:${p.type}${p.required ? '!' : ''}`)).toEqual(['symbol:string[]!', 'period1:date!', 'period2:date', 'interval:string', 'includePrePost:boolean', 'events:string'])
     expect(by('quoteSummary').params.find((p) => p.name === 'modules')).toMatchObject({ type: 'string[]', required: true, enum: expect.arrayContaining(['financialData', 'calendarEvents', 'topHoldings']) })
     expect(by('quoteSummary').fields.map((f) => f.name)).toEqual(['symbol']) // inference fills the rest
     const { connector } = build()
-    expect(connector.mode).toBe('both')
-    const all = await connector.descriptors()
-    expect(all.filter((d) => d.route === 'quote')).toHaveLength(1) // the route wins over the kind of the same name
-    expect(all).toHaveLength(5 + connector.kinds.length - 3) // search, quote, options are both a kind and a route
+    expect(connector.name).toBe('yahoo')
+    expect(connector.config.safeParse({}).success).toBe(true)
+    expect((await connector.descriptors()).map((d) => d.route)).toEqual([...YAHOO_ROUTES])
+  })
+  it('pickExpiration and daysBetween implement the expiration rule the options recipe shares', () => {
+    const d = (s: string) => new Date(`${s}T00:00:00.000Z`)
+    const listed = [d('2026-10-23'), d('2026-10-30'), d('2026-11-20'), d('2026-10-19')]
+    expect(daysBetween('2026-10-18', '2026-10-25')).toBe(7)
+    expect(pickExpiration(listed, '2026-10-18')).toEqual(d('2026-10-30')) // the nearest at least 7 days out
+    expect(pickExpiration(listed, '2026-10-18', '2026-10-24')).toEqual(d('2026-10-30')) // snaps forward
+    expect(pickExpiration(listed, '2026-10-18', '2026-10-23')).toEqual(d('2026-10-23'))
+    expect(pickExpiration(listed, '2026-10-18', '2026-12-01')).toBeUndefined()
+    expect(pickExpiration([d('2026-10-19')], '2026-10-18')).toEqual(d('2026-10-19')) // none 7 days out: the nearest tomorrow or later
+    expect(pickExpiration([d('2026-10-18')], '2026-10-18')).toBeUndefined()
   })
   it('validates the recipe params the way recipes.yml writes them', () => {
     expect(parseParams(by('chart'), { symbol: ['MU'], period1: '2026-07-18', interval: '1d', includePrePost: false })).toEqual({ symbol: ['MU'], period1: '2026-07-18', interval: '1d', includePrePost: false })

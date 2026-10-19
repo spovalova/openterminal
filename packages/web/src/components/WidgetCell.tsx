@@ -10,7 +10,6 @@ import { primaryFrame, viewFor } from '../views'
 import { Editor } from './Editor'
 import { VirtualTable } from './VirtualTable'
 
-export { frameMatches } from '../state/frames'
 
 /**
  * One grid cell: a WidgetFrame around the view for the widget's frames (one per dataset, PLAN.md section 17);

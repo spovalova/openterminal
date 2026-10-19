@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { parseWidget } from '@terminal/core'
+import { parseAnyWidget } from '@terminal/core'
 
 import { Reply, chipsToLinks } from '../Reply'
 
-const w1 = parseWidget({ id: 'w1', title: 'Mag 7 price, 2 years', size: 'lg', query: { kind: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '2y' } }, view: { type: 'series' } })
+const w1 = parseAnyWidget({ id: 'w1', title: 'Mag 7 price, 2 years', size: 'lg', data: { main: { recipe: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '2y' } } }, view: { preset: 'price' } })
 
 beforeAll(() => {
   // jsdom has no scrollIntoView

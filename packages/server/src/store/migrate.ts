@@ -1,10 +1,10 @@
 // One-time migration from the JSON store (`~/.terminal/workspaces/<id>.json`) into SQLite. v1 widgets are read
 // through `migrateWidget` (`{ kind, params }` becomes `{ recipe: kind, params }` under `main`, the view becomes a
-// preset, the v1 query is kept on the widget); v2 widgets pass through. The JSON directory is renamed to a backup
+// preset), which `WorkspaceSchema` applies on parse; v2 widgets pass through. The JSON directory is renamed to a backup
 // beside the database, and a marker in `settings` stops the migration from running twice.
 import { existsSync, readdirSync, readFileSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
-import { WorkspaceSchema, isWidgetV2, migrateWidget, type AnyWidget, type Workspace } from '@terminal/core'
+import { WorkspaceSchema, isLegacyWidget, type Workspace } from '@terminal/core'
 import type { SqliteStore } from './sqlite.js'
 import { ID_RE } from './types.js'
 
@@ -65,14 +65,9 @@ export function migrateJsonStore(jsonDir: string, store: SqliteStore, opts: Migr
   return report
 }
 
-/** A stored workspace document with every v1 widget rewritten as v2. Throws when the document does not validate. */
+/** A stored workspace document with every v1 widget rewritten as v2 (the schema migrates on parse). Throws when the document does not validate. */
 export function migrateWorkspaceDoc(raw: unknown): { workspace: Workspace; v1Widgets: number } {
-  const parsed = WorkspaceSchema.parse(raw)
-  let v1Widgets = 0
-  const widgets: AnyWidget[] = parsed.widgets.map((w) => {
-    if (isWidgetV2(w)) return w
-    v1Widgets++
-    return migrateWidget(w)
-  })
-  return { workspace: { ...parsed, widgets }, v1Widgets }
+  const rawWidgets = raw && typeof raw === 'object' && Array.isArray((raw as { widgets?: unknown }).widgets) ? ((raw as { widgets: unknown[] }).widgets as unknown[]) : []
+  const v1Widgets = rawWidgets.filter((w) => isLegacyWidget(w)).length
+  return { workspace: WorkspaceSchema.parse(raw), v1Widgets }
 }

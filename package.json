@@ -18,6 +18,7 @@
     "lint": "eslint .",
     "query": "tsx scripts/query.ts",
     "probe": "tsx scripts/probe-catalog.ts",
+    "readme:recipes": "tsx scripts/readme-recipes.ts",
     "bench": "node scripts/prompt-bench.mjs"
   },
   "devDependencies": {

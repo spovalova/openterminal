@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { KIND_NAMES, RECIPE_PARAMS_INPUT, applyAnnotations, controlFor, datasetFieldsFrom, expandRecipe, parseRecipes, recipeDatasets, recipeDescriptor, recipeParams, recipeParamsFrame, recipeParamsSchema, recipeRouteAlternatives, recipeSummaryLines, renameColumns, renderValue, titleFor, validateRecipe, type Frame, type Recipe } from '../src/index.js'
+import { RECIPE_PARAMS_INPUT, applyAnnotations, controlFor, datasetFieldsFrom, expandRecipe, parseRecipes, recipeDatasets, recipeDescriptor, recipeParams, recipeParamsFrame, recipeParamsSchema, recipeRouteAlternatives, recipeSummaryLines, renameColumns, renderValue, titleFor, validateRecipe, type Frame, type Recipe } from '../src/index.js'
 import { builtinAnnotations, builtinRecipes } from '../src/node.js'
 
 const recipes = builtinRecipes()
 const by = (name: string) => recipes.find((r) => r.name === name)!
 
 describe('recipes.yml', () => {
-  it('parses, has unique names, and carries every one of the 22 kinds', () => {
+  it('parses, has unique names, and carries every one of the 22 v1 kinds as a recipe of the same name', () => {
     const names = recipes.map((r) => r.name)
     expect(new Set(names).size).toBe(names.length)
-    for (const kind of KIND_NAMES) expect(names, kind).toContain(kind)
+    const kinds = ['search', 'quote', 'ohlcv', 'news', 'earnings', 'profile', 'metrics', 'financials', 'estimates', 'eps_history', 'dividends', 'insiders', 'institutions', 'short_interest', 'options', 'volatility', 'calendar', 'ipos', 'movers', 'holdings', 'macro', 'yield_curve']
+    for (const kind of kinds) expect(names, kind).toContain(kind)
     expect(names.length).toBeGreaterThanOrEqual(22)
     for (const r of recipes) expect(validateRecipe(r), r.name).toEqual([])
   })
@@ -156,8 +157,8 @@ describe('recipe helpers', () => {
     expect(() => parseRecipes([{ name: 'Bad Name', title: 't', params: {}, view: { preset: 'table' }, routes: [{ connector: 'c', route: 'r' }] }])).toThrow()
     expect(() => parseRecipes([{ name: 'noroutes', title: 't', params: {}, view: { preset: 'table' } }])).toThrow(/needs `routes`/)
   })
-  it('options, earnings and macro are data graphs whose main transform reads the reserved `params` input (one expiration, the requested symbols, one series)', () => {
-    for (const name of ['options', 'earnings', 'macro', 'news', 'volatility']) {
+  it('the kinds’ in-handler logic lives in data graphs whose main transform reads the reserved `params` input (one expiration, the requested symbols, one series, the newest `limit` rows)', () => {
+    for (const name of ['options', 'earnings', 'macro', 'news', 'volatility', 'dividends', 'insiders', 'institutions', 'short_interest']) {
       const ds = recipeDatasets(by(name))
       expect(Object.keys(ds), name).toEqual(['raw', 'main'])
       const main = ds.main!
@@ -165,6 +166,16 @@ describe('recipe helpers', () => {
       expect(main.inputs).toEqual(['raw', RECIPE_PARAMS_INPUT])
       expect(validateRecipe(by(name))).toEqual([])
     }
+    // Graphs that need no params: search (exchange names, ten rows) and yield_curve (maturity labels); estimates joins two routes.
+    for (const name of ['search', 'yield_curve']) {
+      const main = recipeDatasets(by(name)).main!
+      if (!('inputs' in main)) throw new Error(`${name} main is not a transform`)
+      expect(main.inputs).toEqual(['raw'])
+    }
+    const estimates = recipeDatasets(by('estimates'))
+    expect(Object.keys(estimates)).toEqual(['consensus', 'eps', 'main'])
+    expect('inputs' in estimates.main! && estimates.main.inputs).toEqual(['consensus', 'eps'])
+    expect('inputs' in estimates.main! && Object.keys(estimates.main.columns ?? {})).toContain('upside_pct')
     const x = expandRecipe(by('options'), { symbol: 'TSLA', expiration: '2026-10-23', type: 'put' })
     expect(x.routes).toEqual((x.data.raw as { routes: unknown[] }).routes) // main is a transform: raw's alternatives stand in
     expect(x.data.raw).toMatchObject({ routes: [{ connector: 'openbb', route: 'derivatives/options/chains', params: { symbol: 'TSLA', provider: 'cboe' } }, { connector: 'yahoo', route: 'options' }] })

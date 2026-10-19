@@ -1,6 +1,6 @@
 # Architecture
 
-A one-page tour for contributors. Everything here restates PLAN.md sections 6 and 7; when the two disagree, PLAN.md wins and this page is wrong.
+A one-page tour for contributors. Everything here restates PLAN.md section 17 (v2); when the two disagree, PLAN.md wins and this page is wrong. Sections 7.1 and 14 of the plan describe the v1 kind catalog that phase 3a removed and are kept for history.
 
 ## Repo layout
 
@@ -8,118 +8,125 @@ pnpm monorepo, TypeScript strict, Node 22.
 
 ```
 packages/
-  core/       Frame, Widget, Workspace types; kind catalog; defineConnector; registry; cache; protocol
-  server/     connector loader, HTTP + WebSocket API, JSON file store, agent loop (src/agent)
+  core/       the contract: frames, descriptors and the OpenAPI generator, catalog, queries, recipes (recipes.yml),
+              annotations (annotations.yml), fields and shapes, presets and layers, clock, transform contract,
+              frame inference, defineConnector, registry, cache, protocol
+  server/     connector loader, HTTP + WebSocket API, SQLite store, persistent frame cache, transform engine
+              (Pyodide), probe and liveness, agent loop (src/agent)
   ui/         design system: tokens, components, chart theme, preview page
-  web/        React app: shell, state, WebSocket client, palette, connectors page, views (src/views)
-  cli/        `npx terminal` → starts the server on localhost, opens the browser
+  web/        React app: shell, state, WebSocket client, palette, Data page, the three-tab editor, views (src/views)
+  cli/        `npx openterminal` → starts the server on localhost, opens the browser
 connectors/
-  openbb/     no key; every kind, through a local OpenBB Platform API (listed first, free when not running)
-  yahoo/      no key; search, quote, ohlcv, earnings, plus the yahoo-finance2 fallbacks listed in PLAN.md section 14
-  finnhub/    free key; quote, news, earnings
+  openbb/     no key; every GET route of a local OpenBB Platform API, descriptors generated from its openapi.json
+  yahoo/      no key; the five yahoo-finance2 endpoints as routes (descriptors.json)
+  finnhub/    free key; quote, company-news, calendar/earnings as routes (descriptors.json)
 docs/
-  vocabulary.md, writing-a-connector.md, architecture.md, notes/
+  vocabulary.md, writing-a-connector.md, architecture.md, shipping.md, notes/
 scripts/
-  query.ts            `pnpm query <kind> key=value …` prints a frame for any kind
+  query.ts            `pnpm query <recipe> key=value …` and `pnpm query <connector> <route> key=value …`
+  probe-catalog.ts    `pnpm probe` calls every route once and records liveness
+  readme-recipes.ts   `pnpm readme:recipes` regenerates the README's recipe table from recipes.yml
   prompt-bench.mjs    `pnpm bench` runs scripts/prompts.json against a running server
+  accept.mjs          the visual acceptance loop over the twelve section 17 cases
 ```
 
-`packages/core` is the shared contract: every other package compiles against it and it changes only with the plan (the v1.2 catalog in PLAN.md section 14 was one such change). The stack is Zod for every schema, Hono for HTTP and WebSocket, Vite + React, Tailwind for tokens, lightweight-charts, cmdk for the palette, the Vercel AI SDK for the agent, Vitest for tests.
+`packages/core` is the shared contract: every other package compiles against it and it changes only with the plan. The stack is Zod for every schema, Hono for HTTP and WebSocket, Vite + React, Tailwind for tokens, lightweight-charts 5, cmdk for the palette, the Vercel AI SDK for the agent, Pyodide (CPython, pandas, numpy, scipy in WebAssembly) for transforms, `node:sqlite` for the store, Vitest for tests.
 
 ## The data path: prompt to pixels
 
 ```
-prompt ─▶ agent ─▶ query tool ─▶ registry ─▶ connector ─▶ frame
-                      │                                     │
-                      ◀──────────── preview ────────────────┤
-                                                            │
-          set_workspace ─▶ widgets ─▶ (server executes) ────┼─▶ frame ─▶ view ─▶ widget
-                                                            │
-          reply with chips ◀────────────────────────────────┘
+prompt ─▶ agent ─▶ find_route ─▶ catalog (descriptors + liveness)
+             │
+             ├──▶ query { recipe | connector+route } ─▶ registry ─▶ connector.call ─▶ inferFrame ─▶ annotations ─▶ frame
+             ├──▶ transform { inputs, code } ─▶ registry ─▶ inputs ─▶ Pyodide worker ─▶ frame
+             │                                                                            │
+             ◀───────────────────────────── preview (columns, units, rows, stats) ───────┤
+             │                                                                            │
+             └──▶ set_workspace ─▶ widgets ─▶ executor runs each dataset ─▶ frame per dataset ─▶ preset ─▶ view
+                  reply with chips, verified against the previews
 ```
 
 1. **Prompt.** The user types in the PromptBox. The web app sends `{ t: 'prompt', workspaceId, text }` over the socket.
-2. **Agent.** The server's `AgentRunner` runs the loop (Vercel AI SDK, provider and key from config). The system prompt holds the kind catalog with param schemas generated from core, the kinds the registry can currently answer, the current workspace JSON, today's date and market state, and the rules (run queries before writing numbers, four to six widgets by default and fewer when asked, first widget is the hero, short titles, a prompt overwrites the workspace, the reply begins with the answer, period changes are measured from the close before the period), plus six worked examples. The `query` tool takes `params` as an open object that `parseQuery` validates against the kind. Hard cap of ten tool calls per prompt. Symbol lookup is `query('search', { q: [...] })`, batched.
-3. **`query(kind, params)` tool.** Calls the registry. The registry validates the query against the catalog, serves from cache when fresh, else tries connectors in config order and falls back on error, then validates the returned frame's columns against the catalog (name, type, order) and caches it for the kind's TTL.
-4. **Connector.** A plain module made with `defineConnector`. It receives validated params and a `Ctx` (`http.get`, `config`, `log`, `signal`) and returns a `Frame` via `toFrame`. See `writing-a-connector.md`.
-5. **Frame → preview (to the agent).** The tool returns a `preview(frame)`: columns, row count, rows (all when 25 or fewer, else the first 25), and per-symbol (per-series for `macro`) per-numeric-column stats (`first`, `last`, `min`, `max`, `changePct`). The agent may only write numbers that appear in a preview. The full frame stays in the cache so rendering does not refetch.
-6. **`set_workspace({ name?, widgets })` tool.** Validates every widget against the kind and view schemas (`WidgetSchema`: `series` requires an `ohlcv` or `macro` query, `candle` and `normalize` are only for `ohlcv` and mutually exclusive, `candle` requires exactly one symbol, `chain` requires an `options` query), replaces the workspace's widgets, and starts executing their queries. The server emits `widgets` immediately and a `frame` or `frameError` per widget as each query settles.
-7. **Frame → view → widget (to the browser).** The web app matches each `frame` message to its widget by id and renders it with the widget's view: `series` on lightweight-charts (one line per symbol, or per series for `macro`; options `candle` or `normalize`; the legend shows each line's last value and change over the range), `table` (typed formatting per kind and column sort), or `chain` (calls on the left, strikes in the middle, puts on the right, the underlying price marked). A widget is a skeleton until its frame lands and shows an error state on `frameError`.
-8. **Reply with chips.** The agent's final text streams as `delta` messages and lands as `done` with the full `Message`. `[[widget:<id>]]` tokens in the text render as chips that scroll to and flash the widget.
-
-Widgets keep polling after the reply: the cache TTL per kind (quote 10 s, intraday ohlcv, options and movers 60 s, daily ohlcv and volatility 10 min, news 2 min, earnings, estimates, metrics, insiders, calendar, ipos, macro and yield_curve 1 h, the rest 1 d; the full list is in `kinds.ts`) bounds how often a connector is hit, and only the focused workspace polls (`{ t: 'focus', workspaceId }`).
+2. **Agent.** The server's `AgentRunner` runs the loop (Vercel AI SDK, provider and key from config, prompt caching on). The system prompt holds the recipe list (`recipeSummaryLines`), the connectors and the catalog size, the rules from section 17 (use a recipe when one fits, search when none does, never a figure outside a preview, unannotated numbers carry no unit, charts before tables, the one-row rule), the current workspace, today's date and market state from `clock.ts`, and worked examples including the P/E transform. Hard cap of ten tool calls per prompt.
+3. **Tools.** `find_route({ query, namespaces? })` searches the catalog (BM25 over path, summary, description, params and fields; dead routes hidden) and returns up to five routes plus recipe names that match. `query` runs a recipe or a route. `transform({ inputs, code, columns? })` runs a pandas script over frames. `set_workspace({ name?, widgets })` validates every widget (`WidgetV2Schema`; recipe params; route params against the descriptor; for datasets the run previewed, that the preset can draw the frame and that no table sits over one row) and replaces the widgets.
+4. **Registry.** A **route** query: the descriptor validates the params, `connector.call` answers, the registry stamps the TTL (`ttlForRoute`) and the lineage and applies the annotations (fractions become percent, units and labels land in `frame.meta.fields`). A **recipe** query: the recipe's params are validated against its JSON schema, each dataset's route alternatives are tried in order with fallback on error or an empty frame, a route's `rename` keeps the column names the recipe expects, and transform datasets run after their inputs with the validated params bound as the reserved `params` input; the frame carries the recipe name and a hash of its definition in the lineage, so a persistent cache from an older definition is a miss. A **transform** query: inputs run in parallel (cache hits when fresh), then the engine. Frames are cached by `canonicalKey` in memory and in SQLite.
+5. **Connector.** A plain module made with `defineConnector`: `descriptors()` (a file, or generated from an OpenAPI document) and `call(route, params, ctx)` → `inferFrame`. See `writing-a-connector.md`. No unit conversion, no selection: a faithful window onto the source.
+6. **Transform engine.** One warm Pyodide worker per server (pandas 3, numpy, scipy, the `ot` helpers with the NYSE calendar), booted in the background after listen (15 to 25 s cold, tens of milliseconds warm). Imports limited to an allow-list, CPU and memory caps, input and output row caps, a timeout that interrupts first and kills only a script that swallows it.
+7. **Frame → preview (to the agent).** `preview(frame)`: columns with their units, row count, rows (all when 25 or fewer, else the first 25), per-group per-numeric-column stats (`first`, `last`, `min`, `max`, `change`, `changePct`), lineage. The agent may only write numbers that appear in a preview; `verify.ts` checks the reply's figures against the run's previews and the result travels on the `done` message.
+8. **Executor.** The server runs every dataset of every widget (`widgetQueries`) and emits `frame` / `frameError` per dataset, keyed by workspace, widget and dataset; only the focused workspace polls, on each frame's TTL.
+9. **Frame → preset → view (to the browser).** For each dataset, field config is `mergeFieldConfig(detectShape(columns, rows), frame.meta.fields, widget.fields)`. A preset (`expandPreset` for charts, `controlFor` for tables, stats, facts and chains) is a pure function from the view's options and the datasets' field config to panes and layers or a control spec. `ChartView` draws panes and layers on lightweight-charts (lines, candles, histograms, markers, levels, bands, a numeric x axis for curves); `TableView`, `StatView`, `FactsCard`, `ChainView`, `HeatmapView` render their controls. A table over one row renders the facts card (product rule 8). The grid packs widgets by size and content hint.
+10. **Reply with chips.** The agent's final text streams as `delta` messages and lands as `done` with the full `Message` and its `verification`. `[[widget:<id>]]` tokens render as chips that scroll to and flash the widget.
 
 ## Message sequence over the socket
 
-One WebSocket per client at `/ws`. For one prompt (PLAN.md 7.4):
+One WebSocket per client at `/ws`. For one prompt:
 
 ```
 client  ──  prompt { workspaceId, text }  ──▶  server
 
-server  ──  started { workspaceId }                      web app: Empty → Active
-server  ──  step { workspaceId, step }        × n        one per tool call
-server  ──  widgets { workspaceId, widgets, name? }      grid renders skeletons
-server  ──  frame { widgetId, frame }         per widget
-        ──  frameError { widgetId, error }    per widget   interleaved with
-server  ──  delta { workspaceId, text }       × n          the streaming reply
-server  ──  done { workspaceId, message }                 message = { role: 'agent', text, steps }
+server  ──  started { workspaceId }                             web app: Empty → Active
+server  ──  step { workspaceId, step }        × n               one per tool call (find_route, query, transform, set_workspace)
+server  ──  widgets { workspaceId, widgets, name? }             grid renders skeletons
+server  ──  frame { workspaceId, widgetId, dataset?, frame }    per dataset
+        ──  frameError { workspaceId, widgetId, dataset?, error }
+server  ──  delta { workspaceId, text }       × n               the streaming reply
+server  ──  done { workspaceId, message }                       message = { role: 'agent', text, steps, verification }
 ```
 
-`failed { workspaceId, error }` can replace anything after `started`. The client can also send `cancel { workspaceId }` (aborts the run via the `AbortSignal` passed to the agent and connectors), `refresh { widgetId }` (re-runs one widget's query, bypassing the cache, and answers with `frame` or `frameError`), and `focus { workspaceId }` (which workspace polls).
+`failed { workspaceId, error }` can replace anything after `started`. The client can also send `cancel { workspaceId }`, `refresh { widgetId, workspaceId?, dataset? }` (re-runs a widget bypassing the cache) and `focus { workspaceId }` (which workspace polls). The schemas are `ClientMsgSchema` and `ServerMsgSchema` in `packages/core/src/protocol.ts`.
 
-The schemas are `ClientMsgSchema` and `ServerMsgSchema` in `packages/core/src/protocol.ts`.
+HTTP, under `/api`: `GET /api/health` (connectors, recipes, llm); workspaces CRUD, export and import; `GET /api/widgets/:id/frame?workspace=&dataset=`; `GET /api/connectors`, `PUT /api/connectors/:name/config`; `GET /api/catalog?q=`, `GET /api/catalog/:connector`, `POST /api/catalog/probe`; `GET/PUT /api/recipes`; `POST /api/query`; `GET/PUT /api/settings/:key` (`ticker`, `providers`); `GET /api/runs`; `GET /api/store`.
 
-HTTP, under `/api`: `GET/POST /api/workspaces`, `GET/PATCH/DELETE /api/workspaces/:id`, `GET /api/widgets/:id/frame`, `GET /api/connectors`, `PUT /api/connectors/:name/config`.
+## The web app
 
-## The three web app states
-
-- **Empty.** A new workspace shows only a centered PromptBox (max width 640px) with the three example prompts as chips beneath it and a hint for the palette. The tab bar is at the top but quiet.
-- **Active.** On `started`, the PromptBox moves to the bottom of a right sidebar (380px) that holds the conversation: the user's message, a collapsible Steps header ("Worked for 12s · 5 steps"), and the reply with chips. The center fills with the grid as `widgets` and then `frame` messages arrive; each widget is a skeleton until its frame lands.
-- **Transition.** The View Transitions API with a `view-transition-name` on the PromptBox, so the box slides from center to sidebar. No animation library; browsers without support just switch.
-
-Also: the sidebar toggles with ⌘\ and overlays the grid below 1100px. The grid is CSS grid, three columns, `grid-auto-flow: dense`; lg spans 2x2, md 2x1, sm 1x1; the first widget is placed first. `/` or ⌘K opens the palette (new workspace, jump to workspace, ticker shortcut). A connectors page lists each connector with status (ok, missing key, error) and a key field. A NoKeys state explains how to add an LLM key. Dark theme only.
+- **Empty.** A new workspace shows a centered PromptBox with the three example prompts as chips. **Active.** On `started`, the PromptBox moves to a right sidebar that holds the conversation (steps, the reply with chips, the verification), and the grid fills as `widgets` and `frame` messages arrive. The View Transitions API slides the box.
+- **Grid.** CSS grid, three columns from 960 px, `grid-auto-flow: dense`; `packLayout` sizes by content (a short table, a stat or a facts card is one row; charts two; a non-hero md chart one column wide) and repairs holes.
+- **Editor.** Three tabs per widget: data (the graph: datasets added as a recipe, a route from the catalog or a transform, with a preview per dataset), transform (CodeMirror with the traceback inline), view (the preset and its options generated from `ViewV2Schema`, the expanded panes read-only).
+- **Data page** (`#data`): the catalog per connector with search, liveness and the probe button, keys, per-route provider overrides, the recipe library with promote and edit, the store's state. Also the ticker strip (six `quote` datasets, saved server-side) and the market strip from `describeMarketTime`.
 
 ## Where each concern lives
 
 | Concern | Lives in |
 |---|---|
-| Kind catalog (params, columns, TTL) | `packages/core/src/kinds.ts` |
 | Frame shape and conventions | `packages/core/src/frame.ts` |
-| Widget, view, size schemas | `packages/core/src/widget.ts` |
+| Descriptors, params validation, the OpenAPI generator | `packages/core/src/descriptor.ts`, `descriptor-openapi.ts` |
+| Catalog (BM25 search, liveness) | `packages/core/src/catalog.ts` |
+| Queries (route, recipe, transform; `canonicalKey`) | `packages/core/src/query.ts` |
+| Recipes (`recipes.yml`), templates and filters, the README table | `packages/core/src/recipes.ts`, `packages/core/recipes.yml` |
+| Annotations (`annotations.yml`), field config, shapes | `packages/core/src/annotations.ts`, `fields.ts`, `shape.ts` |
+| Widget model: datasets, presets, panes and layers; the v1 JSON migration | `packages/core/src/widget.ts`, `presets.ts`, `layers.ts` |
+| Clock (ET sessions, NYSE calendar, ranges), transform contract, frame inference | `packages/core/src/clock.ts`, `transform.ts`, `infer.ts` |
 | Workspace, message, step schemas; chip token | `packages/core/src/workspace.ts` |
-| `defineConnector`, `toFrame`, `Ctx`, `createHttp` | `packages/core/src/connector.ts` |
-| Registry (routing, fallback, column validation) | `packages/core/src/registry.ts` |
-| Cache (in-memory, keyed by kind + stable params) | `packages/core/src/cache.ts` |
+| `defineConnector`, `Ctx`, `createHttp` | `packages/core/src/connector.ts` |
+| Registry (routes, recipes, transforms, fallback, annotations, TTLs) | `packages/core/src/registry.ts` |
+| Cache (in-memory; SQLite in the server) | `packages/core/src/cache.ts`, `packages/server/src/cache-sqlite.ts` |
 | `preview()` | `packages/core/src/preview.ts` |
 | Socket and HTTP message schemas, `AgentRunner` interface | `packages/core/src/protocol.ts` |
-| v2 (PLAN.md section 17, phase 0; beside the kinds until phase 3): descriptors and the OpenAPI generator | `packages/core/src/descriptor.ts`, `descriptor-openapi.ts` |
-| v2 catalog (BM25 search, liveness) | `packages/core/src/catalog.ts` |
-| v2 queries (route, recipe, transform; `canonicalKey`) | `packages/core/src/query.ts` |
-| v2 field config, shapes, annotations (`annotations.yml`), recipes (`recipes.yml`) | `packages/core/src/fields.ts`, `shape.ts`, `annotations.ts`, `recipes.ts` |
-| v2 widget model: datasets, presets, panes and layers | `packages/core/src/widget.ts`, `presets.ts`, `layers.ts` |
-| v2 clock (ET sessions, NYSE calendar), transform contract, frame inference | `packages/core/src/clock.ts`, `transform.ts`, `infer.ts` |
-| Phase 1 seams (who owns and consumes what) | `docs/notes/v2-contracts.md` |
-| Config loading, built-in connector map, registry wiring | `packages/server/src` (`connectors.ts` holds the map) |
-| HTTP and WebSocket routes, widget execution, polling | `packages/server/src` |
-| Workspace store (`~/.terminal/workspaces/<id>.json`) | `packages/server/src` |
-| Agent loop, the two tools, system prompt builder | `packages/server/src/agent` |
+| Config loading, built-in connector map, registry wiring | `packages/server/src/config.ts`, `connectors.ts` |
+| HTTP and WebSocket routes, data routes, widget execution, polling | `packages/server/src/app.ts`, `routes-data.ts`, `executor.ts` |
+| Store (SQLite at `~/.terminal/terminal.db`, the one-time JSON migration) | `packages/server/src/store/` |
+| Transform engine, `ot.py`, vendored wheels | `packages/server/src/transform/`, `packages/server/pyodide/` |
+| Probe and liveness | `packages/server/src/probe.ts`, `liveness.ts`, `scripts/probe-catalog.ts` |
+| Agent loop, the four tools, system prompt, reply verification, run log | `packages/server/src/agent`, `verify.ts`, `runlog.ts` |
 | Stub agent (fixed use-case-A widget set when no LLM key) | `packages/server/src/stub-agent.ts` |
 | Tokens, components, chart theme, series palette | `packages/ui` |
-| Shell, states, socket client, palette, connectors page | `packages/web` |
-| `series`, `table` and `chain` views | `packages/web/src/views` |
-| `npx terminal` | `packages/cli` |
-| Connectors | `connectors/<name>/src/index.ts` |
-| Config and workspaces on disk | `~/.terminal/config.yml`, `~/.terminal/workspaces/` (override the directory with `TERMINAL_HOME`) |
+| Shell, state (frames keyed by workspace, widget, dataset), socket client, palette, Data page, editor | `packages/web` |
+| Field config pipeline and the views | `packages/web/src/views` |
+| `npx openterminal` | `packages/cli` |
+| Connectors | `connectors/<name>/src` |
+| Config, store, catalog cache, user recipes and annotations on disk | `~/.terminal/config.yml`, `terminal.db`, `catalog/`, `recipes.yml`, `annotations.yml` (override the directory with `TERMINAL_HOME`) |
 
 Ports: server `http://localhost:4242` (`/api`, `/ws`); web dev server `http://localhost:5173`, proxying `/api` and `/ws` to 4242; UI preview page `http://localhost:5174`.
 
 ## Decisions that shape the code
 
-From PLAN.md section 0, so nobody reopens them by accident:
+From PLAN.md section 0 and section 17, so nobody reopens them by accident:
 
 - A prompt overwrites the workspace. No diff, no accept/reject. A follow-up re-emits the widgets it wants to keep.
 - Layout is automatic. The agent assigns sizes, never positions. No dragging.
-- Five kinds, two views, two agent tools, two connectors in v1; v1.2 grew the catalog to 22 kinds and added the `chain` view (PLAN.md section 14) because the top data gaps were all keyless routes one connector already served. Still two tools. Add nothing without a use case that needs it.
+- Routes replace kinds (section 17). The two things kinds guaranteed, correct units and views that know their columns, are kept by annotations and shapes. A recipe is data, not code; a question one route answers becomes a recipe, not a connector change.
+- Connectors convert nothing: provider values plus annotations. Selection and derivation are pandas in a recipe's data graph or a transform, in a Pyodide sandbox, never a native Python process.
+- Every number in a reply comes from a preview, and the server verifies it.
 - Local-first, bring your own keys. One process on localhost plus the browser. No accounts, no hosted backend.
 - US equities only. No streaming; TTL polling instead.
 - cordis is deferred. Contributors only see `defineConnector`, so the loader can be swapped later without touching a connector.

@@ -13,7 +13,7 @@ import { isModKey, isTyping, MOD } from './platform'
 import { TerminalSocket } from './socket'
 import { SocketContext } from './socketContext'
 import { AppContext, initialState, layoutFor, reducer, workspaceState, type AppState } from './state'
-import { frameMatches, hasAnyFrame } from './state/frames'
+import { hasAnyFrame } from './state/frames'
 import { withViewTransition } from './transition'
 
 const ACTIVE_KEY = 'terminal.activeWorkspace'
@@ -117,8 +117,7 @@ export function App() {
       void api
         .widgetFrame(widget.id, workspaceId ? { workspaceId } : {})
         .then((frame) => {
-          if (frameMatches(widget, frame)) dispatch({ type: 'frameLoaded', widgetId: widget.id, frame, ...(workspaceId ? { workspaceId } : {}) })
-          else socket.refresh(widget.id, workspaceId)
+          dispatch({ type: 'frameLoaded', widgetId: widget.id, frame, ...(workspaceId ? { workspaceId } : {}) })
         })
         .catch(() => socket.refresh(widget.id, workspaceId))
     }
@@ -215,7 +214,7 @@ export function App() {
               <span>{state.socket === 'open' ? 'connected' : state.socket === 'connecting' ? 'connecting…' : 'disconnected, retrying'}</span>
               {state.health && (
                 <span>
-                  · {state.health.kinds.length} kinds{state.health.llm ? '' : ' · no LLM key'}
+                  · {state.health.connectors.length} {state.health.connectors.length === 1 ? 'connector' : 'connectors'} · {state.health.recipes} recipes{state.health.llm ? '' : ' · no LLM key'}
                 </span>
               )}
               <span className="text-fg-3">·</span>
