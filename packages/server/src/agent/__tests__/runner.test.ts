@@ -1,21 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { z } from 'zod'
-import { ConnectorRegistry, WIDGET_CHIP_RE, WidgetV2Schema, defineConnector, toFrame, type ServerMsg, type WidgetV2 } from '@terminal/core'
+import { ConnectorRegistry, WIDGET_CHIP_RE, WidgetV2Schema, type ServerMsg, type WidgetV2 } from '@terminal/core'
 import { MemoryRunLog } from '../../runlog.js'
 import { createRunner, AgentAbortError } from '../runner.js'
 import { MAX_TOOL_CALLS } from '../tools.js'
 import { collectEmit, createFakeRegistry, scriptedModel, systemPromptSentOn, toolResultsSentOn, workspace, type Turn, type TurnScript } from './helpers.js'
+import { routesConnector } from '../../../test/fake-connector.js'
 
 const MEMORY = ['MU', 'SNDK', 'WDC', 'STX']
-/** A v2 recipe query. */
+/** A recipe query. */
 const rq = (recipe: string, params: Record<string, unknown>) => ({ name: 'query', input: { recipe, params } })
-/** A v1 kind query (accepted until phase 3). */
-const kq = (kind: string, params: Record<string, unknown>) => ({ name: 'query', input: { kind, params } })
 const r = (recipe: string, params: Record<string, unknown>) => ({ recipe, params })
 
 function useCaseA(): Turn[] {
   return [
-    { toolCalls: [rq('search', { q: ['memory', 'MU', 'SNDK', 'WDC', 'STX'] })] },
+    { toolCalls: [rq('search', { q: 'memory' })] },
     {
       toolCalls: [
         rq('ohlcv', { symbols: MEMORY, interval: '1d', range: '3mo' }),
@@ -49,13 +47,13 @@ function useCaseA(): Turn[] {
 const SEMIS = ['NVDA', 'AMD', 'AVGO', 'TSM', 'SMH', 'SPY']
 function useCaseB(): Turn[] {
   return [
-    { toolCalls: [kq('search', { q: SEMIS })] },
+    { toolCalls: [rq('search', { q: 'nvidia' })] },
     {
       toolCalls: [
-        kq('ohlcv', { symbols: ['NVDA', 'SPY', 'SMH'], interval: '5m', range: '1d' }),
-        kq('ohlcv', { symbols: ['NVDA'], interval: '5m', range: '1d' }),
-        kq('quote', { symbols: SEMIS }),
-        kq('news', { symbols: ['NVDA'], limit: 20 }),
+        rq('ohlcv', { symbols: ['NVDA', 'SPY', 'SMH'], interval: '5m', range: '1d' }),
+        rq('ohlcv', { symbols: ['NVDA'], interval: '5m', range: '1d' }),
+        rq('quote', { symbols: SEMIS }),
+        rq('news', { symbols: ['NVDA'], limit: 20 }),
       ],
     },
     {
@@ -64,10 +62,10 @@ function useCaseB(): Turn[] {
           name: 'set_workspace',
           input: {
             widgets: [
-              { id: 'hero', title: 'NVDA vs SPY vs SMH today', size: 'lg', query: { kind: 'ohlcv', params: { symbols: ['NVDA', 'SPY', 'SMH'], interval: '5m', range: '1d' } }, view: { type: 'series', normalize: true } },
-              { id: 'hero', title: 'NVDA today', size: 'md', query: { kind: 'ohlcv', params: { symbols: ['NVDA'], interval: '5m', range: '1d' } }, view: { type: 'series', candle: true } },
-              { title: 'Semis today', size: 'md', query: { kind: 'quote', params: { symbols: SEMIS } }, view: { type: 'table' } },
-              { title: 'NVDA news, 24h', size: 'md', query: { kind: 'news', params: { symbols: ['NVDA'] } }, view: { type: 'table' } },
+              { id: 'hero', title: 'NVDA vs SPY vs SMH today', size: 'lg', data: { main: r('ohlcv', { symbols: ['NVDA', 'SPY', 'SMH'], interval: '5m', range: '1d' }) }, view: { preset: 'compare', normalize: true } },
+              { id: 'hero', title: 'NVDA today', size: 'md', data: { main: r('ohlcv', { symbols: ['NVDA'], interval: '5m', range: '1d' }) }, view: { preset: 'price', candle: true } },
+              { title: 'Semis today', size: 'md', data: { main: r('quote', { symbols: SEMIS }) }, view: { preset: 'table' } },
+              { title: 'NVDA news, 24h', size: 'md', data: { main: r('news', { symbols: ['NVDA'] }) }, view: { preset: 'table' } },
             ],
           },
         },
@@ -113,7 +111,7 @@ describe('use case A: theme research (v2 recipes and presets)', () => {
     expect(message.role).toBe('agent')
     expect(message.steps).toHaveLength(7)
     const summaries = message.steps!.map((s) => s.summary)
-    expect(summaries[0]).toBe('recipe search q=memory,MU,SNDK,WDC,STX · 5 rows')
+    expect(summaries[0]).toBe('recipe search q=memory · 1 row')
     expect(summaries).toContain('recipe ohlcv symbols=MU,SNDK,WDC,STX interval=1d range=3mo · 252 rows')
     expect(summaries).toContain('recipe ohlcv symbols=MU interval=1d range=6mo · 126 rows')
     expect(summaries).toContain('recipe quote symbols=MU,SNDK,WDC,STX · 4 rows')
@@ -126,8 +124,8 @@ describe('use case A: theme research (v2 recipes and presets)', () => {
     }
     expect(messages.filter((m) => m.t === 'step')).toHaveLength(7)
 
-    // The connector answered every recipe through its kind route once (the registry has no cache here).
-    expect(fake.calls.map((c) => c.kind).sort()).toEqual(['earnings', 'news', 'ohlcv', 'ohlcv', 'quote', 'search'])
+    // The connector answered every recipe through its route once (the registry has no cache here).
+    expect(fake.calls.map((c) => c.route).sort()).toEqual(['earnings', 'news', 'ohlcv', 'ohlcv', 'quote', 'search'])
 
     // Reply text streamed as deltas and returned, with chips, and every figure matched a preview.
     const deltas = messages.filter((m) => m.t === 'delta').map((m) => (m as Extract<ServerMsg, { t: 'delta' }>).text)
@@ -155,7 +153,7 @@ describe('use case A: theme research (v2 recipes and presets)', () => {
     expect(Object.keys(sw.inputSchema.properties ?? {})).toEqual(['name', 'widgets'])
     expect(JSON.stringify(sw.inputSchema)).toContain('"preset"')
     const qt = tools.find((t) => t.name === 'query')!
-    expect(Object.keys(qt.inputSchema.properties ?? {})).toEqual(['recipe', 'connector', 'route', 'kind', 'params'])
+    expect(Object.keys(qt.inputSchema.properties ?? {})).toEqual(['recipe', 'connector', 'route', 'params'])
     const system = systemPromptSentOn(model, 0)
     expect(system).toContain('Connectors, in routing order: fake (7 routes in the catalog).')
     expect(system).toContain('- quote(symbols[]) ·')
@@ -180,8 +178,8 @@ describe('use case A: theme research (v2 recipes and presets)', () => {
   })
 })
 
-describe('use case B: event diagnosis (v1 kinds and widgets, accepted until phase 3)', () => {
-  it('runs kind queries, migrates v1 widgets to v2 and resolves colliding ids', async () => {
+describe('use case B: event diagnosis', () => {
+  it('runs the recipes, validates the widgets and resolves colliding ids', async () => {
     const { promise, messages } = run(useCaseB())
     const message = await promise
     const widgets = widgetsOf(messages)[0]!
@@ -189,10 +187,10 @@ describe('use case B: event diagnosis (v1 kinds and widgets, accepted until phas
     for (const w of widgets) expect(WidgetV2Schema.safeParse(w).success).toBe(true)
     // Given id kept; the duplicate and the missing ids are generated in order.
     expect(widgets.map((w) => w.id)).toEqual(['hero', 'w1', 'w2', 'w3'])
-    expect(widgets[0]).toMatchObject({ size: 'lg', view: { preset: 'compare', normalize: true }, data: { main: { recipe: 'ohlcv', params: { symbols: ['NVDA', 'SPY', 'SMH'], interval: '5m', range: '1d' } } }, query: { kind: 'ohlcv' } })
+    expect(widgets[0]).toMatchObject({ size: 'lg', view: { preset: 'compare', normalize: true }, data: { main: { recipe: 'ohlcv', params: { symbols: ['NVDA', 'SPY', 'SMH'], interval: '5m', range: '1d' } } } })
     expect(widgets[1]).toMatchObject({ view: { preset: 'price', candle: true } })
-    expect(widgets[3]!.data.main).toEqual({ recipe: 'news', params: { symbols: ['NVDA'], limit: 20 } }) // default applied by core
-    expect(message.steps!.map((s) => s.summary)).toContain('ohlcv NVDA, SPY, SMH 5m 1d · 234 rows')
+    expect(widgets[3]!.data.main).toEqual({ recipe: 'news', params: { symbols: ['NVDA'] } })
+    expect(message.steps!.map((s) => s.summary)).toContain('recipe ohlcv symbols=NVDA,SPY,SMH interval=5m range=1d · 234 rows')
     expect(message.text).toContain('[[widget:hero]]')
     expect(message.verification).toEqual({ ok: true, checked: 3, matched: 3, unmatched: [] })
   })
@@ -308,15 +306,15 @@ describe('tool call cap', () => {
 })
 
 describe('set_workspace validation', () => {
-  it('returns errors to the model, applies nothing, and accepts the retry (v1 refinements still apply to v1 widgets)', async () => {
+  it('returns errors to the model, applies nothing, and accepts the retry', async () => {
     const bad = {
       name: 'set_workspace',
       input: {
         widgets: [
-          { title: 'Two symbols as candle', size: 'lg', query: { kind: 'ohlcv', params: { symbols: ['MU', 'WDC'], interval: '1d', range: '3mo' } }, view: { type: 'series', candle: true } },
-          { title: 'Series on quote', size: 'md', query: { kind: 'quote', params: { symbols: ['MU'] } }, view: { type: 'series' } },
-          { title: 'Both flags', size: 'md', query: { kind: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '3mo' } }, view: { type: 'series', candle: true, normalize: true } },
-          { title: 'Fine', size: 'sm', query: { kind: 'quote', params: { symbols: ['MU'] } }, view: { type: 'table' } },
+          { title: 'Unknown recipe', size: 'lg', data: { main: r('bonds', { symbols: ['MU'] }) }, view: { preset: 'table' } },
+          { title: 'Bad params', size: 'md', data: { main: r('ohlcv', { symbols: 'MU', interval: '2d' }) }, view: { preset: 'price' } },
+          { title: 'Events missing', size: 'md', data: { main: r('ohlcv', { symbols: ['MU'], interval: '1d', range: '3mo' }) }, view: { preset: 'price', events: 'earnings' } },
+          { title: 'Fine', size: 'sm', data: { main: r('quote', { symbols: ['MU'] }) }, view: { preset: 'table' } },
         ],
       },
     }
@@ -335,9 +333,9 @@ describe('set_workspace validation', () => {
     expect(message.steps).toHaveLength(2)
     const [first, second] = message.steps!
     expect(first!.summary).toBe('set_workspace · 3 invalid widgets')
-    expect(first!.error).toContain('candle requires exactly one symbol')
-    expect(first!.error).toContain('series view requires an ohlcv or macro query')
-    expect(first!.error).toContain('candle and normalize are mutually exclusive')
+    expect(first!.error).toContain('widgets[0] data.main: unknown recipe "bonds"')
+    expect(first!.error).toContain('widgets[1] data.main: recipe ohlcv: interval:')
+    expect(first!.error).toContain('widgets[2] view.events: view.events names dataset "earnings"')
     expect(second!.error).toBeUndefined()
     expect(second!.summary).toBe('set_workspace · 2 widgets')
 
@@ -348,7 +346,7 @@ describe('set_workspace validation', () => {
     const fed = toolResultsSentOn(model, 1)[0] as { ok: boolean; errors: string[] }
     expect(fed.ok).toBe(false)
     expect(fed.errors).toHaveLength(3)
-    expect(fed.errors[0]).toMatch(/^widgets\[0\] view\.candle:/)
+    expect(fed.errors[0]).toMatch(/^widgets\[0\] data\.main:/)
   })
 
   it('refuses a table over a one-row preview (rule 8) and a chart over a frame without time, and accepts the fix', async () => {
@@ -358,7 +356,7 @@ describe('set_workspace validation', () => {
         widgets: [
           { title: 'NVDA quote', size: 'sm', data: { main: r('quote', { symbols: ['NVDA'] }) }, view: { preset: 'table' } },
           { title: 'Quote as chart', size: 'lg', data: { main: r('quote', { symbols: ['NVDA'] }) }, view: { preset: 'price' } },
-          { title: 'Rates', size: 'md', data: { ten: r('macro', { series: ['treasury_10y'] }), two: r('macro', { series: ['treasury_2y'] }) }, view: { preset: 'compare', normalize: false } },
+          { title: 'Rates', size: 'md', data: { ten: r('macro', { series: 'treasury_10y' }), two: r('macro', { series: 'treasury_2y' }) }, view: { preset: 'compare', normalize: false } },
         ],
       },
     }
@@ -367,12 +365,12 @@ describe('set_workspace validation', () => {
       input: {
         widgets: [
           { title: 'NVDA', size: 'sm', data: { main: r('quote', { symbols: ['NVDA'] }) }, view: { preset: 'stat' } },
-          { title: 'Rates', size: 'md', data: { ten: r('macro', { series: ['treasury_10y'] }), two: r('macro', { series: ['treasury_2y'] }) }, view: { preset: 'compare', normalize: false } },
+          { title: 'Rates', size: 'md', data: { ten: r('macro', { series: 'treasury_10y' }), two: r('macro', { series: 'treasury_2y' }) }, view: { preset: 'compare', normalize: false } },
         ],
       },
     }
     const turns: Turn[] = [
-      { toolCalls: [rq('quote', { symbols: ['NVDA'] }), rq('macro', { series: ['treasury_10y'] }), rq('macro', { series: ['treasury_2y'] })] },
+      { toolCalls: [rq('quote', { symbols: ['NVDA'] }), rq('macro', { series: 'treasury_10y' }), rq('macro', { series: 'treasury_2y' })] },
       { toolCalls: [bad] },
       { toolCalls: [good] },
       { text: 'The 10-year is at 4.11%. [[widget:w1]] [[widget:w2]]' },
@@ -392,13 +390,10 @@ describe('set_workspace validation', () => {
     expect(message.verification).toMatchObject({ ok: true, checked: 1 })
   })
 
-  it('rejects widgets whose queries no connector answers: an unknown recipe, and a v1 kind without a connector', async () => {
-    // A registry whose only connector answers nothing but quote, and has no recipes at all.
+  it('rejects widgets whose recipe no registry knows', async () => {
+    // A registry whose only connector answers nothing but a quote route, and has no recipes at all.
     const registry = new ConnectorRegistry()
-    registry.register(
-      defineConnector({ name: 'quoteonly', config: z.object({}), queries: { quote: async (p) => toFrame('quote', p.symbols.map((s) => ({ symbol: s, price: 1 }))) } }),
-      {},
-    )
+    registry.register(routesConnector('quoteonly', { quote: { params: [{ name: 'symbols', type: 'string[]', required: true }], fields: [{ name: 'symbol', type: 'string' }, { name: 'price', type: 'number' }], rows: (p) => (p.symbols as string[]).map((s) => ({ symbol: s, price: 1 })) } }), {})
     const turns: Turn[] = [
       {
         toolCalls: [
@@ -407,7 +402,7 @@ describe('set_workspace validation', () => {
             input: {
               widgets: [
                 { title: 'News', size: 'lg', data: { main: r('news', { symbols: ['MU'] }) }, view: { preset: 'table' } },
-                { title: 'News v1', size: 'md', data: { main: { kind: 'news', params: { symbols: ['MU'] } } }, view: { preset: 'table' } },
+                { title: 'Quote', size: 'md', data: { main: { connector: 'quoteonly', route: 'quote', params: { symbols: ['MU'] } } }, view: { preset: 'table' } },
               ],
             },
           },
@@ -418,7 +413,7 @@ describe('set_workspace validation', () => {
     const { promise, model, messages } = run(turns, { registry })
     const message = await promise
     expect(message.steps![0]!.error).toContain('widgets[0] data.main: unknown recipe "news"')
-    expect(message.steps![0]!.error).toContain('widgets[1] data.main: kind "news" is not answerable now (answerable: quote)')
+    expect(message.steps![0]!.error).not.toContain('widgets[1]')
     expect(widgetsOf(messages)).toHaveLength(0)
     expect(systemPromptSentOn(model, 0)).toContain('(no recipes are loaded; use find_route and routes)')
   })
@@ -438,20 +433,6 @@ describe('query tool', () => {
     expect(message.text).toBe('No news available.')
   })
 
-  it('points a recipe whose routes are not served at the kind of the same name (until phase 3)', async () => {
-    const registry = new ConnectorRegistry({
-      recipes: [{ name: 'quote', title: 'quote', params: { type: 'object', properties: { symbols: { type: 'array', items: { type: 'string' } } }, required: ['symbols'] }, view: { preset: 'stat' }, routes: [{ connector: 'openbb', route: 'equity/price/quote', params: { symbol: '{symbols}' } }] }],
-    })
-    registry.register(defineConnector({ name: 'openbb', config: z.object({}), queries: { quote: async (p) => toFrame('quote', p.symbols.map((s) => ({ symbol: s, price: 1 }))) } }), {})
-    const turns: Turn[] = [{ toolCalls: [rq('quote', { symbols: ['MU'] })] }, { toolCalls: [kq('quote', { symbols: ['MU'] })] }, { text: 'MU is at 1. [[widget:w1]]' }]
-    const { promise, model } = run(turns, { registry })
-    const message = await promise
-    expect(message.steps!.map((s) => s.summary)).toEqual(['recipe quote symbols=MU · failed', 'quote MU · 1 row'])
-    const fed = toolResultsSentOn(model, 1)[0] as { ok: false; error: string }
-    expect(fed.error).toContain('has no route "equity/price/quote"')
-    expect(fed.error).toContain('The kind of the same name still answers: query({ kind: "quote", params })')
-  })
-
   it('runs a route query against a connector route and points at find_route for an unknown route', async () => {
     const turns: Turn[] = [
       { toolCalls: [{ name: 'query', input: { connector: 'fake', route: 'quote', params: { symbols: ['MU'] } } }, { name: 'query', input: { connector: 'fake', route: 'equity/price/quote', params: { symbol: ['MU'] } } }] },
@@ -469,8 +450,8 @@ describe('query tool', () => {
   })
 
   it('records a rejected step when the model sends input the schema refuses', async () => {
-    // An unknown kind fails the enum, so the SDK refuses the input before execute.
-    const turns: Turn[] = [{ toolCalls: [kq('peers' as never, { symbols: ['MU'] })] }, { text: 'Retrying is left to the model.' }]
+    // An empty recipe name fails the schema, so the SDK refuses the input before execute.
+    const turns: Turn[] = [{ toolCalls: [{ name: 'query', input: { recipe: '', params: { symbols: ['MU'] } } }] }, { text: 'Retrying is left to the model.' }]
     const { promise, model, fake } = run(turns)
     const message = await promise
     expect(fake.calls).toHaveLength(0)
@@ -480,25 +461,12 @@ describe('query tool', () => {
     expect(model.doStreamCalls).toHaveLength(2)
   })
 
-  it('records a failed step when params do not fit the kind (params are an open object at the schema level)', async () => {
-    const turns: Turn[] = [{ toolCalls: [kq('ohlcv', { symbols: 'MU', interval: '1d', range: '3mo' } as never)] }, { text: 'Retrying is left to the model.' }]
-    const { promise, model, fake } = run(turns)
-    const message = await promise
-    expect(fake.calls).toHaveLength(0)
-    expect(message.steps).toHaveLength(1)
-    expect(message.steps![0]!.summary).toBe('ohlcv MU 1d 3mo · failed')
-    expect(message.steps![0]!.error).toContain('invalid query')
-    const fed = toolResultsSentOn(model, 1)[0] as { ok: boolean; error: string }
-    expect(fed.ok).toBe(false)
-    expect(fed.error).toContain('invalid query')
-  })
-
   it('records a failed step when a recipe gets params its schema refuses', async () => {
-    const turns: Turn[] = [{ toolCalls: [rq('ohlcv', { symbols: 'MU' })] }, { text: 'Retrying is left to the model.' }]
+    const turns: Turn[] = [{ toolCalls: [rq('ohlcv', { symbols: ['MU'], interval: '2d' })] }, { text: 'Retrying is left to the model.' }]
     const { promise, fake } = run(turns)
     const message = await promise
     expect(fake.calls).toHaveLength(0)
-    expect(message.steps![0]!.summary).toBe('recipe ohlcv symbols=MU · failed')
+    expect(message.steps![0]!.summary).toBe('recipe ohlcv symbols=MU interval=2d · failed')
   })
 })
 
@@ -544,7 +512,7 @@ describe('abort', () => {
 describe('reply without set_workspace', () => {
   it('keeps the current widgets and still returns the reply', async () => {
     const ws = workspace({
-      widgets: [{ id: 'w1', title: 'MU', size: 'lg', query: { kind: 'quote', params: { symbols: ['MU'] } }, view: { type: 'table' } }],
+      widgets: [{ id: 'w1', title: 'MU', size: 'lg', data: { main: { recipe: 'quote', params: { symbols: ['MU'] } } }, view: { preset: 'table' } }],
     })
     const { promise, messages, model } = run([{ text: 'Hello. ' }, { text: 'Nothing to do.' }], { ws })
     const message = await promise

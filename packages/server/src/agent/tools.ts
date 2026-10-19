@@ -3,29 +3,23 @@ import { z } from 'zod'
 import {
   Catalog,
   FieldConfigSchema,
-  KIND_NAMES,
   PREVIEW_MAX_ROWS,
   SizeSchema,
-  ViewSchema,
   ViewV2Schema,
   WidgetV2Schema,
   controlFor,
   describeDescriptor,
   describeQuery,
   expandRecipe,
-  isLegacyQuery,
   isRecipeQuery,
   isRouteQuery,
   isTransformQuery,
   packLayout,
   parseAnyQuery,
-  parseAnyWidget,
-  parseQuery,
   recipeDescriptor,
   validateParams,
   type AnyQuery,
   type CatalogHit,
-  type Kind,
   type Recipe,
   type Registry,
   type ServerMsg,
@@ -50,8 +44,6 @@ export type WidgetsV2Msg = { t: 'widgets'; workspaceId: string; widgets: WidgetV
 export type ToolDeps = {
   registry: Registry
   workspaceId: string
-  /** v1 kinds answerable right now; a widget holding a `{ kind }` query on another kind is rejected (until phase 3). */
-  answerable: Kind[]
   /** The recipes the registry resolves (`registry.recipes()`), for validating recipe queries in widgets. */
   recipes: readonly Recipe[]
   /** The catalog (`registry.catalog()`), for `find_route` and for validating route queries in widgets. */
@@ -77,14 +69,13 @@ export const FindRouteInput = z.object({
 export type FindRouteInputT = z.input<typeof FindRouteInput>
 
 /**
- * `query` takes one of three shapes in one flat object (the Anthropic API rejects a top-level anyOf): a recipe
- * (`recipe` + `params`), a route (`connector` + `route` + `params`), or, until phase 3, a v1 kind (`kind` + `params`).
+ * `query` takes one of two shapes in one flat object (the Anthropic API rejects a top-level anyOf): a recipe
+ * (`recipe` + `params`) or a route (`connector` + `route` + `params`).
  */
 export const QueryToolInput = z.object({
   recipe: z.string().min(1).optional().describe('A recipe name from the prompt\'s list.'),
   connector: z.string().min(1).optional().describe('With `route`: the connector a find_route hit named.'),
   route: z.string().min(1).optional().describe('With `connector`: the route path a find_route hit named.'),
-  kind: z.enum(KIND_NAMES).optional().describe('Deprecated v1 form; prefer the recipe of the same name.'),
   params: z.record(z.string(), z.unknown()).default({}).describe('Params exactly as the recipe line or the descriptor lists them. Symbol lists are arrays.'),
 })
 export type QueryToolInputT = z.input<typeof QueryToolInput>
@@ -94,15 +85,14 @@ const openQuery = z.record(z.string(), z.unknown())
 export { TransformToolInput }
 export type TransformToolInputT = z.input<typeof TransformToolInput>
 
-/** A widget: v2 (`data` + preset `view`) or v1 (`query` + typed `view`), ids optional. */
+/** A widget: a data graph (`data`) and a preset `view`, id optional. */
 export const WidgetToolInput = z.object({
   id: z.string().min(1).optional().describe('Optional. Assigned as w1..wN when omitted.'),
   title: z.string().min(1).max(80),
   size: SizeSchema,
-  data: z.record(z.string().min(1), openQuery).optional().describe('Datasets by name: `main` plus any events, levels or comparison datasets the view names. Each is a recipe, route or transform query.'),
-  view: z.union([ViewV2Schema, ViewSchema]).describe('A preset with options ({ preset: "price" | "compare" | "curve" | "indicator" | "table" | "stat" | "facts" | "chain" | "heatmap", … }).'),
+  data: z.record(z.string().min(1), openQuery).describe('Datasets by name: `main` plus any events, levels or comparison datasets the view names. Each is a recipe, route or transform query.'),
+  view: ViewV2Schema.describe('A preset with options ({ preset: "price" | "compare" | "curve" | "indicator" | "table" | "stat" | "facts" | "chain" | "heatmap", … }).'),
   fields: z.record(z.string().min(1), FieldConfigSchema).optional().describe('Per-column overrides: label, unit, priority, hidden.'),
-  query: openQuery.optional().describe('Deprecated v1 form: { kind, params } with a v1 view.'),
 })
 export type WidgetToolInputT = z.input<typeof WidgetToolInput>
 
@@ -118,7 +108,7 @@ export type SetWorkspaceResult = { ok: true; widgetIds: string[]; name?: string;
 
 // ---------- summaries ----------
 
-/** One-line step summary: `ohlcv MU, SNDK 1d 3mo · 252 rows` (v1), `recipe quote symbols=NVDA · 1 row` (v2). */
+/** One-line step summary: `recipe quote symbols=NVDA · 1 row`, `openbb equity/price/quote symbol=NVDA · failed`. */
 export function querySummary(input: unknown, rowCount?: number, failed = false): string {
   const head = queryHead(input)
   if (failed) return `${head} · failed`
@@ -126,41 +116,9 @@ export function querySummary(input: unknown, rowCount?: number, failed = false):
 }
 
 function queryHead(input: unknown): string {
-  const q = (input ?? {}) as Record<string, unknown> & { params?: Record<string, unknown> }
-  if (typeof q.kind !== 'string') {
-    if (isTransformQuery(q) || isRecipeQuery(q) || isRouteQuery(q)) return describeQuery(q as AnyQuery)
-    return 'query'
-  }
-  const kind = q.kind
-  const p = q.params ?? {}
-  const list = (v: unknown) => (Array.isArray(v) ? v.map(String).join(', ') : typeof v === 'string' ? v : '')
-  switch (kind) {
-    case 'search':
-      return `search ${list(p.q)}`.trim()
-    case 'ohlcv':
-      return `ohlcv ${list(p.symbols)} ${p.interval ?? ''} ${p.range ?? ''}`.replace(/\s+/g, ' ').trim()
-    case 'news':
-      return `news ${list(p.symbols)}`.trim()
-    case 'earnings':
-      return `earnings ${list(p.symbols)} ${p.from ?? ''}→${p.to ?? ''}`.replace(/\s+/g, ' ').trim()
-    case 'quote':
-      return `quote ${list(p.symbols)}`.trim()
-    case 'options':
-      return `options ${list(p.symbol)} ${p.expiration ?? 'nearest'} ${p.type ?? 'both'}`.replace(/\s+/g, ' ').trim()
-    case 'macro':
-      return `macro ${list(p.series)} ${p.range ?? ''}`.replace(/\s+/g, ' ').trim()
-    case 'calendar':
-    case 'ipos':
-      return `${kind} ${p.from ?? ''}→${p.to ?? ''}`.trim()
-    case 'movers':
-      return `movers ${p.list ?? 'gainers'}`
-    case 'holdings':
-      return `holdings ${list(p.symbol)}`.trim()
-    case 'yield_curve':
-      return `yield_curve ${p.date ?? 'latest'}`
-    default:
-      return `${kind} ${list(p.symbols ?? p.symbol)}`.trim()
-  }
+  const q = (input ?? {}) as Record<string, unknown>
+  if (isTransformQuery(q) || isRecipeQuery(q) || isRouteQuery(q)) return describeQuery(q as AnyQuery)
+  return 'query'
 }
 
 export function workspaceSummary(count: number, invalid = 0): string {
@@ -193,7 +151,6 @@ export function layoutNote(widgets: readonly WidgetV2[], memory: PreviewMemory):
 // ---------- widget validation ----------
 
 export type ValidateContext = {
-  answerable: readonly Kind[]
   recipes: readonly Recipe[]
   catalog?: Catalog | undefined
   memory: PreviewMemory
@@ -205,8 +162,8 @@ export const ONE_ROW_TABLE_MESSAGE =
   'a table over one row compares nothing (product rule 8): use `stat` for one or two headline numbers, `facts` for a snapshot with several, the reply or a chart marker for a single date or fact, or a pivot through a transform for one symbol\'s financials'
 
 /**
- * Assign ids and validate every widget: the schema (`WidgetV2Schema`, v1 widgets migrated through `parseAnyWidget`),
- * every dataset query (recipe known and params valid; route in the catalog and params valid; v1 kind answerable),
+ * Assign ids and validate every widget: the schema (`WidgetV2Schema`), every dataset query (recipe known and params
+ * valid; route in the catalog and params valid),
  * and, for datasets this run previewed, that the preset can draw the frame and that no table sits over one row.
  * Returns the validated widgets or the list of errors, one line per problem, keyed by index.
  */
@@ -227,7 +184,7 @@ export function validateWidgets(input: WidgetToolInputT[], ctx: ValidateContext)
     seen.add(id)
     let widget: WidgetV2
     try {
-      widget = parseAnyWidget({ ...raw, id })
+      widget = WidgetV2Schema.parse({ ...raw, id })
     } catch (err) {
       if (err instanceof z.ZodError) for (const issue of err.issues) errors.push(`widgets[${i}] ${issue.path.join('.') || '(root)'}: ${issue.message}`)
       else errors.push(`widgets[${i}]: ${errorMessage(err)}`)
@@ -243,17 +200,8 @@ export function validateWidgets(input: WidgetToolInputT[], ctx: ValidateContext)
   return errors.length > 0 ? { ok: false, errors } : { ok: true, widgets }
 }
 
-/** Why a query would fail at render time: unknown recipe or route, bad params, a kind no connector answers. */
+/** Why a query would fail at render time: unknown recipe or route, bad params. */
 export function queryProblems(q: AnyQuery, ctx: ValidateContext): string[] {
-  if (isLegacyQuery(q)) {
-    try {
-      parseQuery(q)
-    } catch (err) {
-      return [`invalid ${q.kind} params: ${errorMessage(err)}`]
-    }
-    if (!ctx.answerable.includes(q.kind)) return [`kind "${q.kind}" is not answerable now (answerable: ${ctx.answerable.join(', ') || 'none'}); use the recipe of the same name`]
-    return []
-  }
   if (isTransformQuery(q)) {
     const out: string[] = []
     for (const [name, sub] of Object.entries(q.inputs)) for (const p of queryProblems(sub, ctx)) out.push(`input ${name}: ${p}`)
@@ -360,7 +308,6 @@ export function createTools(deps: ToolDeps) {
         `${PREVIEW_MAX_ROWS}, else the first ${PREVIEW_MAX_ROWS}), and per symbol (per series when the frame has one) per numeric column { first, last, min, max, change, changePct }.`,
       'Every number in your reply must come from a preview. Issue independent queries in parallel. `symbols` are arrays; `search` takes one `q` per call.',
       'A column listed in `units` is in that unit (percent means 5.63 is 5.63%); a column not listed carries no unit guarantee, so do not state a unit for it.',
-      'The v1 form { kind, params } still works for the kind of the same name as a recipe, until phase 3 removes kinds.',
     ].join(' '),
     inputSchema: QueryToolInput,
     execute: async (input): Promise<QueryToolResult> => {
@@ -387,10 +334,7 @@ export function createTools(deps: ToolDeps) {
       } catch (err) {
         const error = errorMessage(err)
         deps.onStep({ tool: 'query', args: q, summary: querySummary(q, undefined, true), ms: now() - t0, error })
-        const hint =
-          isRouteQuery(q) && /has no route/.test(error) ? ' Use find_route to find the right route.'
-          : isRecipeQuery(q) && /has no route/.test(error) && (deps.answerable as string[]).includes(q.recipe) ? ` The kind of the same name still answers: query({ kind: "${q.recipe}", params }) (until the connectors serve these routes).`
-          : ''
+        const hint = isRouteQuery(q) && /has no route/.test(error) ? ' Use find_route to find the right route.' : ''
         return { ok: false, error: `${describeQuery(q)} failed: ${error}${hint}` }
       }
     },
@@ -426,7 +370,7 @@ export function createTools(deps: ToolDeps) {
       const over = charge('set_workspace', input, workspaceSummary(input.widgets?.length ?? 0))
       if (over) return { ok: false, errors: [over], note: 'Not applied.' }
       const catalog = deps.catalog ?? (await deps.registry.catalog?.().catch(() => undefined))
-      const res = validateWidgets(input.widgets, { answerable: deps.answerable, recipes: deps.recipes, catalog, memory, now: now() })
+      const res = validateWidgets(input.widgets, { recipes: deps.recipes, catalog, memory, now: now() })
       if (!res.ok) {
         deps.onStep({
           tool: 'set_workspace',
@@ -458,7 +402,6 @@ export type AgentTools = ReturnType<typeof createTools>
 /** The flat `query` input as the query shape it names, unvalidated (for step summaries of inputs that fail). */
 function rawQueryOf(input: QueryToolInputT): Record<string, unknown> {
   const params = input.params ?? {}
-  if (input.kind) return { kind: input.kind, params }
   if (input.recipe) return { recipe: input.recipe, params }
   if (input.connector && input.route) return { connector: input.connector, route: input.route, params }
   return {}
@@ -467,16 +410,9 @@ function rawQueryOf(input: QueryToolInputT): Record<string, unknown> {
 /** The flat `query` input as one AnyQuery, or the reason it is not one. */
 export function resolveQueryInput(input: QueryToolInputT): { ok: true; query: AnyQuery } | { ok: false; error: string } {
   const params = { ...(input.params ?? {}) }
-  const forms = [input.recipe ? 'recipe' : '', input.connector || input.route ? 'route' : '', input.kind ? 'kind' : ''].filter(Boolean)
-  if (forms.length !== 1) return { ok: false, error: `give exactly one of { recipe, params }, { connector, route, params } or (v1) { kind, params }; got ${forms.length ? forms.join(' and ') : 'none'}` }
+  const forms = [input.recipe ? 'recipe' : '', input.connector || input.route ? 'route' : ''].filter(Boolean)
+  if (forms.length !== 1) return { ok: false, error: `give exactly one of { recipe, params } or { connector, route, params }; got ${forms.length ? forms.join(' and ') : 'none'}` }
   if (input.recipe) return { ok: true, query: { recipe: input.recipe, params } }
-  if (input.kind) {
-    try {
-      return { ok: true, query: parseQuery({ kind: input.kind, params }) }
-    } catch (err) {
-      return { ok: false, error: `invalid query: ${errorMessage(err)}` }
-    }
-  }
   if (!input.connector || !input.route) return { ok: false, error: 'a route query needs both `connector` and `route`' }
   return { ok: true, query: { connector: input.connector, route: input.route, params } }
 }

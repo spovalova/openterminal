@@ -139,7 +139,7 @@ const Shell: FC = () => {
             <span className="text-xs text-fg-3">Query (JSON)</span>
             <textarea
               rows={5}
-              defaultValue={JSON.stringify({ kind: 'ohlcv', params: { symbols: MEMORY, interval: '1d', range: '3mo' } }, null, 2)}
+              defaultValue={JSON.stringify({ recipe: 'ohlcv', params: { symbols: MEMORY, interval: '1d', range: '3mo' } }, null, 2)}
               className="rounded-md border border-border-strong bg-bg px-2 py-1 font-mono text-xs text-fg outline-none focus:border-accent"
             />
           </label>

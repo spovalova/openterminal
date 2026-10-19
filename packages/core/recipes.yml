@@ -24,16 +24,36 @@ recipes:
     view: { preset: table, columns: [symbol, name, exchange] }
     size: sm
     ttl: 86400000
-    routes:
-      - connector: openbb
-        route: equity/search
-        provider: nasdaq
-        params: { query: "{q}" }
-        note: nasdaq rows carry a listing-exchange code; the v1 handler mapped it to an exchange name and kept 10 rows.
-      - connector: yahoo
-        route: search
-        params: { q: "{q}" }
-        note: the v1 handler kept the first US equity or ETF hit only.
+    # `main` is the kind's frame on either route: symbol, name, exchange (nasdaq's listing-exchange code mapped to a
+    # name, yahoo's exchDisp), ten rows at most (phase 3a; the v1 handler did this in code).
+    data:
+      raw:
+        routes:
+          - connector: openbb
+            route: equity/search
+            provider: nasdaq
+            params: { query: "{q}" }
+          - connector: yahoo
+            route: search
+            params: { q: "{q}" }
+      main:
+        inputs: [raw]
+        code: |
+          codes = {"Q": "NASDAQ", "N": "NYSE", "A": "NYSE American", "P": "NYSE Arca", "Z": "Cboe BZX", "V": "IEX"}
+          df = raw.copy()
+          if "exchDisp" in df.columns:
+              df["exchange"] = df["exchDisp"]
+          elif "exchange" not in df.columns:
+              src = next((c for c in ("Listing Exchange", "listing_exchange") if c in df.columns), None)
+              df["exchange"] = df[src].map(lambda v: codes.get(str(v), v)) if src else None
+          if "name" not in df.columns:
+              df["name"] = df["longname"] if "longname" in df.columns else df.get("shortname")
+          if "symbol" in df.columns:
+              df = df[df["symbol"].notna()]
+          keep = [c for c in ("query", "symbol", "name", "exchange") if c in df.columns]
+          result = df[keep].head(10)
+        columns:
+          exchange: { label: Exchange, priority: 3 }
 
   - name: quote
     title: "{symbols} quote"
@@ -128,7 +148,7 @@ recipes:
 
   - name: earnings
     title: "Earnings {from} to {to}"
-    summary: Earnings dates inside a date window; session is bmo, amc or null. The market-wide calendar, filtered to the symbols by the connector.
+    summary: Earnings dates inside a date window; session is bmo, amc or null. The market-wide calendar, cut to the symbols.
     params:
       type: object
       properties:
@@ -136,11 +156,12 @@ recipes:
         from: { type: string, format: date, description: "Calendar date, YYYY-MM-DD" }
         to: { type: string, format: date }
       required: [symbols, from, to]
-    view: { preset: table, columns: [symbol, report_date, reporting_time, eps_consensus] }
+    view: { preset: table, columns: [symbol, report_date, session, eps_consensus] }
     size: sm
     ttl: 3600000
     # The nasdaq calendar is the whole market (4,000 rows a month); `main` keeps the requested symbols, reading them
-    # from the reserved `params` input (phase 2; the v1 handler filtered in code).
+    # from the reserved `params` input (phase 2; the v1 handler filtered in code), and adds `session` (bmo, amc or
+    # null) from the provider's word (nasdaq reporting_time, yfinance timing, finnhub hour; phase 3a).
     data:
       raw:
         routes:
@@ -160,11 +181,20 @@ recipes:
         inputs: [raw, params]
         code: |
           wanted = [s.strip().upper() for s in str(params.at[0, "symbols"]).split(",") if s.strip()]
-          df = raw
+          df = raw.copy()
           if "symbol" in df.columns:
               df = df[df["symbol"].astype(str).str.upper().isin(wanted)]
+          src = next((c for c in ("reporting_time", "timing", "hour") if c in df.columns), None)
+          if src:
+              w = df[src].fillna("").astype(str).str.lower()
+              session = pd.Series(None, index=df.index, dtype="object")
+              session[(w == "bmo") | w.str.contains("pre|before")] = "bmo"
+              session[(w == "amc") | w.str.contains("after|post")] = "amc"
+              df["session"] = session
           sort_by = [c for c in ("report_date", "date") if c in df.columns][:1]
           result = df.sort_values(sort_by) if sort_by else df
+        columns:
+          session: { label: Session, priority: 3 }
 
   # ------------------------------------------------------------------------------------------------- company
   - name: profile
@@ -268,15 +298,52 @@ recipes:
     view: { preset: table }
     size: md
     ttl: 3600000
-    routes:
-      - connector: openbb
-        route: equity/estimates/consensus
-        provider: yfinance
-        params: { symbol: "{symbols}" }
-        note: v1 added EPS estimates from yfinance/estimates/earnings (periods 0q and 0y) and computed upside_pct from target_consensus / current_price.
-      - connector: yahoo
-        route: quoteSummary
-        params: { symbol: "{symbols}", modules: [financialData, earningsTrend] }
+    # The kind's frame from two routes (phase 3a; v1 did this in the handler): the consensus (targets, rating, analysts)
+    # joined to the EPS estimates for the current quarter and year (yfinance periods 0q and 0y, yahoo's earningsTrend),
+    # with upside_pct = target_consensus / current_price - 1. The yahoo columns are renamed to the OpenBB names first.
+    data:
+      consensus:
+        routes:
+          - connector: openbb
+            route: equity/estimates/consensus
+            provider: yfinance
+            params: { symbol: "{symbols}" }
+          - connector: yahoo
+            route: quoteSummary
+            params: { symbol: "{symbols}", modules: [financialData] }
+      eps:
+        routes:
+          - connector: openbb
+            route: yfinance/estimates/earnings
+            params: { symbol: "{symbols}" }
+          - connector: yahoo
+            route: quoteSummary
+            params: { symbol: "{symbols}", modules: [earningsTrend] }
+      main:
+        inputs: [consensus, eps]
+        code: |
+          c = consensus.rename(columns={"financialData.targetMeanPrice": "target_consensus", "financialData.targetLowPrice": "target_low", "financialData.targetHighPrice": "target_high", "financialData.currentPrice": "current_price", "financialData.recommendationKey": "recommendation", "financialData.numberOfAnalystOpinions": "number_of_analysts"})
+          if {"target_consensus", "current_price"} <= set(c.columns):
+              c["upside_pct"] = ((c["target_consensus"] / c["current_price"].where(c["current_price"] > 0) - 1) * 100).round(2)
+          e = eps.rename(columns={"earningsTrend.period": "period", "earningsTrend.earningsEstimate.avg": "mean", "earningsTrend.earningsEstimate.growth": "growth"})
+          if {"symbol", "period", "mean"} <= set(e.columns):
+              q = e[e["period"] == "0q"][["symbol", "mean"]].rename(columns={"mean": "eps_estimate_q"})
+              ycols = ["symbol", "mean"] + (["growth"] if "growth" in e.columns else [])
+              y = e[e["period"] == "0y"][ycols].rename(columns={"mean": "eps_estimate_y", "growth": "eps_growth_y"})
+              c = c.merge(q.drop_duplicates("symbol"), on="symbol", how="left").merge(y.drop_duplicates("symbol"), on="symbol", how="left")
+          keep = [k for k in ["symbol", "recommendation", "number_of_analysts", "target_low", "target_consensus", "target_high", "upside_pct", "eps_estimate_q", "eps_estimate_y", "eps_growth_y", "current_price"] if k in c.columns]
+          result = c[keep]
+        columns:
+          recommendation: { label: Rating, priority: 3 }
+          number_of_analysts: { unit: count, format: integer, label: Analysts, priority: 5 }
+          target_low: { unit: usd, format: price, label: Low target, priority: 4 }
+          target_consensus: { unit: usd, format: price, label: Target, priority: 2, key: true }
+          target_high: { unit: usd, format: price, label: High target, priority: 4 }
+          upside_pct: { unit: percent, format: change, label: Upside, priority: 2 }
+          eps_estimate_q: { unit: usd, format: price, label: EPS est. (q), priority: 3 }
+          eps_estimate_y: { unit: usd, format: price, label: EPS est. (y), priority: 3 }
+          eps_growth_y: { unit: percent, format: change, label: EPS growth, priority: 4 }
+          current_price: { unit: usd, format: price, label: Price, priority: 6 }
 
   - name: eps_history
     title: "{symbols} EPS history"
@@ -314,15 +381,25 @@ recipes:
     view: { preset: table, sort: { column: ex_dividend_date, dir: desc } }
     size: sm
     ttl: 86400000
-    routes:
-      - connector: openbb
-        route: equity/fundamental/dividends
-        provider: yfinance
-        params: { symbol: "{symbols|first}" }
-        note: one symbol per call, oldest first, no symbol field.
-      - connector: yahoo
-        route: chart
-        params: { symbol: "{symbols}", period1: "{limit|days_ago:10957}", interval: 1mo, events: div, includePrePost: false }
+    # `main` keeps the newest `limit` payments per symbol (phase 3a; the routes ignore the limit and answer oldest first).
+    data:
+      raw:
+        routes:
+          - connector: openbb
+            route: equity/fundamental/dividends
+            provider: yfinance
+            params: { symbol: "{symbols|first}" }
+            note: one symbol per call, oldest first, no symbol field.
+          - connector: yahoo
+            route: chart
+            params: { symbol: "{symbols}", period1: "{limit|days_ago:10957}", interval: 1mo, events: div, includePrePost: false }
+      main:
+        inputs: [raw, params]
+        code: |
+          n = int(params.at[0, "limit"]) if "limit" in params.columns else 12
+          t = next((c for c in ("ex_dividend_date", "date", "ex_date") if c in raw.columns), None)
+          df = raw.sort_values(t, ascending=False) if t else raw
+          result = df.groupby("symbol", sort=False).head(n) if "symbol" in df.columns else df.head(n)
 
   # ------------------------------------------------------------------------------------------------- ownership
   - name: insiders
@@ -334,18 +411,53 @@ recipes:
         symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
         limit: { type: integer, minimum: 1, maximum: 100, default: 20 }
       required: [symbols]
-    view: { preset: table, columns: [transaction_date, owner_name, owner_title, acquisition_or_disposition, securities_transacted, transaction_price] }
+    view: { preset: table, columns: [transaction_date, owner_name, owner_title, action, securities_transacted, transaction_price, value] }
     size: md
     ttl: 3600000
-    routes:
-      - connector: openbb
-        route: equity/ownership/insider_trading
-        provider: sec
-        params: { symbol: "{symbols}", limit: "{limit}" }
-        note: Form 4 rows; v1 mapped acquisition_or_disposition and the transaction type to buy/sell/grant/other.
-      - connector: yahoo
-        route: quoteSummary
-        params: { symbol: "{symbols}", modules: [insiderTransactions] }
+    # `main` adds the kind's `action` (buy, sell, grant, other) from the Form 4 words (sec: acquisition_or_disposition and
+    # the transaction type; yahoo: the transaction text), `value` = shares × price, and keeps the newest `limit` rows per
+    # symbol (phase 3a; the v1 handler did this in code).
+    data:
+      raw:
+        routes:
+          - connector: openbb
+            route: equity/ownership/insider_trading
+            provider: sec
+            params: { symbol: "{symbols}", limit: "{limit}" }
+            note: Form 4 rows; the route ignores the limit and lists holdings-only rows without a transaction date.
+          - connector: yahoo
+            route: quoteSummary
+            params: { symbol: "{symbols}", modules: [insiderTransactions] }
+      main:
+        inputs: [raw, params]
+        code: |
+          n = int(params.at[0, "limit"]) if "limit" in params.columns else 20
+          df = raw.copy()
+          text_of = lambda c: df[c].fillna("").astype(str).str.lower() if c in df.columns else pd.Series([""] * len(df), index=df.index, dtype="object")
+          ad, kind, text = text_of("acquisition_or_disposition"), text_of("transaction_type"), text_of("insiderTransactions.transactionText")
+          action = pd.Series("other", index=df.index, dtype="object")
+          action[text.str.contains("grant|award|gift")] = "grant"
+          action[text.str.contains(r"^purchase|^buy|\bbought\b")] = "buy"
+          action[text.str.contains(r"^sale|\bsold\b|^sell")] = "sell"
+          action[ad.str.startswith("a")] = "other"
+          action[ad.str.startswith("a") & kind.str.contains("grant|award")] = "grant"
+          action[ad.str.startswith("a") & kind.str.contains("open market|purchase")] = "buy"
+          action[ad.str.startswith("d")] = "sell"
+          action[ad.str.startswith("d") & kind.str.contains("gift|tax liability|exercise price")] = "other"
+          df["action"] = action
+          if {"securities_transacted", "transaction_price"} <= set(df.columns):
+              df["value"] = (df["securities_transacted"] * df["transaction_price"]).round(2)
+          elif {"insiderTransactions.shares", "insiderTransactions.value"} <= set(df.columns):
+              df["value"] = df["insiderTransactions.value"]
+              df["transaction_price"] = (df["insiderTransactions.value"] / df["insiderTransactions.shares"].where(df["insiderTransactions.shares"] > 0)).round(2)
+          t = next((c for c in ("transaction_date", "insiderTransactions.startDate", "date") if c in df.columns), None)
+          if t:
+              df = df[df[t].notna()].sort_values(t, ascending=False)
+          result = df.groupby("symbol", sort=False).head(n) if "symbol" in df.columns else df.head(n)
+        columns:
+          action: { label: Action, priority: 2 }
+          value: { unit: usd, format: compact, label: Value, priority: 3 }
+          transaction_price: { unit: usd, format: price, label: Price, priority: 4 }
 
   - name: institutions
     title: "{symbols} holders"
@@ -359,15 +471,32 @@ recipes:
     view: { preset: table }
     size: md
     ttl: 86400000
-    routes:
-      - connector: openbb
-        route: equity/ownership/institutional
-        provider: nasdaq
-        params: { symbol: "{symbols|first}", limit: "{limit}" }
-        note: one symbol per call; market_value is in thousands of dollars (v1 multiplied by 1000).
-      - connector: yahoo
-        route: quoteSummary
-        params: { symbol: "{symbols}", modules: [institutionOwnership] }
+    # `main` turns nasdaq's market_value (thousands of dollars) into dollars, sorts holders by value and keeps the
+    # top `limit` per symbol (phase 3a; the v1 handler did this in code). yahoo's value is dollars already.
+    data:
+      raw:
+        routes:
+          - connector: openbb
+            route: equity/ownership/institutional
+            provider: nasdaq
+            params: { symbol: "{symbols|first}", limit: "{limit}" }
+            note: one symbol per call; market_value is in thousands of dollars.
+          - connector: yahoo
+            route: quoteSummary
+            params: { symbol: "{symbols}", modules: [institutionOwnership] }
+      main:
+        inputs: [raw, params]
+        code: |
+          n = int(params.at[0, "limit"]) if "limit" in params.columns else 20
+          df = raw.copy()
+          if "market_value" in df.columns:
+              df["market_value"] = df["market_value"] * 1000
+          v = next((c for c in ("market_value", "institutionOwnership.value") if c in df.columns), None)
+          if v:
+              df = df.sort_values(v, ascending=False)
+          result = df.groupby("symbol", sort=False).head(n) if "symbol" in df.columns else df.head(n)
+        columns:
+          market_value: { unit: usd, format: compact, label: Value, priority: 3 }
 
   - name: short_interest
     title: "{symbols} short interest"
@@ -378,23 +507,32 @@ recipes:
         symbols: { type: array, items: { type: string }, minItems: 1, maxItems: 50 }
         limit: { type: integer, minimum: 1, maximum: 60, default: 12 }
       required: [symbols]
-    view: { preset: table, columns: [settlement_date, short_interest, change_pct, avg_daily_volume, days_to_cover] }
+    view: { preset: table, columns: [settlement_date, current_short_position, change_pct, avg_daily_volume, days_to_cover] }
     size: sm
     ttl: 86400000
-    routes:
-      - connector: openbb
-        route: equity/shorts/short_interest
-        provider: finra
-        params: { symbol: "{symbols}" }
-        note: the full history oldest first; v1 kept the newest `limit` rows per symbol.
-      - connector: yahoo
-        route: quoteSummary
-        params: { symbol: "{symbols}", modules: [defaultKeyStatistics] }
+    # `main` keeps the newest `limit` reports per symbol (phase 3a; finra answers the full history oldest first).
+    data:
+      raw:
+        routes:
+          - connector: openbb
+            route: equity/shorts/short_interest
+            provider: finra
+            params: { symbol: "{symbols}" }
+          - connector: yahoo
+            route: quoteSummary
+            params: { symbol: "{symbols}", modules: [defaultKeyStatistics] }
+      main:
+        inputs: [raw, params]
+        code: |
+          n = int(params.at[0, "limit"]) if "limit" in params.columns else 12
+          t = next((c for c in ("settlement_date", "date") if c in raw.columns), None)
+          df = raw.sort_values(t, ascending=False) if t else raw
+          result = df.groupby("symbol", sort=False).head(n) if "symbol" in df.columns else df.head(n)
 
   # ------------------------------------------------------------------------------------------------- options
   - name: options
     title: "{symbol} options {expiration}"
-    summary: Option chain for one symbol. The connector keeps one expiration and a strike window around the underlying.
+    summary: Option chain for one symbol at one expiration, a strike window around the underlying.
     params:
       type: object
       properties:
@@ -426,7 +564,10 @@ recipes:
           import datetime as dt
           p = params.iloc[0]
           df = raw
-          if "expiration" in df.columns and "option_type" in df.columns and len(df):
+          # cboe names the side `option_type` and the spot `underlying_price`; yahoo `type` and `underlyingPrice`.
+          side_col = next((c for c in ("option_type", "type") if c in df.columns), None)
+          spot_col = next((c for c in ("underlying_price", "underlyingPrice") if c in df.columns), None)
+          if "expiration" in df.columns and side_col and len(df):
               exps = sorted(str(e)[:10] for e in df["expiration"].dropna().unique())
               want = str(p["expiration"])[:10] if "expiration" in p.index and p["expiration"] else ""
               if not want:
@@ -435,14 +576,14 @@ recipes:
               df = df[df["expiration"].astype(str).str[:10] == pick]
               side = str(p["type"]) if "type" in p.index else "both"
               if side in ("call", "put"):
-                  df = df[df["option_type"] == side]
+                  df = df[df[side_col] == side]
               n = int(p["strikes"]) if "strikes" in p.index else 10
-              if "underlying_price" in df.columns and df["underlying_price"].notna().any():
-                  u = float(df["underlying_price"].dropna().iloc[0])
+              if spot_col and df[spot_col].notna().any():
+                  u = float(df[spot_col].dropna().iloc[0])
                   strikes = sorted(df["strike"].dropna().unique())
                   keep = [k for k in strikes if k <= u][-n:] + [k for k in strikes if k > u][:n]
                   df = df[df["strike"].isin(keep)]
-              df = df.sort_values(["strike", "option_type"])
+              df = df.sort_values(["strike", side_col])
           result = df
 
   - name: volatility
@@ -637,12 +778,24 @@ recipes:
     view: { preset: curve, x: maturity_years, y: rate }
     size: md
     ttl: 3600000
-    routes:
-      - connector: openbb
-        route: fixedincome/government/yield_curve
-        provider: federal_reserve
-        params: { date: "{date}" }
-        note: eleven maturities month_1 … year_30 with maturity_years; rate is a fraction (annotated).
+    # `main` turns the federal_reserve maturity keys (month_1, year_10) into the kind's labels (1M, 10Y) and sorts
+    # shortest first (phase 3a; the v1 handler did this in code). rate is a fraction on the route (annotated).
+    data:
+      raw:
+        routes:
+          - connector: openbb
+            route: fixedincome/government/yield_curve
+            provider: federal_reserve
+            params: { date: "{date}" }
+      main:
+        inputs: [raw]
+        code: |
+          df = raw.copy()
+          if "maturity" in df.columns:
+              parts = df["maturity"].astype(str).str.extract(r"^(month|year)_(\d+)$")
+              label = parts[1] + parts[0].map({"month": "M", "year": "Y"})
+              df["maturity"] = label.where(parts[0].notna(), df["maturity"])
+          result = df.sort_values("maturity_years") if "maturity_years" in df.columns else df
 
   # ------------------------------------------------------------------------------------------------- v2 additions
   - name: index

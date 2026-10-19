@@ -135,19 +135,19 @@ describe('buildSystemPrompt (v2)', () => {
     expect(p).toContain('No markdown headings, no bullet lists, no bold, no tables in the reply.')
   })
 
-  it('embeds the current workspace widgets (v1 and v2) and only the last few messages, trimmed', () => {
+  it('embeds the current workspace widgets and only the last few messages, trimmed', () => {
     const messages: Message[] = Array.from({ length: 10 }, (_, i) => ({ role: i % 2 ? 'agent' : 'user', text: `message ${i} ${'x'.repeat(i === 9 ? 900 : 0)}` }))
     const ws = workspace({
       name: 'Morning',
       widgets: [
-        { id: 'w1', title: 'Watchlist pre-market', size: 'lg', query: { kind: 'quote', params: { symbols: ['MU', 'SPY'] } }, view: { type: 'table' } },
+        { id: 'w1', title: 'Watchlist pre-market', size: 'lg', data: { main: { recipe: 'quote', params: { symbols: ['MU', 'SPY'] } } }, view: { preset: 'table' } },
         { id: 'w2', title: 'MU daily', size: 'md', data: { main: { recipe: 'ohlcv', params: { symbols: ['MU'] } } }, view: { preset: 'price' } } as never,
       ],
       messages,
     })
     const p = build({ workspace: ws })
     expect(p).toContain('Name: "Morning". Widgets: 2. Earlier messages shown: ' + PROMPT_HISTORY + '.')
-    expect(p).toContain('"id":"w1","title":"Watchlist pre-market","size":"lg","query":{"kind":"quote","params":{"symbols":["MU","SPY"]}},"view":{"type":"table"}')
+    expect(p).toContain('"id":"w1","title":"Watchlist pre-market","size":"lg","data":{"main":{"recipe":"quote","params":{"symbols":["MU","SPY"]}}},"view":{"preset":"table"}')
     expect(p).toContain('"id":"w2","title":"MU daily","size":"md","data":{"main":{"recipe":"ohlcv","params":{"symbols":["MU"]}}},"view":{"preset":"price"}')
     expect(p).toContain('message 4')
     expect(p).not.toContain('message 3 ')

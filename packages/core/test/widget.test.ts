@@ -1,88 +1,25 @@
 import { describe, expect, it } from 'vitest'
-import { parseWidget, WorkspaceSchema, createWorkspace, ClientMsgSchema, ServerMsgSchema, STAT_KINDS, STAT_KEY_COLUMN, statColumn, numericColumns } from '../src/index.js'
+import { ClientMsgSchema, LegacyWidgetSchema, ServerMsgSchema, WorkspaceSchema, createWorkspace, isLegacyWidget } from '../src/index.js'
 
-const ohlcv = (symbols: string[]) => ({ kind: 'ohlcv', params: { symbols, interval: '1d', range: '3mo' } })
-
-describe('widget schema', () => {
-  it('accepts a normalized multi-symbol series', () => {
-    const w = parseWidget({ id: 'w1', title: 'Memory names', size: 'lg', query: ohlcv(['MU', 'SNDK']), view: { type: 'series', normalize: true } })
-    expect(w.size).toBe('lg')
-  })
-  it('accepts a single-symbol candle', () => {
-    expect(() => parseWidget({ id: 'w', title: 'MU', size: 'md', query: ohlcv(['MU']), view: { type: 'series', candle: true } })).not.toThrow()
-  })
-  it('rejects candle with more than one symbol', () => {
-    expect(() => parseWidget({ id: 'w', title: 'x', size: 'md', query: ohlcv(['MU', 'WDC']), view: { type: 'series', candle: true } })).toThrow(/exactly one symbol/)
-  })
-  it('rejects candle together with normalize', () => {
-    expect(() => parseWidget({ id: 'w', title: 'x', size: 'md', query: ohlcv(['MU']), view: { type: 'series', candle: true, normalize: true } })).toThrow(/mutually exclusive/)
-  })
-  it('rejects a series view on a non-ohlcv query', () => {
-    expect(() => parseWidget({ id: 'w', title: 'x', size: 'md', query: { kind: 'quote', params: { symbols: ['MU'] } }, view: { type: 'series' } })).toThrow(/ohlcv/)
-  })
-  it('accepts a table on any kind', () => {
-    for (const query of [
-      { kind: 'quote', params: { symbols: ['MU'] } },
-      { kind: 'news', params: { symbols: ['MU'], limit: 10 } },
-      { kind: 'earnings', params: { symbols: ['MU'], from: '2026-10-16', to: '2026-12-15' } },
-      ohlcv(['MU']),
-    ]) {
-      expect(() => parseWidget({ id: 'w', title: 'x', size: 'sm', query, view: { type: 'table' } })).not.toThrow()
-    }
-  })
-  it('accepts legend labels keyed by the query symbols and trims them', () => {
-    const w = parseWidget({ id: 'w', title: 'x', size: 'lg', query: ohlcv(['MU', 'SNDK']), view: { type: 'series', normalize: true, labels: { MU: ' Micron ', SNDK: 'SanDisk' } } })
-    expect(w.view).toEqual({ type: 'series', normalize: true, labels: { MU: 'Micron', SNDK: 'SanDisk' } })
-    const macro = { kind: 'macro', params: { series: ['treasury_10y', 'fed_funds'], range: '1y' } }
-    expect(parseWidget({ id: 'w', title: 'x', size: 'lg', query: macro, view: { type: 'series', labels: { fed_funds: 'Policy rate' } } }).view).toEqual({
-      type: 'series',
-      labels: { fed_funds: 'Policy rate' },
-    })
-  })
-  it('rejects legend labels for symbols the query does not have, and blank or long labels', () => {
-    expect(() => parseWidget({ id: 'w', title: 'x', size: 'lg', query: ohlcv(['MU']), view: { type: 'series', labels: { WDC: 'Western Digital' } } })).toThrow(/WDC.* is not one of the query's symbols/)
-    expect(() => parseWidget({ id: 'w', title: 'x', size: 'lg', query: ohlcv(['MU']), view: { type: 'series', labels: { MU: '  ' } } })).toThrow()
-    expect(() => parseWidget({ id: 'w', title: 'x', size: 'lg', query: ohlcv(['MU']), view: { type: 'series', labels: { MU: 'x'.repeat(33) } } })).toThrow()
-  })
-  it('drops labels from a table view', () => {
-    expect(parseWidget({ id: 'w', title: 'x', size: 'sm', query: ohlcv(['MU']), view: { type: 'table', labels: { MU: 'Micron' } } }).view).toEqual({ type: 'table' })
-  })
-  it('rejects unknown sizes and views', () => {
-    expect(() => parseWidget({ id: 'w', title: 'x', size: 'xl', query: ohlcv(['MU']), view: { type: 'table' } })).toThrow()
-    expect(() => parseWidget({ id: 'w', title: 'x', size: 'sm', query: ohlcv(['MU']), view: { type: 'gauge' } })).toThrow()
-  })
-
-  describe('stat view', () => {
-    const stat = (query: unknown, view: Record<string, unknown> = { type: 'stat' }) => parseWidget({ id: 'w', title: 'x', size: 'sm', query, view })
-
-    it('is allowed on the kinds with one row per symbol, and on nothing else', () => {
-      expect(STAT_KINDS).toEqual(new Set(['quote', 'metrics', 'volatility', 'estimates', 'profile', 'short_interest']))
-      for (const kind of STAT_KINDS) {
-        expect(() => stat({ kind, params: { symbols: ['MU'] } }), kind).not.toThrow()
-        expect(statColumn(kind, { type: 'stat' }), kind).toBe(STAT_KEY_COLUMN[kind as keyof typeof STAT_KEY_COLUMN])
-      }
-      expect(() => stat(ohlcv(['MU']))).toThrow(/stat view requires a quote, metrics, volatility, estimates, profile, short_interest query/)
-      expect(() => stat({ kind: 'news', params: { symbols: ['MU'] } })).toThrow(/stat view requires/)
-      expect(() => stat({ kind: 'options', params: { symbol: 'MU' } })).toThrow(/stat view requires/)
-    })
-
-    it('takes an optional column that must be a numeric column of the kind', () => {
-      const w = stat({ kind: 'metrics', params: { symbols: ['MU'] } }, { type: 'stat', column: 'forward_pe' })
-      expect(w.view).toEqual({ type: 'stat', column: 'forward_pe' })
-      expect(statColumn('metrics', w.view)).toBe('forward_pe')
-      // ZodError messages are JSON, so the quotes around the column name are escaped
-      expect(() => stat({ kind: 'metrics', params: { symbols: ['MU'] } }, { type: 'stat', column: 'symbol' })).toThrow(/metrics has no numeric column \\"symbol\\"/)
-      expect(() => stat({ kind: 'quote', params: { symbols: ['MU'] } }, { type: 'stat', column: 'pe' })).toThrow(/quote has no numeric column \\"pe\\" \(one of price, change_pct, volume, extended_price, extended_change_pct\)/)
-      expect(() => stat({ kind: 'quote', params: { symbols: ['MU'] } }, { type: 'stat', column: '' })).toThrow()
-      expect(numericColumns('quote')).toEqual(['price', 'change_pct', 'volume', 'extended_price', 'extended_change_pct'])
-    })
+describe('the v1 JSON shape', () => {
+  it('is recognised and read, but only to migrate: an open params object, the four typed views', () => {
+    const quote = { id: 'w1', title: 'Quotes', size: 'sm', query: { kind: 'quote', params: { symbols: ['MU'] } }, view: { type: 'table' } }
+    expect(isLegacyWidget(quote)).toBe(true)
+    expect(isLegacyWidget({ ...quote, data: {} })).toBe(false)
+    expect(isLegacyWidget({ id: 'w', title: 'x', size: 'sm', data: { main: { recipe: 'quote' } }, view: { preset: 'table' } })).toBe(false)
+    expect(LegacyWidgetSchema.parse(quote).query).toEqual({ kind: 'quote', params: { symbols: ['MU'] } })
+    expect(LegacyWidgetSchema.parse({ ...quote, view: { type: 'series', candle: true, labels: { MU: 'Micron' } } }).view).toEqual({ type: 'series', candle: true, labels: { MU: 'Micron' } })
+    expect(() => LegacyWidgetSchema.parse({ ...quote, view: { type: 'gauge' } })).toThrow()
+    expect(() => LegacyWidgetSchema.parse({ ...quote, size: 'xl' })).toThrow()
   })
 })
 
 describe('workspace and protocol schemas', () => {
-  it('creates and validates a workspace', () => {
+  it('creates and validates a workspace, migrating v1 widgets on read', () => {
     const ws = createWorkspace({ id: 'abc', name: 'Morning', now: 1 })
     expect(WorkspaceSchema.parse(ws)).toEqual(ws)
+    const stored = { ...ws, widgets: [{ id: 'w1', title: 'Quotes', size: 'sm', query: { kind: 'quote', params: { symbols: ['MU'] } }, view: { type: 'table' } }] }
+    expect(WorkspaceSchema.parse(stored).widgets).toEqual([{ id: 'w1', title: 'Quotes', size: 'sm', data: { main: { recipe: 'quote', params: { symbols: ['MU'] } } }, view: { preset: 'table' } }])
   })
   it('validates messages on both directions', () => {
     expect(ClientMsgSchema.parse({ t: 'prompt', workspaceId: 'a', text: 'MU' }).t).toBe('prompt')

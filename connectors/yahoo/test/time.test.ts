@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { nyDate, nyMidnight, nyParts, sessionStart } from '../src/time.js'
+import { nyDate, nyMidnight, nyParts, utcDate } from '../src/time.js'
 
 describe('New York clock helpers', () => {
   it('nyMidnight is DST aware', () => {
@@ -23,13 +23,8 @@ describe('New York clock helpers', () => {
     expect(nyDate(new Date('2026-01-01T04:59:00.000Z'))).toBe('2025-12-31')
   })
 
-  it('sessionStart picks the most recent session at the 09:30 ET boundary and across weekends', () => {
-    const iso = (d: Date) => d.toISOString()
-    expect(iso(sessionStart(new Date('2026-10-16T13:30:00.000Z')))).toBe('2026-10-16T04:00:00.000Z')
-    expect(iso(sessionStart(new Date('2026-10-16T13:29:59.000Z')))).toBe('2026-10-15T04:00:00.000Z')
-    expect(iso(sessionStart(new Date('2026-10-19T12:00:00.000Z')))).toBe('2026-10-16T04:00:00.000Z')
-    expect(iso(sessionStart(new Date('2026-10-18T12:00:00.000Z')))).toBe('2026-10-16T04:00:00.000Z')
-    // Month boundary: Monday 2026-11-02 before the open goes back to Friday 2026-10-30 (and DST changed on 11-01).
-    expect(iso(sessionStart(new Date('2026-11-02T13:00:00.000Z')))).toBe('2026-10-30T04:00:00.000Z')
+  it('utcDate is the UTC calendar day of a 00:00Z stamp', () => {
+    expect(utcDate(new Date('2026-10-23T00:00:00.000Z'))).toBe('2026-10-23')
+    expect(nyDate(new Date('2026-10-23T00:00:00.000Z'))).toBe('2026-10-22')
   })
 })

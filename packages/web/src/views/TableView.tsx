@@ -5,10 +5,9 @@ import { DataTable, EMPTY_CELL, EmptyState, direction, formatCell, type CellForm
 import type { ViewProps } from './types'
 import { VirtualTable } from '../components/VirtualTable'
 import { FactsCard } from './FactsCard'
-import { controlOf, datasetsFor, kindOf, primaryFrame, viewOf } from './fields'
-import { EMPTY_HINT, KIND_PRIORITY, defaultSortFor, formatsFor, type SortSpec } from './legacy'
+import { controlOf, datasetsFor, emptyHintFor, primaryFrame, viewOf } from './fields'
 
-export { defaultSortFor, formatsFor, type SortSpec }
+export type SortSpec = { column: string; dir: 'asc' | 'desc' }
 
 /** Rank per column for a DataTable: 0 for the first three in display order, then 3, 4, … so narrow widgets shed the tail. */
 export function ranksFor(columns: readonly string[]): Record<string, number> {
@@ -17,13 +16,6 @@ export function ranksFor(columns: readonly string[]): Record<string, number> {
     out[name] = i < 3 ? 0 : Math.min(i, 15)
   })
   return out
-}
-
-/** v1 compatibility: ranks for a kind's columns in its priority order (the first three always show). */
-export function priorityFor(kind: Parameters<typeof formatsFor>[0], columns: Column[]): Record<string, number> {
-  const listed = KIND_PRIORITY[kind] ?? []
-  const names = columns.map((c) => c.name)
-  return ranksFor([...listed.filter((n) => names.includes(n)), ...names.filter((n) => !listed.includes(n))])
 }
 
 /** Direction a column sorts in when first clicked: newest/largest first for time, date and numbers. */
@@ -104,18 +96,17 @@ export function projectFrame(frame: Frame, columns: readonly string[]): Frame {
 
 /**
  * `table` preset: a DataTable from the `TableControl` (columns by priority, formats and labels from field config),
- * sort (the control's, else the kind's default, else the frame's order; click a header to change), the
+ * sort (the control's, else the frame's order; click a header to change), the
  * highlighted row, conditional colour on percent and change columns, and best and worst marks for compare
  * tables. A one-row frame renders the facts card instead (product rule 8).
  */
 export const TableView: FC<ViewProps> = ({ widget, frames }) => {
-  const kind = kindOf(widget)
   const control = tableControlOf(widget, frames)
   const frame = control ? frames[control.data] : primaryFrame(widget, frames)
   const [state, setState] = useState<{ key: string; sort: SortSpec | undefined } | null>(null)
   const table = control?.kind === 'table' ? control : undefined
   const sortKey = `${widget.id}:${table?.data ?? ''}`
-  const sort = state?.key === sortKey ? state.sort : (table?.sort ?? (kind ? defaultSortFor(kind) : undefined))
+  const sort = state?.key === sortKey ? state.sort : table?.sort
 
   const projected = useMemo(() => (frame && table ? projectFrame(frame, table.columns) : frame), [frame, table])
   const formats = useMemo(() => formatsOf(table), [table])
@@ -123,7 +114,7 @@ export const TableView: FC<ViewProps> = ({ widget, frames }) => {
   const sorted = useMemo(() => (projected ? sortRows(projected, sort) : []), [projected, sort])
 
   if (!frame || !projected) return <EmptyState title="No data" hint="The frame has not landed." />
-  if (frame.rows.length === 0) return <EmptyState title="No rows" hint={kind ? EMPTY_HINT[kind] : 'The query returned no rows.'} />
+  if (frame.rows.length === 0) return <EmptyState title="No rows" hint={emptyHintFor(widget)} />
   if (frame.rows.length === 1) return <FactsCard widget={widget} frames={frames} />
   if (!table) return <EmptyState title="No table" hint="The view has no table control for this frame." />
 

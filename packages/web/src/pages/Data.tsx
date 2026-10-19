@@ -5,7 +5,7 @@ import { recipeParams, type CatalogHit, type Descriptor, type Recipe, type Regis
 import { api, type CatalogStats, type ConnectorCatalog, type StoreInfo } from '../api'
 import { parseRecipeText, recipeFromWidget } from './recipe-promote'
 
-type ConnectorInfo = RegisteredConnector & { needsKey?: boolean; configured?: boolean }
+type ConnectorInfo = RegisteredConnector & { routes?: number; needsKey?: boolean; configured?: boolean }
 
 const STATUS_LABEL: Record<RegisteredConnector['status'], string> = { ok: 'ok', missing_config: 'missing key', unreachable: 'not running', error: 'error' }
 const STATUS_CLASS: Record<RegisteredConnector['status'], string> = { ok: 'text-up', missing_config: 'text-fg-2', unreachable: 'text-down', error: 'text-down' }
@@ -159,7 +159,6 @@ function ConnectorRow({ connector, stats, onSaved, onProbe, probing }: { connect
       <div className="flex items-center gap-2">
         <span className="font-medium text-fg">{connector.name}</span>
         <span className={STATUS_CLASS[connector.status]}>{statusLabel(connector)}</span>
-        {connector.mode && connector.mode !== 'kinds' && <span className="rounded bg-surface-3 px-1 text-[10px] tracking-wide text-fg-2 uppercase">{connector.mode === 'both' ? 'routes + kinds' : 'routes'}</span>}
         {stats && (
           <span className="num ml-auto text-xs text-fg-2" title="routes · alive · dead · unprobed">
             {stats.routes} routes · <span className="text-up">{stats.alive}</span> alive · <span className={stats.dead ? 'text-down' : ''}>{stats.dead}</span> dead · {stats.unknown} unprobed · probed {ago(stats.probedAt)}
@@ -171,7 +170,7 @@ function ConnectorRow({ connector, stats, onSaved, onProbe, probing }: { connect
           </Button>
         )}
       </div>
-      <div className="text-xs text-fg-2">{connector.kinds.join(', ')}</div>
+      <div className="text-xs text-fg-2">{connector.routes !== undefined ? `${connector.routes} routes` : ''}</div>
       {connector.detail && <div className="text-xs text-fg-2">{connector.detail}</div>}
       {connector.error && <pre className="whitespace-pre-wrap font-sans text-xs text-fg-2">{connector.error}</pre>}
       {connector.needsKey !== false && (
@@ -465,7 +464,7 @@ function RecipesSection({ recipes, workspace, onChanged }: { recipes: { builtin:
               <li key={w.id}>
                 <button type="button" className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-surface-2" onClick={() => promote(w.id)}>
                   <span className="text-fg">{w.title}</span>
-                  <span className="ml-auto text-xs text-fg-3">{'preset' in w.view ? w.view.preset : w.view.type}</span>
+                  <span className="ml-auto text-xs text-fg-3">{w.view.preset}</span>
                 </button>
               </li>
             ))}

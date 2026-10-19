@@ -1,5 +1,5 @@
 // Promote to recipe (PLAN.md section 17, feature 11): a widget the user likes becomes a user recipe. Pure, tested.
-import { DEFAULT_DATASET, RecipeSchema, isLegacyQuery, isRecipeQuery, isRouteQuery, isTransformQuery, widgetQueries, type AnyQuery, type AnyWidget, type JsonSchemaObject, type Recipe, type RecipeDataset, type RecipeRoute } from '@terminal/core'
+import { DEFAULT_DATASET, RecipeSchema, isRecipeQuery, isRouteQuery, isTransformQuery, widgetQueries, type AnyQuery, type AnyWidget, type JsonSchemaObject, type Recipe, type RecipeDataset, type RecipeRoute } from '@terminal/core'
 import { z } from 'zod'
 
 /** Params that become recipe params (templated) when promoting a route; everything else stays literal. */
@@ -41,7 +41,7 @@ function routeDataset(q: { connector: string; route: string; params: Record<stri
 }
 
 /**
- * The user recipe for a widget. Recipe and v1 kind datasets copy the base recipe's routes with the widget's params
+ * The user recipe for a widget. Recipe datasets copy the base recipe's routes with the widget's params
  * as the defaults; route datasets template their symbol params; a transform carries its inputs as datasets.
  */
 export function recipeFromWidget(widget: AnyWidget, builtin: readonly Recipe[], taken: Set<string> = new Set(builtin.map((r) => r.name))): Recipe {
@@ -64,7 +64,7 @@ export function recipeFromWidget(widget: AnyWidget, builtin: readonly Recipe[], 
       if (name === DEFAULT_DATASET && b.title) title = widget.title
       return
     }
-    const baseName = isRecipeQuery(q) ? q.recipe : isLegacyQuery(q) ? q.kind : undefined
+    const baseName = isRecipeQuery(q) ? q.recipe : undefined
     const base = baseName ? builtin.find((r) => r.name === baseName) : undefined
     const params = (q as { params: Record<string, unknown> }).params ?? {}
     if (base) {

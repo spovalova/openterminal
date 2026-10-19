@@ -1,10 +1,10 @@
 /**
  * Frames in the web state, keyed by workspace, widget and dataset through core's `frameKey` (PLAN.md section 17,
  * feature 8): widget ids (w1, w2, …) repeat across workspaces, so a frame left by another workspace's widget
- * with the same id must never render under this one. A v1 server sends frames without a `workspaceId`, so a
- * widget also reads the bare key, guarded by `frameMatches` as belt and braces.
+ * with the same id must never render under this one. A frame message without a `workspaceId` lands under the
+ * bare key and is read as a fallback.
  */
-import { DEFAULT_DATASET, KINDS, frameKey, isWidgetV2, widgetQueries, type AnyWidget, type Frame, type FrameRef } from '@terminal/core'
+import { DEFAULT_DATASET, frameKey, widgetQueries, type AnyWidget, type Frame, type FrameRef } from '@terminal/core'
 
 export type FrameStore = Record<string, Frame>
 export type FrameErrors = Record<string, string>
@@ -31,7 +31,7 @@ export function parseFrameKey(key: string): FrameRef {
 }
 
 /**
- * Drop every frame and error of a widget: the keys under this workspace and the bare v1 keys, every dataset.
+ * Drop every frame and error of a widget: the keys under this workspace and the bare keys, every dataset.
  * Used when a `widgets` message replaces the set and when a workspace is deleted.
  */
 export function dropWidgetFrames<T>(store: Record<string, T>, workspaceId: string | undefined, widgetId: string): Record<string, T> {
@@ -57,26 +57,15 @@ export function hasAnyFrame<T>(store: Record<string, T>, workspaceId: string | u
 }
 
 /**
- * A frame has the columns of a v1 widget's kind (the registry guarantees it for the widget's own frame), so a
- * stale frame from another kind under the same widget id is never rendered. A v2 widget has no kind: its
- * frames are keyed by workspace, which is the real guard; anything stored is accepted.
- */
-export function frameMatches(widget: AnyWidget, frame: Frame): boolean {
-  if (isWidgetV2(widget)) return true
-  const expected = KINDS[widget.query.kind].columns
-  return frame.columns.length === expected.length && frame.columns.every((c, i) => c.name === expected[i]!.name)
-}
-
-/**
  * The frames a widget renders with, one per dataset that has landed: the workspace-keyed frame first, then the
- * bare v1 key when it passes `frameMatches`. Empty when nothing has landed yet.
+ * bare key. Empty when nothing has landed yet.
  */
 export function framesFor(store: FrameStore, workspaceId: string | undefined, widget: AnyWidget): Record<string, Frame> {
   const out: Record<string, Frame> = {}
   for (const dataset of Object.keys(widgetQueries(widget))) {
     const keyed = workspaceId ? store[frameKey({ workspaceId, widgetId: widget.id, dataset })] : undefined
     const frame = keyed ?? store[frameKey({ widgetId: widget.id, dataset })]
-    if (frame && frameMatches(widget, frame)) out[dataset] = frame
+    if (frame) out[dataset] = frame
   }
   return out
 }

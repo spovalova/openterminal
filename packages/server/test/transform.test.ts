@@ -6,7 +6,6 @@ import {
   ConnectorRegistry,
   MemoryCache,
   defineConnector,
-  toFrame,
   NYSE_EARLY_CLOSES,
   NYSE_HOLIDAYS,
   OT_HELPERS,
@@ -14,6 +13,7 @@ import {
   TRANSFORM_LIMITS,
   TransformFailed,
   frameToObjects,
+  inferFrame,
   isTransformError,
   lastTradingDay,
   lastWeek,
@@ -21,9 +21,11 @@ import {
   prevClose,
   tradingDays,
   type AnyQueryInput,
+  type Descriptor,
   type Frame,
   type TransformOutput,
 } from '@terminal/core'
+import { builtinAnnotations, builtinRecipes } from '@terminal/core/node'
 import { z } from 'zod'
 import { createTransformEngine, fromColumnar, toColumnar, vendoredWheels, type ServerTransformEngine } from '../src/transform/index.js'
 
@@ -110,18 +112,26 @@ const epsFrame = frame(
   EPS_ROWS.map(([d, a, e]) => ['NVDA', nyMidnight(d), a, e]),
 )
 
-/** A v1 connector answering ohlcv (three daily bars from 2025-10-01) and eps_history (four quarters) from memory. */
-function kindConnector() {
+/** A routes connector answering ohlcv (three daily bars from 2025-10-01) and eps_history (the newest `limit` quarters) from memory. */
+function barsAndEpsConnector() {
+  const symbols = { name: 'symbols', type: 'string[]' as const, required: true }
+  const S = (name: string) => ({ name, type: 'string' as const })
+  const N = (name: string) => ({ name, type: 'number' as const })
+  const descriptors: Descriptor[] = [
+    { connector: 'fake', route: 'ohlcv', summary: 'bars', params: [symbols, { name: 'interval', type: 'string', required: false }, { name: 'range', type: 'string', required: false }], providers: [], fields: [S('symbol'), { name: 'time', type: 'time' }, N('open'), N('high'), N('low'), N('close'), N('volume')] },
+    { connector: 'fake', route: 'eps_history', summary: 'eps', params: [symbols, { name: 'limit', type: 'integer', required: false, default: 8 }], providers: [], fields: [S('symbol'), S('date'), N('eps_actual'), N('eps_estimate'), N('surprise_pct')] },
+  ]
   return defineConnector({
     name: 'fake',
     config: z.object({}),
-    queries: {
-      ohlcv: async (p) =>
-        toFrame(
-          'ohlcv',
-          p.symbols.flatMap((symbol) => tradingDays('2025-10-01', '2025-10-03').map((d, i) => ({ symbol, time: nyMidnight(d) + 16 * 3_600_000, open: 10, high: 11, low: 9, close: 100 + i, volume: 100 }))),
-        ),
-      eps_history: async (p) => toFrame('eps_history', p.symbols.flatMap((symbol) => EPS_ROWS.slice(0, p.limit).map(([date, eps_actual, eps_estimate]) => ({ symbol, date, eps_actual, eps_estimate, surprise_pct: 5 })))),
+    descriptors: () => descriptors,
+    call: async (route, p) => {
+      const list = p.symbols as string[]
+      const rows =
+        route === 'ohlcv'
+          ? list.flatMap((symbol) => tradingDays('2025-10-01', '2025-10-03').map((d, i) => ({ symbol, time: nyMidnight(d) + 16 * 3_600_000, open: 10, high: 11, low: 9, close: 100 + i, volume: 100 })))
+          : list.flatMap((symbol) => EPS_ROWS.slice(0, Number(p.limit ?? 8)).map(([date, eps_actual, eps_estimate]) => ({ symbol, date, eps_actual, eps_estimate, surprise_pct: 5 })))
+      return inferFrame(rows, { connector: 'fake' }, { descriptor: descriptors.find((d) => d.route === route) })
     },
   })
 }
@@ -198,11 +208,11 @@ describe('P/E worked example', () => {
   )
 
   it(
-    'runs through the registry over v1 kind queries and stamps lineage, fields and ttl',
+    'runs through the registry over route queries and stamps lineage, fields and ttl',
     async () => {
       const registry = new ConnectorRegistry({ cache: new MemoryCache(), transform: engine, now: () => NOW })
-      registry.register(kindConnector(), {})
-      // The v1 eps_history has `date` as a string; ot.to_et turns it into the tz-aware time merge_asof needs.
+      registry.register(barsAndEpsConnector(), {})
+      // eps_history's `date` is a string here; ot.to_et turns it into the tz-aware time merge_asof needs.
       const code = [
         'e = eps.assign(time=ot.to_et(eps.date)).sort_values("time")',
         'e["eps_ttm"] = e.groupby("symbol")["eps_actual"].transform(lambda s: s.rolling(4).sum())',
@@ -213,7 +223,7 @@ describe('P/E worked example', () => {
         'result = m[["symbol", "time", "close", "eps_ttm", "pe"]]',
       ].join('\n')
       const frame = await registry.run({
-        inputs: { price: { kind: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '1mo' } }, eps: { kind: 'eps_history', params: { symbols: ['NVDA'], limit: 4 } } },
+        inputs: { price: { connector: 'fake', route: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '1mo' } }, eps: { connector: 'fake', route: 'eps_history', params: { symbols: ['NVDA'], limit: 4 } } },
         code,
         columns: { pe: { unit: 'ratio', label: 'P/E (TTM)' } },
       })
@@ -228,7 +238,7 @@ describe('P/E worked example', () => {
       expect(rows.map((r) => r.pe)).toEqual([null, null, null])
       // With eight reports the TTM as of 2025-10-01 is the four reported by then: 1.05 + 0.81 + 0.89 + 0.81 = 3.56; close 100.
       const eight = await registry.run({
-        inputs: { price: { kind: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '1mo' } }, eps: { kind: 'eps_history', params: { symbols: ['NVDA'], limit: 8 } } },
+        inputs: { price: { connector: 'fake', route: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '1mo' } }, eps: { connector: 'fake', route: 'eps_history', params: { symbols: ['NVDA'], limit: 8 } } },
         code,
       })
       expect(frameToObjects(eight)[0]!.pe).toBeCloseTo(100 / 3.56, 10)
@@ -240,8 +250,8 @@ describe('P/E worked example', () => {
     'a traceback comes back through the registry as TransformFailed with the traceback attached',
     async () => {
       const registry = new ConnectorRegistry({ cache: new MemoryCache(), transform: engine, now: () => NOW })
-      registry.register(kindConnector(), {})
-      const q: AnyQueryInput = { inputs: { price: { kind: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '1mo' } } }, code: 'result = price[["nope"]]' }
+      registry.register(barsAndEpsConnector(), {})
+      const q: AnyQueryInput = { inputs: { price: { connector: 'fake', route: 'ohlcv', params: { symbols: ['NVDA'], interval: '1d', range: '1mo' } } }, code: 'result = price[["nope"]]' }
       const err = await registry.run(q).catch((e: unknown) => e)
       expect(err).toBeInstanceOf(TransformFailed)
       expect((err as TransformFailed).message).toMatch(/KeyError/)
@@ -804,6 +814,199 @@ describe('ot helpers', () => {
         const params = /\(([^)]*)\)/.exec(h.signature)![1]!.split(',').map((p) => p.trim().split(/[:=]/)[0]!.trim()).filter(Boolean)
         expect(r![h.name], h.name).toBe(params.join(','))
       }
+    },
+    RUN_MS,
+  )
+})
+
+// ---------- the recipes' data graphs: what the v1 kind handlers did in code, now pandas in recipes.yml ----------
+
+type Row = Record<string, unknown>
+type FakeRoute = { params: Record<string, 'string' | 'string[]' | 'integer' | 'date'>; providers?: string[]; rows: Row[] | (() => Row[]) }
+
+/** A connector that answers the given routes from memory with descriptors mirroring the recipe routes' params. */
+function fakeRoutes(name: string, routes: Record<string, FakeRoute>) {
+  const descriptors: Descriptor[] = Object.entries(routes).map(([route, r]) => ({
+    connector: name,
+    route,
+    summary: route,
+    params: Object.entries(r.params).map(([n, type]) => ({ name: n, type, required: false })),
+    providers: r.providers ?? [],
+    fields: [],
+  }))
+  return defineConnector({
+    name,
+    config: z.object({}),
+    descriptors: () => descriptors,
+    call: async (route) => {
+      const r = routes[route]
+      if (!r) throw new Error(`${name} does not answer ${route}`)
+      const rows = typeof r.rows === 'function' ? r.rows() : r.rows
+      return inferFrame(rows, { connector: name }, { dropEmpty: rows.length > 0 })
+    },
+  })
+}
+
+/** A registry over the built-in recipes and annotations, the shared engine, and the given fake connectors. */
+function recipeRegistry(...connectors: ReturnType<typeof fakeRoutes>[]) {
+  const registry = new ConnectorRegistry({ cache: new MemoryCache(), transform: engine, now: () => NOW, recipes: builtinRecipes(), annotations: builtinAnnotations() })
+  for (const c of connectors) registry.register(c, {})
+  return registry
+}
+
+const symbolList = { symbol: 'string[]' } as const
+
+describe('recipe data graphs (the kind handlers’ mappings)', () => {
+  it(
+    'search: nasdaq listing-exchange codes become exchange names, the frame is symbol, name, exchange, ten rows at most',
+    async () => {
+      const rows: Row[] = Array.from({ length: 12 }, (_, i) => ({ symbol: `S${i}`, name: `Name ${i}`, nasdaq_traded: 'Y', 'Listing Exchange': i % 2 ? 'N' : 'Q' }))
+      const r = recipeRegistry(fakeRoutes('openbb', { 'equity/search': { params: { query: 'string' }, providers: ['nasdaq'], rows } }))
+      const f = await r.run({ recipe: 'search', params: { q: 'micron' } })
+      expect(f.columns.map((c) => c.name)).toEqual(['symbol', 'name', 'exchange'])
+      expect(f.rows).toHaveLength(10)
+      expect(frameToObjects(f).slice(0, 2).map((x) => x.exchange)).toEqual(['NASDAQ', 'NYSE'])
+      expect(f.meta.fields?.exchange?.label).toBe('Exchange')
+      // yahoo's hits carry exchDisp and longname/shortname
+      const y = recipeRegistry(fakeRoutes('yahoo', { search: { params: { q: 'string' }, rows: [{ query: 'micron', symbol: 'MU', shortname: 'Micron', longname: 'Micron Technology', exchange: 'NMS', exchDisp: 'NASDAQ', quoteType: 'EQUITY' }] } }))
+      const g = frameToObjects(await y.run({ recipe: 'search', params: { q: 'micron' } }))
+      expect(g).toEqual([{ query: 'micron', symbol: 'MU', name: 'Micron Technology', exchange: 'NASDAQ' }])
+    },
+    RUN_MS,
+  )
+
+  it(
+    'earnings: the whole-market calendar is cut to the requested symbols and the provider’s word becomes session (bmo, amc or null)',
+    async () => {
+      const rows: Row[] = [
+        { report_date: '2026-11-18', symbol: 'NVDA', name: 'NVIDIA', eps_consensus: 2.48, reporting_time: 'time-not-supplied' },
+        { report_date: '2026-10-29', symbol: 'SNDK', name: 'Sandisk', eps_consensus: 45.22, reporting_time: 'after-hours' },
+        { report_date: '2026-10-30', symbol: 'AAPL', name: 'Apple', eps_consensus: 1.99, reporting_time: 'pre-market' },
+        { report_date: '2026-10-28', symbol: 'ZZZ', name: 'Not asked', eps_consensus: 1, reporting_time: 'after-hours' },
+      ]
+      const r = recipeRegistry(fakeRoutes('openbb', { 'equity/calendar/earnings': { params: { start_date: 'date', end_date: 'date' }, providers: ['nasdaq'], rows } }))
+      const f = frameToObjects(await r.run({ recipe: 'earnings', params: { symbols: ['NVDA', 'SNDK', 'AAPL'], from: '2026-10-19', to: '2026-12-31' } }))
+      expect(f.map((x) => [x.symbol, x.session])).toEqual([
+        ['SNDK', 'amc'],
+        ['AAPL', 'bmo'],
+        ['NVDA', null],
+      ])
+    },
+    RUN_MS,
+  )
+
+  it(
+    'estimates: the consensus joined to the 0q and 0y EPS estimates, upside from the target and the price, growth scaled by the annotation',
+    async () => {
+      const r = recipeRegistry(
+        fakeRoutes('openbb', {
+          'equity/estimates/consensus': { params: symbolList, providers: ['yfinance'], rows: [{ symbol: 'NVDA', target_high: 515, target_low: 180, target_consensus: 328.71695, recommendation: 'strong_buy', number_of_analysts: 59, current_price: 214.13 }] },
+          'yfinance/estimates/earnings': {
+            params: symbolList,
+            providers: ['yfinance'],
+            rows: [
+              { symbol: 'NVDA', period: '0q', mean: 2.47325, growth: 0.6124, number_of_analysts: 40 },
+              { symbol: 'NVDA', period: '+1q', mean: 2.9, growth: 0.5, number_of_analysts: 30 },
+              { symbol: 'NVDA', period: '0y', mean: 9.31242, growth: 0.9523, number_of_analysts: 50 },
+            ],
+          },
+        }),
+      )
+      const f = await r.run({ recipe: 'estimates', params: { symbols: ['NVDA'] } })
+      const [row] = frameToObjects(f)
+      expect(row).toMatchObject({ symbol: 'NVDA', recommendation: 'strong_buy', number_of_analysts: 59, target_consensus: 328.71695, eps_estimate_q: 2.47325, eps_estimate_y: 9.31242, eps_growth_y: 95.23 })
+      expect(row!.upside_pct).toBeCloseTo(53.51, 2)
+      expect(f.meta.fields?.upside_pct).toMatchObject({ unit: 'percent', format: 'change' })
+      expect(f.meta.fields?.target_consensus).toMatchObject({ unit: 'usd', key: true })
+    },
+    RUN_MS,
+  )
+
+  it(
+    'dividends and short_interest: the newest `limit` rows per symbol; institutions: nasdaq’s thousands become dollars, largest first',
+    async () => {
+      const r = recipeRegistry(
+        fakeRoutes('openbb', {
+          'equity/fundamental/dividends': { params: symbolList, providers: ['yfinance'], rows: ['2025-02-10', '2025-05-12', '2025-08-11', '2025-11-10', '2026-02-09'].map((d, i) => ({ symbol: 'AAPL', ex_dividend_date: d, amount: 0.25 + i / 100 })) },
+          'equity/shorts/short_interest': { params: symbolList, providers: ['finra'], rows: ['2026-08-31', '2026-09-15', '2026-09-30', '2026-10-15'].map((d, i) => ({ settlement_date: d, symbol: 'MU', current_short_position: 1_000 + i, days_to_cover: 1.1, change_pct: -1 })) },
+          'equity/ownership/institutional': {
+            params: { symbol: 'string[]', limit: 'integer' },
+            providers: ['nasdaq'],
+            rows: [
+              { symbol: 'MU', date: '2026-06-30', owner_name: 'Blackrock, Inc.', shares_held: 104_827_219, shares_change_percent: 0.01628, market_value: 92_126_353 },
+              { symbol: 'MU', date: '2025-12-31', owner_name: 'Vanguard Group Inc', shares_held: 106_608_094, shares_change_percent: 0.0187, market_value: 93_691_457 },
+              { symbol: 'MU', date: '2026-06-30', owner_name: 'Small Fund', shares_held: 1_000, shares_change_percent: 0, market_value: 1_000 },
+            ],
+          },
+        }),
+      )
+      const divs = frameToObjects(await r.run({ recipe: 'dividends', params: { symbols: ['AAPL'], limit: 3 } }))
+      expect(divs.map((x) => x.amount)).toEqual([0.29, 0.28, 0.27])
+      const si = frameToObjects(await r.run({ recipe: 'short_interest', params: { symbols: ['MU'], limit: 2 } }))
+      expect(si.map((x) => x.current_short_position)).toEqual([1003, 1002])
+      const inst = await r.run({ recipe: 'institutions', params: { symbols: ['MU'], limit: 2 } })
+      expect(frameToObjects(inst).map((x) => [x.owner_name, x.market_value, x.shares_change_percent])).toEqual([
+        ['Vanguard Group Inc', 93_691_457_000, 1.87],
+        ['Blackrock, Inc.', 92_126_353_000, 1.628],
+      ])
+      expect(inst.meta.fields?.market_value).toMatchObject({ unit: 'usd', label: 'Value' })
+    },
+    RUN_MS,
+  )
+
+  it(
+    'insiders: action from the Form 4 words (sell, buy, grant, other), value as shares × price, holdings-only rows dropped, newest `limit` kept',
+    async () => {
+      const sec = (date: string | null, ad: string, type: string, shares: number, price: number): Row => ({ symbol: 'MU', filing_date: '2026-10-15', transaction_date: date, owner_name: 'X', owner_title: 'CEO', transaction_type: type, acquisition_or_disposition: ad, securities_transacted: shares, transaction_price: price, filing_url: 'https://sec.gov/x' })
+      const rows: Row[] = [
+        sec('2026-10-14', 'Disposition', 'Open market or private sale of non-derivative or derivative security', 40, 947.29),
+        sec('2026-10-13', 'Acquisition', 'Grant, award or other acquisition pursuant to Rule 16b-3(d)', 1000, 0),
+        sec('2026-10-12', 'Disposition', 'Bona fide gift', 500, 0),
+        sec('2026-10-11', 'Acquisition', 'Open market or private purchase of non-derivative or derivative security', 10, 900),
+        sec('2026-10-10', 'Disposition', 'Payment of exercise price or tax liability by delivering or withholding securities', 5, 900),
+        sec(null, 'Acquisition', 'Holdings only', 1, 1),
+      ]
+      const r = recipeRegistry(fakeRoutes('openbb', { 'equity/ownership/insider_trading': { params: { symbol: 'string[]', limit: 'integer' }, providers: ['sec'], rows } }))
+      const f = await r.run({ recipe: 'insiders', params: { symbols: ['MU'], limit: 4 } })
+      expect(frameToObjects(f).map((x) => [x.action, x.value])).toEqual([
+        ['sell', 37891.6],
+        ['grant', 0],
+        ['other', 0],
+        ['buy', 9000],
+      ])
+      expect(f.meta.fields?.action?.label).toBe('Action')
+      // yahoo's transaction text
+      const y = recipeRegistry(fakeRoutes('yahoo', { quoteSummary: { params: { symbol: 'string[]', modules: 'string[]' }, rows: [{ symbol: 'MU', 'insiderTransactions.transactionText': 'Sale at price 959.14 per share.', 'insiderTransactions.shares': 100, 'insiderTransactions.value': 95914, 'insiderTransactions.startDate': '2026-10-01' }, { symbol: 'MU', 'insiderTransactions.transactionText': 'Stock Award(Grant) at price 0.00 per share.', 'insiderTransactions.shares': 100, 'insiderTransactions.value': 0, 'insiderTransactions.startDate': '2026-09-01' }] } }))
+      const g = frameToObjects(await y.run({ recipe: 'insiders', params: { symbols: ['MU'] } }))
+      expect(g.map((x) => [x.action, x.value, x.transaction_price])).toEqual([
+        ['sell', 95914, 959.14],
+        ['grant', 0, 0],
+      ])
+    },
+    RUN_MS,
+  )
+
+  it(
+    'options over yahoo’s column names (type, underlyingPrice): the side and the strike window still apply; yield_curve labels its maturities',
+    async () => {
+      const contracts: Row[] = []
+      for (const type of ['call', 'put']) for (const strike of [90, 95, 100, 105, 110]) contracts.push({ symbol: 'NVDA', type, strike, bid: 1, ask: 1.2, expiration: '2026-10-23', underlyingPrice: 100 })
+      const r = recipeRegistry(
+        fakeRoutes('yahoo', { options: { params: { symbol: 'string', date: 'date' }, rows: contracts } }),
+        fakeRoutes('openbb', { 'fixedincome/government/yield_curve': { params: { date: 'date' }, providers: ['federal_reserve'], rows: [{ date: '2026-10-15', maturity: 'year_10', rate: 0.0401, maturity_years: 10 }, { date: '2026-10-15', maturity: 'month_1', rate: 0.0417, maturity_years: 1 / 12 }, { date: '2026-10-15', maturity: 'year_30', rate: 0.0464, maturity_years: 30 }] } }),
+      )
+      const chain = frameToObjects(await r.run({ recipe: 'options', params: { symbol: 'NVDA', strikes: 1, type: 'put' } }))
+      expect(chain.map((x) => [x.type, x.strike])).toEqual([
+        ['put', 100],
+        ['put', 105],
+      ])
+      const curve = await r.run({ recipe: 'yield_curve', params: {} })
+      expect(frameToObjects(curve).map((x) => [x.maturity, x.rate])).toEqual([
+        ['1M', 4.17],
+        ['10Y', 4.01],
+        ['30Y', 4.64],
+      ])
+      expect(curve.meta.fields?.rate).toMatchObject({ unit: 'percent' })
     },
     RUN_MS,
   )

@@ -1,5 +1,4 @@
 import { columnIndex, type Frame } from './frame.js'
-import type { Range } from './kinds.js'
 
 /**
  * Time semantics in one place (PLAN.md section 17, feature 5): the US equity calendar in Eastern Time.
@@ -9,6 +8,18 @@ import type { Range } from './kinds.js'
 
 export const NY = 'America/New_York'
 export const DAY_MS = 86_400_000
+export const MS = { second: 1_000, minute: 60_000, hour: 3_600_000, day: DAY_MS } as const
+
+/** The ranges the price recipes take (`ohlcv`, `index`, `macro`), and what `rangeStart` and `baselineFor` understand. */
+export const RANGES = ['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y'] as const
+export type Range = (typeof RANGES)[number]
+/** The bar intervals the price recipes take; the first four are intraday. */
+export const INTERVALS = ['1m', '5m', '15m', '1h', '1d', '1w'] as const
+export type Interval = (typeof INTERVALS)[number]
+export const INTRADAY_INTERVALS: ReadonlySet<string> = new Set(['1m', '5m', '15m', '1h'])
+export function isIntraday(interval: string): boolean {
+  return INTRADAY_INTERVALS.has(interval)
+}
 
 export type NyParts = { year: number; month: number; day: number; hour: number; minute: number; weekday: number }
 

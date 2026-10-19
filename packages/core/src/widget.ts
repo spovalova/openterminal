@@ -1,115 +1,11 @@
 import { z } from 'zod'
 import { FieldOverridesSchema } from './fields.js'
-import { KINDS, QuerySchema, SERIES_KINDS, type Kind } from './kinds.js'
 import { ViewV2Schema, type ViewV2 } from './presets.js'
-import { AnyQuerySchema, legacyToRecipe, type AnyQuery, type AnyQueryInput } from './query.js'
+import { AnyQuerySchema, type AnyQuery, type AnyQueryInput } from './query.js'
 import { LEGEND_LABEL_MAX, LegendLabelsSchema, SizeSchema, type Size } from './view-options.js'
 
 export { LEGEND_LABEL_MAX, LegendLabelsSchema, SizeSchema }
 export type { Size }
-
-/**
- * Kinds whose frame has one row per symbol (the latest row per symbol for short_interest) and the
- * numeric column a trader asks about first: what the `stat` view shows as its one big number.
- */
-export const STAT_KEY_COLUMN = {
-  quote: 'price',
-  metrics: 'pe',
-  volatility: 'iv30',
-  estimates: 'target_consensus',
-  profile: 'market_cap',
-  short_interest: 'days_to_cover',
-} as const satisfies Partial<Record<Kind, string>>
-export type StatKind = keyof typeof STAT_KEY_COLUMN
-export const STAT_KINDS: ReadonlySet<Kind> = new Set<Kind>(Object.keys(STAT_KEY_COLUMN) as StatKind[])
-export function isStatKind(kind: Kind): kind is StatKind {
-  return STAT_KINDS.has(kind)
-}
-
-/** Numeric columns of a kind: what a stat view's `column` may name. */
-export function numericColumns(kind: Kind): string[] {
-  return KINDS[kind].columns.filter((c) => c.type === 'number').map((c) => c.name)
-}
-
-/**
- * series: lightweight-charts over a frame with a time column (`ohlcv`, `macro`). `candle` and `normalize`
- * are mutually exclusive and only for `ohlcv`; candle requires exactly one symbol; normalize rebases every
- * line to 100 at the first bar. `labels` renames legend entries; every key must be one of the query's
- * symbols (or macro series).
- * table: any kind.
- * chain: the option chain layout (calls, strike, puts), only for `options`.
- * stat: one big number per symbol (the kind's key column, or `column` to pick another numeric one) with
- * the symbol as its label and a change line under it; only for the kinds in STAT_KEY_COLUMN.
- */
-export const ViewSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('series'), candle: z.boolean().optional(), normalize: z.boolean().optional(), labels: LegendLabelsSchema.optional() }),
-  z.object({ type: z.literal('table') }),
-  z.object({ type: z.literal('chain') }),
-  z.object({ type: z.literal('stat'), column: z.string().min(1).optional().describe('A numeric column of the kind to show instead of its key column') }),
-])
-export type View = z.infer<typeof ViewSchema>
-export const VIEW_TYPES = ['series', 'table', 'chain', 'stat'] as const
-
-/** The column a stat widget shows: the view's `column` when set, else the kind's key column. */
-export function statColumn(kind: Kind, view: View): string | undefined {
-  if (view.type === 'stat' && view.column) return view.column
-  return isStatKind(kind) ? STAT_KEY_COLUMN[kind] : undefined
-}
-
-/** The v1 widget: one kind query rendered by one view. Production's path; unchanged until phase 3. */
-export const WidgetSchema = z
-  .object({
-    id: z.string().min(1),
-    title: z.string().min(1).max(80),
-    size: SizeSchema,
-    query: QuerySchema,
-    view: ViewSchema,
-  })
-  .superRefine((w, ctx) => {
-    if (w.view.type === 'chain') {
-      if (w.query.kind !== 'options') ctx.addIssue({ code: 'custom', path: ['view'], message: 'chain view requires an options query' })
-      return
-    }
-    if (w.view.type === 'stat') {
-      if (!isStatKind(w.query.kind)) {
-        ctx.addIssue({ code: 'custom', path: ['view'], message: `stat view requires a ${[...STAT_KINDS].join(', ')} query` })
-        return
-      }
-      if (w.view.column && !numericColumns(w.query.kind).includes(w.view.column)) {
-        ctx.addIssue({ code: 'custom', path: ['view', 'column'], message: `${w.query.kind} has no numeric column "${w.view.column}" (one of ${numericColumns(w.query.kind).join(', ')})` })
-      }
-      return
-    }
-    if (w.view.type !== 'series') return
-    if (!SERIES_KINDS.has(w.query.kind)) {
-      ctx.addIssue({ code: 'custom', path: ['view'], message: `series view requires an ohlcv or macro query` })
-      return
-    }
-    if (w.view.labels) {
-      const groups: readonly string[] = w.query.kind === 'ohlcv' ? w.query.params.symbols : w.query.kind === 'macro' ? w.query.params.series : []
-      for (const key of Object.keys(w.view.labels)) {
-        if (!groups.includes(key)) {
-          ctx.addIssue({ code: 'custom', path: ['view', 'labels', key], message: `labels: "${key}" is not one of the query's ${w.query.kind === 'macro' ? 'series' : 'symbols'}` })
-        }
-      }
-    }
-    if (w.query.kind !== 'ohlcv') {
-      if (w.view.candle || w.view.normalize) ctx.addIssue({ code: 'custom', path: ['view'], message: 'candle and normalize are only for ohlcv' })
-      return
-    }
-    if (w.view.candle && w.view.normalize) {
-      ctx.addIssue({ code: 'custom', path: ['view'], message: 'candle and normalize are mutually exclusive' })
-    }
-    if (w.view.candle && w.query.params.symbols.length !== 1) {
-      ctx.addIssue({ code: 'custom', path: ['view', 'candle'], message: 'candle requires exactly one symbol' })
-    }
-  })
-export type Widget = z.output<typeof WidgetSchema>
-export type WidgetInput = z.input<typeof WidgetSchema>
-
-export function parseWidget(input: unknown): Widget {
-  return WidgetSchema.parse(input)
-}
 
 /** Grid spans per size: lg 2x2, md 1x2 (two columns wide, one row), sm 1x1. */
 export const SIZE_SPANS: Record<Size, { cols: number; rows: number }> = {
@@ -118,12 +14,9 @@ export const SIZE_SPANS: Record<Size, { cols: number; rows: number }> = {
   sm: { cols: 1, rows: 1 },
 }
 
-// ---------------------------------------------------------------------------------------------- v2
-
 /**
- * The v2 widget (PLAN.md section 17, "the widget model"): a named data graph instead of one query (a plain
- * widget is a graph with one node, `main`), a preset with options instead of a view type, per-field overrides,
- * and the size as a hint the packer may demote. The v1 `query` stays readable on migrated widgets.
+ * The widget (PLAN.md section 17, "the widget model"): a named data graph (a plain widget is a graph with one node,
+ * `main`), a preset with options, per-field overrides, and the size as a hint the packer may demote.
  */
 export const DATASET_NAME_RE = /^[a-z_][a-z0-9_]*$/
 export const DEFAULT_DATASET = 'main'
@@ -136,8 +29,6 @@ export const WidgetV2Schema = z
     data: z.record(z.string().regex(DATASET_NAME_RE, 'dataset names are Python identifiers'), AnyQuerySchema).refine((d) => Object.keys(d).length > 0, { message: 'a widget needs at least one dataset' }),
     view: ViewV2Schema,
     fields: FieldOverridesSchema.optional(),
-    /** The v1 query this widget was migrated from, kept for the Data tab and for v1 clients. */
-    query: QuerySchema.optional(),
   })
   .superRefine((w, ctx) => {
     const names = Object.keys(w.data)
@@ -154,12 +45,43 @@ export const WidgetV2Schema = z
 export type WidgetV2 = z.output<typeof WidgetV2Schema>
 export type WidgetV2Input = z.input<typeof WidgetV2Schema>
 
+/** The widget type; the name dates from the v1 coexistence. */
+export type AnyWidget = WidgetV2
+
 export function isWidgetV2(w: unknown): w is WidgetV2 {
   return !!w && typeof w === 'object' && 'data' in w && !!(w as WidgetV2).data && typeof (w as WidgetV2).view === 'object' && 'preset' in (w as WidgetV2).view
 }
 
+// ---------------------------------------------------------------------------------------------- the v1 JSON shape
+
+/**
+ * A widget as the v1 store wrote it (`~/.terminal/workspaces/<id>.json`, before 2026-10-19): one `{ kind, params }`
+ * query rendered by one typed view. Read here only to migrate it; nothing executes a kind. The params are an open
+ * object: the recipe of the same name validates them when the widget runs.
+ */
+const LegacyViewSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('series'), candle: z.boolean().optional(), normalize: z.boolean().optional(), labels: LegendLabelsSchema.optional() }),
+  z.object({ type: z.literal('table') }),
+  z.object({ type: z.literal('chain') }),
+  z.object({ type: z.literal('stat'), column: z.string().min(1).optional() }),
+])
+export const LegacyWidgetSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1).max(80),
+  size: SizeSchema,
+  query: z.object({ kind: z.string().min(1), params: z.record(z.string(), z.unknown()).default({}) }),
+  view: LegacyViewSchema,
+})
+export type LegacyWidget = z.output<typeof LegacyWidgetSchema>
+
+export function isLegacyWidget(w: unknown): w is LegacyWidget {
+  return !!w && typeof w === 'object' && 'query' in w && !!(w as LegacyWidget).query && typeof (w as LegacyWidget).query.kind === 'string' && !('data' in w)
+}
+
+const list = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : typeof v === 'string' && v ? v.split(',').map((s) => s.trim()).filter(Boolean) : [])
+
 /** The v1 view of a widget as the v2 preset it maps to. */
-export function migrateView(view: View, query: Widget['query']): ViewV2 {
+export function migrateView(view: LegacyWidget['view'], query: LegacyWidget['query']): ViewV2 {
   switch (view.type) {
     case 'table':
       return { preset: 'table' }
@@ -169,9 +91,9 @@ export function migrateView(view: View, query: Widget['query']): ViewV2 {
       return view.column ? { preset: 'stat', column: view.column } : { preset: 'stat' }
     case 'series': {
       const labels = view.labels
-      if (view.candle) return { preset: 'price', candle: true, ...(labels ? { labels } : {}) }
+      if (view.candle) return { preset: 'price', candle: true, volume: true, ...(labels ? { labels } : {}) }
       if (view.normalize) return { preset: 'compare', normalize: true, ...(labels ? { labels } : {}) }
-      const groups = query.kind === 'ohlcv' ? query.params.symbols.length : query.kind === 'macro' ? query.params.series.length : 1
+      const groups = query.kind === 'ohlcv' ? list(query.params.symbols).length : query.kind === 'macro' ? list(query.params.series).length : 1
       if (groups <= 1 && query.kind === 'ohlcv') return { preset: 'price', ...(labels ? { labels } : {}) }
       return { preset: 'compare', normalize: false, ...(labels ? { labels } : {}) }
     }
@@ -179,31 +101,34 @@ export function migrateView(view: View, query: Widget['query']): ViewV2 {
 }
 
 /**
- * A v1 widget as a v2 one: the query becomes the recipe of the same name under `main` (a multi-series macro
- * query becomes one `macro` dataset per series, since the v2 recipe takes one series), the view becomes a preset.
+ * A v1 widget as a v2 one: the query becomes the recipe of the same name under `main` (a multi-series macro query
+ * becomes one `macro` dataset per series, since the recipe takes one series), the view becomes a preset. Accepts the
+ * raw JSON (validated with `LegacyWidgetSchema`) or an already parsed legacy widget. Throws ZodError on neither.
  */
-export function migrateWidget(w: Widget): WidgetV2 {
+export function migrateWidget(input: unknown): WidgetV2 {
+  const w = LegacyWidgetSchema.parse(input)
   const data: Record<string, AnyQuery> = {}
-  if (w.query.kind === 'macro' && w.query.params.series.length > 1) {
-    for (const s of w.query.params.series) data[s] = { recipe: 'macro', params: { series: s, range: w.query.params.range } }
+  const series = list(w.query.params.series)
+  if (w.query.kind === 'macro' && series.length > 1) {
+    for (const s of series) data[s] = { recipe: 'macro', params: { series: s, ...(w.query.params.range !== undefined ? { range: w.query.params.range } : {}) } }
   } else if (w.query.kind === 'macro') {
-    data[DEFAULT_DATASET] = { recipe: 'macro', params: { series: w.query.params.series[0], range: w.query.params.range } }
-  } else data[DEFAULT_DATASET] = legacyToRecipe(w.query)
-  return { id: w.id, title: w.title, size: w.size, data, view: migrateView(w.view, w.query), query: w.query }
+    data[DEFAULT_DATASET] = { recipe: 'macro', params: { ...w.query.params, ...(series.length === 1 ? { series: series[0] } : {}) } }
+  } else data[DEFAULT_DATASET] = { recipe: w.query.kind, params: { ...w.query.params } }
+  return WidgetV2Schema.parse({ id: w.id, title: w.title, size: w.size, data, view: migrateView(w.view, w.query) })
 }
 
-/** Accept a v1 or a v2 widget and return v2. Throws ZodError on neither. */
+/** Accept a widget in either JSON shape and return a v2 widget: a v1 shape is migrated. Throws ZodError on neither. */
 export function parseAnyWidget(input: unknown): WidgetV2 {
-  if (isWidgetV2(input)) return WidgetV2Schema.parse(input)
-  return migrateWidget(WidgetSchema.parse(input))
+  if (isLegacyWidget(input)) return migrateWidget(input)
+  return WidgetV2Schema.parse(input)
 }
 
-export const AnyWidgetSchema = z.union([WidgetV2Schema, WidgetSchema])
-export type AnyWidget = WidgetV2 | Widget
+/** The widget schema stores and the protocol use: a v2 widget, or a v1 one migrated on read. */
+export const AnyWidgetSchema: z.ZodType<WidgetV2, WidgetV2Input | z.input<typeof LegacyWidgetSchema>> = z.union([WidgetV2Schema, LegacyWidgetSchema.transform((w) => migrateWidget(w))]) as unknown as z.ZodType<WidgetV2, WidgetV2Input | z.input<typeof LegacyWidgetSchema>>
 
-/** Every query in a widget, v1 or v2, keyed by dataset name (`main` for v1). */
+/** Every query in a widget, keyed by dataset name. */
 export function widgetQueries(w: AnyWidget): Record<string, AnyQuery> {
-  return isWidgetV2(w) ? w.data : { [DEFAULT_DATASET]: w.query }
+  return w.data
 }
 
 export type { AnyQueryInput as WidgetQueryInput }

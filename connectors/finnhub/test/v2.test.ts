@@ -1,5 +1,5 @@
-// v2 (PLAN.md section 17): quote, company-news and calendar/earnings as routes, answered from the recorded
-// fixtures through inferFrame. No network.
+// quote, company-news and calendar/earnings as routes (PLAN.md section 17), answered from the recorded fixtures
+// through inferFrame. No network.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DescriptorSchema, frameToObjects, parseParams, type Descriptor } from '@terminal/core'
 import finnhub from '../src/index.js'
@@ -21,9 +21,8 @@ describe('descriptors.json', () => {
     expect(by('calendar/earnings').params.find((p) => p.name === 'symbol')).toMatchObject({ required: false })
     expect(by('company-news').fields.find((f) => f.name === 'datetime')).toMatchObject({ type: 'time' })
     expect(by('quote').fields.find((f) => f.name === 't')).toMatchObject({ type: 'time' })
-    expect(finnhub.mode).toBe('both')
     const all = await finnhub.descriptors()
-    expect(all.map((d) => d.route)).toEqual(['quote', 'company-news', 'calendar/earnings', 'news', 'earnings']) // `quote` the route wins over the kind
+    expect(all.map((d) => d.route)).toEqual(['quote', 'company-news', 'calendar/earnings'])
   })
 })
 
@@ -72,15 +71,41 @@ describe('call', () => {
     expect(empty.rows).toEqual([])
     expect(empty.columns.map((c) => c.name)).toContain('epsEstimate') // descriptor columns on an empty result
   })
-  it('propagates HTTP errors and refuses unknown routes; the connector routes kinds and routes apart', async () => {
+  it('propagates HTTP errors and refuses unknown routes', async () => {
     const { ctx } = fakeCtx({ [`${base}/quote?symbol=AAPL&token=${TOKEN}`]: status(500), [`${base}/quote?symbol=MSFT&token=${TOKEN}`]: fixture('quote-MSFT') })
     await expect(callFinnhub('quote', { symbol: 'AAPL' }, ctx)).rejects.toThrow(/HTTP 500/)
     await expect(callFinnhub('nope', {}, ctx)).rejects.toThrow(/does not answer route "nope"/)
-    const v2 = await finnhub.call('quote', { symbol: 'MSFT' }, ctx)
-    expect(v2.columns.map((c) => c.name)).toContain('dp')
-    const v1 = await finnhub.call('news', { symbols: ['MSFT'], limit: 5 }, fakeCtx({ [`${base}/company-news?symbol=MSFT&from=2026-10-09&to=2026-10-16&token=${TOKEN}`]: fixture('company-news-MSFT') }).ctx)
-    expect(v1.columns.map((c) => c.name)).toEqual(['time', 'headline', 'source', 'url', 'symbol'])
+    const frame = await finnhub.call('quote', { symbol: 'MSFT' }, ctx)
+    expect(frame.columns.map((c) => c.name)).toContain('dp')
     expect(secondsToMs(1.5)).toBe(1500)
     expect(secondsToMs(null)).toBeNull()
+  })
+  it('the connector is named finnhub, requires an apiKey and lists the three routes', async () => {
+    expect(finnhub.name).toBe('finnhub')
+    expect(finnhub.config.safeParse({}).success).toBe(false)
+    expect(finnhub.config.safeParse({ apiKey: '' }).success).toBe(false)
+    expect(finnhub.config.safeParse({ apiKey: 'k' }).success).toBe(true)
+    expect((await finnhub.descriptors()).map((d) => d.route)).toEqual([...FINNHUB_ROUTES])
+  })
+  it('retries once after a 429 and not twice', async () => {
+    let n = 0
+    const first = fakeCtx({
+      [`${base}/quote?symbol=AAPL&token=${TOKEN}`]: () => {
+        if (n++ === 0) throw status(429)
+        return fixture('quote-AAPL')
+      },
+    })
+    const pending = callFinnhub('quote', { symbol: 'AAPL' }, first.ctx)
+    await vi.advanceTimersByTimeAsync(1_000)
+    const frame = await pending
+    expect(first.calls).toHaveLength(2)
+    expect(frame.rows).toHaveLength(1)
+    expect(first.logs).toContain('429 on /quote, retrying in 1000ms')
+    const again = fakeCtx({ [`${base}/quote?symbol=AAPL&token=${TOKEN}`]: status(429) })
+    const failing = callFinnhub('quote', { symbol: 'AAPL' }, again.ctx)
+    failing.catch(() => {})
+    await vi.advanceTimersByTimeAsync(1_000)
+    await expect(failing).rejects.toThrow(/HTTP 429/)
+    expect(again.calls).toHaveLength(2)
   })
 })

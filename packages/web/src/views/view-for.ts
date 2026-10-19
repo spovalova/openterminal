@@ -1,5 +1,5 @@
 import type { FC } from 'react'
-import type { AnyWidget, PresetName, View, ViewV2 } from '@terminal/core'
+import type { AnyWidget, PresetName, ViewV2 } from '@terminal/core'
 import type { ViewProps } from './types'
 import { ChainView } from './ChainView'
 import { ChartView } from './ChartView'
@@ -23,15 +23,11 @@ const BY_PRESET: Record<PresetName, FC<ViewProps>> = {
   chain: ChainView,
 }
 
-const BY_V1: Record<View['type'], FC<ViewProps>> = { series: ChartView, table: TableView, chain: ChainView, stat: StatView }
-
 /**
- * The component that renders a widget's view: by preset for a v2 widget (or a bare `ViewV2`), by the migrated
- * preset for a v1 widget, by type for a bare v1 `View`. A `table` renders the facts card itself when its frame
- * has one row (product rule 8), so that decision needs the frame and lives in TableView.
+ * The component that renders a widget's view, by preset (a widget or a bare `ViewV2`). A `table` renders the facts
+ * card itself when its frame has one row (product rule 8), so that decision needs the frame and lives in TableView.
  */
-export function viewFor(target: AnyWidget | View | ViewV2): FC<ViewProps> {
+export function viewFor(target: AnyWidget | ViewV2): FC<ViewProps> {
   if ('preset' in target) return BY_PRESET[target.preset]
-  if ('type' in target && !('view' in target)) return BY_V1[target.type]
-  return BY_PRESET[viewOf(target as AnyWidget).preset]
+  return BY_PRESET[viewOf(target).preset]
 }

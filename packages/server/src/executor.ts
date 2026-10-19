@@ -1,31 +1,14 @@
-// Widget execution: run each widget's datasets through the registry and emit frame / frameError per dataset.
-// TTL polling: only the focused workspace re-executes widgets when their frames' TTLs expire.
-//
-// A widget is v1 (one `query`, dataset `main`) or v2 (a data graph, PLAN.md section 17). A migrated v2 widget keeps
-// its v1 `query`; during the coexistence, when one of its recipe datasets fails (the route it names is not served
-// yet), the v1 query answers `main` so the workspace renders as it did before the migration.
-import {
-  DEFAULT_DATASET,
-  describeQuery,
-  isLegacyQuery,
-  isRouteQuery,
-  isTransformQuery,
-  isWidgetV2,
-  widgetQueries,
-  type AnyQuery,
-  type AnyWidget,
-  type Frame,
-  type Registry,
-  type ServerMsg,
-  type Workspace,
-} from '@terminal/core'
+// Widget execution: run each widget's datasets (PLAN.md section 17: a data graph of recipe, route and transform
+// queries) through the registry and emit frame / frameError per dataset. TTL polling: only the focused workspace
+// re-executes widgets when their frames' TTLs expire.
+import { DEFAULT_DATASET, describeQuery, isRouteQuery, isTransformQuery, widgetQueries, type AnyQuery, type AnyWidget, type Frame, type Registry, type ServerMsg, type Workspace } from '@terminal/core'
 
 export type Emit = (m: ServerMsg) => void
 
 export type RunOptions = { bypassCache?: boolean; signal?: AbortSignal; workspaceId?: string }
 
 export type Frames = Record<string, Frame>
-export type DatasetResult = { frames: Frames; errors: Record<string, string>; /** Set when the v1 query answered `main` for a migrated widget. */ legacy?: boolean }
+export type DatasetResult = { frames: Frames; errors: Record<string, string> }
 
 export function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
@@ -76,16 +59,6 @@ export class Executor {
         }
       }),
     )
-    const legacy = isWidgetV2(widget) && widget.query && isLegacyQuery(widget.query) ? widget.query : undefined
-    if (legacy && Object.keys(errors).length > 0) {
-      try {
-        const main = await this.runQuery(legacy, opts)
-        this.opts.log?.(`widget ${widget.id}: ${Object.entries(errors).map(([n, e]) => `${n}: ${e}`).join(' | ')}; the v1 query answered main`)
-        return { frames: { [DEFAULT_DATASET]: main }, errors: {}, legacy: true }
-      } catch (err) {
-        errors[DEFAULT_DATASET] = errorMessage(err)
-      }
-    }
     return { frames, errors }
   }
 
@@ -93,7 +66,7 @@ export class Executor {
   async framesFor(widget: AnyWidget, opts: RunOptions = {}): Promise<Frames> {
     const r = await this.datasets(widget, opts)
     const failed = Object.entries(r.errors)
-    if (failed.length > 0) throw new Error(failed.map(([n, e]) => (n === DEFAULT_DATASET && !isWidgetV2(widget) ? e : `${n}: ${e}`)).join(' | '))
+    if (failed.length > 0) throw new Error(failed.map(([n, e]) => `${n}: ${e}`).join(' | '))
     return r.frames
   }
 
@@ -102,13 +75,6 @@ export class Executor {
     const queries = widgetQueries(widget)
     const name = opts.dataset ?? (queries[DEFAULT_DATASET] ? DEFAULT_DATASET : Object.keys(queries)[0])
     if (!name || !queries[name]) throw new Error(`widget ${widget.id} has no dataset "${opts.dataset ?? DEFAULT_DATASET}"`)
-    if (isWidgetV2(widget) && widget.query) {
-      // a migrated widget: same fallback as `datasets`
-      const r = await this.datasets(widget, opts)
-      const f = r.frames[name] ?? (r.legacy ? r.frames[DEFAULT_DATASET] : undefined)
-      if (f) return f
-      throw new Error(r.errors[name] ?? Object.values(r.errors)[0] ?? 'no frame')
-    }
     return this.runQuery(queries[name], opts)
   }
 

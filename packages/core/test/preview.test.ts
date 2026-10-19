@@ -1,23 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { preview, toFrame, frameToObjects } from '../src/index.js'
+import { preview } from '../src/index.js'
 
-describe('toFrame', () => {
-  it('orders columns per catalog and nulls missing fields', () => {
-    const f = toFrame('quote', [{ price: 10, symbol: 'MU', extra: 1 }], { connector: 'test' })
-    expect(f.columns.map((c) => c.name)[0]).toBe('symbol')
-    expect(f.rows[0]).toEqual(['MU', 10, null, null, null, null, null])
-    expect(f.meta.connector).toBe('test')
-    expect(f.meta.ttl).toBe(10_000)
-    expect(frameToObjects(f)[0]).toMatchObject({ symbol: 'MU', price: 10, volume: null })
-  })
-})
+const OHLCV_COLUMNS = [{ name: 'symbol', type: 'string' }, { name: 'time', type: 'time' }, { name: 'open', type: 'number' }, { name: 'high', type: 'number' }, { name: 'low', type: 'number' }, { name: 'close', type: 'number' }, { name: 'volume', type: 'number' }] as const
+/** A price frame from row objects, in the ohlcv recipe's column order; missing fields are null. */
+function ohlcvFrame(rows: Record<string, unknown>[]) {
+  return { columns: OHLCV_COLUMNS.map((c) => ({ ...c })), rows: rows.map((r) => OHLCV_COLUMNS.map((c) => (r[c.name] === undefined ? null : r[c.name]))), meta: { connector: 'test', fetchedAt: 0, ttl: 60_000 } }
+}
 
 describe('preview', () => {
   const bars = (symbol: string, closes: number[]) =>
     closes.map((c, i) => ({ symbol, time: 1_000 + i * 60_000, open: c, high: c + 1, low: c - 1, close: c, volume: 100 }))
 
   it('returns every row for small frames and stats per symbol', () => {
-    const f = toFrame('ohlcv', [...bars('MU', [100, 110, 120]), ...bars('WDC', [50, 45])])
+    const f = ohlcvFrame([...bars('MU', [100, 110, 120]), ...bars('WDC', [50, 45])])
     const p = preview(f)
     expect(p.rowCount).toBe(5)
     expect(p.rows).toHaveLength(5)
@@ -28,7 +23,7 @@ describe('preview', () => {
   })
 
   it('truncates rows past the limit but keeps stats over the whole frame', () => {
-    const f = toFrame('ohlcv', bars('MU', Array.from({ length: 100 }, (_, i) => 100 + i)))
+    const f = ohlcvFrame(bars('MU', Array.from({ length: 100 }, (_, i) => 100 + i)))
     const p = preview(f)
     expect(p.rowCount).toBe(100)
     expect(p.rows).toHaveLength(25)
@@ -36,7 +31,7 @@ describe('preview', () => {
   })
 
   it('sorts by time before computing first and last', () => {
-    const f = toFrame('ohlcv', [...bars('MU', [120]).map((b) => ({ ...b, time: 3 })), ...bars('MU', [100]).map((b) => ({ ...b, time: 1 }))])
+    const f = ohlcvFrame([...bars('MU', [120]).map((b) => ({ ...b, time: 3 })), ...bars('MU', [100]).map((b) => ({ ...b, time: 1 }))])
     expect(preview(f).stats.MU!.close).toMatchObject({ first: 100, last: 120, changePct: 20 })
   })
 

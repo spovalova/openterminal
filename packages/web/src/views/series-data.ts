@@ -1,25 +1,15 @@
-import type { Frame, Interval, Kind, View } from '@terminal/core'
-import { columnIndex, isIntraday, preview } from '@terminal/core'
+import type { Frame } from '@terminal/core'
+import { columnIndex, preview } from '@terminal/core'
 import type { BusinessDay, CandlestickData, HistogramData, LineData, Time, UTCTimestamp } from 'lightweight-charts'
 // Short labels for the macro series, shared with the widget sub-header; a symbol is its own label.
 import { MACRO_LABELS } from '../subtitle'
-
-/** Which lightweight-charts shape a series widget renders. */
-export type SeriesMode = 'line' | 'candle' | 'normalize'
-
-export function seriesMode(view: View): SeriesMode {
-  if (view.type !== 'series') return 'line'
-  if (view.candle) return 'candle'
-  if (view.normalize) return 'normalize'
-  return 'line'
-}
 
 export type Bar = { time: Time; open: number; high: number; low: number; close: number; volume: number | null }
 /** One line: the group key (a `symbol`, or a `series` name for macro frames) and its bars. */
 export type SymbolSeries = { group: string; bars: Bar[] }
 
 /**
- * Which columns a frame draws from: ohlcv frames group by `symbol` and plot `close`; macro frames
+ * Which columns a frame draws from: price frames group by `symbol` and plot `close`; macro frames
  * group by `series` and plot `value`. Null when the frame has no time or value column.
  */
 export function seriesColumns(frame: Pick<Frame, 'columns'>): { group: 'symbol' | 'series' | null; value: 'close' | 'value' } | null {
@@ -55,7 +45,7 @@ function num(v: unknown): number | null {
 
 /**
  * Group a frame into per-group bar arrays in the order groups first appear: by `symbol` with `close`
- * for ohlcv, by `series` with `value` for macro (open, high and low collapse onto the value).
+ * for price frames, by `series` with `value` for macro (open, high and low collapse onto the value).
  * Rows with a null or non-finite value are dropped; duplicate times keep the last row;
  * bars are sorted ascending by time as lightweight-charts requires.
  */
@@ -110,7 +100,7 @@ export function toVolumeData(bars: Bar[], upColor: string, downColor: string): H
 
 /**
  * One legend row per group. Every number is exactly what `preview(frame).stats[group][value]` reports:
- * `first` and `last` over the range and `changePct` between them (`close` for ohlcv, `value` for macro).
+ * `first` and `last` over the range and `changePct` between them (`close` for prices, `value` for macro).
  */
 export type LegendRow = { group: string; first: number | null; last: number | null; changePct: number | null; color: string | undefined }
 
@@ -123,19 +113,9 @@ export function legendRows(frame: Frame, groups: string[], colorFor: (i: number)
   })
 }
 
-/** The legend label for one line: the widget's `view.labels` override, else the macro short name, else the group itself. */
-export function legendLabel(group: string, kind: Kind, labels?: Record<string, string>): string {
+/** The legend label for one line: the widget's `labels` override, else the macro short name for a macro series id, else the group itself. */
+export function legendLabel(group: string, labels?: Record<string, string>): string {
   const override = labels?.[group]?.trim()
   if (override) return override
-  return kind === 'macro' ? (MACRO_LABELS[group] ?? group) : group
-}
-
-/** The lines a series widget draws, from its query params: the ohlcv symbols or the macro series. */
-export function legendGroups(kind: Kind, params: Record<string, unknown>): string[] {
-  const list = kind === 'ohlcv' ? params.symbols : kind === 'macro' ? params.series : undefined
-  return Array.isArray(list) ? list.map(String) : []
-}
-
-export function intervalIsIntraday(interval: Interval | undefined): boolean {
-  return interval ? isIntraday(interval) : false
+  return MACRO_LABELS[group] ?? group
 }

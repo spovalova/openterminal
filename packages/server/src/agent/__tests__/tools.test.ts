@@ -18,12 +18,12 @@ async function seeded() {
   await run({ recipe: 'ohlcv', params: { symbols: MEMORY, interval: '1d', range: '3mo' } })
   await run({ recipe: 'news', params: { symbols: MEMORY, limit: 20 } })
   await run({ recipe: 'earnings', params: { symbols: MEMORY, from: '2026-10-16', to: '2026-12-15' } })
-  const ctx: ValidateContext = { answerable: registry.kinds(), recipes: registry.recipes(), catalog: await registry.catalog(), memory, now: Date.UTC(2026, 9, 16, 14) }
+  const ctx: ValidateContext = { recipes: registry.recipes(), catalog: await registry.catalog(), memory, now: Date.UTC(2026, 9, 16, 14) }
   return { registry, memory, ctx }
 }
 
 describe('tool input schemas', () => {
-  it('are flat objects (no top-level anyOf) and accept the v2 and v1 widget shapes', () => {
+  it('are flat objects (no top-level anyOf) and accept the widget shape', () => {
     for (const schema of [FindRouteInput, QueryToolInput, TransformToolInput, SetWorkspaceInput]) {
       const json = z.toJSONSchema(schema, { io: 'input', target: 'draft-7', unrepresentable: 'any' }) as { type?: string; anyOf?: unknown; properties?: Record<string, unknown> }
       expect(json.type).toBe('object')
@@ -31,23 +31,20 @@ describe('tool input schemas', () => {
     }
     expect(QueryToolInput.parse({ recipe: 'quote', params: { symbols: ['MU'] } })).toEqual({ recipe: 'quote', params: { symbols: ['MU'] } })
     expect(QueryToolInput.parse({ connector: 'openbb', route: 'equity/price/quote' })).toMatchObject({ params: {} })
-    expect(() => QueryToolInput.parse({ kind: 'peers', params: {} })).toThrow()
+    expect(() => QueryToolInput.parse({ recipe: '', params: {} })).toThrow()
     expect(FindRouteInput.parse({ query: 'corporate bond prices', namespaces: ['fixedincome'] }).namespaces).toEqual(['fixedincome'])
     expect(TransformToolInput.parse({ inputs: { price: { recipe: 'ohlcv', params: {} } }, code: 'result = price', columns: { pe: { unit: 'ratio' } } }).columns).toEqual({ pe: { unit: 'ratio' } })
     expect(() => TransformToolInput.parse({ inputs: { 'bad name': {} }, code: 'x' })).toThrow()
     const v2 = SetWorkspaceInput.parse({ widgets: [{ title: 'MU', size: 'sm', data: { main: { recipe: 'quote', params: { symbols: ['MU'] } } }, view: { preset: 'stat', column: 'price' } }] })
     expect(v2.widgets[0]!.view).toEqual({ preset: 'stat', column: 'price' })
-    const v1 = SetWorkspaceInput.parse({ widgets: [{ title: 'MU', size: 'sm', query: { kind: 'quote', params: { symbols: ['MU'] } }, view: { type: 'table' } }] })
-    expect(v1.widgets[0]!.view).toEqual({ type: 'table' })
+    expect(() => SetWorkspaceInput.parse({ widgets: [{ title: 'MU', size: 'sm', query: { kind: 'quote', params: { symbols: ['MU'] } }, view: { type: 'table' } }] })).toThrow()
     expect(() => SetWorkspaceInput.parse({ widgets: [] })).toThrow()
   })
 
   it('resolves the flat query input to exactly one query shape', () => {
     expect(resolveQueryInput({ recipe: 'quote', params: { symbols: ['MU'] } })).toEqual({ ok: true, query: { recipe: 'quote', params: { symbols: ['MU'] } } })
     expect(resolveQueryInput({ connector: 'openbb', route: 'equity/price/quote', params: { symbol: ['MU'] } })).toEqual({ ok: true, query: { connector: 'openbb', route: 'equity/price/quote', params: { symbol: ['MU'] } } })
-    expect(resolveQueryInput({ kind: 'quote', params: { symbols: ['MU'] } })).toEqual({ ok: true, query: { kind: 'quote', params: { symbols: ['MU'] } } })
-    expect(resolveQueryInput({ kind: 'ohlcv', params: { symbols: 'MU' } })).toMatchObject({ ok: false, error: expect.stringContaining('invalid query') })
-    expect(resolveQueryInput({ recipe: 'quote', kind: 'quote', params: {} })).toMatchObject({ ok: false, error: expect.stringContaining('exactly one of') })
+    expect(resolveQueryInput({ recipe: 'quote', connector: 'openbb', route: 'quote', params: {} })).toMatchObject({ ok: false, error: expect.stringContaining('exactly one of') })
     expect(resolveQueryInput({ params: {} })).toMatchObject({ ok: false })
     expect(resolveQueryInput({ connector: 'openbb', params: {} })).toMatchObject({ ok: false })
   })
@@ -113,16 +110,15 @@ describe('validateWidgets', () => {
     expect(res.errors[2]).toContain('preset "chain" needs an option chain')
   })
 
-  it('validates every dataset query: unknown recipe, bad recipe params, routes outside the catalog, unanswerable kinds', async () => {
+  it('validates every dataset query: unknown recipe, bad recipe params, routes outside the catalog', async () => {
     const { ctx } = await seeded()
     const res = validateWidgets(
       [
         { title: 'Unknown', size: 'md', data: { main: { recipe: 'bonds', params: {} } }, view: { preset: 'table' } },
-        { title: 'Bad params', size: 'md', data: { main: { recipe: 'ohlcv', params: { symbols: 'MU' } } }, view: { preset: 'price' } },
+        { title: 'Bad params', size: 'md', data: { main: { recipe: 'ohlcv', params: { symbols: ['MU'], interval: '2d' } } }, view: { preset: 'price' } },
         { title: 'No such route', size: 'md', data: { main: { connector: 'fake', route: 'equity/price/quote', params: {} } }, view: { preset: 'table' } },
         { title: 'No such connector', size: 'md', data: { main: { connector: 'openbb', route: 'quote', params: {} } }, view: { preset: 'table' } },
         { title: 'Bad route params', size: 'md', data: { main: { connector: 'fake', route: 'ohlcv', params: { symbols: ['MU'], interval: '2d' } } }, view: { preset: 'table' } },
-        { title: 'Dead kind', size: 'md', data: { main: { kind: 'metrics', params: { symbols: ['MU'] } } }, view: { preset: 'table' } },
         { title: 'Events missing', size: 'md', data: { main: { recipe: 'ohlcv', params: { symbols: ['MU'] } } }, view: { preset: 'price', events: 'earnings' } },
       ],
       ctx,
@@ -134,26 +130,7 @@ describe('validateWidgets', () => {
     expect(res.errors[2]).toContain('widgets[2] data.main: connector "fake" has no route "equity/price/quote"; use find_route')
     expect(res.errors[3]).toContain('widgets[3] data.main: connector "openbb" is not available')
     expect(res.errors[4]).toContain('widgets[4] data.main: fake ohlcv params:')
-    expect(res.errors[5]).toContain('widgets[5] data.main: kind "metrics" is not answerable now')
-    expect(res.errors[6]).toContain('widgets[6] view.events: view.events names dataset "earnings", which the widget does not have')
-  })
-
-  it('accepts v1 widgets through parseAnyWidget (migrated to recipes and presets) and keeps the v1 refinements', async () => {
-    const { ctx } = await seeded()
-    const res = validateWidgets(
-      [
-        { title: 'MU daily', size: 'md', query: { kind: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '6mo' } }, view: { type: 'series', candle: true } },
-        { title: 'Two as candle', size: 'md', query: { kind: 'ohlcv', params: { symbols: ['MU', 'WDC'], interval: '1d', range: '3mo' } }, view: { type: 'series', candle: true } },
-      ],
-      ctx,
-    )
-    expect(res.ok).toBe(false)
-    if (res.ok) return
-    expect(res.errors).toEqual(['widgets[1] view.candle: candle requires exactly one symbol'])
-    const ok = validateWidgets([{ title: 'MU daily', size: 'md', query: { kind: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '6mo' } }, view: { type: 'series', candle: true } }], ctx)
-    expect(ok.ok).toBe(true)
-    if (!ok.ok) return
-    expect(ok.widgets[0]).toMatchObject({ id: 'w1', data: { main: { recipe: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '6mo' } } }, view: { preset: 'price', candle: true }, query: { kind: 'ohlcv' } })
+    expect(res.errors[5]).toContain('widgets[5] view.events: view.events names dataset "earnings", which the widget does not have')
   })
 })
 
@@ -190,10 +167,10 @@ describe('content hints and the layout note', () => {
 })
 
 describe('find_route and transform tools', () => {
-  it('find_route searches the catalog (kind routes of a v1 connector included) and records a step', async () => {
+  it('find_route searches the catalog and records a step', async () => {
     const { registry, memory } = await seeded()
     const steps: Step[] = []
-    const tools = createTools({ registry, workspaceId: 'ws1', answerable: registry.kinds(), recipes: registry.recipes(), catalog: await registry.catalog(), memory, signal: new AbortController().signal, emit: () => {}, onStep: (s) => steps.push(s), onWidgets: () => {}, budget: { used: 0, max: 10 } })
+    const tools = createTools({ registry, workspaceId: 'ws1', recipes: registry.recipes(), catalog: await registry.catalog(), memory, signal: new AbortController().signal, emit: () => {}, onStep: (s) => steps.push(s), onWidgets: () => {}, budget: { used: 0, max: 10 } })
     const res = (await tools.find_route.execute!({ query: 'option chain strikes' }, { toolCallId: 't1', messages: [] } as never)) as { ok: true; routes: { connector: string; route: string; describe: string }[]; recipes: string[] }
     expect(res.ok).toBe(true)
     expect(res.routes[0]).toMatchObject({ connector: 'fake', route: 'options' })
@@ -206,7 +183,7 @@ describe('find_route and transform tools', () => {
   it('transform without an engine returns the registry error for the model to read, with a failed step', async () => {
     const { registry, memory } = await seeded()
     const steps: Step[] = []
-    const tools = createTools({ registry, workspaceId: 'ws1', answerable: registry.kinds(), recipes: registry.recipes(), memory, signal: new AbortController().signal, emit: () => {}, onStep: (s) => steps.push(s), onWidgets: () => {}, budget: { used: 0, max: 10 } })
+    const tools = createTools({ registry, workspaceId: 'ws1', recipes: registry.recipes(), memory, signal: new AbortController().signal, emit: () => {}, onStep: (s) => steps.push(s), onWidgets: () => {}, budget: { used: 0, max: 10 } })
     const res = (await tools.transform.execute!({ inputs: { q: { recipe: 'quote', params: { symbols: ['MU'] } } }, code: 'result = q' }, { toolCallId: 't1', messages: [] } as never)) as { ok: false; error: string }
     expect(res.ok).toBe(false)
     expect(res.error).toContain('transform failed: transforms are not available: no transform engine is configured')

@@ -1,25 +1,124 @@
 /**
- * Hand-written, recorded-shape fixture frames: one per widget row in PLAN.md section 5
- * (A1–A5, B1–B4, C1–C4), one `search` frame, and one per v1.2 kind with a view worth looking at
- * (options on the chain view, macro on the series view, the rest on tables).
- * Columns come straight from `KINDS` so they always match the catalog.
+ * Hand-written, recorded-shape fixture frames: one per widget row in PLAN.md section 5 (A1–A5, B1–B4, C1–C4), one
+ * `search` frame, and one per recipe with a view worth looking at (options on the chain view, macro on the compare
+ * view, the rest on tables, four stats). Every widget is a recipe widget (`data.main = { recipe, params }`) and every
+ * frame carries the field config the runner stamps from the annotations (`meta.fields`), so the views here render
+ * through the same pipeline as a live frame.
  */
-import { KINDS, parseWidget, type AnyWidget, type Frame, type Kind, type Widget, type WidgetInput } from '@terminal/core'
+import { parseAnyWidget, type Column, type FieldConfig, type Frame, type WidgetV2, type WidgetV2Input } from '@terminal/core'
 import { V2_FIXTURES, type FixtureV2 } from './v2'
 
-/** A widget with its frames per dataset; `frame` is the primary (`main`) one, kept for the v1 fixtures and their tests. */
-export type Fixture = { id: string; note: string; widget: AnyWidget; frames: Record<string, Frame>; frame: Frame }
-/** A v1 fixture: a kind query with one frame. */
-export type FixtureV1 = { id: string; note: string; widget: Widget; frame: Frame }
+/** A widget with its frames per dataset; `frame` is the primary (`main`) one. */
+export type Fixture = { id: string; note: string; widget: WidgetV2; frames: Record<string, Frame>; frame: Frame }
+/** A one-dataset recipe fixture: `frames` is `{ main: frame }`. */
+export type RecipeFixture = { id: string; note: string; widget: WidgetV2; frame: Frame }
 export type { FixtureV2 }
 
 /** 2026-10-16 09:30 ET, the morning every fixture was "recorded". */
 export const FETCHED_AT = Date.UTC(2026, 9, 16, 13, 30)
 
-function frame(kind: Kind, rows: unknown[][]): Frame {
-  const def = KINDS[kind]
-  const ttl = typeof def.ttl === 'number' ? def.ttl : 60_000
-  return { columns: def.columns, rows, meta: { connector: 'fixture', fetchedAt: FETCHED_AT, ttl } }
+const S = (name: string): Column => ({ name, type: 'string' })
+const N = (name: string): Column => ({ name, type: 'number' })
+const T = (name: string): Column => ({ name, type: 'time' })
+
+/** The columns of each recipe's frame as these fixtures record them (the v1 kinds' product columns). */
+const COLUMNS: Record<string, Column[]> = {
+  search: [S('query'), S('symbol'), S('name'), S('exchange')],
+  quote: [S('symbol'), N('price'), N('change_pct'), N('volume'), S('market_state'), N('extended_price'), N('extended_change_pct')],
+  ohlcv: [S('symbol'), T('time'), N('open'), N('high'), N('low'), N('close'), N('volume')],
+  news: [T('time'), S('headline'), S('source'), S('url'), S('symbol')],
+  earnings: [S('symbol'), S('date'), S('session'), N('eps_estimate')],
+  profile: [S('symbol'), S('name'), S('exchange'), S('sector'), S('industry'), N('market_cap'), N('employees'), N('beta'), S('description')],
+  metrics: [S('symbol'), N('market_cap'), N('pe'), N('forward_pe'), N('peg'), N('ev_ebitda'), N('ps'), N('pb'), N('gross_margin'), N('operating_margin'), N('profit_margin'), N('revenue_growth'), N('earnings_growth'), N('roe'), N('debt_to_equity'), N('dividend_yield')],
+  financials: [S('symbol'), S('period_ending'), N('revenue'), N('gross_profit'), N('operating_income'), N('net_income'), N('eps'), N('operating_cash_flow'), N('capex'), N('free_cash_flow'), N('cash'), N('debt'), N('shares')],
+  insiders: [S('symbol'), S('date'), S('name'), S('title'), S('action'), N('shares'), N('price'), N('value'), S('url')],
+  options: [S('symbol'), S('expiration'), S('type'), N('strike'), N('bid'), N('ask'), N('last'), N('volume'), N('open_interest'), N('iv'), N('delta'), N('gamma'), N('theta'), N('vega'), N('underlying_price'), N('dte')],
+  volatility: [S('symbol'), N('iv30'), N('iv30_high'), N('iv30_low'), N('iv_rank'), N('hv30'), N('hv30_high'), N('hv30_low'), N('year_high'), N('year_low')],
+  calendar: [T('time'), S('country'), S('event'), S('actual'), S('consensus'), S('previous')],
+  movers: [S('symbol'), S('name'), N('price'), N('change_pct'), N('volume')],
+  macro: [S('series'), T('time'), N('value')],
+}
+
+const usd = (label: string, priority: number, extra: Partial<FieldConfig> = {}): FieldConfig => ({ unit: 'usd', format: 'price', label, priority, ...extra })
+const pct = (label: string, priority: number, extra: Partial<FieldConfig> = {}): FieldConfig => ({ unit: 'percent', format: 'percent', label, priority, ...extra })
+const chg = (label: string, priority: number): FieldConfig => ({ unit: 'percent', format: 'change', label, priority })
+const big = (label: string, priority: number, unit: FieldConfig['unit'] = 'usd', extra: Partial<FieldConfig> = {}): FieldConfig => ({ unit, format: 'compact', label, priority, ...extra })
+const ratio = (label: string, priority: number, extra: Partial<FieldConfig> = {}): FieldConfig => ({ unit: 'ratio', format: 'ratio', label, priority, ...extra })
+const text = (label: string, priority: number, extra: Partial<FieldConfig> = {}): FieldConfig => ({ label, priority, ...extra })
+
+/** The field config the annotations stamp on each recipe's frame (`packages/core/annotations.yml`), condensed. */
+const FIELDS: Record<string, Record<string, FieldConfig>> = {
+  search: { symbol: text('Symbol', 1), name: text('Name', 2), exchange: text('Exchange', 3), query: text('Query', 4) },
+  quote: { symbol: text('Symbol', 1), price: usd('Last', 2, { key: true }), change_pct: chg('Chg %', 3), volume: big('Volume', 4, 'shares'), market_state: text('Market', 5), extended_price: usd('Ext', 6), extended_change_pct: chg('Ext %', 7) },
+  ohlcv: { symbol: text('Symbol', 1), time: text('Time', 2), close: usd('Close', 3, { key: true }), volume: big('Volume', 4, 'shares'), open: usd('Open', 5), high: usd('High', 6), low: usd('Low', 7) },
+  news: { headline: text('Headline', 1), time: text('Time', 2), source: text('Source', 3), symbol: text('Symbol', 4), url: { format: 'link', label: 'Link', priority: 9 } },
+  earnings: { symbol: text('Symbol', 1), date: text('Date', 2), eps_estimate: usd('EPS est.', 3), session: text('Session', 4) },
+  profile: { symbol: text('Symbol', 1), name: text('Name', 2), sector: text('Sector', 3), market_cap: big('Mkt cap', 4, 'usd', { key: true }), industry: text('Industry', 5), exchange: text('Exchange', 6), employees: big('Employees', 7, 'count'), beta: ratio('Beta', 8), description: text('Description', 9) },
+  metrics: {
+    symbol: text('Symbol', 1),
+    pe: ratio('P/E', 2, { key: true }),
+    forward_pe: ratio('Fwd P/E', 3),
+    market_cap: big('Mkt cap', 4),
+    ps: ratio('P/S', 5),
+    ev_ebitda: ratio('EV/EBITDA', 6),
+    peg: ratio('PEG', 7),
+    pb: ratio('P/B', 8),
+    gross_margin: pct('Gross margin', 9),
+    operating_margin: pct('Op margin', 9),
+    profit_margin: pct('Net margin', 9),
+    revenue_growth: chg('Rev growth', 9),
+    earnings_growth: chg('EPS growth', 9),
+    roe: pct('ROE', 9),
+    debt_to_equity: ratio('D/E', 9),
+    dividend_yield: pct('Div yield', 9),
+  },
+  financials: {
+    symbol: text('Symbol', 1),
+    period_ending: text('Period', 2),
+    revenue: big('Revenue', 3),
+    net_income: big('Net income', 4),
+    eps: usd('EPS', 5),
+    gross_profit: big('Gross profit', 6),
+    operating_income: big('Op income', 7),
+    free_cash_flow: big('FCF', 8),
+    operating_cash_flow: big('Op cash flow', 9),
+    capex: big('Capex', 9),
+    cash: big('Cash', 9),
+    debt: big('Debt', 9),
+    shares: big('Shares', 9, 'shares'),
+  },
+  insiders: { symbol: text('Symbol', 1), name: text('Insider', 2), action: text('Action', 3), date: text('Date', 4), value: big('Value', 5), shares: big('Shares', 6, 'shares'), price: usd('Price', 7), title: text('Title', 8), url: { format: 'link', label: 'Filing', priority: 9 } },
+  options: {
+    strike: usd('Strike', 1, { role: 'x' }),
+    type: text('Type', 1),
+    bid: usd('Bid', 2),
+    ask: usd('Ask', 2),
+    iv: pct('IV', 2),
+    open_interest: big('OI', 3, 'count'),
+    volume: big('Volume', 3, 'shares'),
+    last: usd('Last', 3),
+    delta: ratio('Delta', 4),
+    expiration: text('Expiry', 1),
+    dte: { unit: 'days', format: 'integer', label: 'DTE', priority: 4 },
+    symbol: text('Symbol', 5),
+    gamma: ratio('Gamma', 6),
+    theta: ratio('Theta', 5),
+    vega: ratio('Vega', 6),
+    underlying_price: usd('Underlying', 5),
+  },
+  volatility: { symbol: text('Symbol', 1), iv30: pct('IV30', 1, { key: true }), iv_rank: { unit: 'count', format: 'integer', label: 'IV rank', priority: 2 }, hv30: pct('HV30', 3), iv30_high: pct('IV30 high', 4), iv30_low: pct('IV30 low', 4), hv30_high: pct('HV30 high', 5), hv30_low: pct('HV30 low', 5), year_high: usd('52w high', 6), year_low: usd('52w low', 6) },
+  calendar: { event: text('Event', 1), time: text('Time', 2), actual: text('Actual', 3), consensus: text('Consensus', 4), previous: text('Previous', 5), country: text('Country', 6) },
+  movers: { symbol: text('Symbol', 1), change_pct: chg('Chg %', 2), price: usd('Last', 3, { key: true }), name: text('Name', 4), volume: big('Volume', 5, 'shares') },
+  macro: { series: text('Series', 1), time: text('Time', 2), value: pct('Rate', 3, { key: true }) },
+}
+
+/** A frame of a recipe's rows as the runner stamps it: the recipe's columns, the annotations' field config, a lineage. */
+function frame(recipe: string, rows: unknown[][], ttl = 600_000): Frame {
+  const columns = COLUMNS[recipe]
+  if (!columns) throw new Error(`no fixture columns for ${recipe}`)
+  const fields: Record<string, FieldConfig> = {}
+  for (const c of columns) if (FIELDS[recipe]?.[c.name]) fields[c.name] = FIELDS[recipe]![c.name]!
+  return { columns, rows, meta: { connector: 'fixture', fetchedAt: FETCHED_AT, ttl, fields, lineage: { recipe } } }
 }
 
 /** Daily bar timestamp: US regular session open, 13:30 UTC. */
@@ -49,21 +148,21 @@ function ohlcv(groups: [symbol: string, times: number[], closes: number[], baseV
   return frame('ohlcv', groups.flatMap(([s, t, c, v]) => bars(s, t, c, v)))
 }
 
-function widget(w: WidgetInput): Widget {
-  return parseWidget(w)
+function widget(w: WidgetV2Input): WidgetV2 {
+  return parseAnyWidget(w)
 }
 
 // ---- A. "What's happening with memory?" ------------------------------------------------------
 
-const A1: FixtureV1 = {
+const A1: RecipeFixture = {
   id: 'A1',
   note: 'ohlcv 1d 3mo basket · series, normalize · lg',
   widget: widget({
     id: 'a1',
     title: 'Memory names, 3 months rebased',
     size: 'lg',
-    query: { kind: 'ohlcv', params: { symbols: ['MU', 'SNDK', 'WDC', 'STX'], interval: '1d', range: '3mo' } },
-    view: { type: 'series', normalize: true },
+    data: { main: { recipe: 'ohlcv', params: { symbols: ['MU', 'SNDK', 'WDC', 'STX'], interval: '1d', range: '3mo' } } },
+    view: { preset: 'compare', normalize: true },
   }),
   frame: ohlcv([
     ['MU', OCT_DAYS, [181.2, 184.9, 188.35, 186.1, 192.4, 195.8, 193.25, 199.6], 18_400_000],
@@ -73,15 +172,15 @@ const A1: FixtureV1 = {
   ]),
 }
 
-const A2: FixtureV1 = {
+const A2: RecipeFixture = {
   id: 'A2',
   note: 'ohlcv 1d 6mo MU · series, candle · md',
   widget: widget({
     id: 'a2',
     title: 'MU daily',
     size: 'md',
-    query: { kind: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '6mo' } },
-    view: { type: 'series', candle: true },
+    data: { main: { recipe: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '6mo' } } },
+    view: { preset: 'price', candle: true, volume: true },
   }),
   frame: ohlcv([
     [
@@ -93,15 +192,15 @@ const A2: FixtureV1 = {
   ]),
 }
 
-const A3: FixtureV1 = {
+const A3: RecipeFixture = {
   id: 'A3',
   note: 'quote basket · table · md',
   widget: widget({
     id: 'a3',
     title: 'Basket snapshot',
     size: 'md',
-    query: { kind: 'quote', params: { symbols: ['MU', 'SNDK', 'WDC', 'STX'] } },
-    view: { type: 'table' },
+    data: { main: { recipe: 'quote', params: { symbols: ['MU', 'SNDK', 'WDC', 'STX'] } } },
+    view: { preset: 'table' },
   }),
   frame: frame('quote', [
     ['MU', 199.6, 3.29, 21_430_000, 'REGULAR', null, null],
@@ -111,15 +210,15 @@ const A3: FixtureV1 = {
   ]),
 }
 
-const A4: FixtureV1 = {
+const A4: RecipeFixture = {
   id: 'A4',
   note: 'earnings basket next 60 days · table · sm',
   widget: widget({
     id: 'a4',
     title: 'Upcoming earnings',
     size: 'sm',
-    query: { kind: 'earnings', params: { symbols: ['MU', 'SNDK', 'WDC', 'STX'], from: '2026-10-16', to: '2026-12-15' } },
-    view: { type: 'table' },
+    data: { main: { recipe: 'earnings', params: { symbols: ['MU', 'SNDK', 'WDC', 'STX'], from: '2026-10-16', to: '2026-12-15' } } },
+    view: { preset: 'table' },
   }),
   frame: frame('earnings', [
     ['MU', '2026-12-17', 'amc', 3.12],
@@ -129,15 +228,15 @@ const A4: FixtureV1 = {
   ]),
 }
 
-const A5: FixtureV1 = {
+const A5: RecipeFixture = {
   id: 'A5',
   note: 'news basket · table · md',
   widget: widget({
     id: 'a5',
     title: 'Memory news',
     size: 'md',
-    query: { kind: 'news', params: { symbols: ['MU', 'SNDK', 'WDC', 'STX'], limit: 20 } },
-    view: { type: 'table' },
+    data: { main: { recipe: 'news', params: { symbols: ['MU', 'SNDK', 'WDC', 'STX'], limit: 20 } } },
+    view: { preset: 'table' },
   }),
   frame: frame('news', [
     [Date.UTC(2026, 9, 16, 12, 5), 'Micron lifts HBM capacity target as hyperscaler orders firm up', 'Reuters', 'https://example.com/news/mu-hbm', 'MU'],
@@ -150,15 +249,15 @@ const A5: FixtureV1 = {
 
 // ---- B. "Is NVDA's drop today news or just the market?" --------------------------------------
 
-const B1: FixtureV1 = {
+const B1: RecipeFixture = {
   id: 'B1',
   note: 'ohlcv 5m 1d NVDA, SPY, SMH · series, normalize · lg',
   widget: widget({
     id: 'b1',
     title: 'NVDA vs SPY vs SMH today',
     size: 'lg',
-    query: { kind: 'ohlcv', params: { symbols: ['NVDA', 'SPY', 'SMH'], interval: '5m', range: '1d' } },
-    view: { type: 'series', normalize: true },
+    data: { main: { recipe: 'ohlcv', params: { symbols: ['NVDA', 'SPY', 'SMH'], interval: '5m', range: '1d' } } },
+    view: { preset: 'compare', normalize: true },
   }),
   frame: ohlcv([
     ['NVDA', INTRADAY, [184.2, 183.1, 181.9, 180.4, 179.2, 178.6, 178.9, 177.8], 2_900_000],
@@ -167,28 +266,28 @@ const B1: FixtureV1 = {
   ]),
 }
 
-const B2: FixtureV1 = {
+const B2: RecipeFixture = {
   id: 'B2',
   note: 'ohlcv 5m 1d NVDA · series, candle · md',
   widget: widget({
     id: 'b2',
     title: 'NVDA today',
     size: 'md',
-    query: { kind: 'ohlcv', params: { symbols: ['NVDA'], interval: '5m', range: '1d' } },
-    view: { type: 'series', candle: true },
+    data: { main: { recipe: 'ohlcv', params: { symbols: ['NVDA'], interval: '5m', range: '1d' } } },
+    view: { preset: 'price', candle: true, volume: true },
   }),
   frame: ohlcv([['NVDA', INTRADAY, [184.2, 183.1, 181.9, 180.4, 179.2, 178.6, 178.9, 177.8], 2_900_000]]),
 }
 
-const B3: FixtureV1 = {
+const B3: RecipeFixture = {
   id: 'B3',
   note: 'quote NVDA + peers + SPY + SMH · table · md',
   widget: widget({
     id: 'b3',
     title: 'Semis today',
     size: 'md',
-    query: { kind: 'quote', params: { symbols: ['NVDA', 'AMD', 'AVGO', 'TSM', 'SMH', 'SPY'] } },
-    view: { type: 'table' },
+    data: { main: { recipe: 'quote', params: { symbols: ['NVDA', 'AMD', 'AVGO', 'TSM', 'SMH', 'SPY'] } } },
+    view: { preset: 'table' },
   }),
   frame: frame('quote', [
     ['NVDA', 177.8, -3.48, 98_200_000, 'REGULAR', null, null],
@@ -200,15 +299,15 @@ const B3: FixtureV1 = {
   ]),
 }
 
-const B4: FixtureV1 = {
+const B4: RecipeFixture = {
   id: 'B4',
   note: 'news NVDA 24h · table · md',
   widget: widget({
     id: 'b4',
     title: 'NVDA news, 24h',
     size: 'md',
-    query: { kind: 'news', params: { symbols: ['NVDA'], limit: 20 } },
-    view: { type: 'table' },
+    data: { main: { recipe: 'news', params: { symbols: ['NVDA'], limit: 20 } } },
+    view: { preset: 'table' },
   }),
   frame: frame('news', [
     [Date.UTC(2026, 9, 16, 13, 48), 'Nvidia slides as chip stocks retreat on export licence report', 'Reuters', 'https://example.com/news/nvda-export', 'NVDA'],
@@ -220,15 +319,15 @@ const B4: FixtureV1 = {
 
 // ---- C. "Morning check on my watchlist" -----------------------------------------------------
 
-const C1: FixtureV1 = {
+const C1: RecipeFixture = {
   id: 'C1',
   note: 'quote watchlist + SPY + QQQ · table · lg',
   widget: widget({
     id: 'c1',
     title: 'Watchlist pre-market',
     size: 'lg',
-    query: { kind: 'quote', params: { symbols: ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'SPY', 'QQQ'] } },
-    view: { type: 'table' },
+    data: { main: { recipe: 'quote', params: { symbols: ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'SPY', 'QQQ'] } } },
+    view: { preset: 'table' },
   }),
   frame: frame('quote', [
     ['AAPL', 254.1, 0.42, 48_300_000, 'PRE', 255.9, 0.71],
@@ -240,28 +339,28 @@ const C1: FixtureV1 = {
   ]),
 }
 
-const C2: FixtureV1 = {
+const C2: RecipeFixture = {
   id: 'C2',
   note: 'earnings watchlist today · table · sm',
   widget: widget({
     id: 'c2',
     title: 'Reporting today',
     size: 'sm',
-    query: { kind: 'earnings', params: { symbols: ['AAPL', 'MSFT', 'NVDA', 'TSLA'], from: '2026-10-16', to: '2026-10-16' } },
-    view: { type: 'table' },
+    data: { main: { recipe: 'earnings', params: { symbols: ['AAPL', 'MSFT', 'NVDA', 'TSLA'], from: '2026-10-16', to: '2026-10-16' } } },
+    view: { preset: 'table' },
   }),
   frame: frame('earnings', [['TSLA', '2026-10-16', 'amc', 0.52]]),
 }
 
-const C3: FixtureV1 = {
+const C3: RecipeFixture = {
   id: 'C3',
   note: 'news watchlist overnight · table · md',
   widget: widget({
     id: 'c3',
     title: 'Overnight news',
     size: 'md',
-    query: { kind: 'news', params: { symbols: ['AAPL', 'MSFT', 'NVDA', 'TSLA'], limit: 20 } },
-    view: { type: 'table' },
+    data: { main: { recipe: 'news', params: { symbols: ['AAPL', 'MSFT', 'NVDA', 'TSLA'], limit: 20 } } },
+    view: { preset: 'table' },
   }),
   frame: frame('news', [
     [Date.UTC(2026, 9, 16, 10, 15), 'Tesla deliveries beat ahead of tonight\'s report', 'Reuters', 'https://example.com/news/tsla-deliveries', 'TSLA'],
@@ -271,15 +370,15 @@ const C3: FixtureV1 = {
   ]),
 }
 
-const C4: FixtureV1 = {
+const C4: RecipeFixture = {
   id: 'C4',
   note: 'ohlcv 1d 5d SPY, QQQ · series · md',
   widget: widget({
     id: 'c4',
     title: 'SPY and QQQ, 5 days',
     size: 'md',
-    query: { kind: 'ohlcv', params: { symbols: ['SPY', 'QQQ'], interval: '1d', range: '5d' } },
-    view: { type: 'series' },
+    data: { main: { recipe: 'ohlcv', params: { symbols: ['SPY', 'QQQ'], interval: '1d', range: '5d' } } },
+    view: { preset: 'compare', normalize: false },
   }),
   frame: ohlcv([
     ['SPY', OCT_DAYS.slice(3), [664.1, 666.8, 665.3, 667.9, 668.4], 55_000_000],
@@ -287,17 +386,17 @@ const C4: FixtureV1 = {
   ]),
 }
 
-// ---- extra: search, so every kind has a table fixture ---------------------------------------
+// ---- extra: search, so every recipe has a table fixture -------------------------------------
 
-const SEARCH: FixtureV1 = {
+const SEARCH: RecipeFixture = {
   id: 'search',
-  note: 'search (not a section 5 widget; agent-only kind) · table',
+  note: 'search (not a section 5 widget; agent-only recipe) · table',
   widget: widget({
     id: 'search',
     title: 'Symbol lookup',
     size: 'sm',
-    query: { kind: 'search', params: { q: ['micron', 'sandisk', 'western digital', 'seagate'] } },
-    view: { type: 'table' },
+    data: { main: { recipe: 'search', params: { q: 'micron' } } },
+    view: { preset: 'table' },
   }),
   frame: frame('search', [
     ['micron', 'MU', 'Micron Technology, Inc.', 'NMS'],
@@ -307,7 +406,7 @@ const SEARCH: FixtureV1 = {
   ]),
 }
 
-// ---- v1.2: the chain view, macro on the series view, and the new tables -----------------------
+// ---- the chain view, macro on the compare view, and the tables -----------------------------------
 
 /** Standard normal CDF and PDF, for Black–Scholes prices on the fixture chain. */
 function cdf(x: number): number {
@@ -355,28 +454,28 @@ function chain(symbol: string, spot: number, expiration: string, dte: number, st
 const r2 = (n: number) => Math.round(n * 100) / 100
 const round4 = (n: number) => Math.round(n * 10_000) / 10_000
 
-const OPTIONS: FixtureV1 = {
+const OPTIONS: RecipeFixture = {
   id: 'options',
   note: 'options NVDA, 10 strikes each side, one expiration · chain · lg',
   widget: widget({
     id: 'options',
     title: 'NVDA chain, Oct 23',
     size: 'lg',
-    query: { kind: 'options', params: { symbol: 'NVDA', expiration: '2026-10-23', strikes: 10, type: 'both' } },
-    view: { type: 'chain' },
+    data: { main: { recipe: 'options', params: { symbol: 'NVDA', expiration: '2026-10-23', strikes: 10, type: 'both' } } },
+    view: { preset: 'chain' },
   }),
   frame: frame('options', chain('NVDA', 182.43, '2026-10-23', 7, 2.5, 10)),
 }
 
-const OPTIONS_SM: FixtureV1 = {
+const OPTIONS_SM: RecipeFixture = {
   id: 'options-sm',
   note: 'the same chain at sm (volume and delta dropped) · chain · sm',
   widget: widget({
     id: 'options-sm',
     title: 'NVDA chain',
     size: 'sm',
-    query: { kind: 'options', params: { symbol: 'NVDA', expiration: '2026-10-23', strikes: 10, type: 'both' } },
-    view: { type: 'chain' },
+    data: { main: { recipe: 'options', params: { symbol: 'NVDA', expiration: '2026-10-23', strikes: 10, type: 'both' } } },
+    view: { preset: 'chain' },
   }),
   frame: OPTIONS.frame,
 }
@@ -396,32 +495,44 @@ function steps(start: number, cuts: number[]): number[] {
   return WEEKS.map((_, i) => r2(start - 0.25 * cuts.filter((c) => c <= i).length))
 }
 
-const MACRO: FixtureV1 = {
+/** One macro dataset per series, each frame as the macro recipe stamps it: `time`, the series' own column (its annotation's label), `series`. */
+const MACRO_SERIES: Record<string, { column: string; label: string; values: number[] }> = {
+  treasury_10y: { column: 'year_10', label: '10Y', values: path(4.08, 4.21, 0.11) },
+  treasury_2y: { column: 'year_2', label: '2Y', values: path(4.02, 3.49, 0.08) },
+  fed_funds: { column: 'rate', label: 'Fed funds', values: steps(4.58, [9, 22, 44, 48]) },
+}
+function macroFrame(series: string): Frame {
+  const { column, label, values } = MACRO_SERIES[series]!
+  return {
+    columns: [T('time'), N(column), S('series')],
+    rows: values.map((v, i) => [WEEKS[i]!, v, series]),
+    meta: { connector: 'fixture', fetchedAt: FETCHED_AT, ttl: 3_600_000, fields: { time: text('Time', 2), [column]: pct(label, 1, { key: true }), series: text('Series', 1) }, lineage: { recipe: 'macro' } },
+  }
+}
+const macroFrames = Object.fromEntries(Object.keys(MACRO_SERIES).map((series) => [series, macroFrame(series)]))
+const MACRO: Fixture = {
   id: 'macro',
-  note: 'macro treasury_10y, treasury_2y, fed_funds, 1y · series · lg',
+  note: 'macro treasury_10y, treasury_2y, fed_funds, 1y: one macro dataset per series · compare · lg',
   widget: widget({
     id: 'macro',
     title: 'Rates, one year',
     size: 'lg',
-    query: { kind: 'macro', params: { series: ['treasury_10y', 'treasury_2y', 'fed_funds'], range: '1y' } },
-    view: { type: 'series' },
+    data: Object.fromEntries(Object.keys(MACRO_SERIES).map((series) => [series, { recipe: 'macro', params: { series, range: '1y' } }])),
+    view: { preset: 'compare', normalize: false },
   }),
-  frame: frame('macro', [
-    ...path(4.08, 4.21, 0.11).map((v, i) => ['treasury_10y', WEEKS[i]!, v]),
-    ...path(4.02, 3.49, 0.08).map((v, i) => ['treasury_2y', WEEKS[i]!, v]),
-    ...steps(4.58, [9, 22, 44, 48]).map((v, i) => ['fed_funds', WEEKS[i]!, v]),
-  ]),
+  frames: macroFrames,
+  frame: macroFrames.treasury_10y!,
 }
 
-const FINANCIALS: FixtureV1 = {
+const FINANCIALS: RecipeFixture = {
   id: 'financials',
   note: 'financials NVDA quarterly, 4 periods · table · md',
   widget: widget({
     id: 'financials',
     title: 'NVDA quarterly statements',
     size: 'md',
-    query: { kind: 'financials', params: { symbols: ['NVDA'], period: 'quarter', limit: 4 } },
-    view: { type: 'table' },
+    data: { main: { recipe: 'financials', params: { symbols: ['NVDA'], period: 'quarter', limit: 4 } } },
+    view: { preset: 'table' },
   }),
   frame: frame('financials', [
     ['NVDA', '2026-07-26', 46_743_000_000, 33_851_000_000, 28_440_000_000, 26_422_000_000, 1.08, 23_855_000_000, -1_306_000_000, 22_549_000_000, 56_791_000_000, 8_467_000_000, 24_420_000_000],
@@ -431,15 +542,15 @@ const FINANCIALS: FixtureV1 = {
   ]),
 }
 
-const INSIDERS: FixtureV1 = {
+const INSIDERS: RecipeFixture = {
   id: 'insiders',
   note: 'insiders NVDA, latest 6 · table · md',
   widget: widget({
     id: 'insiders',
     title: 'NVDA insider transactions',
     size: 'md',
-    query: { kind: 'insiders', params: { symbols: ['NVDA'], limit: 20 } },
-    view: { type: 'table' },
+    data: { main: { recipe: 'insiders', params: { symbols: ['NVDA'], limit: 20 } } },
+    view: { preset: 'table' },
   }),
   frame: frame('insiders', [
     ['NVDA', '2026-10-14', 'Jensen Huang', 'President and CEO', 'sell', 75_000, 181.92, 13_644_000, 'https://example.com/sec/nvda-huang-1014'],
@@ -451,15 +562,15 @@ const INSIDERS: FixtureV1 = {
   ]),
 }
 
-const CALENDAR: FixtureV1 = {
+const CALENDAR: RecipeFixture = {
   id: 'calendar',
   note: 'calendar US, next week · table · md',
   widget: widget({
     id: 'calendar',
     title: 'US economic calendar',
     size: 'md',
-    query: { kind: 'calendar', params: { from: '2026-10-19', to: '2026-10-23', country: 'United States' } },
-    view: { type: 'table' },
+    data: { main: { recipe: 'calendar', params: { from: '2026-10-19', to: '2026-10-23', country: 'United States' } } },
+    view: { preset: 'table' },
   }),
   frame: frame('calendar', [
     [Date.UTC(2026, 9, 19, 14, 0), 'United States', 'NAHB Housing Market Index (Oct)', null, '38', '37'],
@@ -475,15 +586,15 @@ const CALENDAR: FixtureV1 = {
   ]),
 }
 
-const MOVERS: FixtureV1 = {
+const MOVERS: RecipeFixture = {
   id: 'movers',
   note: 'movers gainers, top 10 · table · sm',
   widget: widget({
     id: 'movers',
     title: 'Top gainers',
     size: 'sm',
-    query: { kind: 'movers', params: { list: 'gainers', limit: 10 } },
-    view: { type: 'table' },
+    data: { main: { recipe: 'movers', params: { list: 'gainers', limit: 10 } } },
+    view: { preset: 'table' },
   }),
   frame: frame('movers', [
     ['OKLO', 'Oklo Inc.', 142.18, 18.42, 31_400_000],
@@ -499,15 +610,15 @@ const MOVERS: FixtureV1 = {
   ]),
 }
 
-const VOLATILITY: FixtureV1 = {
+const VOLATILITY: RecipeFixture = {
   id: 'volatility',
   note: 'volatility NVDA, AMD, TSLA, SPY · table · md',
   widget: widget({
     id: 'volatility',
     title: 'Implied vs realized vol',
     size: 'md',
-    query: { kind: 'volatility', params: { symbols: ['NVDA', 'AMD', 'TSLA', 'SPY'] } },
-    view: { type: 'table' },
+    data: { main: { recipe: 'volatility', params: { symbols: ['NVDA', 'AMD', 'TSLA', 'SPY'] } } },
+    view: { preset: 'table' },
   }),
   frame: frame('volatility', [
     ['NVDA', 44.8, 71.2, 31.5, 33.5, 38.1, 92.4, 24.6, 212.19, 86.62],
@@ -517,15 +628,15 @@ const VOLATILITY: FixtureV1 = {
   ]),
 }
 
-const PROFILE: FixtureV1 = {
+const PROFILE: RecipeFixture = {
   id: 'profile',
   note: 'profile NVDA, AMD (long description truncates) · table · md',
   widget: widget({
     id: 'profile',
     title: 'Company profiles',
     size: 'md',
-    query: { kind: 'profile', params: { symbols: ['NVDA', 'AMD'] } },
-    view: { type: 'table' },
+    data: { main: { recipe: 'profile', params: { symbols: ['NVDA', 'AMD'] } } },
+    view: { preset: 'table' },
   }),
   frame: frame('profile', [
     [
@@ -555,28 +666,28 @@ const PROFILE: FixtureV1 = {
 
 // ---- stat view: one headline number per symbol ----------------------------------------------
 
-const STAT_QUOTE: FixtureV1 = {
+const STAT_QUOTE: RecipeFixture = {
   id: 'stat-quote',
   note: 'quote NVDA after hours · stat · sm',
   widget: widget({
     id: 'stat-quote',
     title: 'NVDA',
     size: 'sm',
-    query: { kind: 'quote', params: { symbols: ['NVDA'] } },
-    view: { type: 'stat' },
+    data: { main: { recipe: 'quote', params: { symbols: ['NVDA'] } } },
+    view: { preset: 'stat' },
   }),
   frame: frame('quote', [['NVDA', 177.8, -3.48, 98_200_000, 'POST', 178.42, 0.35]]),
 }
 
-const STAT_QUOTES: FixtureV1 = {
+const STAT_QUOTES: RecipeFixture = {
   id: 'stat-quotes',
   note: 'quote basket in the regular session · stat, four cards · md',
   widget: widget({
     id: 'stat-quotes',
     title: 'Memory basket',
     size: 'md',
-    query: { kind: 'quote', params: { symbols: ['MU', 'SNDK', 'WDC', 'STX'] } },
-    view: { type: 'stat' },
+    data: { main: { recipe: 'quote', params: { symbols: ['MU', 'SNDK', 'WDC', 'STX'] } } },
+    view: { preset: 'stat' },
   }),
   frame: frame('quote', [
     ['MU', 199.6, 3.29, 21_430_000, 'REGULAR', null, null],
@@ -586,33 +697,33 @@ const STAT_QUOTES: FixtureV1 = {
   ]),
 }
 
-const STAT_METRICS: FixtureV1 = {
+const STAT_METRICS: RecipeFixture = {
   id: 'stat-metrics',
   note: 'metrics RDDT, forward P/E picked with `column` · stat · sm',
   widget: widget({
     id: 'stat-metrics',
     title: 'RDDT forward multiple',
     size: 'sm',
-    query: { kind: 'metrics', params: { symbols: ['RDDT'] } },
-    view: { type: 'stat', column: 'forward_pe' },
+    data: { main: { recipe: 'metrics', params: { symbols: ['RDDT'] } } },
+    view: { preset: 'stat', column: 'forward_pe' },
   }),
   frame: frame('metrics', [['RDDT', 30_000_000_000, 36.31, 16.13, 0.78, 34.03, 9.82, 9.14, 91.44, 28.79, 31.35, 61.1, 106.2, 24.1, 0.02, null]]),
 }
 
-const STAT_VOL: FixtureV1 = {
+const STAT_VOL: RecipeFixture = {
   id: 'stat-volatility',
   note: 'volatility NVDA, the key column (iv30) with IV rank under it · stat · sm',
   widget: widget({
     id: 'stat-volatility',
     title: 'NVDA implied vol',
     size: 'sm',
-    query: { kind: 'volatility', params: { symbols: ['NVDA'] } },
-    view: { type: 'stat' },
+    data: { main: { recipe: 'volatility', params: { symbols: ['NVDA'] } } },
+    view: { preset: 'stat' },
   }),
   frame: frame('volatility', [['NVDA', 44.8, 71.2, 31.5, 33.5, 38.1, 92.4, 24.6, 212.19, 86.62]]),
 }
 
-export const V1_FIXTURES: FixtureV1[] = [
+export const RECIPE_FIXTURES: RecipeFixture[] = [
   A1,
   A2,
   A3,
@@ -629,7 +740,6 @@ export const V1_FIXTURES: FixtureV1[] = [
   SEARCH,
   OPTIONS,
   OPTIONS_SM,
-  MACRO,
   FINANCIALS,
   INSIDERS,
   CALENDAR,
@@ -642,8 +752,8 @@ export const V1_FIXTURES: FixtureV1[] = [
   STAT_VOL,
 ]
 
-/** Every fixture: the v1 kinds with their frame under `main`, then one per v2 preset. */
-export const FIXTURES: Fixture[] = [...V1_FIXTURES.map((f) => ({ ...f, frames: { main: f.frame } })), ...V2_FIXTURES]
+/** Every fixture: the recipe fixtures with their frame under `main`, the macro graph, then one per v2 preset. */
+export const FIXTURES: Fixture[] = [...RECIPE_FIXTURES.map((f) => ({ ...f, frames: { main: f.frame } })), MACRO, ...V2_FIXTURES]
 
 export function fixture(id: string): Fixture {
   const f = FIXTURES.find((x) => x.id === id)

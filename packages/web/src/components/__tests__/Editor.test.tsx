@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { TRANSFORM_EXAMPLE, parseWidget, type AnyWidget, type Frame, type WidgetV2 } from '@terminal/core'
+import { TRANSFORM_EXAMPLE, type AnyWidget, type Frame, type WidgetV2 } from '@terminal/core'
 import { RECIPES } from './recipes-fixture'
 
 const actions = vi.hoisted(() => ({
@@ -58,14 +58,12 @@ function setupApi() {
   api.connectorCatalog.mockResolvedValue({
     connector: 'fake',
     status: 'ok',
-    mode: 'kinds',
     stats: { routes: 1, alive: 0, dead: 0, unknown: 1 },
     descriptors: [{ connector: 'fake', route: 'quote', summary: 'A quote', params: [{ name: 'symbols', type: 'string[]', required: true }], providers: ['a', 'b'], fields: [{ name: 'price', type: 'number' }] }],
   })
   api.query.mockResolvedValue(quoteFrame)
 }
 
-const tab = (name: string) => screen.getByRole('tab', { name: new RegExp(`^${name}`) })
 const submit = () => fireEvent.submit(screen.getByRole('button', { name: 'Save' }).closest('form')!)
 const saved = async (): Promise<WidgetV2> => {
   await waitFor(() => expect(actions.saveWidget).toHaveBeenCalledTimes(1))
@@ -164,28 +162,6 @@ describe('Editor: three tabs', () => {
     const w = await saved()
     expect(w.view).toEqual({ preset: 'table', extremes: true, columns: ['symbol', 'price'], limit: 50 })
     expect(w.fields).toEqual({ price: { label: 'Last' } })
-  })
-
-  it('edits a v1 widget: its kind query is the main dataset (badge kind (v1)), the form is the kind\'s, the save stays on the v1 path', async () => {
-    setupApi()
-    const widget = parseWidget({ id: 'w1', title: 'MU daily', size: 'md', query: { kind: 'ohlcv', params: { symbols: ['MU'], interval: '1d', range: '6mo' } }, view: { type: 'series', candle: true } })
-    render(<Editor open onClose={() => {}} workspaceId="ws1" widget={widget} />)
-    expect(screen.getAllByText('kind (v1)').length).toBeGreaterThan(0)
-    expect((screen.getByLabelText('Kind') as HTMLSelectElement).value).toBe('ohlcv')
-    expect((screen.getByLabelText(/^symbols/) as HTMLInputElement).value).toBe('MU')
-    expect((screen.getByLabelText(/^range/) as HTMLSelectElement).value).toBe('6mo')
-    fireEvent.change(screen.getByLabelText(/^symbols/), { target: { value: 'mu, sndk' } })
-    fireEvent.change(screen.getByLabelText(/^range/), { target: { value: '2y' } })
-    fireEvent.click(tab('View'))
-    expect((screen.getByLabelText('Preset') as HTMLSelectElement).value).toBe('price')
-    expect((screen.getByLabelText('candle') as HTMLInputElement).checked).toBe(true)
-    fireEvent.change(screen.getByLabelText('Preset'), { target: { value: 'compare' } })
-    submit()
-    const w = await saved()
-    expect(w.id).toBe('w1')
-    expect(w.data).toEqual({ main: { kind: 'ohlcv', params: { symbols: ['MU', 'SNDK'], interval: '1d', range: '2y' } } })
-    expect(w.view).toEqual({ preset: 'compare' })
-    expect(screen.getByRole('button', { name: 'Remove' })).toBeTruthy()
   })
 
   it('route datasets: connector and route with the descriptor\'s params and a provider select; validation errors block the save', async () => {

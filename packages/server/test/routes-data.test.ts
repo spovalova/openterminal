@@ -54,7 +54,7 @@ const userRecipe: Recipe = {
 }
 
 describe('catalog routes', () => {
-  it('GET /api/catalog searches the fake connector\'s kind routes and reports stats', async () => {
+  it('GET /api/catalog searches the fake connector\'s routes and reports stats', async () => {
     const empty = await body(await app.request('/api/catalog'))
     expect(empty.hits).toEqual([])
     expect(empty.stats.fake).toMatchObject({ routes: 5, alive: 0, dead: 0, unknown: 5 })
@@ -142,17 +142,15 @@ describe('recipes routes', () => {
 })
 
 describe('query, settings, runs, store', () => {
-  it('POST /api/query runs route and kind queries, 400 on an invalid body, 422 on a failure', async () => {
+  it('POST /api/query runs route and transform queries, 400 on an invalid body, 422 on a failure', async () => {
     const route = await app.request('/api/query', json({ query: { connector: 'fake', route: 'quote', params: { symbols: ['MU'] } } }))
     expect(route.status).toBe(200)
     expect((await body(route)).frame.rows).toHaveLength(1)
-    const kind = await app.request('/api/query', json({ query: { kind: 'quote', params: { symbols: ['MU'] } } }))
-    expect(kind.status).toBe(200)
     expect((await app.request('/api/query', json({ query: { nope: 1 } }))).status).toBe(400)
     const failed = await app.request('/api/query', json({ query: { connector: 'fake', route: 'missing', params: {} } }))
     expect(failed.status).toBe(422)
     expect((await body(failed)).error).toMatch(/no route "missing"/)
-    const transform = await app.request('/api/query', json({ query: { inputs: { q: { kind: 'quote', params: { symbols: ['MU'] } } }, code: 'result = q' } }))
+    const transform = await app.request('/api/query', json({ query: { inputs: { q: { connector: 'fake', route: 'quote', params: { symbols: ['MU'] } } }, code: 'result = q' } }))
     expect(transform.status).toBe(422)
     expect((await body(transform)).error).toMatch(/transform/)
   })
@@ -166,7 +164,7 @@ describe('query, settings, runs, store', () => {
     expect((await body(await app.request('/api/settings/providers'))).value).toEqual({})
     const put = await app.request('/api/settings/providers', json({ value: { 'fake:quote': 'nasdaq' } }, 'PUT'))
     expect(put.status).toBe(200)
-    // the fake connector's kind routes have no providers, so the override makes the route query fail validation: it was applied
+    // the fake connector's routes have no providers, so the override makes the route query fail validation: it was applied
     const q = await app.request('/api/query', json({ query: { connector: 'fake', route: 'quote', params: { symbols: ['MU'] } } }))
     expect(q.status).toBe(422)
     expect((await body(q)).error).toMatch(/no providers/)
@@ -223,7 +221,7 @@ describe('export and import', () => {
   it('exportDocument and recipeNamesIn only carry the recipes the widgets use', () => {
     const widgets = [
       { id: 'a', title: 'a', size: 'sm' as const, data: { main: { recipe: 'r1', params: {} } }, view: { preset: 'table' as const } },
-      { id: 'b', title: 'b', size: 'sm' as const, data: { main: { inputs: { x: { recipe: 'r2', params: {} }, y: { kind: 'quote' as const, params: { symbols: ['MU'] } } }, code: 'result = x' } }, view: { preset: 'table' as const } },
+      { id: 'b', title: 'b', size: 'sm' as const, data: { main: { inputs: { x: { recipe: 'r2', params: {} }, y: { connector: 'fake', route: 'quote', params: { symbols: ['MU'] } } }, code: 'result = x' } }, view: { preset: 'table' as const } },
     ]
     expect([...recipeNamesIn(widgets)]).toEqual(['r1', 'r2'])
     const r = (name: string): Recipe => ({ ...userRecipe, name })

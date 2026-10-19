@@ -1,6 +1,5 @@
-// v1 contract (PLAN.md section 7.4, 14): kinds, widget, workspace, preview, connector, cache, registry, protocol.
+// The contract (PLAN.md section 17): frames, widgets, workspaces, previews, connectors, cache, registry, protocol.
 export * from './frame.js'
-export * from './kinds.js'
 export * from './widget.js'
 export * from './layout.js'
 export * from './workspace.js'
@@ -9,8 +8,8 @@ export * from './connector.js'
 export * from './cache.js'
 export * from './registry.js'
 export * from './protocol.js'
-// v2 contracts (PLAN.md section 17): descriptors, catalog, queries, fields and shapes, annotations, recipes,
-// layers and presets, clock, transforms, inference. Browser-safe; the YAML loaders are in '@terminal/core/node'.
+// Descriptors, catalog, queries, fields and shapes, annotations, recipes, layers and presets, clock, transforms,
+// inference. Browser-safe; the YAML loaders are in '@terminal/core/node'.
 export * from './descriptor.js'
 export * from './descriptor-openapi.js'
 export * from './catalog.js'

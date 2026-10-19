@@ -51,7 +51,7 @@ export type ParamsFormProps = {
   providers?: string[]
 }
 
-/** A form generated from descriptor params (routes, recipes and v1 kinds all describe themselves this way). */
+/** A form generated from descriptor params (routes and recipes both describe themselves this way). */
 export const ParamsForm: FC<ParamsFormProps> = ({ id, params, values, onChange, providers }) => {
   const set = (name: string, v: unknown) => {
     const next = { ...values }

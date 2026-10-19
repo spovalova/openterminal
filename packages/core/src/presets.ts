@@ -148,7 +148,7 @@ function scaleFor(ds: DatasetFields, y: string | undefined): Scale | undefined {
 }
 
 const EVENT_LABELS = ['label', 'headline', 'event', 'title', 'name', 'action', 'holder'] as const
-const EVENT_KINDS = ['kind', 'type', 'action', 'session', 'source'] as const
+const EVENT_KINDS = ['kind', 'type', 'action', 'source'] as const
 
 /** A marker layer over an events dataset: its time column, the first label-like string column, a kind column when there is one. */
 export function markerLayer(name: string, ds: DatasetFields): Layer | undefined {

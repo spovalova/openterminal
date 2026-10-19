@@ -21,11 +21,10 @@ import {
   type PriceFormat,
   type SeriesType,
 } from 'lightweight-charts'
-import { isWidgetV2 } from '@terminal/core'
 import { DOWN_COLOR, EmptyState, UP_COLOR, chartTheme, levelColor, zeroLineColor } from '@terminal/ui'
 import type { ViewProps } from './types'
 import { withAlpha } from './format'
-import { datasetsFor, expandView, kindOf, viewOf } from './fields'
+import { datasetsFor, expandView, recipeOf, viewOf } from './fields'
 import { legendLabel } from './series-data'
 import { useWidth } from './use-width'
 import { BandPrimitive } from './chart/band-primitive'
@@ -107,14 +106,12 @@ export function stackBadges<T extends { top: number }>(badges: T[], paneTop: num
  */
 export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
   const view = viewOf(widget)
-  const kind = kindOf(widget)
   const labels = 'labels' in view ? view.labels : undefined
   const spec = useMemo(() => {
     const datasets = datasetsFor(widget, frames)
     const panes = expandView(widget, frames)
-    const groupLabel = kind ? (g: string) => legendLabel(g, kind) : undefined
-    return buildChart(panes, frames, datasets, { labels, groupLabel })
-  }, [widget, frames, labels, kind])
+    return buildChart(panes, frames, datasets, { labels, groupLabel: (g: string) => legendLabel(g) })
+  }, [widget, frames, labels])
   const percentUnits = useMemo(() => {
     // Series whose field carries a percent unit show their change in basis points (rates, yields).
     const datasets = datasetsFor(widget, frames)
@@ -376,8 +373,9 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
   }, [tops, scheduleBadges])
 
   if (empty) {
-    if (kind === 'macro') return <EmptyState title="No observations" hint="The query returned no values for this range." />
-    if (kind === 'ohlcv') return <EmptyState title="No bars" hint="The query returned no price bars for this range." />
+    const recipe = recipeOf(widget)
+    if (recipe === 'macro') return <EmptyState title="No observations" hint="The query returned no values for this range." />
+    if (recipe === 'ohlcv' || recipe === 'index') return <EmptyState title="No bars" hint="The query returned no price bars for this range." />
     return <EmptyState title="Nothing to chart" hint="The frame has no series the preset can draw." />
   }
 
@@ -401,8 +399,6 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
       data-panes={spec.panes.length}
       data-last-value={lastValueTotal}
       data-legend-placement={side ? 'side' : 'top'}
-      data-kind={kind}
-      data-mode={isWidgetV2(widget) ? undefined : legacyMode(widget)}
       style={side ? rootRowStyle : rootStyle}
     >
       {!side && mainLegend}
@@ -432,11 +428,6 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
       {side && mainLegend}
     </div>
   )
-}
-
-function legacyMode(widget: ViewProps['widget']): string | undefined {
-  if (isWidgetV2(widget) || widget.view.type !== 'series') return undefined
-  return widget.view.candle ? 'candle' : widget.view.normalize ? 'normalize' : 'line'
 }
 
 const rootStyle: CSSProperties = { display: 'flex', flexDirection: 'column', width: '100%', height: '100%', minHeight: 160 }
