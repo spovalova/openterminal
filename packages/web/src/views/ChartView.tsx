@@ -9,13 +9,11 @@ import {
   PriceScaleMode,
   createChart,
   createOptionsChart,
-  createSeriesMarkers,
   createYieldCurveChart,
   type ChartOptions,
   type DeepPartial,
   type IChartApiBase,
   type ISeriesApi,
-  type ISeriesMarkersPluginApi,
   type LineWidth,
   type MouseEventParams,
   type PriceFormat,
@@ -75,6 +73,36 @@ function priceFormatFor(s: SeriesSpec): PriceFormat {
 }
 
 type Badge = { id: string; color: string; text: string; top: number; side: 'right' | 'left' }
+/** An event pin: the bar's x, the bar's high (or low) y, and the marker kinds on that bar. */
+type Pin = { id: string; x: number; y: number; below: boolean; paneTop: number; items: { letter: string; color: string; kind: string }[] }
+/** Pin circle diameter and the stem between the bar and the circle. */
+const PIN = 14
+const STEM = 6
+
+/** The first value of a series (the base of an indexed-to-100 axis). */
+function firstValue(s: SeriesSpec): number | null {
+  const d = (s.data as { value?: number; close?: number }[])[0]
+  const v = d?.value ?? d?.close
+  return v != null && Number.isFinite(v) && v !== 0 ? v : null
+}
+
+/** One event pin: a stem from the bar, then a circle per kind with its letter inside, stacked away from the bar. */
+const MarkerPin: FC<{ pin: Pin }> = ({ pin }) => {
+  const n = pin.items.length
+  const span = STEM + n * PIN + (n - 1) * 2
+  // Above the bar unless that would leave the pane; then the pin sits on the bar's top edge.
+  const top = pin.below ? pin.y + 2 : Math.max(pin.paneTop + 2, pin.y - 2 - span)
+  return (
+    <div data-marker="" data-kinds={pin.items.map((i) => i.kind).join(',')} className="pointer-events-none absolute z-10 flex flex-col items-center" style={{ left: Math.round(pin.x - PIN / 2), top: Math.round(top), width: PIN, flexDirection: pin.below ? 'column-reverse' : 'column' }}>
+      {pin.items.map((i, k) => (
+        <span key={i.kind} className="num inline-flex shrink-0 items-center justify-center rounded-full text-[9px] leading-none font-semibold text-bg" style={{ width: PIN, height: PIN, background: i.color, marginBottom: k === n - 1 ? 0 : 2 }}>
+          {i.letter}
+        </span>
+      ))}
+      <span aria-hidden="true" className="w-px shrink-0" style={{ height: STEM, background: pin.items[0]!.color, opacity: 0.7 }} />
+    </div>
+  )
+}
 type AxisBox = { right: { left: number; width: number }; left: { left: number; width: number } }
 
 /** Stack badges that would overlap (change 4): sorted by y, each at least BADGE_HEIGHT under the one above, the group kept inside the pane. */
@@ -129,7 +157,6 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
   const hostRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<Chart | null>(null)
   const seriesRef = useRef<{ api: Series; spec: SeriesSpec }[]>([])
-  const pluginsRef = useRef<ISeriesMarkersPluginApi<HorzItem>[]>([])
   const specRef = useRef(spec)
   specRef.current = spec
   const percentRef = useRef(percentUnits)
@@ -137,6 +164,7 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
   const [tops, setTops] = useState<number[]>([])
   const [hover, setHover] = useState<{ key: number; x: number; y: number } | null>(null)
   const [badges, setBadges] = useState<Badge[]>([])
+  const [pins, setPins] = useState<Pin[]>([])
   const [axes, setAxes] = useState<AxisBox>({ right: { left: 0, width: 0 }, left: { left: 0, width: 0 } })
   const [rootRef, rootWidth] = useWidth()
   const theme = chartTheme as DeepPartial<ChartOptions>
@@ -198,7 +226,10 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
         y = null
       }
       if (y == null || !Number.isFinite(y)) continue
-      const text = percentRef.current.has(s.id) ? `${s.last.toFixed(2)}%` : formatValue(s.last, s.format, s.precision)
+      const indexed = current.panes[s.pane]?.side[s.side]?.indexed
+      const first = indexed ? firstValue(s) : null
+      // On a rebased axis the badge reads the axis (the index level), not the raw price the legend shows.
+      const text = indexed && first ? (s.last / first * 100).toFixed(2) : percentRef.current.has(s.id) ? `${s.last.toFixed(2)}%` : formatValue(s.last, s.format, s.precision)
       let color = s.color
       if (s.kind === 'candle') {
         const bars = s.data as { open: number; close: number }[]
@@ -210,6 +241,43 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
       list.push({ id: s.id, color, text, top: (paneTop[s.pane] ?? 0) + y, side: s.side })
       groups.set(key, list)
     }
+    // Event pins (change 12): a 14px circle with the letter inside, above the bar's high (below its low for a
+    // below-bar marker) on a short stem; kinds on one bar stack; the first bar's pin is inset from the plot's edge.
+    const nextPins: Pin[] = []
+    for (const { spec: s, api } of seriesRef.current) {
+      if (s.markers.length === 0) continue
+      const extent = new Map<number, { hi: number; lo: number }>()
+      for (const d of s.data as { time: HorzItem; high?: number; low?: number; value?: number }[]) {
+        const hi = d.high ?? d.value
+        const lo = d.low ?? d.value
+        if (hi != null && lo != null) extent.set(horzKey(d.time), { hi, lo })
+      }
+      const byBar = new Map<string, MarkerSpec[]>()
+      for (const m of s.markers) {
+        const k = `${horzKey(m.time)}|${m.position === 'belowBar' ? 'b' : 'a'}`
+        const list = byBar.get(k) ?? []
+        if (!list.some((x) => x.kind === m.kind)) list.push(m)
+        byBar.set(k, list)
+      }
+      for (const [k, list] of byBar) {
+        const m = list[0]!
+        const e = extent.get(horzKey(m.time))
+        if (!e) continue
+        let x: number | null
+        let y: number | null
+        try {
+          x = chart.timeScale().timeToCoordinate(m.time as never)
+          y = api.priceToCoordinate(m.position === 'belowBar' ? e.lo : e.hi)
+        } catch {
+          x = null
+          y = null
+        }
+        if (x == null || y == null || !Number.isFinite(x) || !Number.isFinite(y)) continue
+        const top = paneTop[s.pane] ?? 0
+        nextPins.push({ id: `${s.id}|${k}`, x: Math.max(leftWidth + PIN / 2 + 2, leftWidth + x), y: top + y, below: m.position === 'belowBar', paneTop: top, items: list.map((i) => ({ letter: i.letter, color: i.color, kind: i.kind })) })
+      }
+    }
+    setPins((prev) => (prev.length === nextPins.length && prev.every((p, i) => p.id === nextPins[i]!.id && p.x === nextPins[i]!.x && p.y === nextPins[i]!.y) ? prev : nextPins))
     const out: Badge[] = []
     for (const [key, list] of groups) {
       const pane = Number(key.split(':')[0])
@@ -289,7 +357,6 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
       chart.unsubscribeCrosshairMove(onMove)
       ts.unsubscribeVisibleLogicalRangeChange?.(onRange)
       seriesRef.current = []
-      pluginsRef.current = []
       chartRef.current = null
       chart.remove()
     }
@@ -300,8 +367,6 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
   useEffect(() => {
     const chart = chartRef.current
     if (!chart) return
-    for (const p of pluginsRef.current) p.detach()
-    pluginsRef.current = []
     for (const s of seriesRef.current) chart.removeSeries(s.api)
     seriesRef.current = []
     while (chart.panes().length < spec.panes.length) chart.addPane(true)
@@ -336,10 +401,7 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
       for (const l of s.priceLines) {
         series.createPriceLine({ price: l.price, color: l.color ?? levelColor, lineWidth: 1, lineStyle: LINE_STYLE[l.style], axisLabelVisible: true, title: l.label ?? '' })
       }
-      if (s.markers.length > 0) {
-        const plugin = createSeriesMarkers(series, s.markers.map((m) => ({ time: m.time, position: m.position, shape: 'circle' as const, color: m.color, text: m.letter, size: 1 })))
-        pluginsRef.current.push(plugin)
-      }
+      // Event markers are drawn by the view (pins anchored to the bar, change 12), laid out with the badges.
       if (s.bands.length > 0) series.attachPrimitive(new BandPrimitive(s.bands))
       seriesRef.current.push({ api: series, spec: s })
     }
@@ -354,7 +416,8 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
           chart.priceScale(side, p.index).applyOptions({
             visible: used && (scale?.visible ?? true),
             mode: scale?.indexed ? PriceScaleMode.IndexedTo100 : PriceScaleMode.Normal,
-            scaleMargins: { top: 0.12, bottom: 0.08 },
+            // Room above the highest bar for an event pin and its stem (change 12).
+            scaleMargins: { top: spec.series.some((x) => x.pane === p.index && x.markers.length > 0) ? 0.18 : 0.12, bottom: 0.08 },
           })
         } catch {
           /* a pane without that scale */
@@ -423,6 +486,9 @@ export const ChartView: FC<ViewProps> = ({ widget, frames }) => {
             </div>
           )
         })}
+        {pins.map((p) => (
+          <MarkerPin key={p.id} pin={p} />
+        ))}
         {hoverMarkers.length > 0 && hover && <MarkerTooltip markers={hoverMarkers} x={hover.x} y={hover.y} />}
       </div>
       {side && mainLegend}

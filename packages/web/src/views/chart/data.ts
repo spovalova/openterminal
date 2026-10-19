@@ -553,8 +553,8 @@ export function formatValue(v: number, format: PriceFormatKind, precision = 2): 
       if (abs >= 1e12) return `${sign}${(abs / 1e12).toFixed(2)}T`
       if (abs >= 1e9) return `${sign}${(abs / 1e9).toFixed(2)}B`
       if (abs >= 1e6) return `${sign}${(abs / 1e6).toFixed(1)}M`
-      if (abs >= 1e3) return `${sign}${(abs / 1e3).toFixed(1)}K`
-      return grouped(0).format(v)
+      // Below a million a level reads in full (change 13): an index at 7,659.44, never "7.7K"; 95,394 shares as written.
+      return grouped(Number.isInteger(v) ? 0 : Math.min(precision, 2)).format(v)
     }
     case 'integer':
       return grouped(0).format(v)

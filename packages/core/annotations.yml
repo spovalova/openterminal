@@ -28,6 +28,10 @@ annotations:
   "*:*:low": { unit: usd, format: price, label: Low, priority: 5 }
   "*:*:close": { unit: usd, format: price, label: Close, priority: 2, key: true }
   "*:*:date": { label: Date, priority: 1 }
+  "*:*:revenue": { unit: usd, format: compact, label: Revenue, priority: 2 }
+  "*:*:excerpt": { label: Excerpt, priority: 8 }
+  "*:*:topic": { label: Topic, priority: 6 }
+  "*:*:topics": { label: Topics, priority: 6 }
   "*:*:time": { label: Time, priority: 1 }
 
   # ---------------------------------------------------------------- openbb: prices and quotes

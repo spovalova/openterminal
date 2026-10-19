@@ -5,6 +5,7 @@ import { EmptyState, divergingColor, divergingScale, sequentialColor, sequential
 import type { ViewProps } from './types'
 import { datasetsFor, expandView, primaryFrame } from './fields'
 import { formatValue } from './chart/data'
+import { displayName } from './series-data'
 
 type CellLayer = Extract<Layer, { mark: 'cell' }>
 
@@ -136,7 +137,7 @@ export const HeatmapView: FC<ViewProps> = ({ widget, frames }) => {
               <th className="w-[72px]" />
               {heat.ys.map((y) => (
                 <th key={y} scope="col" className={clsx('h-6 truncate px-1 text-center font-medium text-fg-3', dense && 'text-[10px]')} title={y}>
-                  {y}
+                  {displayName(y)}
                 </th>
               ))}
             </tr>
@@ -145,7 +146,7 @@ export const HeatmapView: FC<ViewProps> = ({ widget, frames }) => {
             {heat.xs.map((x) => (
               <tr key={x}>
                 <th scope="row" className="num h-7 truncate pr-2 text-right font-medium text-fg-2" title={x}>
-                  {x}
+                  {displayName(x)}
                 </th>
                 {heat.ys.map((y) => {
                   const v = heat.cells.get(key(x, y)) ?? null

@@ -221,6 +221,11 @@ export function App() {
               <MarketStrip />
             </div>
             <div className="flex items-center gap-3">
+              {/* The charts' attribution (lightweight-charts' NOTICE) lives here once instead of a logo inside every plot,
+                  where it sat on MACD histograms and volume bars (taste round, change 13). */}
+              <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer noopener" data-attribution="" className="text-fg-3 hover:text-fg-2">
+                Charts by TradingView
+              </a>
               <span>
                 <Kbd>{MOD}</Kbd> <Kbd>K</Kbd> palette · <Kbd>{MOD}</Kbd> <Kbd>\</Kbd> sidebar
               </span>

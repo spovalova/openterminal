@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { preview, type Frame, type WidgetV2 } from '@terminal/core'
 import { DOWN, UP } from './mocks'
@@ -273,7 +273,7 @@ describe('ChartView over macro frames', () => {
 })
 
 describe('ChartView v2 presets', () => {
-  it('price: volume pane, earnings markers with a letter, a level as a price line, a band primitive, marker chips in the legend', () => {
+  it('price: volume pane, earnings markers with a letter, a level as a price line, a band primitive, marker chips in the legend', async () => {
     const { widget, frames } = fixture('v2-price')
     render(<ChartView widget={widget} frames={frames} />)
     const [chart] = mock().charts
@@ -281,10 +281,13 @@ describe('ChartView v2 presets', () => {
       ['Line', 0],
       ['Histogram', 1],
     ])
-    expect(mock().markers).toHaveLength(1)
-    const markers = mock().markers[0]!.markers as { text: string; position: string; color: string }[]
-    expect(markers).toHaveLength(2)
-    expect(markers.every((m) => m.text === 'E' && m.position === 'aboveBar')).toBe(true)
+    // Event pins are drawn by the view above each bar's high (change 12), not by the library's marker plugin.
+    expect(mock().markers).toHaveLength(0)
+    await waitFor(() => expect(document.querySelectorAll('[data-marker]')).toHaveLength(2))
+    const pins = Array.from(document.querySelectorAll<HTMLElement>('[data-marker]'))
+    expect(pins.every((p) => p.textContent === 'E' && p.getAttribute('data-kinds') === 'earnings')).toBe(true)
+    // inset from the plot's left edge so a pin on the first bar is never clipped
+    expect(pins.every((p) => parseFloat(p.style.left) >= 0)).toBe(true)
     expect(chart!.series[0]!.stub.createPriceLine).toHaveBeenCalledWith(expect.objectContaining({ price: 200, axisLabelVisible: true }))
     expect(chart!.series[0]!.stub.attachPrimitive).toHaveBeenCalledTimes(1)
     const chip = document.querySelector('[data-marker-kind="earnings"]')!

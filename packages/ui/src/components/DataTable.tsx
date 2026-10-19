@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type FC } from 'react'
 import clsx from 'clsx'
-import { fieldLabel, type Column } from '@terminal/core'
+import { enumLabel, fieldLabel, type Column } from '@terminal/core'
 import { direction, formatCell, inferFormats, isNumericFormat, sortRows, type CellFormat, type SortDir } from '../format.js'
 import { ExternalIcon } from './icons.js'
 
@@ -122,6 +122,17 @@ export function numberWidths(columns: readonly Column[], rows: readonly unknown[
     out[c.name] = Math.round(Math.max(word, Math.min(Math.max(fixed, 128), Math.max(line, content), Math.max(fixed, line <= 128 ? line : 0, content))))
   })
   return out
+}
+
+/**
+ * A string cell as people read it (taste round, change 11): an enum by its reading ("after-hours" is "After the
+ * close", "not-supplied" an em dash, "strong_buy" "Strong buy"), and a list of tickers capped at three plus "+n".
+ */
+export function displayText(v: string): string {
+  const tickers = v.split(/\s*,\s*/)
+  if (tickers.length > 3 && tickers.every((t) => /^[A-Z0-9.^-]{1,8}$/.test(t))) return `${tickers.slice(0, 3).join(', ')} +${tickers.length - 3}`
+  if (v === '') return '—'
+  return enumLabel(v)
 }
 
 /** Average glyph width at the table's 14px: the sans face for names, the mono face for tickers. */
@@ -288,7 +299,7 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
               {visible.map((c) => {
                 const f = fmts[c.name] ?? 'text'
                 const v = row[indexOf.get(c.name)!]
-                const text = formatCell(v, f, nowMs)
+                const text = f === 'text' && typeof v === 'string' && c.name !== 'symbol' && c.name !== 'etf' ? displayText(v) : formatCell(v, f, nowMs)
                 const dir = f === 'change' ? direction(v) : null
                 const mark = cellMark?.(row, c.name)
                 const numeric = isNumericFormat(f)
