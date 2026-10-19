@@ -8,7 +8,10 @@ const SESSION_CLASS: Record<Session, string> = { regular: 'text-up', pre: 'text-
 /** The status-bar line: `describeMarketTime` ("Saturday 2026-10-18 23:40 ET, market closed") and, when closed, the next session day. */
 export function marketLine(now: number): { text: string; session: Session; next?: string } {
   const session = sessionAt(now)
-  const text = describeMarketTime(now)
+  const full = describeMarketTime(now)
+  // The coloured tag after the time names an open session, so the text stops at the time (round 2, change 8: the
+  // status bar read "pre-market session pre-market"); a closed market keeps "market closed" in the text.
+  const text = session === 'closed' ? full : full.replace(/,\s*[^,]*session$/, '')
   if (session !== 'closed') return { text, session }
   return { text, session, next: nextTradingDay(nyDate(now)) }
 }

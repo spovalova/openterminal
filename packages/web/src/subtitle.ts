@@ -7,6 +7,34 @@
 import { DEFAULT_DATASET, columnIndex, describeQuery, enumLabel, fieldLabel, type AnyQuery, type AnyWidget, type Frame, type ViewV2 } from '@openterminal/core'
 import { formatCell } from '@openterminal/ui'
 
+/** Index symbols by their names (taste round 2, change 8: "S&P 500", never "^GSPC"), shared with the series legend. */
+export const INDEX_NAMES: Record<string, string> = {
+  '^GSPC': 'S&P 500',
+  '^SPX': 'S&P 500',
+  '^NDX': 'Nasdaq 100',
+  '^IXIC': 'Nasdaq',
+  '^DJI': 'Dow',
+  '^RUT': 'Russell 2000',
+  '^VIX': 'VIX',
+  '^SOX': 'SOX',
+  '^TNX': '10Y yield',
+  '^FVX': '5Y yield',
+  '^TYX': '30Y yield',
+  '^IRX': '13W T-bill',
+}
+
+/**
+ * A FINRA bond symbol ("CRWV6083302") as people name the bond (taste round 2, change 8): the issuer's ticker, with
+ * the coupon and the maturity year when the title gives them ("9.25% 2030 notes") as "CRWV 9.25% 2030", else
+ * "CRWV bond". Undefined for anything that is not a FINRA bond symbol.
+ */
+export function bondLabel(symbol: string, title?: string): string | undefined {
+  const m = /^([A-Z]{1,5})\d{5,}$/.exec(symbol.trim())
+  if (!m) return undefined
+  const t = title ? /(\d+(?:\.\d+)?)\s*%[^\d]{0,12}((?:19|20)\d\d)/.exec(title) : null
+  return t ? `${m[1]} ${t[1]}% ${t[2]}` : `${m[1]} bond`
+}
+
 /** Short labels for the macro series, shared with the series legend. */
 export const MACRO_LABELS: Record<string, string> = {
   treasury_3m: '3M',
@@ -25,7 +53,8 @@ const SEP = ' · '
 
 /** Up to three symbols are listed; more become a count. */
 export function symbolsLabel(symbols: readonly string[]): string {
-  if (symbols.length <= 3) return symbols.join(', ')
+  // An index by its name ("S&P 500", never "^GSPC": taste round 2, change 8).
+  if (symbols.length <= 3) return symbols.map((s) => INDEX_NAMES[s.toUpperCase()] ?? s).join(', ')
   return `${symbols.length} symbols`
 }
 
@@ -136,7 +165,7 @@ export function subtitleForRecipe(recipe: string, params: Params, view: ViewV2 |
     }
     case 'ohlcv':
     case 'index': {
-      parts.push(recipe === 'index' ? symbol : symbolsLabel(symbols), str(params.interval) ?? '1d')
+      parts.push(recipe === 'index' ? symbolsLabel([symbol]) : symbolsLabel(symbols), str(params.interval) ?? '1d')
       const start = str(params.start)
       let range = start ? `since ${shortDate(start, now)}` : (RANGE_LABEL[str(params.range) ?? ''] ?? str(params.range) ?? '3mo')
       if (view?.preset === 'compare' && view.normalize !== false) range += ', rebased'
@@ -289,7 +318,7 @@ export function subtitleForWidget(widget: AnyWidget, frames: Record<string, Fram
     parts.push(macroSeries.map((d) => MACRO_LABELS[String(d.params.series)] ?? String(d.params.series)).join(', '), str(macroSeries[0]!.params.range) ?? '1y')
     return parts.join(SEP)
   }
-  parts.push(describeDataset(q, widget.view, frame, now))
+  parts.push(describeDataset(q, widget.view, frame, now, widget.title))
   if (extras.length > 0) parts.push([...new Set(extras.map((n) => markerName(widget.data[n]!)))].join(', '))
   return parts.filter(Boolean).join(SEP)
 }
@@ -298,16 +327,25 @@ export function subtitleForWidget(widget: AnyWidget, frames: Record<string, Fram
  * One dataset at a glance: a recipe by its params and frame ("CRWV · 1d · 3mo", "4 symbols · regular session"), a
  * route by its path and the params that matter, a transform by what it derives from.
  */
-export function describeDataset(q: AnyQuery, view?: ViewV2, frame?: Frame, now: number = Date.now()): string {
+export function describeDataset(q: AnyQuery, view?: ViewV2, frame?: Frame, now: number = Date.now(), title?: string): string {
   const query = q as { recipe?: string; params?: Params; connector?: string; route?: string; inputs?: Record<string, unknown> }
   if (query.recipe) return subtitleForRecipe(query.recipe, query.params ?? {}, view, frame, now)
   if (query.route) {
     // A route by what it serves, never its path or `key=value` pairs (taste round, change 11): "Economic calendar ·
     // Oct 19 to Oct 24 · United States", "Quote · NVDA, AMD".
     const params = Object.entries(query.params ?? {}).filter(([k, v]) => k !== 'provider' && v != null && v !== '')
-    const values = params.slice(0, 3).map(([, v]) => paramText(v, now))
+    const bonds = /bond/i.test(query.route)
+    // A bond by its name, not its CUSIP (round 2, change 8: "21873SAB4 · 350 bars" is "CRWV 9.25% 2030").
+    const symbol = bonds ? cell(frame, ['symbol']) : undefined
+    const named = typeof symbol === 'string' ? bondLabel(symbol, title) : undefined
+    const values = params.slice(0, 3).map(([k, v]) => (named && /cusip|isin/i.test(k) ? named : paramText(v, now)))
     const parts = [routeNoun(query.route), ...values]
-    if (frame) parts.push(count(frame.rows.length, frame.columns.some((c) => c.type === 'time') ? 'bar' : 'row'))
+    const time = frame?.columns.some((c) => c.type === 'time')
+    if (frame && bonds) {
+      // Bonds are counted as bonds; a bond's price history needs no count ("350 bars" said nothing).
+      const ids = new Set(frame.rows.map((r) => r[columnIndex(frame, 'cusip')]))
+      if (ids.size > 1) parts.push(count(ids.size, 'bond'))
+    } else if (frame) parts.push(count(frame.rows.length, time ? 'bar' : 'row'))
     return parts.filter(Boolean).join(SEP)
   }
   if (query.inputs) {
@@ -357,6 +395,7 @@ export function routeNoun(route: string): string {
   const last = parts[parts.length - 1] ?? route
   if (last === 'calendar' && parts[0] === 'economy') return 'Economic calendar'
   if (last === 'historical' && parts.length > 1) return `${fieldLabel(parts[parts.length - 2]!)} history`
+  if (/^[a-z]+_historical$/.test(last)) return `${fieldLabel(last.replace(/_historical$/, ''))} history`
   return fieldLabel(last)
 }
 
@@ -375,8 +414,16 @@ function joinWords(words: string[]): string {
 
 /** The short name of a secondary dataset in the subtitle: "earnings markers", "news markers", never the recipe id. */
 function markerName(q: unknown): string {
-  const query = q as { recipe?: string; route?: string; inputs?: unknown }
+  const query = q as { recipe?: string; route?: string; inputs?: Record<string, unknown> }
   if (query.recipe) return `${MARKER_NOUN[query.recipe] ?? recipeNoun(query.recipe)} markers`
   if (query.route) return `${routeNoun(query.route).toLowerCase()} markers`
-  return 'derived markers'
+  // A transform's markers by what it reads (round 2, change 8: "derived markers" said nothing): the calendar's are
+  // release markers, eps_history's earnings markers; anything else is events.
+  for (const input of Object.values(query.inputs ?? {})) {
+    const r = (input as { recipe?: string; route?: string }).recipe
+    if (r && MARKER_NOUN[r] && r !== 'ohlcv' && r !== 'index') return `${MARKER_NOUN[r]} markers`
+    const route = (input as { route?: string }).route
+    if (route && /calendar/.test(route)) return 'release markers'
+  }
+  return 'event markers'
 }

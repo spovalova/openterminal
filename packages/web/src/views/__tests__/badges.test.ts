@@ -1,5 +1,78 @@
 import { describe, expect, it } from 'vitest'
-import { barOnlyPanes, stackBadges } from '../ChartView'
+import { tokens } from '@openterminal/ui'
+import { BADGE_MAX, atTheMoney, badgePlan, badgeTextColor, barOnlyPanes, rebaseData, signedPercent, stackBadges } from '../ChartView'
+import type { SeriesSpec } from '../chart/data'
+
+const series = (id: string, over: Partial<SeriesSpec> = {}): SeriesSpec => ({
+  id,
+  pane: 0,
+  kind: 'line',
+  color: '#000',
+  label: id,
+  group: id,
+  data: [],
+  side: 'right',
+  format: 'price',
+  precision: 2,
+  width: 2,
+  legend: true,
+  lastValue: true,
+  range: undefined,
+  markers: [],
+  priceLines: [],
+  bands: [],
+  first: 1,
+  last: 2,
+  changePct: 100,
+  byTime: new Map(),
+  ...over,
+})
+
+describe('badgePlan (taste round 2, change 3: at most three badges per chart)', () => {
+  it('badges three series or fewer on the price pane and leaves the rest of the three to levels', () => {
+    const plan = badgePlan({ x: 'time', series: [series('a'), series('b'), series('vol', { kind: 'histogram' })] })
+    expect(BADGE_MAX).toBe(3)
+    expect([...plan.series]).toEqual(['a', 'b'])
+    expect(plan.levels).toBe(1)
+    expect(plan.legend).toBe('badges')
+  })
+  it('past three series the legend carries the values and no badge stacks into a column', () => {
+    const plan = badgePlan({ x: 'time', series: ['AAPL', 'AMZN', 'GOOGL', 'META', 'MSFT', 'NVDA', 'TSLA'].map((s) => series(s)) })
+    expect(plan.series.size).toBe(0)
+    expect(plan.levels).toBe(0)
+    expect(plan.legend).toBe('values')
+  })
+  it('never badges a strike axis or an indicator pane', () => {
+    expect(badgePlan({ x: 'number', series: [series('oi', { kind: 'histogram' }), series('vol', { kind: 'histogram' })] })).toEqual({ series: new Set(), levels: 0, legend: 'totals' })
+    const plan = badgePlan({ x: 'time', series: [series('amd'), series('rsi', { pane: 2 }), series('macd', { pane: 3 }), series('signal', { pane: 3 })] })
+    expect([...plan.series]).toEqual(['amd'])
+  })
+})
+
+describe('badgeTextColor (PR #22: dark text on violet was 3.5:1)', () => {
+  it('puts light text on the violet slot and dark text on the bright hues', () => {
+    expect(badgeTextColor('#9500ff')).toBe(tokens.color.fg)
+    expect(badgeTextColor('#ffd500')).toBe(tokens.color.bg)
+    expect(badgeTextColor('#00ff00')).toBe(tokens.color.bg)
+  })
+})
+
+describe('rebased charts read one number (round 2)', () => {
+  it('plots the percent change from the first value, candles and lines alike', () => {
+    expect(rebaseData([{ time: 1, value: 50 }, { time: 2, value: 75 }] as never, 50)).toEqual([
+      { time: 1, value: 0 },
+      { time: 2, value: 50 },
+    ])
+    expect(rebaseData([{ time: 1, open: 100, high: 110, low: 90, close: 105 }] as never, 100)).toEqual([{ time: 1, open: 0, high: 10, low: -10, close: 5 }])
+    expect(signedPercent(-28.14)).toBe('-28.14%')
+    expect(signedPercent(25.844)).toBe('+25.84%')
+  })
+  it('reads a by-strike line at the strike nearest the underlying, never the last strike', () => {
+    const iv = series('iv', { byTime: new Map([[340, 0.62], [350, 0.6], [360, 0.58], [370, 0.57], [390, 0.55]]) })
+    expect(atTheMoney(iv, 367.9)).toEqual({ strike: 370, value: 0.57 })
+    expect(atTheMoney(iv, undefined)).toBeUndefined()
+  })
+})
 
 describe('stackBadges (change 4: badges never collide)', () => {
   it('leaves separated badges alone and pushes a colliding one 16px under the one above', () => {

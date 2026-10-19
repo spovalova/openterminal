@@ -81,6 +81,8 @@ export type ChartSpec = {
   xLabels: Map<number, string>
   /** Paired bars on a strike axis are drawn at offsets around each strike; the axis rounds back to this step (change 14). */
   xStep?: number
+  /** A strike axis: the underlying's price when a frame carries it (the legend reads a by-strike line at the money). */
+  underlying?: number
 }
 
 export type BuildOptions = {
@@ -588,7 +590,15 @@ export function buildChart(panes: readonly Pane[], frames: Record<string, Frame>
     }
   }
 
-  return { x, intraday, panes: paneSpecs, series, markerKinds: [...markerKinds.values()], xLabels, ...(xStep ? { xStep } : {}) }
+  let underlying: number | undefined
+  if (x === 'number') {
+    const frame = Object.values(frames).find((f) => f && UNDERLYING.some((c) => columnIndex(f, c) >= 0))
+    if (frame) {
+      const iu = UNDERLYING.map((c) => columnIndex(frame, c)).find((i) => i >= 0)!
+      underlying = frame.rows.map((r) => num(r[iu])).find((v): v is number => v != null)
+    }
+  }
+  return { x, intraday, panes: paneSpecs, series, markerKinds: [...markerKinds.values()], xLabels, ...(xStep ? { xStep } : {}), ...(underlying !== undefined ? { underlying } : {}) }
 }
 
 const UNDERLYING = ['underlying_price', 'underlyingPrice', 'underlying']

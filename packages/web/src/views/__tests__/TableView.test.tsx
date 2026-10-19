@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { Frame } from '@openterminal/core'
+import { rowCardsFit, type Frame } from '@openterminal/core'
 
 vi.mock('@openterminal/ui', async () => {
   const { makeUiMock } = await import('./mocks')
@@ -186,6 +186,14 @@ describe('TableView from the table control (v2)', () => {
     expect(ranksFor(['symbol', 'close_oct9', 'close_oct16', 'week_pct'])).toEqual({ symbol: 0, close_oct9: 0, close_oct16: 0, week_pct: 3 })
     expect(ranksFor(['symbol', 'close_oct9', 'close_oct16', 'week_pct'], 'week_pct')).toEqual({ symbol: 0, week_pct: 0, close_oct9: 0, close_oct16: 3 })
     expect(ranksFor(['symbol', 'pe', 'name'], 'symbol')).toEqual({ symbol: 0, pe: 0, name: 0 })
+  })
+
+  it('never sheds the signed move that answers the question before two closes (round 2: "Last week %" at 1440)', () => {
+    const formats = { symbol: 'text', close_oct9: 'price', close_oct16: 'price', week_pct: 'change' } as const
+    expect(ranksFor(['symbol', 'close_oct9', 'close_oct16', 'week_pct'], undefined, formats)).toEqual({ symbol: 0, week_pct: 0, close_oct9: 0, close_oct16: 3 })
+    expect(rowCardsFit(2, 343)).toBe(false) // two cards do not sit side by side in a 343px column: a table
+    expect(rowCardsFit(2, 694)).toBe(true)
+    expect(rowCardsFit(4, 1200)).toBe(false)
   })
 
   it('marks across each row of a pivoted compare table by the metric (change 6)', () => {

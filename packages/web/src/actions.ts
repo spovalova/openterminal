@@ -52,6 +52,8 @@ export function useActions() {
   const cancel = (workspaceId: string): void => socket.cancel(workspaceId)
 
   const refreshWidget = (widgetId: string, workspaceId?: string): void => socket.refresh(widgetId, workspaceId)
+  /** Release the reply's held frames to live data (taste round 2, change 5). */
+  const goLive = (workspaceId: string, widgetId?: string): void => socket.live(workspaceId, widgetId)
 
   /** Ticker shortcut from the palette: a new workspace named after the ticker, then "Overview of <ticker>". */
   const openTicker = async (ticker: string): Promise<void> => {
@@ -97,7 +99,7 @@ export function useActions() {
     return workspace.id
   }
 
-  return { newWorkspace, deleteWorkspace, renameWorkspace, submitPrompt, retry, cancel, refreshWidget, openTicker, saveWidget, removeWidget, exportWorkspace, importWorkspace }
+  return { newWorkspace, deleteWorkspace, renameWorkspace, submitPrompt, retry, cancel, refreshWidget, goLive, openTicker, saveWidget, removeWidget, exportWorkspace, importWorkspace }
 }
 
 /** Trigger a browser download of a JSON document. */

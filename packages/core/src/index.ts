@@ -8,6 +8,7 @@ export * from './connector.js'
 export * from './cache.js'
 export * from './registry.js'
 export * from './protocol.js'
+export * from './snapshot.js'
 // Descriptors, catalog, queries, fields and shapes, annotations, recipes, layers and presets, clock, transforms,
 // inference. Browser-safe; the YAML loaders are in '@openterminal/core/node'.
 export * from './descriptor.js'

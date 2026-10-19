@@ -10,10 +10,18 @@ import {
   ClientMsgSchema,
   MessageSchema,
   ServerMsgSchema,
+  buildSnapshot,
+  heldFrames,
+  canonicalKey,
+  releaseSnapshot,
+  snapshotCurrent,
   type AgentRunner,
+  type AnyQuery,
   type AnyWidget,
+  type Frame,
   type Message,
   type Recipe,
+  type ReplySnapshot,
   type ServerMsg,
   type Step,
 } from '@openterminal/core'
@@ -104,6 +112,7 @@ export function createApp(deps: AppDeps) {
     const id = c.req.param('id')
     inflight.get(id)?.controller.abort()
     const removed = await store.delete(id)
+    if (removed) store.setSetting(snapshotKey(id), undefined)
     return removed ? c.body(null, 204) : c.json({ error: 'workspace not found' }, 404)
   })
 
@@ -122,6 +131,11 @@ export function createApp(deps: AppDeps) {
     if (!widget) return c.json({ error: 'widget not found' }, 404)
     const bypassCache = c.req.query('refresh') === '1'
     const dataset = c.req.query('dataset') || undefined
+    // The reply's held frame when the snapshot holds this widget (taste round 2, change 5): the HTTP fallback a page
+    // uses before its socket opens must not overwrite the held frames with live ones.
+    const held = workspaceId && !bypassCache ? heldFrames(readSnapshot(workspaceId), widget, now()) : undefined
+    const heldFrame = held ? (held[dataset ?? 'main'] ?? Object.values(held)[0]) : undefined
+    if (heldFrame) return c.json(heldFrame)
     try {
       return c.json(await executor.frameFor(widget, { bypassCache, ...(dataset ? { dataset } : {}) }))
     } catch (err) {
@@ -193,10 +207,32 @@ export function createApp(deps: AppDeps) {
     log(`serving web app from ${root}`)
   }
 
+  /** The reply's snapshot of a workspace lives in settings (taste round 2, change 5): one per workspace, the latest reply's. */
+  const snapshotKey = (workspaceId: string) => `snapshot:${workspaceId}`
+  const readSnapshot = (workspaceId: string): ReplySnapshot | undefined => {
+    const snap = store.getSetting<ReplySnapshot>(snapshotKey(workspaceId))
+    if (snap && !snapshotCurrent(snap, now())) {
+      // A reply from an earlier trading day: the workspace is live again.
+      store.setSetting(snapshotKey(workspaceId), undefined)
+      return undefined
+    }
+    return snap
+  }
+  const releaseStored = (workspaceId: string, widgetId?: string) => {
+    const snap = store.getSetting<ReplySnapshot>(snapshotKey(workspaceId))
+    if (!snap) return
+    const next = releaseSnapshot(snap, widgetId ? [widgetId] : undefined)
+    store.setSetting(snapshotKey(workspaceId), Object.keys(next.widgets).length > 0 ? next : undefined)
+  }
+
   /** One per socket: the client's focused workspace, its poller, and the prompt it may be running. */
   class Session {
     private ws: WSContext | undefined
+    /** While a prompt runs: the frames its workspace's widgets showed, by `widgetId/dataset` (the reply's snapshot). */
+    private readonly captures = new Map<string, Map<string, Frame>>()
     readonly send = (m: ServerMsg): void => {
+      const shown = m.t === 'frame' && m.workspaceId ? this.captures.get(m.workspaceId) : undefined
+      if (shown && m.t === 'frame') shown.set(`${m.widgetId}/${m.dataset ?? 'main'}`, m.frame)
       if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(m))
     }
     private readonly poller = new Poller(executor, this.send, { now, log })
@@ -238,6 +274,10 @@ export function createApp(deps: AppDeps) {
           case 'focus':
             await this.focus(msg.workspaceId)
             break
+          case 'live':
+            releaseStored(msg.workspaceId, msg.widgetId)
+            if (this.poller.focusedWorkspaceId === msg.workspaceId) await this.poller.release(msg.widgetId)
+            break
         }
       } catch (err) {
         log(`ws ${msg.t}: ${errorMessage(err)}`)
@@ -251,10 +291,12 @@ export function createApp(deps: AppDeps) {
         this.send({ t: 'failed', workspaceId, error: 'workspace not found' })
         return
       }
-      await this.poller.focus(workspace)
+      await this.poller.focus(workspace, readSnapshot(workspace.id))
     }
 
     private async refresh(widgetId: string, workspaceId?: string) {
+      // A refresh is a request for live data: the widget leaves the reply's snapshot.
+      if (workspaceId) releaseStored(workspaceId, widgetId)
       if (await this.poller.refresh(widgetId)) return
       // Widget ids are unique only within a workspace, so prefer the workspace the client names.
       const scoped = workspaceId ? (await store.get(workspaceId))?.widgets.find((w) => w.id === widgetId) : undefined
@@ -280,6 +322,13 @@ export function createApp(deps: AppDeps) {
       const controller = new AbortController()
       inflight.set(workspaceId, { workspaceId, controller, startedAt: now() })
       this.send({ t: 'started', workspaceId })
+      // One snapshot for the reply and the widgets (taste round 2, change 5): every frame the run fetches is kept by
+      // query; the widgets it sets are shown those very frames, and when the reply is done the frames on screen are
+      // held (no live refresh) until the user asks for live data, so the verified figures and the widgets agree.
+      const seen = new Map<string, Frame>()
+      const overlay = (q: AnyQuery) => seen.get(canonicalKey(q))
+      const shown = new Map<string, Frame>()
+      this.captures.set(workspaceId, shown)
       try {
         const workspace = (await store.appendMessage(workspaceId, { role: 'user', text, at: now() })) ?? initial
         const executions: Promise<void>[] = []
@@ -293,9 +342,12 @@ export function createApp(deps: AppDeps) {
           const out = ok.data
           if (out.t === 'step') steps.push(out.step)
           this.send(out)
-          if (out.t === 'widgets') executions.push(this.applyWidgets(workspaceId, out.widgets, out.name))
+          if (out.t === 'widgets') executions.push(this.applyWidgets(workspaceId, out.widgets, out.name, overlay))
         }
-        const reply = await agent.run({ workspace, prompt: text, signal: controller.signal, emit })
+        const record = (q: AnyQuery, frame: Frame) => {
+          seen.set(canonicalKey(q), frame)
+        }
+        const reply = await agent.run({ workspace, prompt: text, signal: controller.signal, emit, record })
         await Promise.all(executions)
         const message: Message = {
           ...reply,
@@ -304,24 +356,31 @@ export function createApp(deps: AppDeps) {
           ...(reply.steps ? {} : steps.length > 0 ? { steps } : {}),
         }
         await store.appendMessage(workspaceId, message)
+        const current = await store.get(workspaceId)
+        if (current) {
+          const snapshot = buildSnapshot(current.widgets, shown, overlay, message.at ?? now())
+          store.setSetting(snapshotKey(workspaceId), Object.keys(snapshot.widgets).length > 0 ? snapshot : undefined)
+          this.poller.hold(workspaceId, snapshot)
+        }
         this.send({ t: 'done', workspaceId, message })
       } catch (err) {
         const error = controller.signal.aborted ? 'cancelled' : errorMessage(err)
         log(`prompt ${workspaceId}: ${error}`)
         this.send({ t: 'failed', workspaceId, error })
       } finally {
+        this.captures.delete(workspaceId)
         inflight.delete(workspaceId)
       }
     }
 
     /** Persist the new widget set, then execute it: through the poller when this client has the workspace focused. */
-    private async applyWidgets(workspaceId: string, widgets: AnyWidget[], name?: string) {
+    private async applyWidgets(workspaceId: string, widgets: AnyWidget[], name?: string, overlay?: (q: AnyQuery) => Frame | undefined) {
       const patch = name ? { widgets, name: name.trim().slice(0, 60) || undefined } : { widgets }
       const saved = await store.patch(workspaceId, patch)
       if (!saved) throw new Error('workspace not found')
-      const polled = this.poller.replaceWidgets(workspaceId, widgets)
+      const polled = this.poller.replaceWidgets(workspaceId, widgets, overlay)
       if (polled) await polled
-      else await executor.runAll(widgets, this.send, { workspaceId })
+      else await executor.runAll(widgets, this.send, { workspaceId, ...(overlay ? { overlay } : {}) })
     }
   }
 

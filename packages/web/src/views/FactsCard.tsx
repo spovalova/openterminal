@@ -6,6 +6,7 @@ import type { ViewProps } from './types'
 import { ONE_SIGNED, cellFormat } from './TableView'
 import { datasetsFor, primaryFrame, viewOf } from './fields'
 import { columnLabel } from './labels'
+import { FieldGrid } from './FieldGrid'
 
 export type Fact = { column: string; label: string; text: string; format: CellFormat; dir: 'up' | 'down' | null; raw: unknown }
 
@@ -61,10 +62,9 @@ export const FactsCard: FC<ViewProps> = ({ widget, frames }) => {
   const hero = heroFact(facts, fields)
   const rest = facts.filter((f) => f !== hero)
   return (
-    <div data-view="facts" data-count={facts.length} className="facts-card flex h-full w-full flex-col overflow-x-hidden overflow-y-auto p-3">
-      {/* The hero anchors the top and the grid the foot when the cell is taller than the card (a 1920 row), so the card
-          reads as one block filling its cell rather than a strip floating in the middle; centred when there is one part. */}
-      <div className={clsx('flex flex-col gap-2.5', hero && rest.length > 0 ? 'flex-auto justify-between' : 'my-auto min-h-0')}>
+    <div data-view="facts" data-count={facts.length} className="facts-card flex w-full flex-col overflow-x-hidden p-3">
+      {/* Round 2: hero, 8px, the fields, and the card ends there; the grid sizes the track to this content. */}
+      <div className="card-stack">
         {hero && (
           <div data-fact={hero.column} data-hero="" className="flex min-w-0 flex-col">
             <div className="truncate text-xs leading-4 text-fg-3" title={hero.label}>
@@ -76,30 +76,17 @@ export const FactsCard: FC<ViewProps> = ({ widget, frames }) => {
           </div>
         )}
         {rest.length > 0 && (
-          <div className={clsx('grid grid-cols-2 gap-x-5 gap-y-1 text-xs leading-5 @[420px]/widget:grid-cols-3', hero && 'border-t border-border/60 pt-2')}>
-            {rest.map((f) => {
-              const long = typeof f.raw === 'string' && f.raw.length > 24
-              return (
-                <div key={f.column} data-fact={f.column} className="flex min-w-0 items-baseline justify-between gap-2">
-                  {/* The label wraps at words and the value never gives way: "Median next-day move 8.20%", not "Median next-day mo… 8.…". */}
-                  <span className="line-clamp-2 min-w-0 break-words text-fg-3" title={f.label}>
-                    {f.label}
-                  </span>
-                  <span
-                    data-field="value"
-                    title={long ? String(f.raw) : undefined}
-                    className={clsx(
-                      long ? 'min-w-0 truncate text-right' : 'shrink-0 text-right whitespace-nowrap',
-                      f.format !== 'text' && f.format !== 'link' && 'num',
-                      f.text === EMPTY_CELL ? 'text-fg-3' : f.dir === 'up' ? 'text-up' : f.dir === 'down' ? 'text-down' : 'text-fg',
-                    )}
-                  >
-                    {f.text}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
+          <FieldGrid
+            rule={!!hero}
+            fields={rest.map((f) => ({
+              key: f.column,
+              label: f.label,
+              text: f.text,
+              mono: f.format !== 'text' && f.format !== 'link',
+              tone: f.text === EMPTY_CELL ? 'text-fg-3' : f.dir === 'up' ? 'text-up' : f.dir === 'down' ? 'text-down' : 'text-fg',
+              ...(typeof f.raw === 'string' && f.raw.length > 24 ? { title: f.raw } : {}),
+            }))}
+          />
         )}
       </div>
     </div>

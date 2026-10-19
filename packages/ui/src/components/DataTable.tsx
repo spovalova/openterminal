@@ -160,7 +160,8 @@ export function textWidths(columns: readonly Column[], rows: readonly unknown[][
     for (const row of rows) {
       const v = row[i]
       if (v == null) continue
-      longest = Math.max(longest, String(v).length)
+      // Measured as displayed: a ticker list shows three and "+n" (round 2: sized by its raw 200 characters it took the row).
+      longest = Math.max(longest, (typeof v === 'string' ? displayText(v) : String(v)).length)
       if (longest > SHORT_TEXT) return
     }
     const mono = /^(symbol|ticker|pair|etf)$/i.test(c.name)
@@ -177,6 +178,9 @@ export function textWidths(columns: readonly Column[], rows: readonly unknown[][
  */
 /** What a text column needs before the fixed ones take the rest (a headline, a name). */
 const TEXT_COLUMN_MIN = 120
+/** The tallest a row grows to when the table has room (round 2), and the header row it is measured under. */
+const ROW_MAX = 36
+const HEAD_HEIGHT = 32
 
 /**
  * The columns that fit a container of `width` px: every column when the width is unknown (server rendering, tests),
@@ -206,19 +210,46 @@ export function columnsThatFit(columns: readonly Column[], width: number | undef
   return visible
 }
 
+/** A prose column (a headline, a description) at the width it reads well at, for the table's natural width. */
+const PROSE_WIDTH = 300
+
+/**
+ * The px a table needs across (round 2, for the packer): `width` with every column at its content width (prose at a
+ * readable 300px), `minWidth` with only the columns it never sheds (rank 0: the first three and the sort column) and
+ * prose at 90px. A table no wider than a grid column takes one column; one whose `minWidth` fits may.
+ */
+export function tableContentWidth(columns: readonly Column[], rows: readonly unknown[][], formats: Record<string, CellFormat> = {}, labels?: Record<string, string>, priority?: Record<string, number>): { width: number; minWidth: number } {
+  const fmts = uniformFormats(columns, rows, { ...inferFormats([...columns]), ...formats })
+  const headers = headerLabels(columns, fmts, labels)
+  const sized = { ...numberWidths(columns, rows, fmts, headers, Date.now()), ...textWidths(columns, rows, fmts, headers) }
+  const need = (c: Column, prose: number) => sized[c.name] ?? columnWidth(c.name, fmts[c.name] ?? 'text', headers[c.name]) ?? prose
+  const width = columns.reduce((n, c) => n + need(c, PROSE_WIDTH), 0)
+  // (A headline squeezes to 90px before it reads as a column of fragments: two lines of two or three words.)
+  const minWidth = columns.filter((c) => (priority?.[c.name] ?? 0) <= 0).reduce((n, c) => n + need(c, 90), 0)
+  return { width: Math.round(width), minWidth: Math.round(minWidth) }
+}
+
 export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, onSort, labels, priority, stickyHeader = true, className, now, highlightRow, cellMark }) => {
   const [internal, setInternal] = useState<{ column: string; dir: SortDir } | undefined>(undefined)
   const active = sort ?? internal
   const fmts = useMemo(() => uniformFormats(columns, rows, { ...inferFormats(columns), ...formats }), [columns, rows, formats])
   const nowMs = now ?? Date.now()
   const [width, setWidth] = useState<number | undefined>(undefined)
+  const [height, setHeight] = useState<number | undefined>(undefined)
   const wrap = useCallback((el: HTMLDivElement | null) => {
     if (!el || typeof ResizeObserver === 'undefined') return
-    const update = () => setWidth(el.clientWidth)
+    const update = () => {
+      setWidth(el.clientWidth)
+      // Inside a content-sized frame (data-fit="content") the height is the table's own: never stretch from it.
+      setHeight(el.closest('[data-fit="content"]') ? undefined : el.clientHeight)
+    }
     update()
     const ro = new ResizeObserver(update)
     ro.observe(el)
   }, [])
+  // A table given more height than its rows need lets them breathe up to 36px (taste round 2): the 28px rows of a
+  // short table in a tall cell left half the cell blank, and stretched to 58px they read as cell borders.
+  const rowHeight = height && rows.length > 0 ? Math.max(28, Math.min(ROW_MAX, Math.floor((height - HEAD_HEIGHT) / rows.length))) : 28
   const allHeaders = useMemo(() => headerLabels(columns, fmts, labels), [columns, fmts, labels])
   // Every column at its content width (change 5): numbers at their longest formatted value, short text at its longest value.
   const sized = useMemo(() => ({ ...numberWidths(columns, rows, fmts, allHeaders, nowMs), ...textWidths(columns, rows, fmts, allHeaders) }), [columns, rows, fmts, allHeaders, nowMs])
@@ -255,9 +286,9 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
 
   return (
     <div ref={wrap} className={clsx('data-table h-full w-full overflow-x-hidden overflow-y-auto', className)}>
-      {/* `h-full`: a table shorter than its cell shares the height between its rows (an 11-row hero in a two-row cell, a
-          4-row table in a tall 1920 row) instead of leaving the bottom blank; a longer table scrolls as before. */}
-      <table className="h-full w-full table-fixed border-collapse text-sm">
+      {/* Rows keep their 28px (taste round 2: stretched to 58px they made the best/worst bars read as cell borders); the
+          grid sizes a short table's track to its rows and a longer table scrolls. */}
+      <table className="w-full table-fixed border-collapse text-sm">
         <thead className={clsx(stickyHeader && 'sticky top-0 z-10')}>
           <tr className="bg-surface">
             {visible.map((c) => {
@@ -299,7 +330,7 @@ export const DataTable: FC<DataTableProps> = ({ columns, rows, formats, sort, on
           {sorted.map((row, ri) => {
             const highlighted = highlightRow?.(row) ?? false
             return (
-            <tr key={ri} data-highlight={highlighted ? '' : undefined} className={clsx('hover:bg-surface-2', highlighted && 'bg-accent/10 hover:bg-accent/15')}>
+            <tr key={ri} data-highlight={highlighted ? '' : undefined} style={rowHeight > 28 ? { height: rowHeight } : undefined} className={clsx('hover:bg-surface-2', highlighted && 'bg-accent/10 hover:bg-accent/15')}>
               {visible.map((c) => {
                 const f = fmts[c.name] ?? 'text'
                 const v = row[indexOf.get(c.name)!]

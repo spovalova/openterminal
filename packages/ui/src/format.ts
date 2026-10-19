@@ -85,6 +85,8 @@ export function formatCompact(n: number): string {
  */
 export function formatCell(value: unknown, format: CellFormat = 'text', now: number = Date.now()): string {
   if (value === null || value === undefined || value === '') return EMPTY_CELL
+  // A flag is a tick, never "true"/"false" (taste round 2, change 8: the bond table's "Is convertible" column).
+  if (typeof value === 'boolean') return value ? '✓' : EMPTY_CELL
   switch (format) {
     case 'price': {
       const n = asNumber(value)

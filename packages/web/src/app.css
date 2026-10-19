@@ -84,6 +84,43 @@ body,
   letter-spacing: -0.04em;
 }
 
+/*
+ * A card's label:value pairs (taste round 2, change 2): at most 180px each, two across in a 343px column and three in
+ * a 503px one, left-packed so a label never sits 300px from its value in a wide card.
+ */
+.field-grid {
+  display: grid;
+  /* auto-fill counts columns by the max track size when it is definite (180px gave one column in a 317px card), so the
+     tracks are 140px to 1fr and each pair is capped instead */
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  column-gap: 20px;
+  /* A card in a cell taller than its content (the Grid sets --card-slack) lets its lines breathe up to 12px more. */
+  row-gap: calc(4px + min(12px, var(--card-slack, 0px) / 6));
+}
+/* Hero, 8px, the fields (round 2): the gap breathes with the slack too, at most 28px, never the 70-180px split of round 1. */
+.card-stack {
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px + min(20px, var(--card-slack, 0px) / 4));
+}
+/* Compact stat cards and row cards take a little of the slack too, up to 16px and 24px taller. */
+.stat-card {
+  height: calc(72px + min(16px, var(--card-slack, 0px) / 4));
+}
+.row-cards > [data-row] {
+  padding-top: calc(10px + min(12px, var(--card-slack, 0px) / 8));
+  padding-bottom: calc(10px + min(12px, var(--card-slack, 0px) / 8));
+}
+.field-grid > [data-fact] {
+  max-width: 200px;
+}
+.field-grid > [data-fact].col-span-2 {
+  max-width: 400px;
+}
+.field-grid > [data-fact].col-span-full {
+  max-width: none;
+}
+
 /* Sidebar overlays the grid below 1100px. */
 .sidebar {
   width: 380px;

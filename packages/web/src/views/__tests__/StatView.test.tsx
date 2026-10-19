@@ -3,7 +3,8 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { type Frame, type WidgetV2 } from '@openterminal/core'
 
-import { StatView, balancedRows, cardHeightFor, cardsFit, cardsPerRow, columnLabel, denseLineHeight, detailRows, orderStats, statRows, symbolOrder } from '../StatView'
+import { denseStat } from '@openterminal/core'
+import { StatView, balancedRows, cardsPerRow, columnLabel, detailRows, orderStats, statRows, symbolOrder } from '../StatView'
 import { viewFor } from '../view-for'
 import { fixture } from '../fixtures'
 
@@ -26,6 +27,20 @@ describe('column labels', () => {
     expect(columnLabel('days_to_cover')).toBe('Days to cover')
     expect(columnLabel('iv30')).toBe('IV30')
     expect(columnLabel('something_else')).toBe('Something else')
+  })
+})
+
+describe('statRows: a reading that is not a price has a neutral change (round 2, change 4)', () => {
+  it('leaves an IV30 or a yield move uncoloured and keeps a price move signed', () => {
+    const frame = {
+      columns: [{ name: 'symbol', type: 'string' as const }, { name: 'iv30', type: 'number' as const }, { name: 'iv30_change', type: 'number' as const }],
+      rows: [['TSLA', 45.6, -3.9]],
+      meta: { connector: 'openbb', fetchedAt: 0, ttl: 0 },
+    }
+    const [iv] = statRows(frame, 'iv30', { change: 'iv30_change', format: 'percent', formats: { iv30_change: 'change' } })
+    expect(iv!.secondary).toEqual({ text: '-3.90%', dir: null })
+    const [px] = statRows({ ...frame, columns: [frame.columns[0]!, { name: 'price', type: 'number' as const }, { name: 'change_pct', type: 'number' as const }] }, 'price', { change: 'change_pct', format: 'price', formats: { change_pct: 'change' } })
+    expect(px!.secondary?.dir).toBe('down')
   })
 })
 
@@ -162,20 +177,12 @@ describe('StatView, the taste round (change 2)', () => {
   })
 })
 
-describe('cardsFit (change 2: five cards in a short cell become one line per symbol)', () => {
-  it('fits four cards in a 340x190 cell and not five', () => {
-    expect(cardsFit(4, 340, 190)).toBe(true)
-    expect(cardsFit(5, 340, 190)).toBe(false)
-    expect(cardsFit(7, 1000, 190)).toBe(true)
-    expect(cardsFit(5, 0, 0)).toBe(true) // unmeasured: cards
-  })
-})
-
-describe('denseLineHeight (the one-line-per-symbol list fits its cell)', () => {
-  it('shares the height: seven lines in a 189px cell are 25px, never under 21 or over 29', () => {
-    expect(denseLineHeight(7, 189)).toBe(25) // the Mag 7 at 1440: 7 x 29px hid TSLA under the foot
-    expect(denseLineHeight(5, 400)).toBe(29)
-    expect(denseLineHeight(12, 189)).toBe(21)
+describe('denseStat (round 2: the width alone picks cards or the one-line-per-symbol list)', () => {
+  it('lists more than four symbols in a column that holds two cards across, and keeps cards otherwise', () => {
+    expect(denseStat(4, 340)).toBe(false)
+    expect(denseStat(5, 340)).toBe(true)
+    expect(denseStat(7, 690)).toBe(false) // the morning watchlist across two columns: four and three cards
+    expect(denseStat(7, 1000)).toBe(false)
   })
 })
 
@@ -225,10 +232,3 @@ describe('detailRows (companions in the headline unit)', () => {
   })
 })
 
-describe('cardHeightFor (compact cards share a tall cell)', () => {
-  it('fills a tall row up to 128px and keeps 72px in a short one', () => {
-    expect(cardHeightFor(3, 480, 250)).toBe(128)
-    expect(cardHeightFor(4, 340, 190)).toBe(83)
-    expect(cardHeightFor(2, 340, 80)).toBe(72)
-  })
-})

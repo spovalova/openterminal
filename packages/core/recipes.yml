@@ -182,6 +182,13 @@ recipes:
         code: |
           wanted = [s.strip().upper() for s in str(params.at[0, "symbols"]).split(",") if s.strip()]
           df = raw.copy()
+          # yahoo's calendarEvents answer in its own names: the date and the estimate under the calendar's (taste round 2:
+          # a view asking for report_date and eps_consensus kept only the symbol column of this fallback).
+          yahoo = {"calendarEvents.earnings.earningsDate": "report_date", "calendarEvents.earnings.earningsAverage": "eps_consensus"}
+          if any(c in df.columns for c in yahoo):
+              df = df.rename(columns=yahoo)
+              df = df[[c for c in ("symbol", "report_date", "eps_consensus") if c in df.columns]].copy()
+              df["session"] = None
           if "symbol" in df.columns:
               df = df[df["symbol"].astype(str).str.upper().isin(wanted)]
           src = next((c for c in ("reporting_time", "timing", "hour") if c in df.columns), None)

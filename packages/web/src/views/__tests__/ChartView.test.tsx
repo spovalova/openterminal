@@ -18,7 +18,7 @@ vi.mock('@openterminal/ui', async () => {
 import { ChartView } from '../ChartView'
 import { viewFor } from '../view-for'
 import { fixture } from '../fixtures'
-import { formatPercent, formatPrice } from '../format'
+import { formatPercent } from '../format'
 import { legendLabel } from '../series-data'
 import { buildChart, detectIntraday, legendValues, nearest, toChartTime } from '../chart/data'
 import { expandView } from '../view-for'
@@ -51,9 +51,11 @@ describe('ChartView legend (chips above the plot, change 4)', () => {
     for (const item of items) {
       const symbol = item.getAttribute('data-symbol')!
       const close = stats[symbol]!.close!
-      expect(item.querySelector('[data-field="last"]')!.textContent).toBe(formatPrice(close.last))
+      // Round 2: four rebased lines carry no badges; each chip carries its change, the value the % axis reads.
+      expect(item.querySelector('[data-field="last"]')).toBeNull()
       expect(item.querySelector('[data-field="change"]')!.textContent).toBe(formatPercent(close.changePct))
     }
+    expect(document.querySelector('[data-view="chart"]')!.getAttribute('data-badges')).toBe('values')
     // The price pane's legend sits above the plot, in flow, never over the lines (change 4).
     const legend = document.querySelector('[data-legend]')!
     expect(legend.getAttribute('data-placement')).toBe('top')
@@ -74,7 +76,7 @@ describe('ChartView legend (chips above the plot, change 4)', () => {
     expect(legendLabel('NVDA')).toBe('NVDA')
   })
 
-  it('sets the change in a tint of the series colour, never red or green (change 7)', () => {
+  it('keeps a comparison\'s changes neutral: text never wears the series colour (round 2, change 4)', () => {
     const { widget, frame } = fixture('B1') // every symbol is down on the day
     render(<ChartView widget={widget} frames={one(frame)} />)
     const items = legendItems()
@@ -82,9 +84,22 @@ describe('ChartView legend (chips above the plot, change 4)', () => {
     const [chart] = mock().charts
     items.forEach((item, i) => {
       const el = item.querySelector('[data-field="change"]') as HTMLElement
-      expect(el.style.color).toBe(hexToRgb((chart!.series[i]!.options as { color: string }).color))
-      expect(el.style.color).not.toBe(hexToRgb(DOWN))
+      expect(el.style.color).toBe('')
+      expect(el.className).toContain('text-fg-2')
+      expect(el.className).not.toMatch(/text-(up|down)/)
+      expect((chart!.series[i]!.options as { color: string }).color).toBeTruthy()
     })
+  })
+
+  it('colours one candle series\' move by its sign and draws it with a two-tone glyph, never the up-candle green (round 2, change 4)', () => {
+    const { widget, frame } = fixture('A2') // candles with volume
+    render(<ChartView widget={widget} frames={one(frame)} />)
+    const [item] = legendItems()
+    expect(item!.querySelector('[data-glyph="candle"]')).toBeTruthy()
+    const change = item!.querySelector('[data-field="change"]') as HTMLElement
+    const negative = change.textContent!.startsWith('-')
+    expect(change.className).toContain(negative ? 'text-down' : 'text-up')
+    expect(change.style.color).toBe('')
   })
 })
 
@@ -107,11 +122,14 @@ describe('ChartView v1 modes, preserved', () => {
     expect(document.querySelector('[data-view="chart"]')!.getAttribute('data-last-value')).toBe('2')
   })
 
-  it('normalize: lines on the IndexedTo100 price scale (A1)', () => {
+  it('normalize: lines rebased to their percent change from the first bar, on a normal scale (A1, round 2)', () => {
     const { widget, frame } = fixture('A1')
     render(<ChartView widget={widget} frames={one(frame)} />)
     const [chart] = mock().charts
-    expect(chart!.chart.scales['right:0']!.mode).toBe(3)
+    // The view rebases the data itself, so the axis, the badge and the legend's change read one number.
+    expect(chart!.chart.scales['right:0']!.mode).toBe(0)
+    const data = chart!.series[0]!.stub.setData.mock.calls[0]![0] as { value: number }[]
+    expect(data[0]!.value).toBe(0)
     expect(chart!.series).toHaveLength(4)
     expect(chart!.series.every((s) => (s.definition as { type: string }).type === 'Line')).toBe(true)
     expect(document.querySelector('[data-view="chart"]')!.getAttribute('data-preset')).toBe('compare')
@@ -254,7 +272,8 @@ describe('ChartView over macro frames', () => {
       expect(item.querySelector('[data-field="change"]')!.textContent).toBe(`${bp > 0 ? '+' : ''}${bp} bp`)
     }
     const ff = items[2]!.querySelector('[data-field="change"]') as HTMLElement
-    expect(ff.style.color).toBe(hexToRgb((mock().charts[0]!.series[2]!.options as { color: string }).color)) // the series tint, not red (change 7)
+    expect(ff.className).toContain('text-fg-2') // a rate's move is neutral: never red, never the series colour (round 2)
+    expect(ff.style.color).toBe('')
   })
 
   it('legendValues: percent units move in bp, compact amounts and prices in percent', () => {
@@ -294,14 +313,14 @@ describe('ChartView v2 presets', () => {
     expect(chip.textContent).toContain('E')
     expect(chip.textContent).toContain('Earnings') // the display name, not the recipe id (change 11)
     expect(legendItems().map((el) => el.getAttribute('data-symbol'))).toEqual(['NVDA'])
-    expect(document.querySelector('[data-view="chart"]')!.getAttribute('data-last-value')).toBe('1')
+    expect(document.querySelector('[data-view="chart"]')!.getAttribute('data-last-value')).toBe('2') // the close and the level
   })
 
   it('compare: legend labels from the view, indexed scale', () => {
     const { widget, frames } = fixture('v2-compare')
     render(<ChartView widget={widget} frames={frames} />)
     expect(legendItems().map((el) => el.querySelector('span:nth-child(2)')!.textContent)).toEqual(['Tech', 'Energy', 'Financials'])
-    expect(mock().charts[0]!.chart.scales['right:0']!.mode).toBe(3)
+    expect(mock().charts[0]!.chart.scales['right:0']!.mode).toBe(0) // rebased by the view (round 2)
   })
 
   it('curve: maturities on a categorical tenor axis (one evenly spaced slot each, dots at the tenors), one line per series (change 14)', () => {
@@ -340,15 +359,13 @@ describe('ChartView v2 presets', () => {
     const hist = macd[0]!.stub.setData.mock.calls[0]![0] as { value: number; color: string }[]
     expect(hist.every((d) => (d.value < 0 ? d.color === DOWN : d.color === UP))).toBe(true)
     expect(macd[0]!.stub.createPriceLine).toHaveBeenCalledWith(expect.objectContaining({ price: 0 })) // the zero line under signed bars
-    // the price pane carries the series chips; the indicator panes carry their title chip and their last value on the axis
+    // the price pane carries the series chips and their badges; the indicator panes carry their title chip and, with no
+    // badge of their own (round 2: three per chart, none on an indicator pane), their last value in the inset chips
     expect(legendItems().map((el) => el.getAttribute('data-symbol'))).toEqual(['AMD', 'SMA 50'])
-    expect(Array.from(document.querySelectorAll('[data-legend] [data-symbol]')).map((el) => el.getAttribute('data-symbol'))).toEqual(['AMD', 'SMA 50'])
-    expect(screen.getByRole('list', { name: 'RSI 14 legend' })).toBeTruthy()
-    expect(document.querySelector('[data-view="chart"]')!.getAttribute('data-last-value')).toBe('5')
+    const rsiChips = within(screen.getByRole('list', { name: 'RSI 14 legend' })).getAllByRole('listitem')
+    expect(rsiChips.length).toBeGreaterThan(0)
+    expect(rsiChips[0]!.querySelector('[data-field="last"]')).toBeTruthy()
+    expect(Number(document.querySelector('[data-view="chart"]')!.getAttribute('data-last-value'))).toBeGreaterThanOrEqual(3)
+    expect(document.querySelector('[data-view="chart"]')!.getAttribute('data-badges')).toBe('badges')
   })
 })
-
-function hexToRgb(hex: string): string {
-  const n = parseInt(hex.slice(1), 16)
-  return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`
-}
