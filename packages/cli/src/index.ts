@@ -1,13 +1,17 @@
-// CLI entry: parse flags, start @openterminal/server, open the browser.
+// CLI entry for `openterminal`: parse flags, start @openterminal/server, open the browser.
 import { startServer, DEFAULT_PORT } from '@openterminal/server'
 
 export type CliOptions = { port: number; open: boolean; help: boolean }
 
-export const USAGE = `usage: terminal [--port <n>] [--no-open]
+export const USAGE = `Open Terminal: the open-source, AI-native terminal for traders.
+
+usage: openterminal [--port <n>] [--no-open]
 
   --port <n>   listen on port n (default: PORT or ${DEFAULT_PORT})
   --no-open    do not open the browser
-  --help       show this help`
+  --help       show this help
+
+Config, workspaces and recipes live in ~/.openterminal (OPENTERMINAL_HOME overrides the directory).`
 
 export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env): CliOptions {
   const opts: CliOptions = { port: Number(env.PORT) || DEFAULT_PORT, open: true, help: false }
@@ -41,7 +45,7 @@ export async function run(argv: string[]): Promise<void> {
     return
   }
   const running = await startServer({ port: opts.port })
-  console.error(`terminal running at ${running.url} (ctrl-c to stop)`)
+  console.error(`Open Terminal running at ${running.url} (ctrl-c to stop)`)
   if (opts.open) {
     try {
       const { default: open } = await import('open')

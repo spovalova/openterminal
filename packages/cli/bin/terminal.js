@@ -1,9 +1,5 @@
 #!/usr/bin/env node
-// `npx terminal`: start the server on localhost and open the browser.
-/* global process */
-// The workspace packages ship TypeScript sources, so tsx is registered before anything is imported.
-import { register } from 'tsx/esm/api'
-
-register()
-const { run } = await import('../src/index.ts')
-await run(process.argv.slice(2))
+// The bin's path before the rename to Open Terminal (2026-10-19), kept so a unit or script that still runs
+// `packages/cli/bin/terminal.js` (the old terminal.service) keeps working until it is switched to
+// `bin/openterminal.js`. Nothing else lives here.
+import './openterminal.js'

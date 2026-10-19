@@ -1,9 +1,9 @@
 {
-  "name": "terminal",
+  "name": "openterminal",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "bin": { "terminal": "./bin/terminal.js" },
+  "bin": { "openterminal": "./bin/openterminal.js" },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run --passWithNoTests"
