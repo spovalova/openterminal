@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { Catalog, type Descriptor } from '@terminal/core'
-import { FileLivenessStore, MemoryLivenessStore, applyLiveness, livenessOf, livenessPath, livenessRow, openLivenessStore, type LivenessRow } from '../src/liveness.js'
+import { FileLivenessStore, MemoryLivenessStore, applyLiveness, livenessOf, livenessPath, livenessRow, livenessStoreOver, openLivenessStore, type LivenessRow } from '../src/liveness.js'
+import { WorkspaceStore } from '../src/store/index.js'
 
 const d = (connector: string, route: string): Descriptor => ({ connector, route, summary: route, params: [], providers: [], fields: [] })
 const rowA: LivenessRow = { connector: 'openbb', route: 'equity/price/quote', checkedAt: 1_000, ok: true, rows: 2, ms: 120, sampleColumns: ['symbol', 'last_price'] }
@@ -61,6 +62,23 @@ describe('FileLivenessStore', () => {
     const foreign = new FileLivenessStore(join(home, 'foreign.json'), { log: (m) => logs.push(m) })
     expect(await foreign.all()).toEqual([])
     expect(logs[1]).toMatch(/not a liveness file/)
+  })
+})
+
+describe('livenessStoreOver', () => {
+  it('reads and writes through (e)’s store so the data routes see the probe’s rows', async () => {
+    const backend = new WorkspaceStore(join(home, 'workspaces'), { log: () => {} })
+    const s = livenessStoreOver(backend)
+    expect(await s.all()).toEqual([])
+    await s.put([rowA, rowB, rowC])
+    expect(backend.getLiveness('openbb').map((r) => r.route).sort()).toEqual(['eia/petroleum_status_report', 'equity/price/quote'])
+    expect(await s.get(rowC)).toEqual(rowC)
+    expect(await s.get({ connector: 'openbb', route: 'nope' })).toBeUndefined()
+    await s.put([{ ...rowA, rows: 9 }])
+    expect((await s.get(rowA))!.rows).toBe(9)
+    await s.clear('openbb') // no delete in the store: rows stay until the next probe overwrites them
+    expect((await s.all()).length).toBe(3)
+    await expect(s.put([{ connector: 'x', route: 'y' } as LivenessRow])).rejects.toThrow()
   })
 })
 

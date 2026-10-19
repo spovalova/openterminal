@@ -370,6 +370,35 @@ export function summarize(results: ProbeResult[], ms: number, timeoutRetries = 0
   }
 }
 
+/** What (e)'s `POST /api/catalog/probe` calls: every route (or one connector's), liveness into the store, four numbers back. */
+export type ProbeFn = (opts: { connector?: string; concurrency?: number; signal?: AbortSignal }) => Promise<{ probed: number; alive: number; dead: number; ms: number }>
+
+/**
+ * The probe as the server runs it in-process: over the registry's catalog, rows into the store and onto the
+ * catalog, one run at a time (a second request while one runs gets the running one's result).
+ */
+export function createProbeFn(deps: { registry: ConnectorRegistry; store: LivenessStore; log?: (msg: string) => void; defaults?: Omit<ProbeOptions, 'connectors' | 'concurrency' | 'store' | 'log'> }): ProbeFn {
+  let running: Promise<{ probed: number; alive: number; dead: number; ms: number }> | undefined
+  return (opts) => {
+    if (running) return running
+    running = (async () => {
+      const catalog = await deps.registry.catalog()
+      const s = await probeCatalog(deps.registry, catalog, {
+        ...(deps.defaults ?? {}),
+        ...(opts.connector ? { connectors: [opts.connector] } : {}),
+        ...(opts.concurrency ? { concurrency: opts.concurrency } : {}),
+        store: deps.store,
+        log: deps.log,
+      })
+      deps.log?.(renderSummary(s))
+      return { probed: s.called, alive: s.ok, dead: s.failed, ms: s.ms }
+    })().finally(() => {
+      running = undefined
+    })
+    return running
+  }
+}
+
 /** The summary as text for the terminal and the probe note. */
 export function renderSummary(s: ProbeSummary): string {
   const lines: string[] = []

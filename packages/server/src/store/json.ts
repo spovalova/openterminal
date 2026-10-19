@@ -1,21 +1,31 @@
-// ~/.terminal/workspaces/<id>.json, one file per workspace. No database.
+// The v1 store: ~/.terminal/workspaces/<id>.json, one file per workspace. Kept behind the `Store` interface for
+// the one-time migration (`migrate.ts` reads it) and as the fallback when SQLite cannot open; the tables SQLite
+// adds (recipes, catalog, liveness, run log, frames, settings) are in memory here.
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { nanoid } from 'nanoid'
-import { WorkspaceSchema, createWorkspace, type Message, type Widget, type Workspace } from '@terminal/core'
+import { WorkspaceSchema, createWorkspace, type AnyWidget, type Frame, type Message, type Recipe, type Workspace } from '@terminal/core'
+import { ID_RE, type CatalogCacheRow, type LivenessRow, type RunLogRow, type Store, type WorkspaceInit, type WorkspacePatch } from './types.js'
 
-const ID_RE = /^[A-Za-z0-9_-]{1,64}$/
+export type StoreOptions = { log?: (msg: string) => void; now?: () => number; id?: () => string }
 
-export type WorkspaceInit = { name?: string; widgets?: Widget[]; messages?: Message[] }
-export type WorkspacePatch = { name?: string; widgets?: Widget[]; messages?: Message[] }
-
-export class WorkspaceStore {
+export class WorkspaceStore implements Store {
   private locks = new Map<string, Promise<unknown>>()
+  private recipes: Recipe[] = []
+  private catalogs = new Map<string, CatalogCacheRow>()
+  private liveness = new Map<string, LivenessRow>()
+  private runs: RunLogRow[] = []
+  private frames = new Map<string, { frame: Frame; expiresAt: number }>()
+  private settings = new Map<string, unknown>()
 
   constructor(
     readonly dir: string,
-    private readonly opts: { log?: (msg: string) => void; now?: () => number; id?: () => string } = {},
+    private readonly opts: StoreOptions = {},
   ) {}
+
+  get location(): string {
+    return this.dir
+  }
 
   private get now() {
     return this.opts.now ?? Date.now
@@ -58,6 +68,10 @@ export class WorkspaceStore {
     const valid = WorkspaceSchema.parse(ws)
     await this.write(valid)
     return valid
+  }
+
+  importWorkspace(doc: { name: string; widgets: AnyWidget[]; messages?: Message[] }): Promise<Workspace> {
+    return this.create({ name: doc.name, widgets: doc.widgets, messages: doc.messages ?? [] })
   }
 
   /** Apply a partial update and bump updatedAt. Undefined when the workspace does not exist. */
@@ -103,13 +117,88 @@ export class WorkspaceStore {
   }
 
   /** Find a widget by id across every workspace. Widget ids are only unique within a workspace, so the first match wins. */
-  async findWidget(widgetId: string): Promise<{ workspace: Workspace; widget: Widget } | undefined> {
+  async findWidget(widgetId: string): Promise<{ workspace: Workspace; widget: AnyWidget } | undefined> {
     for (const workspace of await this.list()) {
       const widget = workspace.widgets.find((w) => w.id === widgetId)
       if (widget) return { workspace, widget }
     }
     return undefined
   }
+
+  // ---- in-memory extras ----
+
+  listRecipes(): Recipe[] {
+    return [...this.recipes]
+  }
+  setRecipes(recipes: Recipe[]): void {
+    this.recipes = [...recipes]
+  }
+  getCatalog(connector: string): CatalogCacheRow | undefined {
+    return this.catalogs.get(connector)
+  }
+  setCatalog(row: CatalogCacheRow): void {
+    this.catalogs.set(row.connector, row)
+  }
+  listCatalogs(): CatalogCacheRow[] {
+    return [...this.catalogs.values()]
+  }
+  getLiveness(connector?: string): LivenessRow[] {
+    return [...this.liveness.values()].filter((r) => !connector || r.connector === connector)
+  }
+  setLiveness(rows: LivenessRow | LivenessRow[]): void {
+    for (const r of Array.isArray(rows) ? rows : [rows]) this.liveness.set(`${r.connector}:${r.route}`, r)
+  }
+  appendRun(row: RunLogRow): void {
+    this.runs.push(row)
+  }
+  listRuns(opts: { workspaceId?: string; limit?: number } = {}): RunLogRow[] {
+    const rows = this.runs.filter((r) => !opts.workspaceId || r.workspaceId === opts.workspaceId).sort((a, b) => b.startedAt - a.startedAt)
+    return rows.slice(0, opts.limit ?? 50)
+  }
+  getFrame(key: string, now = this.now()): Frame | undefined {
+    const e = this.frames.get(key)
+    if (!e) return undefined
+    if (e.expiresAt <= now) {
+      this.frames.delete(key)
+      return undefined
+    }
+    return e.frame
+  }
+  setFrame(key: string, frame: Frame, expiresAt: number): void {
+    this.frames.set(key, { frame, expiresAt })
+  }
+  deleteFrame(key: string): void {
+    this.frames.delete(key)
+  }
+  clearFrames(): void {
+    this.frames.clear()
+  }
+  pruneFrames(now = this.now(), maxRows = Infinity): number {
+    let removed = 0
+    for (const [k, e] of this.frames) {
+      if (e.expiresAt <= now) {
+        this.frames.delete(k)
+        removed++
+      }
+    }
+    while (this.frames.size > maxRows) {
+      const oldest = this.frames.keys().next().value
+      if (oldest === undefined) break
+      this.frames.delete(oldest)
+      removed++
+    }
+    return removed
+  }
+  countFrames(): number {
+    return this.frames.size
+  }
+  getSetting<T = unknown>(key: string): T | undefined {
+    return this.settings.get(key) as T | undefined
+  }
+  setSetting(key: string, value: unknown): void {
+    this.settings.set(key, value)
+  }
+  close(): void {}
 
   private async read(id: string): Promise<Workspace | undefined> {
     let text: string

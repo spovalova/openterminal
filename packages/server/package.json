@@ -28,6 +28,7 @@
     "fast-json-stable-stringify": "^2.1.0",
     "hono": "^4.13.13",
     "nanoid": "^6.0.2",
+    "pyodide": "314.0.7",
     "ws": "^8.22.0",
     "yaml": "^2.9.1",
     "zod": "^4.6.7"

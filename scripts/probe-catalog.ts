@@ -5,20 +5,22 @@
 //   pnpm probe --connector=openbb --match=equity/*   one connector, routes matching a glob
 //   pnpm probe --limit=50 --concurrency=4 --timeout=10000
 //   pnpm probe --json=/tmp/probe.json       also write every result (params, provider, error) to a file
-//   pnpm probe --reset                      forget stored liveness for the probed connectors first
+//   pnpm probe --no-store                   do not write liveness rows
 //   pnpm probe --ci                         no network: generate descriptors from the core fixture and check that
 //                                           every one gets sample params that validate
 //
-// Connectors come from ~/.terminal/config.yml (TERMINAL_HOME overrides the directory). Nothing here is committed;
-// the summary goes to docs/notes/openbb-probe.md by hand.
+// Connectors come from ~/.terminal/config.yml (TERMINAL_HOME overrides the directory); liveness rows go to the
+// store the server reads (`<home>/terminal.db`), so the Data page shows them. Nothing here is committed; the summary
+// goes to docs/notes/openbb-probe.md by hand.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { ConnectorRegistry, DescriptorSchema, MemoryCache, descriptorsFromOpenApi, globToRegExp } from '@terminal/core'
 import { builtinAnnotations, builtinRecipes } from '@terminal/core/node'
-import { loadConfig, terminalHome } from '../packages/server/src/config.js'
+import { loadConfig, terminalHome, workspacesDir } from '../packages/server/src/config.js'
 import { builtinConnector } from '../packages/server/src/connectors.js'
-import { applyLiveness, openLivenessStore } from '../packages/server/src/liveness.js'
+import { applyLiveness, livenessStoreOver } from '../packages/server/src/liveness.js'
 import { probeCatalog, renderSummary, sampleParams } from '../packages/server/src/probe.js'
+import { openStore } from '../packages/server/src/store/index.js'
 
 const args = new Map<string, string>()
 for (const a of process.argv.slice(2)) {
@@ -63,16 +65,13 @@ for (const entry of config.connectors) {
 }
 
 const catalog = await registry.catalog()
-const store = args.has('no-store') ? undefined : openLivenessStore(home, { log })
-if (store) log(`${await applyLiveness(catalog, store)} liveness rows loaded from ${home}/catalog/liveness.json`)
+const opened = args.has('no-store') ? undefined : openStore(home, { log, jsonDir: workspacesDir(home) })
+const store = opened ? livenessStoreOver(opened.store) : undefined
+if (opened && store) log(`${await applyLiveness(catalog, store)} liveness rows loaded from the ${opened.kind} store at ${opened.store.location}`)
 const stats = catalog.stats()
 log(`catalog: ${Object.entries(stats).map(([c, s]) => `${c} ${s.routes} routes`).join(', ')}`)
 
 const connectors = args.get('connector')?.split(',').map((s) => s.trim()).filter(Boolean)
-if (store && args.has('reset')) {
-  for (const c of connectors ?? catalog.connectors()) await store.clear(c)
-  log(`liveness reset for ${(connectors ?? catalog.connectors()).join(', ')}`)
-}
 const matchGlob = args.get('match')
 const match = matchGlob ? (d: { route: string }) => globToRegExp(matchGlob).test(d.route) || d.route === matchGlob : undefined
 const summary = await probeCatalog(registry, catalog, {
@@ -85,6 +84,7 @@ const summary = await probeCatalog(registry, catalog, {
   log,
 })
 console.log(renderSummary(summary))
+opened?.store.close()
 if (args.has('json')) {
   writeFileSync(args.get('json')!, JSON.stringify(summary, null, 1), 'utf8')
   log(`results written to ${args.get('json')}`)

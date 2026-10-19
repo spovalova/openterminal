@@ -3,6 +3,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
 import type { LanguageModel } from 'ai'
 import type { AgentRunner, Registry } from '@terminal/core'
+import type { ModelPricing, RunLog } from '../runlog.js'
 import { createRunner } from './runner.js'
 
 export type LlmConfig = { provider: 'anthropic' | 'openai'; model: string; apiKey: string }
@@ -33,12 +34,32 @@ export function resolveModel(llm: LlmConfig): ResolvedModel {
   }
 }
 
-export function createAgentRunner(deps: { registry: Registry; llm: LlmConfig; log?: (msg: string) => void; now?: () => Date }): AgentRunner {
+export function createAgentRunner(deps: { registry: Registry; llm: LlmConfig; log?: (msg: string) => void; now?: () => Date; runLog?: RunLog; pricing?: ModelPricing }): AgentRunner {
   if (!deps.llm.apiKey) throw new Error(`llm.apiKey is required for provider ${deps.llm.provider}`)
-  return createRunner({ registry: deps.registry, model: resolveModel(deps.llm), log: deps.log, now: deps.now })
+  return createRunner({ registry: deps.registry, model: resolveModel(deps.llm), log: deps.log, now: deps.now, runLog: deps.runLog, pricing: deps.pricing })
 }
 
 export { createRunner, AgentAbortError, MAX_STEPS, type RunnerDeps } from './runner.js'
-export { buildSystemPrompt, renderParams, PROMPT_HISTORY, type PromptInput } from './prompt.js'
+export { buildSystemPrompt, PROMPT_HISTORY, type PromptInput } from './prompt.js'
 export { marketState, easternParts, easternDate, MARKET_TZ, type MarketState } from './market.js'
-export { MAX_TOOL_CALLS, createTools, validateWidgets, querySummary, workspaceSummary, QueryToolInput, SetWorkspaceInput, WidgetToolInput } from './tools.js'
+export {
+  MAX_TOOL_CALLS,
+  ONE_ROW_TABLE_MESSAGE,
+  createTools,
+  validateWidgets,
+  queryProblems,
+  viewProblems,
+  layoutNote,
+  querySummary,
+  workspaceSummary,
+  resolveQueryInput,
+  FindRouteInput,
+  QueryToolInput,
+  TransformToolInput,
+  SetWorkspaceInput,
+  WidgetToolInput,
+  type ToolDeps,
+  type WidgetsV2Msg,
+  type ValidateContext,
+} from './tools.js'
+export { PreviewMemory, contentHintFor, describeColumns, unitsOf, previewResult, primaryDatasetOf, type SeenPreview, type PreviewResult } from './previews.js'

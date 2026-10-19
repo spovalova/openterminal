@@ -121,9 +121,34 @@ export class FileLivenessStore extends MemoryLivenessStore {
   }
 }
 
-/** The store for a TERMINAL_HOME (the file fallback until (e)'s SQLite store takes over). */
+/** The file store for a TERMINAL_HOME: what the script uses when (e)'s store is not open. */
 export function openLivenessStore(home: string = terminalHome(), opts: { log?: (msg: string) => void } = {}): LivenessStore {
   return new FileLivenessStore(livenessPath(home), opts)
+}
+
+/** The part of (e)'s `Store` the probe needs. */
+export type LivenessBackend = { getLiveness(connector?: string): LivenessRow[]; setLiveness(rows: LivenessRow | LivenessRow[]): void }
+
+/**
+ * `LivenessStore` over (e)'s store (SQLite in production, JSON in the fallback), so the probe's rows land where the
+ * Data page and `GET /api/catalog/:connector` read them. The store has no delete: `clear` leaves rows in place and
+ * the probe's upserts overwrite them route by route.
+ */
+export function livenessStoreOver(store: LivenessBackend): LivenessStore {
+  return {
+    async all() {
+      return store.getLiveness()
+    },
+    async get(ref) {
+      return store.getLiveness(ref.connector).find((r) => r.route === ref.route)
+    },
+    async put(rows) {
+      if (rows.length > 0) store.setLiveness(rows.map((r) => LivenessRowSchema.parse(r)))
+    },
+    async clear() {
+      // (e)'s store keeps rows until the next probe overwrites them.
+    },
+  }
 }
 
 /** Stamp every stored row onto the catalog (unknown routes are ignored by the catalog). Returns how many rows were applied. */

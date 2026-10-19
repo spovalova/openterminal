@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { ConnectorRegistry, defineConnector, descriptorsFromOpenApi, inferFrame, type Descriptor } from '@terminal/core'
 import { MemoryLivenessStore } from '../src/liveness.js'
-import { KEYLESS_PROVIDERS, classifyError, keylessAlternatives, probeCatalog, probeRoute, renderSummary, sampleParams, sampleValue } from '../src/probe.js'
+import { KEYLESS_PROVIDERS, classifyError, createProbeFn, keylessAlternatives, probeCatalog, probeRoute, renderSummary, sampleParams, sampleValue } from '../src/probe.js'
 
 /** Monday 2026-10-19 12:00 ET. Last week is Oct 12 to Oct 16. */
 const NOW = Date.UTC(2026, 9, 19, 16)
@@ -189,6 +189,22 @@ describe('probeCatalog', () => {
     expect(cat.get('flaky', 'equity/price/quote')!.liveness).toBeUndefined()
     expect(await store.all()).toEqual([])
     expect(catalog2.size).toBe(0)
+  })
+  it('createProbeFn runs over the registry’s catalog into the store and answers the four numbers the data route expects', async () => {
+    slowCalls = 0
+    const registry = new ConnectorRegistry({ now: () => NOW })
+    registry.register(fake, {})
+    const store = new MemoryLivenessStore()
+    const logs: string[] = []
+    const probe = createProbeFn({ registry, store, log: (m) => logs.push(m), defaults: { now: () => NOW, timeoutMs: 50 } })
+    const first = probe({ concurrency: 3 })
+    expect(probe({})).toBe(first) // one run at a time
+    const r = await first
+    expect(r).toEqual({ probed: 6, alive: 4, dead: 2, ms: expect.any(Number) })
+    expect((await store.all()).length).toBe(6)
+    expect(logs.some((l) => /7 routes: 4 answered/.test(l))).toBe(true)
+    const one = await probe({ connector: 'nobody' })
+    expect(one).toEqual({ probed: 0, alive: 0, dead: 0, ms: expect.any(Number) })
   })
   it('honours connectors, match and limit, and probeRoute reports the provider that answered', async () => {
     const registry = new ConnectorRegistry({ now: () => NOW })
