@@ -9,3 +9,6 @@ coverage/
 
 # agent worktrees (one per branch)
 .worktrees/
+
+# the desktop app's electron-builder output
+packages/desktop/release/

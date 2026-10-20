@@ -25,9 +25,10 @@ import {
   type ServerMsg,
   type Step,
 } from '@openterminal/core'
-import { saveConnectorConfig } from './config.js'
+import { LlmConfigSchema, PROVIDERS, saveConnectorConfig, saveLlmConfig, resolvedLlm, type Provider } from './config.js'
 import { builtinConnector, connectorNeedsKey, describeConnectors, type ConnectorInfo } from './connectors.js'
 import { Executor, PROVIDER_OVERRIDES_KEY, Poller, errorMessage, type ProviderOverrides } from './executor.js'
+import { localOnly, type GuardOptions } from './guard.js'
 import { createDataRoutes, type DataRouteDeps, type ProbeFn } from './routes-data.js'
 import type { Store } from './store/index.js'
 
@@ -39,6 +40,15 @@ export type AppDeps = {
   home: string
   /** Whether an LLM is configured (reported by /api/health). */
   llm: boolean
+  /** The configured provider and model, for GET /api/llm (never the key). */
+  llmInfo?: { provider: Provider; model: string }
+  /**
+   * Builds the real agent for a key saved through PUT /api/llm, so the app switches from the stub without a restart.
+   * Without it, PUT /api/llm saves the key and answers that a restart is needed.
+   */
+  makeAgent?: (llm: { provider: Provider; model: string; apiKey: string }) => AgentRunner
+  /** Which hosts and origins may reach the app (guard.ts); loopback and the app's own origin always may. */
+  guard?: GuardOptions
   log?: (msg: string) => void
   now?: () => number
   /** Built web app to serve in production (static files, SPA fallback). Ignored when the directory does not exist. */
@@ -63,13 +73,19 @@ export type InflightRun = { workspaceId: string; controller: AbortController; st
 export function createApp(deps: AppDeps) {
   const log = deps.log ?? (() => {})
   const now = deps.now ?? Date.now
-  const { registry, store, agent } = deps
+  const { registry, store } = deps
+  // The agent and whether it is the real one change when a key is saved through PUT /api/llm.
+  let agent = deps.agent
+  let llmOn = deps.llm
+  let llmInfo = deps.llmInfo
   const executor = new Executor(registry, { log, overrides: () => store.getSetting<ProviderOverrides>(PROVIDER_OVERRIDES_KEY) })
   /** One in-flight prompt per workspace, across every client. */
   const inflight = new Map<string, InflightRun>()
 
   const app = new Hono()
   const { upgradeWebSocket, injectWebSocket, wss } = createNodeWebSocket({ app })
+
+  app.use('*', localOnly(deps.guard, log))
 
   app.onError((err, c) => {
     if (err instanceof z.ZodError) return c.json({ error: 'invalid body', issues: err.issues }, 400)
@@ -84,9 +100,31 @@ export function createApp(deps: AppDeps) {
       ok: true,
       connectors: registry.connectors().filter((x) => x.status === 'ok').map((x) => x.name),
       recipes: registry.recipes?.().length ?? 0,
-      llm: deps.llm,
+      llm: llmOn,
     }),
   )
+
+  // ---- the LLM key (the app's onboarding screen) ----
+  // The key is written to config.yml (mode 600) and never sent back: GET answers the provider and model only.
+  app.get('/api/llm', (c) => c.json({ configured: llmOn, ...(llmOn && llmInfo ? llmInfo : {}), providers: PROVIDERS }))
+
+  app.put('/api/llm', async (c) => {
+    const parsed = LlmConfigSchema.safeParse(await jsonBody(c.req.raw))
+    if (!parsed.success) return c.json({ error: 'invalid key', issues: parsed.error.issues.map((i) => `${i.path.join('.') || '(body)'}: ${i.message}`) }, 400)
+    const llm = { provider: parsed.data.provider, apiKey: parsed.data.apiKey.trim(), ...(parsed.data.model ? { model: parsed.data.model } : {}) }
+    const config = saveLlmConfig(deps.home, llm)
+    const resolved = resolvedLlm(config)
+    if (!resolved) return c.json({ error: 'the key was saved but could not be read back' }, 500)
+    llmInfo = { provider: resolved.provider, model: resolved.model }
+    if (!deps.makeAgent) {
+      log(`llm: ${resolved.provider} key saved; applies after a restart`)
+      return c.json({ configured: false, saved: true, restart: true, ...llmInfo })
+    }
+    agent = deps.makeAgent(resolved)
+    llmOn = true
+    log(`llm: ${resolved.provider} ${resolved.model} key saved; the agent is live`)
+    return c.json({ configured: true, ...llmInfo })
+  })
 
   // ---- workspaces ----
   app.get('/api/workspaces', async (c) => c.json(await store.list()))

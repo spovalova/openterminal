@@ -92,6 +92,9 @@ export const api = {
   },
 
   connectors: () => request<RegisteredConnector[]>('/api/connectors'),
+  /** Save the LLM key (config.yml, mode 600); the answer never carries it. `restart` when the server cannot switch live. */
+  setLlm: (llm: { provider: 'anthropic' | 'openai'; apiKey: string; model?: string }) =>
+    request<{ configured: boolean; provider: string; model: string; restart?: boolean }>('/api/llm', { method: 'PUT', json: llm }),
   setConnectorConfig: (name: string, config: Record<string, unknown>) =>
     request<RegisteredConnector>(`/api/connectors/${encodeURIComponent(name)}/config`, { method: 'PUT', json: config }),
 

@@ -9,6 +9,7 @@ import { createAgentRunner } from './agent/index.js'
 import { createApp, type App } from './app.js'
 import { SqliteCache } from './cache-sqlite.js'
 import { loadConfig, resolvedLlm, workspacesDir, type Config } from './config.js'
+import { allowedOriginsFromEnv, LOOPBACK_HOSTS } from './guard.js'
 import { resolveHome } from './home.js'
 import { buildRegistry } from './connectors.js'
 import { applyLiveness, livenessStoreOver } from './liveness.js'
@@ -114,13 +115,14 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
   log(`connectors: ${registry.connectors().filter((c) => c.status === 'ok').map((c) => c.name).join(', ') || '(none)'} · ${registry.recipes?.().length ?? 0} recipes`)
 
   const llm = resolvedLlm(config)
+  const makeAgent = (resolved: NonNullable<typeof llm>) => createAgentRunner({ registry, llm: resolved, log, runLog: storeRunLog(store) })
   let agent: AgentRunner
   let real = false
   if (opts.agent) {
     agent = opts.agent
     log('agent: injected')
   } else if (llm) {
-    agent = createAgentRunner({ registry, llm, log, runLog: storeRunLog(store) })
+    agent = makeAgent(llm)
     real = true
     log(`agent: ${llm.provider} ${llm.model}`)
   } else {
@@ -140,6 +142,13 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
     agent,
     home,
     llm: real,
+    ...(llm && real ? { llmInfo: { provider: llm.provider, model: llm.model } } : {}),
+    // A key saved from the web app replaces the stub; an injected agent (tests) stays.
+    ...(opts.agent ? {} : { makeAgent }),
+    guard: {
+      hosts: hostname === '0.0.0.0' || hostname === '::' || (LOOPBACK_HOSTS as readonly string[]).includes(hostname) ? [] : [hostname],
+      origins: allowedOriginsFromEnv(env),
+    },
     log,
     webDist,
     builtinRecipes,

@@ -1,0 +1,155 @@
+# This file belongs at .github/workflows/release.yml. It lives in deploy/ only because the token that pushed it has
+# no `workflow` scope, and GitHub refuses pushes under .github/workflows/ without it. To turn it on, from a checkout
+# whose token has that scope (or in the GitHub web editor):
+#   git mv deploy/release.yml .github/workflows/release.yml
+#
+# Release the Open Terminal desktop app (PLAN.md section 18). On a tag v<version> matching packages/cli/package.json:
+# build the release bundle and the Electron app on each platform (macOS arm64 + x64 on one runner, Windows x64, Linux
+# x64 and arm64), smoke-test every build (the packaged app started with --no-window: /api/health, the web app, one
+# pandas transform), check the contract the install scripts rely on, write SHA256SUMS over the nine installers, and
+# create a DRAFT GitHub Release with them and electron-builder's latest*.yml. Publish the draft by hand; until then
+# releases/latest/download/<asset> does not point at it. Run it by hand (workflow_dispatch) for a dry run: the same
+# builds and checks, with everything uploaded as a workflow artifact and no release. Nothing is signed or notarized,
+# and nothing goes to npm.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-14, platform: mac }
+          - { os: windows-latest, platform: win }
+          - { os: ubuntu-latest, platform: linux-x64, appimage: OpenTerminal-linux-x86_64.AppImage }
+          - { os: ubuntu-24.04-arm, platform: linux-arm64, appimage: OpenTerminal-linux-arm64.AppImage }
+    runs-on: ${{ matrix.os }}
+    env:
+      # The mac build signs ad hoc (identity "-" in the config); never pick up a certificate from the keychain.
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: The tag matches the version in packages/cli/package.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          version=$(node -p "require('./packages/cli/package.json').version")
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME does not match packages/cli/package.json ($version)"; exit 1; }
+      - name: Typecheck, lint, test (once)
+        if: matrix.platform == 'linux-x64'
+        run: pnpm typecheck && pnpm lint && pnpm test
+
+      # dist/release/lib (the bundle), then electron-builder for this runner into packages/desktop/release.
+      - run: node packages/desktop/scripts/build.mjs
+
+      # ---- Linux: the AppImage itself, headless under Xvfb ----
+      - name: Smoke the AppImage
+        if: startsWith(matrix.platform, 'linux')
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: xvfb-run -a node packages/desktop/scripts/smoke.mjs packages/desktop/release/${{ matrix.appimage }}
+
+      # ---- macOS: ad-hoc signatures that verify, Open Terminal.app at the zip's root, both architectures run ----
+      - name: Check the mac apps and zips
+        if: matrix.platform == 'mac'
+        run: |
+          for arch in arm64 x64; do
+            dir=packages/desktop/release/mac-$arch; [ "$arch" = x64 ] && dir=packages/desktop/release/mac
+            codesign --verify --deep --strict --verbose=2 "$dir/Open Terminal.app"
+            codesign -dv "$dir/Open Terminal.app" 2>&1 | grep -q 'Signature=adhoc'
+            first=$(unzip -Z1 packages/desktop/release/OpenTerminal-mac-$arch.zip | head -1)
+            case $first in "Open Terminal.app/"*) ;; *) echo "OpenTerminal-mac-$arch.zip starts with $first"; exit 1 ;; esac
+          done
+      - name: Smoke the mac app (arm64)
+        if: matrix.platform == 'mac'
+        run: node packages/desktop/scripts/smoke.mjs "packages/desktop/release/mac-arm64/Open Terminal.app/Contents/MacOS/Open Terminal"
+      # The x64 app runs under Rosetta on this arm64 runner; installing Rosetta may not be allowed everywhere, so a
+      # failure here is reported but does not stop the release (the arm64 smoke and the signature checks above do).
+      - name: Smoke the mac app (x64, under Rosetta)
+        if: matrix.platform == 'mac'
+        continue-on-error: true
+        run: |
+          /usr/bin/pgrep -q oahd || softwareupdate --install-rosetta --agree-to-license
+          node packages/desktop/scripts/smoke.mjs "packages/desktop/release/mac/Open Terminal.app/Contents/MacOS/Open Terminal"
+
+      # ---- Windows: the unpacked app, then the installer as the install script runs it (per user, silent) ----
+      - name: Smoke the Windows app
+        if: matrix.platform == 'win'
+        run: node packages/desktop/scripts/smoke.mjs "packages/desktop/release/win-unpacked/Open Terminal.exe"
+      - name: The installer runs silently per user and registers an HKCU uninstall entry
+        if: matrix.platform == 'win'
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath packages/desktop/release/OpenTerminal-win-x64-setup.exe -ArgumentList '/S' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "setup exited $($p.ExitCode)" }
+          $entry = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' | Where-Object { $_.DisplayName -like 'Open Terminal*' }
+          if (-not $entry) { throw 'no HKCU uninstall entry named Open Terminal*' }
+          $exe = if ($entry.InstallLocation) { Join-Path $entry.InstallLocation 'Open Terminal.exe' } else { (Get-ChildItem "$env:LOCALAPPDATA\Programs\*\Open Terminal.exe" | Select-Object -First 1).FullName }
+          if (-not $exe -or -not (Test-Path $exe)) { throw "Open Terminal.exe is not where the uninstall entry says ($($entry.InstallLocation))" }
+          if ($exe -notlike "$env:LOCALAPPDATA*") { throw "installed outside the user profile: $exe" }
+          "installed $($entry.DisplayName) at $exe"
+          Get-Process 'Open Terminal' -ErrorAction SilentlyContinue | Stop-Process -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform }}
+          path: |
+            packages/desktop/release/OpenTerminal-*
+            packages/desktop/release/latest*.yml
+          if-no-files-found: error
+
+  assemble:
+    name: SHA256SUMS and the draft release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: assets
+          merge-multiple: true
+      - name: All nine installers are there; SHA256SUMS over them
+        working-directory: assets
+        run: |
+          set -eu
+          assets="OpenTerminal-mac-arm64.dmg OpenTerminal-mac-x64.dmg OpenTerminal-mac-arm64.zip OpenTerminal-mac-x64.zip
+            OpenTerminal-win-x64-setup.exe OpenTerminal-linux-x86_64.AppImage OpenTerminal-linux-arm64.AppImage
+            OpenTerminal-linux-amd64.deb OpenTerminal-linux-arm64.deb"
+          for a in $assets; do test -f "$a" || { echo "missing $a"; exit 1; }; done
+          sha256sum $assets > SHA256SUMS
+          cat SHA256SUMS
+          ls -l
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: assets/
+      - name: Draft release ${{ github.ref_name }}
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: assets
+        run: |
+          gh release create "$GITHUB_REF_NAME" --draft --verify-tag --generate-notes \
+            --repo "$GITHUB_REPOSITORY" --title "Open Terminal ${GITHUB_REF_NAME#v}" \
+            OpenTerminal-* latest*.yml SHA256SUMS
