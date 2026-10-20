@@ -1,1 +1,15 @@
-[]
+[
+  { "name": "cot-bitcoin-positions", "route": "cftc/cot", "params": { "code": "CFTC_133741", "start_date": "2024-01-01", "end_date": "2024-02-01", "measure": "positions" } },
+  { "name": "cot-euro-financial-all", "route": "cftc/cot", "params": { "code": "CFTC_099741", "report_type": "financial", "start_date": "2024-01-01", "end_date": "2024-01-31" } },
+  { "name": "cot-wti-disaggregated-futures-only", "route": "cftc/cot", "params": { "code": "CFTC_067411", "report_type": "disaggregated", "futures_only": true, "start_date": "2024-01-01", "end_date": "2024-01-31", "measure": "changes" } },
+  { "name": "cot-corn-supplemental", "route": "cftc/cot", "params": { "code": "CFTC_002602", "report_type": "supplemental", "start_date": "2024-03-01", "end_date": "2024-03-31" } },
+  { "name": "cot-silver-name-search-traders", "route": "cftc/cot", "params": { "code": "silver", "start_date": "2024-02-01", "end_date": "2024-02-29", "measure": "traders", "limit": 2 } },
+  { "name": "cot-gold-percent-of-oi", "route": "cftc/cot", "params": { "code": "CFTC_088691", "start_date": "2024-01-01", "end_date": "2024-01-31", "measure": "percent_of_oi" } },
+  { "name": "cot-sp500-concentration", "route": "cftc/cot", "params": { "code": "CFTC_13874+", "report_type": "legacy", "futures_only": true, "start_date": "2024-01-01", "end_date": "2024-01-31", "measure": "concentration" } },
+  { "name": "cot-search-bitcoin", "route": "cftc/cot_search", "params": { "query": "bitcoin" } },
+  { "name": "cot-search-category-subcategory", "route": "cftc/cot_search", "params": { "report_type": "financial", "category": "financial_instruments", "subcategory": "stock_indices", "futures_only": true } },
+  { "name": "cot-search-code-disaggregated", "route": "cftc/cot_search", "params": { "code": "067411", "query": "crude", "report_type": "disaggregated" } },
+  { "name": "cot-index-currencies", "route": "cftc/cot_index", "params": { "asset_class": "currencies", "lookback_weeks": 26 } },
+  { "name": "cot-movers-currencies", "route": "cftc/cot_movers", "params": { "asset_class": "currencies", "lookback_weeks": 26, "limit": 4, "futures_only": false } },
+  { "name": "cot-positioning-bitcoin", "route": "cftc/cot_positioning", "params": { "code": "CFTC_133741", "lookback_weeks": 26 } }
+]
