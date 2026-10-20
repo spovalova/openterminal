@@ -1,0 +1,12 @@
+[
+  { "name": "employment-situation-t1-employment-changes", "route": "bls/employment_situation/t1_employment_changes", "params": {} },
+  { "name": "employment-situation-t2-ranked-industries", "route": "bls/employment_situation/t2_ranked_industries", "params": {} },
+  { "name": "employment-situation-t3a-employment-changes-sa", "route": "bls/employment_situation/t3a_employment_changes_sa", "params": {} },
+  { "name": "employment-situation-t3b-changes-vs-averages", "route": "bls/employment_situation/t3b_changes_vs_averages", "params": {} },
+  { "name": "employment-situation-t4-over-the-year-changes", "route": "bls/employment_situation/t4_over_the_year_changes", "params": {} },
+  { "name": "employment-situation-t5-hours-earnings", "route": "bls/employment_situation/t5_hours_earnings", "params": {} },
+  { "name": "employment-situation-t6-aggregate-hours-payrolls", "route": "bls/employment_situation/t6_aggregate_hours_payrolls", "params": {} },
+  { "name": "employment-situation-t7-peak-trough", "route": "bls/employment_situation/t7_peak_trough", "params": {} },
+  { "name": "employment-situation-confidence-intervals", "route": "bls/employment_situation/confidence_intervals", "params": {} },
+  { "name": "employment-situation-confidence-intervals-b1", "route": "bls/employment_situation/confidence_intervals", "params": { "ci_table": "B1" } }
+]

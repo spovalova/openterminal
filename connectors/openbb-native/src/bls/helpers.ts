@@ -68,6 +68,14 @@ export function textOf(node: Node): string {
   return parts.join(' ')
 }
 
+/**
+ * Numeric character references (`&#x00a0;`) left in text. BLS's spreadsheets pad their numbers with them, and
+ * readXlsx (src/lib/xlsx.ts, fast-xml-parser) hands them over undecoded where openpyxl decodes them.
+ */
+export function decodeCharRefs(s: string): string {
+  return s.replace(/&#x([0-9a-fA-F]+);/g, (_m, h: string) => String.fromCodePoint(parseInt(h, 16))).replace(/&#(\d+);/g, (_m, d: string) => String.fromCodePoint(Number(d)))
+}
+
 /** Every element below `node` whose tag is in `tags`, in document order (`find_all([...])`). */
 export function findAll(node: Node, tags: readonly string[]): HTMLElement[] {
   const want = new Set(tags.map((t) => t.toUpperCase()))
