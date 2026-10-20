@@ -1,0 +1,201 @@
+[
+  {
+    "name": "headers-crws-10k",
+    "route": "sec/filing_headers",
+    "params": { "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774926021496/crws20260329_10k.htm" }
+  },
+  {
+    "name": "headers-sprc-20f",
+    "route": "sec/filing_headers",
+    "params": { "url": "https://www.sec.gov/Archives/edgar/data/0001611746/000121390026049322/ea0286030-20f_scisparc.htm" }
+  },
+  {
+    "name": "headers-crws-10q-2002-text",
+    "route": "sec/filing_headers",
+    "params": { "url": "https://www.sec.gov/Archives/edgar/data/25895/000095013402009983/d98941e10vq.txt" }
+  },
+  {
+    "name": "headers-crws-8k",
+    "route": "sec/filing_headers",
+    "params": { "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774923003452/crws20230209_8k.htm" }
+  },
+  {
+    "name": "risk-crws-10k",
+    "route": "sec/risk_factors",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774926021496/crws20260329_10k.htm" }
+  },
+  {
+    "name": "risk-sprc-20f",
+    "route": "sec/risk_factors",
+    "params": { "symbol": "SPRC", "url": "https://www.sec.gov/Archives/edgar/data/0001611746/000121390026049322/ea0286030-20f_scisparc.htm" },
+    "fixture": false,
+    "reason": "a 20-F: the 2.7 MB main document (520 KB compressed) and its 102 risk factors would take 0.9 MB of the provider's 8 MB recording budget"
+  },
+  {
+    "name": "legal-crws-10k",
+    "route": "sec/legal_proceedings",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774926021496/crws20260329_10k.htm" }
+  },
+  {
+    "name": "legal-crws-10q-2004-html",
+    "route": "sec/legal_proceedings",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000095013404011936/d17435e10vq.htm" }
+  },
+  {
+    "name": "legal-crws-10q-2002-text",
+    "route": "sec/legal_proceedings",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000095013402009983/d98941e10vq.txt" }
+  },
+  {
+    "name": "exhibit-crws-10k-first",
+    "route": "sec/exhibit",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774926021496/crws20260329_10k.htm" }
+  },
+  {
+    "name": "exhibit-crws-10k-ex21",
+    "route": "sec/exhibit",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774926021496/crws20260329_10k.htm", "exhibit": "EX-21.1" }
+  },
+  {
+    "name": "exhibit-crws-10q-2002-text",
+    "route": "sec/exhibit",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000095013402009983/d98941e10vq.txt" }
+  },
+  {
+    "name": "exhibit-crws-8k-press-release",
+    "route": "sec/exhibit",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774923003452/crws20230209_8k.htm" }
+  },
+  {
+    "name": "overview-crws-10k",
+    "route": "sec/company_overview",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774926021496/crws20260329_10k.htm" }
+  },
+  {
+    "name": "overview-crws-10k-2005-html",
+    "route": "sec/company_overview",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000095013405012231/d26175e10vk.htm" }
+  },
+  {
+    "name": "overview-crws-2005-by-symbol",
+    "route": "sec/company_overview",
+    "params": { "symbol": "CRWS", "calendar_year": 2005 }
+  },
+  {
+    "name": "disclosures-sprc-20f",
+    "route": "sec/disclosures",
+    "params": { "symbol": "SPRC", "url": "https://www.sec.gov/Archives/edgar/data/0001611746/000121390026049322/ea0286030-20f_scisparc.htm" }
+  },
+  {
+    "name": "disclosures-crws-10k-2005-html",
+    "route": "sec/disclosures",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000095013405012231/d26175e10vk.htm", "use_cache": false }
+  },
+  {
+    "name": "disclosures-crws-10k",
+    "route": "sec/disclosures",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774926021496/crws20260329_10k.htm" },
+    "fixture": false,
+    "reason": "a us-gaap filer: the route downloads the 14 MB us-gaap label linkbase (927 KB compressed), over the 768 KB recording limit"
+  },
+  {
+    "name": "segment-sprc-20f",
+    "route": "sec/segment_revenue",
+    "params": { "symbol": "SPRC", "url": "https://www.sec.gov/Archives/edgar/data/0001611746/000121390026049322/ea0286030-20f_scisparc.htm" }
+  },
+  {
+    "name": "segment-crws-10k",
+    "route": "sec/segment_revenue",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774926021496/crws20260329_10k.htm" },
+    "fixture": false,
+    "reason": "a us-gaap filer: the route downloads the 14 MB us-gaap label linkbase (927 KB compressed), over the 768 KB recording limit"
+  },
+  {
+    "name": "statements-crws-10k-income",
+    "route": "sec/financial_statements",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774926021496/crws20260329_10k.htm", "statement_type": "income" },
+    "fixture": false,
+    "reason": "a us-gaap filer: the route downloads the 14 MB us-gaap label linkbase (927 KB compressed), over the 768 KB recording limit"
+  },
+  {
+    "name": "statements-crws-10k-balance",
+    "route": "sec/financial_statements",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774926021496/crws20260329_10k.htm", "statement_type": "balance" },
+    "fixture": false,
+    "reason": "a us-gaap filer: the route downloads the 14 MB us-gaap label linkbase (927 KB compressed), over the 768 KB recording limit"
+  },
+  {
+    "name": "statements-crws-10k-cash",
+    "route": "sec/financial_statements",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774926021496/crws20260329_10k.htm", "statement_type": "cash" },
+    "fixture": false,
+    "reason": "a us-gaap filer: the route downloads the 14 MB us-gaap label linkbase (927 KB compressed), over the 768 KB recording limit"
+  },
+  {
+    "name": "statements-crws-10k-equity",
+    "route": "sec/financial_statements",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774926021496/crws20260329_10k.htm", "statement_type": "equity" },
+    "fixture": false,
+    "reason": "a us-gaap filer: the route downloads the 14 MB us-gaap label linkbase (927 KB compressed), over the 768 KB recording limit"
+  },
+  {
+    "name": "statements-crws-10q-income",
+    "route": "sec/financial_statements",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774926027350/crws20260629_10q.htm", "statement_type": "income" },
+    "fixture": false,
+    "reason": "a us-gaap filer: the route downloads the 14 MB us-gaap label linkbase (927 KB compressed), over the 768 KB recording limit"
+  },
+  {
+    "name": "statements-crws-10q-balance",
+    "route": "sec/financial_statements",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000143774926027350/crws20260629_10q.htm", "statement_type": "balance" },
+    "fixture": false,
+    "reason": "a us-gaap filer: the route downloads the 14 MB us-gaap label linkbase (927 KB compressed), over the 768 KB recording limit"
+  },
+  {
+    "name": "statements-crws-2025-q3-by-symbol",
+    "route": "sec/financial_statements",
+    "params": { "symbol": "CRWS", "calendar_year": 2025, "calendar_period": "Q3", "statement_type": "income" },
+    "fixture": false,
+    "reason": "a us-gaap filer: the route downloads the 14 MB us-gaap label linkbase (927 KB compressed), over the 768 KB recording limit"
+  },
+  {
+    "name": "statements-crws-10k-2005-income",
+    "route": "sec/financial_statements",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000095013405012231/d26175e10vk.htm", "statement_type": "income" }
+  },
+  {
+    "name": "statements-crws-10k-2005-balance",
+    "route": "sec/financial_statements",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000095013405012231/d26175e10vk.htm", "statement_type": "balance" }
+  },
+  {
+    "name": "statements-crws-10k-2005-cash",
+    "route": "sec/financial_statements",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000095013405012231/d26175e10vk.htm", "statement_type": "cash" }
+  },
+  {
+    "name": "statements-crws-10q-2002-text-balance",
+    "route": "sec/financial_statements",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000095013402009983/d98941e10vq.txt", "statement_type": "balance" }
+  },
+  {
+    "name": "statements-crws-10q-2002-text-income",
+    "route": "sec/financial_statements",
+    "params": { "symbol": "CRWS", "url": "https://www.sec.gov/Archives/edgar/data/25895/000095013402009983/d98941e10vq.txt", "statement_type": "income" },
+    "oracle": "none",
+    "reason": "OpenBB fails with a pydantic error on this filing: the parent_tag column mixes missing and text values, and pandas 3 turns the missing ones into NaN, which SecAsFiledStatementsData rejects; the port returns the rows"
+  },
+  {
+    "name": "statements-sprc-20f-cash",
+    "route": "sec/financial_statements",
+    "params": { "symbol": "SPRC", "url": "https://www.sec.gov/Archives/edgar/data/0001611746/000121390026049322/ea0286030-20f_scisparc.htm", "statement_type": "cash" },
+    "compare": { "ignore": ["preferred_label"] },
+    "reason": "OpenBB builds the presentation tree from a Python set difference (roots = list(all_parents - all_children)), so the order in which a tag shown in several statements is visited, and with it its preferred_label, depends on the hash seed of the OpenBB process"
+  },
+  {
+    "name": "statements-sprc-20f-equity",
+    "route": "sec/financial_statements",
+    "params": { "symbol": "SPRC", "url": "https://www.sec.gov/Archives/edgar/data/0001611746/000121390026049322/ea0286030-20f_scisparc.htm", "statement_type": "equity" }
+  }
+]

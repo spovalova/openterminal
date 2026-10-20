@@ -1,1 +1,29 @@
-[]
+[
+  { "name": "historical-eurusd", "route": "currency/price/historical", "params": { "symbol": "EURUSD", "start_date": "2026-10-01", "end_date": "2026-10-08" } },
+  { "name": "historical-cross-monthly", "route": "currency/price/historical", "params": { "symbol": "USDGBP,EURJPY", "frequency": "monthly", "start_date": "2026-01-01", "end_date": "2026-06-30" } },
+  { "name": "historical-annual-hyphen", "route": "currency/price/historical", "params": { "symbol": "EUR-USD", "frequency": "annual", "start_date": "2020-01-01", "end_date": "2024-12-31" } },
+  { "name": "reference-rates", "route": "currency/reference_rates", "params": {} },
+  {
+    "name": "eligible-assets-first-five",
+    "route": "ecb/eligible_assets",
+    "params": { "currency": "USD", "asset_type": "Bond", "limit": 5 },
+    "fixture": false,
+    "reason": "the snapshot is a 1.1 MB gzip (about 25,000 assets), over the 768 KB recording limit; the decoding is unit-tested in test/ecb-eligible-assets.test.ts"
+  },
+  { "name": "key-interest-rates-across-a-change", "route": "ecb/key_interest_rates", "params": { "start_date": "2025-05-30", "end_date": "2025-06-12" } },
+  { "name": "key-interest-rates-until-today", "route": "ecb/key_interest_rates", "params": { "start_date": "2026-10-10" } },
+  { "name": "mfi-interest-rates-germany", "route": "ecb/mfi_interest_rates", "params": { "symbol": ["household_overnight_deposits", "corporate_loans"], "country": "DE", "start_date": "2025-01-01", "end_date": "2025-06-30" } },
+  { "name": "mfi-interest-rates-all-series", "route": "ecb/mfi_interest_rates", "params": { "symbol": ["household_overnight_deposits", "household_deposits_with_agreed_maturity", "household_deposits_redeemable_at_notice", "household_loans_for_house_purchase", "household_loans_for_house_purchase_cost_of_borrowing", "household_consumer_credit", "household_other_loans", "corporate_overnight_deposits", "corporate_deposits_with_agreed_maturity", "corporate_loans", "corporate_loans_cost_of_borrowing", "household_loans_outstanding", "household_house_purchase_outstanding", "household_consumer_and_other_outstanding"], "start_date": "2025-01-01", "end_date": "2025-03-31" } },
+  { "name": "estr", "route": "fixedincome/rate/estr", "params": { "start_date": "2026-10-01", "end_date": "2026-10-08" } },
+  { "name": "yield-curve-spot", "route": "fixedincome/government/yield_curve", "params": { "date": "2026-10-08" } },
+  { "name": "yield-curve-par-all-ratings", "route": "fixedincome/government/yield_curve", "params": { "date": "2026-09-01", "rating": "all_ratings", "yield_curve_type": "par_yield" } },
+  { "name": "available-indicators-icp", "route": "economy/available_indicators", "params": { "dataflow": "ICP", "frequency": "M", "reference_area": "U2", "dimension_values": ["ICP_ITEM:000000"], "limit": 20 } },
+  { "name": "available-indicators-exr-query", "route": "economy/available_indicators", "params": { "dataflow": "EXR", "frequency": "D", "query": ["us dollar | pound"], "limit": 10 } },
+  { "name": "balance-of-payments-main", "route": "economy/balance_of_payments", "params": { "frequency": "quarterly", "start_date": "2025-01-01", "end_date": "2025-12-31" } },
+  { "name": "balance-of-payments-summary-monthly", "route": "economy/balance_of_payments", "params": { "report_type": "summary", "start_date": "2025-01-01", "end_date": "2025-06-30" } },
+  { "name": "balance-of-payments-services", "route": "economy/balance_of_payments", "params": { "report_type": "services", "start_date": "2025-01-01", "end_date": "2025-09-30" } },
+  { "name": "balance-of-payments-country", "route": "economy/balance_of_payments", "params": { "country": "united_states", "start_date": "2025-01-01", "end_date": "2025-09-30" } },
+  { "name": "calendar-upcoming", "route": "economy/calendar", "params": { "start_date": "2026-10-20", "end_date": "2026-11-10" } },
+  { "name": "indicators-exr", "route": "economy/indicators", "params": { "symbol": ["EXR::D.USD.EUR.SP00.A"], "start_date": "2026-10-01", "end_date": "2026-10-08" } },
+  { "name": "indicators-two-flows", "route": "economy/indicators", "params": { "symbol": ["EXR::D.GBP.EUR.SP00.A", "ICP::M.U2.N.000000.4.ANR"], "start_date": "2025-06-01", "end_date": "2025-08-31" } }
+]

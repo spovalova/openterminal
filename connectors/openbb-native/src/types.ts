@@ -19,6 +19,8 @@ export type NativeCtx = {
    * the parity harness gives every case its own, so a recording holds everything its replay needs.
    */
   cache<T>(key: string, ttlMs: number, load: () => Promise<T>): Promise<T>
+  /** Wait before a retry. Use this, not setTimeout: a replay skips the wait, so a recorded back-off replays at once. */
+  sleep(ms: number): Promise<void>
   log(msg: string): void
   signal?: AbortSignal
 }

@@ -1,0 +1,40 @@
+[
+  {
+    "name": "form13f-berkshire-2024q4",
+    "route": "equity/ownership/form_13f",
+    "params": { "symbol": "1067983", "date": "2024-12-31" }
+  },
+  {
+    "name": "form13f-symbol-2024q3",
+    "route": "equity/ownership/form_13f",
+    "params": { "symbol": "BRK-B", "date": "2024-09-30" }
+  },
+  {
+    "name": "form13f-latest-limit2",
+    "route": "equity/ownership/form_13f",
+    "params": { "symbol": "1067983", "limit": 2 },
+    "compare": { "rows": "overlap", "minOverlap": 0.6, "keys": ["period_ending", "cusip", "asset_class", "security_type", "option_type", "investment_discretion"] },
+    "reason": "the two newest filings change each quarter (a new 13F-HR moves the window), so only the overlap of rows is required"
+  },
+  {
+    "name": "insider-aapl-april-2025",
+    "route": "equity/ownership/insider_trading",
+    "params": { "symbol": "AAPL", "start_date": "2025-04-01", "end_date": "2025-04-20", "limit": 4 },
+    "compare": { "keys": ["filing_url", "security_type", "transaction_date", "securities_transacted", "securities_owned", "transaction_type", "underlying_security_shares", "conversion_exercise_price"] },
+    "reason": "OpenBB collects the filings in the order their downloads finish, so filings of the same filing date come in no fixed order; rows are matched by identity instead"
+  },
+  {
+    "name": "insider-nvda-june-2025",
+    "route": "equity/ownership/insider_trading",
+    "params": { "symbol": "NVDA", "start_date": "2025-06-01", "end_date": "2025-06-12", "limit": 4 },
+    "compare": { "keys": ["filing_url", "security_type", "transaction_date", "securities_transacted", "securities_owned", "transaction_type", "underlying_security_shares", "conversion_exercise_price"] },
+    "reason": "OpenBB collects the filings in the order their downloads finish, so filings of the same filing date come in no fixed order; rows are matched by identity instead"
+  },
+  {
+    "name": "insider-tsla-q1-2025",
+    "route": "equity/ownership/insider_trading",
+    "params": { "symbol": "TSLA", "start_date": "2025-01-01", "end_date": "2025-03-31", "limit": 3 },
+    "compare": { "keys": ["filing_url", "security_type", "transaction_date", "securities_transacted", "securities_owned", "transaction_type", "underlying_security_shares", "conversion_exercise_price"] },
+    "reason": "OpenBB collects the filings in the order their downloads finish, so filings of the same filing date come in no fixed order; rows are matched by identity instead"
+  }
+]

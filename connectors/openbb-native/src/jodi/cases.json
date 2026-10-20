@@ -1,1 +1,236 @@
-[]
+[
+  {
+    "name": "gas-balance-us",
+    "route": "jodi/gas/balance",
+    "params": {
+      "country": "united_states",
+      "start_date": "2024-01-01",
+      "end_date": "2024-06-30"
+    }
+  },
+  {
+    "name": "gas-balance-tj-by-code",
+    "route": "jodi/gas/balance",
+    "params": {
+      "country": "DE",
+      "unit": "tj",
+      "start_date": "2023-01-01",
+      "end_date": "2023-03-31"
+    }
+  },
+  {
+    "name": "gas-demand-observed",
+    "route": "jodi/gas/demand",
+    "params": {
+      "country": "united_states,germany,japan",
+      "start_date": "2024-01-01",
+      "end_date": "2024-03-31"
+    }
+  },
+  {
+    "name": "gas-demand-calculated-all",
+    "route": "jodi/gas/demand",
+    "params": {
+      "measure": "calculated",
+      "start_date": "2025-01-01",
+      "end_date": "2025-02-28"
+    }
+  },
+  {
+    "name": "gas-exports-lng",
+    "route": "jodi/gas/exports",
+    "params": {
+      "flow": "lng",
+      "country": "qatar,australia,united_states",
+      "start_date": "2024-01-01",
+      "end_date": "2024-04-30"
+    }
+  },
+  {
+    "name": "gas-imports-pipeline",
+    "route": "jodi/gas/imports",
+    "params": {
+      "flow": "pipeline",
+      "unit": "tj",
+      "country": "germany,italy",
+      "start_date": "2024-01-01",
+      "end_date": "2024-03-31"
+    }
+  },
+  {
+    "name": "gas-production-all",
+    "route": "jodi/gas/production",
+    "params": {
+      "start_date": "2024-06-01",
+      "end_date": "2024-07-31"
+    }
+  },
+  {
+    "name": "gas-stocks-m3",
+    "route": "jodi/gas/stocks",
+    "params": {
+      "country": "united_states,germany",
+      "start_date": "2024-01-01",
+      "end_date": "2024-03-31"
+    }
+  },
+  {
+    "name": "oil-production-crude",
+    "route": "jodi/oil/production",
+    "params": {
+      "country": "united_states,saudi_arabia",
+      "start_date": "2024-01-01",
+      "end_date": "2024-03-31"
+    },
+    "fixture": false,
+    "reason": "the JODI-Oil primary table is a 23 MB zip (285 MB of CSV); a recording cannot exceed 768 KB per body"
+  },
+  {
+    "name": "oil-production-ngl-all",
+    "route": "jodi/oil/production",
+    "params": {
+      "product": "ngl",
+      "unit": "kbbl",
+      "start_date": "2025-01-01",
+      "end_date": "2025-02-28"
+    },
+    "fixture": false,
+    "reason": "the JODI-Oil primary table is a 23 MB zip (285 MB of CSV); a recording cannot exceed 768 KB per body"
+  },
+  {
+    "name": "oil-balance-primary",
+    "route": "jodi/oil/balance",
+    "params": {
+      "country": "united_states",
+      "start_date": "2024-01-01",
+      "end_date": "2024-06-30"
+    },
+    "fixture": false,
+    "reason": "the JODI-Oil primary table is a 23 MB zip (285 MB of CSV); a recording cannot exceed 768 KB per body"
+  },
+  {
+    "name": "oil-balance-secondary",
+    "route": "jodi/oil/balance",
+    "params": {
+      "country": "japan",
+      "product": "gasoline",
+      "unit": "kbbl",
+      "start_date": "2024-01-01",
+      "end_date": "2024-06-30"
+    },
+    "fixture": false,
+    "reason": "the JODI-Oil secondary table is a 59 MB zip (700 MB of CSV); a recording cannot exceed 768 KB per body"
+  },
+  {
+    "name": "oil-demand-total-products",
+    "route": "jodi/oil/demand",
+    "params": {
+      "country": "united_states,china,india",
+      "start_date": "2024-01-01",
+      "end_date": "2024-03-31"
+    },
+    "fixture": false,
+    "reason": "the JODI-Oil secondary table is a 59 MB zip (700 MB of CSV); a recording cannot exceed 768 KB per body"
+  },
+  {
+    "name": "oil-demand-by-product-us",
+    "route": "jodi/oil/demand_by_product",
+    "params": {
+      "country": "united_states",
+      "start_date": "2024-01-01",
+      "end_date": "2024-06-30"
+    },
+    "fixture": false,
+    "reason": "the JODI-Oil secondary table is a 59 MB zip (700 MB of CSV); a recording cannot exceed 768 KB per body"
+  },
+  {
+    "name": "oil-exports-lpg",
+    "route": "jodi/oil/exports",
+    "params": {
+      "product": "lpg",
+      "country": "united_states,saudi_arabia",
+      "start_date": "2024-01-01",
+      "end_date": "2024-03-31"
+    },
+    "fixture": false,
+    "reason": "the JODI-Oil secondary table is a 59 MB zip (700 MB of CSV); a recording cannot exceed 768 KB per body"
+  },
+  {
+    "name": "oil-imports-crude",
+    "route": "jodi/oil/imports",
+    "params": {
+      "country": "china,india,japan",
+      "start_date": "2024-01-01",
+      "end_date": "2024-03-31"
+    },
+    "fixture": false,
+    "reason": "the JODI-Oil primary table is a 23 MB zip (285 MB of CSV); a recording cannot exceed 768 KB per body"
+  },
+  {
+    "name": "oil-stocks-crude",
+    "route": "jodi/oil/stocks",
+    "params": {
+      "country": "united_states,japan",
+      "start_date": "2024-01-01",
+      "end_date": "2024-04-30"
+    },
+    "fixture": false,
+    "reason": "the JODI-Oil primary table is a 23 MB zip (285 MB of CSV); a recording cannot exceed 768 KB per body"
+  },
+  {
+    "name": "oil-production-total-crude-ktons",
+    "route": "jodi/oil/production",
+    "params": {
+      "product": "total_crude",
+      "unit": "ktons",
+      "country": "saudi_arabia,RU",
+      "start_date": "2024-01-01",
+      "end_date": "2024-03-31"
+    },
+    "fixture": false,
+    "reason": "the JODI-Oil primary table is a 23 MB zip (285 MB of CSV); a recording cannot exceed 768 KB per body"
+  },
+  {
+    "name": "oil-imports-naphtha-kl",
+    "route": "jodi/oil/imports",
+    "params": {
+      "product": "naphtha",
+      "unit": "kl",
+      "country": "japan,south_korea",
+      "start_date": "2024-01-01",
+      "end_date": "2024-03-31"
+    },
+    "fixture": false,
+    "reason": "the JODI-Oil secondary table is a 59 MB zip (700 MB of CSV); a recording cannot exceed 768 KB per body"
+  },
+  {
+    "name": "oil-stocks-jet-fuel-default-unit",
+    "route": "jodi/oil/stocks",
+    "params": {
+      "product": "jet_fuel",
+      "country": "united_states",
+      "start_date": "2023-01-01",
+      "end_date": "2023-06-30"
+    },
+    "fixture": false,
+    "reason": "the JODI-Oil secondary table is a 59 MB zip (700 MB of CSV); a recording cannot exceed 768 KB per body"
+  },
+  {
+    "name": "oil-balance-full-history",
+    "route": "jodi/oil/balance",
+    "params": {
+      "country": "norway",
+      "product": "ngl",
+      "unit": "conversion_factor"
+    },
+    "fixture": false,
+    "reason": "the JODI-Oil primary table is a 23 MB zip (285 MB of CSV); a recording cannot exceed 768 KB per body"
+  },
+  {
+    "name": "gas-balance-full-history",
+    "route": "jodi/gas/balance",
+    "params": {
+      "country": "germany"
+    }
+  }
+]

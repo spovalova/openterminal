@@ -1,0 +1,41 @@
+[
+  {
+    "name": "adviser-firms-vanguard",
+    "route": "sec/adviser_firms",
+    "params": { "query": "vanguard", "limit": 3 }
+  },
+  {
+    "name": "adviser-firms-crd",
+    "route": "sec/adviser_firms",
+    "params": { "query": "105958", "limit": 2 }
+  },
+  {
+    "name": "adviser-individuals-smith",
+    "route": "sec/adviser_individuals",
+    "params": { "query": "smith", "limit": 3 }
+  },
+  {
+    "name": "adviser-individuals-many-employers",
+    "route": "sec/adviser_individuals",
+    "params": { "query": "john", "limit": 6 }
+  },
+  {
+    "name": "adviser-documents-vanguard",
+    "route": "sec/adviser_documents",
+    "params": { "crd": "105958" }
+  },
+  {
+    "name": "adviser-universe-registered-crd",
+    "route": "sec/adviser_universe",
+    "params": { "registration_type": "registered", "crd": "105958" },
+    "fixture": false,
+    "reason": "the monthly Form ADV report zip is several MB and incompressible, over the 768 KB recording limit"
+  },
+  {
+    "name": "adviser-universe-exempt-crd",
+    "route": "sec/adviser_universe",
+    "params": { "registration_type": "exempt", "crd": "309765" },
+    "fixture": false,
+    "reason": "the monthly exempt-adviser report zip is over the 768 KB recording limit"
+  }
+]
