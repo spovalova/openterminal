@@ -36,7 +36,11 @@ function filterByKeywords(indicators: IndicatorEntry[], keywords: string[] | und
   })
 }
 
-const list = (v: string | undefined): string[] | undefined => (v === undefined ? undefined : v.split(','))
+/**
+ * OpenBB's API hands a list param (`dataflows`, `keywords`) to the model as a list holding the one comma-joined text,
+ * and the model uses a list as it is: two dataflows in one call find nothing, in OpenBB as here.
+ */
+const list = (v: string | undefined): string[] | undefined => (v === undefined ? undefined : [v])
 
 export async function availableIndicators(params: NativeParams, _ctx: NativeCtx): Promise<Row[]> {
   const queryParam = text(params, 'query')

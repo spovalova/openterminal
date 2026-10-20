@@ -1,1 +1,21 @@
-[]
+[
+  { "name": "available-indicators-kei", "route": "economy/available_indicators", "params": { "dataflows": ["DF_KEI"] } },
+  { "name": "available-indicators-query", "route": "economy/available_indicators", "params": { "dataflows": ["DF_KEI"], "query": ["interest | rate"] } },
+  { "name": "available-indicators-search-all", "route": "economy/available_indicators", "params": { "query": ["unemployment rate; \"youth\""] } },
+  { "name": "available-indicators-keywords", "route": "economy/available_indicators", "params": { "query": ["gini"], "keywords": ["not household"] } },
+  { "name": "available-indicators-keyword-in-dataflow", "route": "economy/available_indicators", "params": { "dataflows": ["DF_PRICES_ALL"], "keywords": ["not growth"] } },
+  { "name": "available-indicators-two-dataflows-find-nothing", "route": "economy/available_indicators", "params": { "dataflows": ["DF_KEI", "DF_CLI"] } },
+  { "name": "available-indicators-topic", "route": "economy/available_indicators", "params": { "topic": "ECO", "query": ["potential output"] } },
+  { "name": "balance-of-payments-us", "route": "economy/balance_of_payments", "params": { "country": ["united_states"], "frequency": "quarterly", "start_date": "2024-01-01", "end_date": "2025-03-31" } },
+  { "name": "cli-us", "route": "economy/composite_leading_indicator", "params": { "country": ["united_states"], "start_date": "2025-01-01", "end_date": "2025-06-30" } },
+  { "name": "cpi-us-yoy", "route": "economy/cpi", "params": { "country": ["united_states"], "transform": "yoy", "frequency": "monthly", "start_date": "2025-01-01", "end_date": "2025-04-30" } },
+  { "name": "cpi-two-countries-index", "route": "economy/cpi", "params": { "country": ["united_states", "germany"], "transform": "index", "frequency": "quarter", "start_date": "2024-01-01", "end_date": "2025-03-31" } },
+  { "name": "gdp-forecast-growth", "route": "economy/gdp/forecast", "params": { "country": ["united_states"], "units": "growth", "frequency": "annual", "start_date": "2025-01-01", "end_date": "2027-12-31" } },
+  { "name": "gdp-nominal-level", "route": "economy/gdp/nominal", "params": { "country": ["united_states"], "frequency": "annual", "start_date": "2020-01-01", "end_date": "2024-12-31" } },
+  { "name": "gdp-real-quarterly", "route": "economy/gdp/real", "params": { "country": ["united_states"], "frequency": "quarter", "start_date": "2024-01-01", "end_date": "2025-12-31" } },
+  { "name": "house-price-index-yoy", "route": "economy/house_price_index", "params": { "country": ["united_states"], "frequency": "quarter", "transform": "yoy", "start_date": "2024-01-01", "end_date": "2025-12-31" } },
+  { "name": "indicators-kei", "route": "economy/indicators", "params": { "symbol": ["DF_KEI::IR3TIB"], "country": ["united_states"], "frequency": "monthly", "start_date": "2025-01-01", "end_date": "2025-06-30" } },
+  { "name": "interest-rates-short", "route": "economy/interest_rates", "params": { "country": ["united_states"], "duration": "short", "frequency": "monthly", "start_date": "2025-01-01", "end_date": "2025-06-30" } },
+  { "name": "share-price-index", "route": "economy/share_price_index", "params": { "country": ["united_states"], "frequency": "monthly", "start_date": "2025-01-01", "end_date": "2025-06-30" } },
+  { "name": "unemployment-male-25plus", "route": "economy/unemployment", "params": { "country": ["united_states"], "frequency": "quarter", "sex": "male", "age": "25+", "seasonal_adjustment": true, "start_date": "2024-01-01", "end_date": "2025-06-30" } }
+]
