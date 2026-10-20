@@ -35,7 +35,8 @@ const PYODIDE_RUNTIME = ['pyodide.asm.mjs', 'pyodide.asm.wasm', 'python_stdlib.z
 
 function run(cmd, args, opts = {}) {
   console.error(`$ ${cmd} ${args.join(' ')}`)
-  execFileSync(cmd, args, { stdio: 'inherit', cwd: repo, ...opts })
+  // pnpm and npm are .cmd shims on Windows, which execFileSync only finds through a shell.
+  execFileSync(cmd, args, { stdio: 'inherit', cwd: repo, shell: process.platform === 'win32', ...opts })
 }
 
 function du(path) {
