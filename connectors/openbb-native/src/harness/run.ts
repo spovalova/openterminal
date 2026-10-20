@@ -11,7 +11,8 @@ import type { Case } from './cases.js'
 import type { Fixture } from './fixtures.js'
 
 export const DEFAULT_OPENBB = 'http://127.0.0.1:6900'
-const OPENBB_TIMEOUT_MS = 120_000
+/** A cold OpenBB route that sweeps a directory or a large archive can take minutes (federal_reserve state_average: 146 s). */
+const OPENBB_TIMEOUT_MS = 300_000
 
 export function descriptorOf(route: string): Descriptor | undefined {
   return snapshotDescriptors().find((d) => d.route === route)

@@ -1,1 +1,428 @@
-[]
+[
+  {
+    "name": "factors-3-monthly",
+    "route": "famafrench/factors",
+    "params": {
+      "start_date": "2024-01-01",
+      "end_date": "2024-06-30"
+    }
+  },
+  {
+    "name": "factors-3-annual",
+    "route": "famafrench/factors",
+    "params": {
+      "frequency": "annual",
+      "start_date": "2018-01-01"
+    }
+  },
+  {
+    "name": "factors-5-monthly",
+    "route": "famafrench/factors",
+    "params": {
+      "factor": "5_factors",
+      "start_date": "2024-01-01",
+      "end_date": "2024-06-30"
+    }
+  },
+  {
+    "name": "factors-momentum-america",
+    "route": "famafrench/factors",
+    "params": {
+      "factor": "momentum",
+      "start_date": "2024-01-01",
+      "end_date": "2024-06-30"
+    }
+  },
+  {
+    "name": "factors-st-reversal",
+    "route": "famafrench/factors",
+    "params": {
+      "factor": "st_reversal",
+      "start_date": "2024-01-01",
+      "end_date": "2024-06-30"
+    }
+  },
+  {
+    "name": "factors-lt-reversal",
+    "route": "famafrench/factors",
+    "params": {
+      "factor": "lt_reversal",
+      "frequency": "monthly",
+      "start_date": "2023-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "factors-europe-3",
+    "route": "famafrench/factors",
+    "params": {
+      "region": "europe",
+      "start_date": "2024-01-01",
+      "end_date": "2024-06-30"
+    }
+  },
+  {
+    "name": "factors-japan-momentum",
+    "route": "famafrench/factors",
+    "params": {
+      "region": "japan",
+      "factor": "momentum",
+      "start_date": "2024-01-01",
+      "end_date": "2024-06-30"
+    }
+  },
+  {
+    "name": "factors-emerging-5-annual",
+    "route": "famafrench/factors",
+    "params": {
+      "region": "emerging",
+      "factor": "5_factors",
+      "frequency": "annual",
+      "start_date": "2015-01-01"
+    }
+  },
+  {
+    "name": "factors-3-daily",
+    "route": "famafrench/factors",
+    "params": {
+      "frequency": "daily",
+      "start_date": "2024-01-01",
+      "end_date": "2024-01-31"
+    },
+    "oracle": "none",
+    "reason": "OpenBB looks for a table labelled daily among tables it labels only monthly or annual, and fails with an IndexError; the daily file itself is fine"
+  },
+  {
+    "name": "factors-3-weekly",
+    "route": "famafrench/factors",
+    "params": {
+      "frequency": "weekly",
+      "start_date": "2024-01-01",
+      "end_date": "2024-02-29"
+    },
+    "oracle": "none",
+    "reason": "OpenBB rejects the weekly frequency when it reads the file (get_portfolio_data allows only monthly, annual and daily); the weekly file itself is fine"
+  },
+  {
+    "name": "breakpoints-me",
+    "route": "famafrench/breakpoints",
+    "params": {
+      "breakpoint_type": "me",
+      "start_date": "2024-01-01",
+      "end_date": "2024-06-30"
+    }
+  },
+  {
+    "name": "breakpoints-be-me",
+    "route": "famafrench/breakpoints",
+    "params": {
+      "breakpoint_type": "be-me",
+      "start_date": "2020-01-01"
+    }
+  },
+  {
+    "name": "breakpoints-op",
+    "route": "famafrench/breakpoints",
+    "params": {
+      "breakpoint_type": "op",
+      "start_date": "2020-01-01"
+    }
+  },
+  {
+    "name": "breakpoints-inv",
+    "route": "famafrench/breakpoints",
+    "params": {
+      "breakpoint_type": "inv",
+      "start_date": "2020-01-01"
+    }
+  },
+  {
+    "name": "breakpoints-e-p",
+    "route": "famafrench/breakpoints",
+    "params": {
+      "breakpoint_type": "e-p",
+      "start_date": "2020-01-01"
+    }
+  },
+  {
+    "name": "breakpoints-cf-p",
+    "route": "famafrench/breakpoints",
+    "params": {
+      "breakpoint_type": "cf-p",
+      "start_date": "2020-01-01"
+    }
+  },
+  {
+    "name": "breakpoints-d-p",
+    "route": "famafrench/breakpoints",
+    "params": {
+      "breakpoint_type": "d-p",
+      "start_date": "2020-01-01"
+    }
+  },
+  {
+    "name": "breakpoints-prior-2-12",
+    "route": "famafrench/breakpoints",
+    "params": {
+      "breakpoint_type": "2-12",
+      "start_date": "2024-01-01",
+      "end_date": "2024-06-30"
+    }
+  },
+  {
+    "name": "us-portfolios-me-value",
+    "route": "famafrench/us_portfolio_returns",
+    "params": {
+      "start_date": "2024-01-01",
+      "end_date": "2024-03-31"
+    }
+  },
+  {
+    "name": "us-portfolios-me-equal-annual",
+    "route": "famafrench/us_portfolio_returns",
+    "params": {
+      "measure": "equal",
+      "frequency": "annual",
+      "start_date": "2020-01-01"
+    }
+  },
+  {
+    "name": "us-portfolios-me-number-of-firms",
+    "route": "famafrench/us_portfolio_returns",
+    "params": {
+      "measure": "number_of_firms",
+      "start_date": "2024-01-01",
+      "end_date": "2024-03-31"
+    }
+  },
+  {
+    "name": "us-portfolios-me-firm-size",
+    "route": "famafrench/us_portfolio_returns",
+    "params": {
+      "measure": "firm_size",
+      "start_date": "2024-01-01",
+      "end_date": "2024-03-31"
+    }
+  },
+  {
+    "name": "us-portfolios-beme-wout-div",
+    "route": "famafrench/us_portfolio_returns",
+    "params": {
+      "portfolio": "portfolios_formed_on_be-me_wout_div",
+      "start_date": "2024-01-01",
+      "end_date": "2024-02-29"
+    }
+  },
+  {
+    "name": "us-portfolios-industry-10",
+    "route": "famafrench/us_portfolio_returns",
+    "params": {
+      "portfolio": "10_industry_portfolios",
+      "start_date": "2024-01-01",
+      "end_date": "2024-02-29"
+    }
+  },
+  {
+    "name": "us-portfolios-industry-5-daily",
+    "route": "famafrench/us_portfolio_returns",
+    "params": {
+      "portfolio": "5_industry_portfolios_daily",
+      "start_date": "2024-01-01",
+      "end_date": "2024-01-12"
+    }
+  },
+  {
+    "name": "regional-portfolios-default",
+    "route": "famafrench/regional_portfolio_returns",
+    "params": {
+      "start_date": "2024-01-01",
+      "end_date": "2024-03-31"
+    }
+  },
+  {
+    "name": "regional-portfolios-japan-25-annual",
+    "route": "famafrench/regional_portfolio_returns",
+    "params": {
+      "portfolio": "japan_25_portfolios_me_be-me",
+      "frequency": "annual",
+      "start_date": "2018-01-01"
+    }
+  },
+  {
+    "name": "regional-portfolios-europe-6-firms",
+    "route": "famafrench/regional_portfolio_returns",
+    "params": {
+      "portfolio": "europe_6_portfolios_me_inv",
+      "measure": "number_of_firms",
+      "start_date": "2024-01-01",
+      "end_date": "2024-03-31"
+    }
+  },
+  {
+    "name": "index-all-usd-monthly",
+    "route": "famafrench/international_index_returns",
+    "params": {}
+  },
+  {
+    "name": "index-all-usd-annual",
+    "route": "famafrench/international_index_returns",
+    "params": {
+      "frequency": "annual"
+    }
+  },
+  {
+    "name": "index-europe-local",
+    "route": "famafrench/international_index_returns",
+    "params": {
+      "index": "europe",
+      "measure": "local"
+    }
+  },
+  {
+    "name": "index-uk-ratios",
+    "route": "famafrench/international_index_returns",
+    "params": {
+      "index": "uk",
+      "measure": "ratios"
+    }
+  },
+  {
+    "name": "index-asia-pacific-ex-dividends",
+    "route": "famafrench/international_index_returns",
+    "params": {
+      "index": "asia_pacific",
+      "dividends": false,
+      "frequency": "annual"
+    }
+  },
+  {
+    "name": "index-all-items-not-required",
+    "route": "famafrench/international_index_returns",
+    "params": {
+      "index": "all",
+      "all_data_items_required": false,
+      "frequency": "annual"
+    }
+  },
+  {
+    "name": "index-europe-ex-uk-dates",
+    "route": "famafrench/international_index_returns",
+    "params": {
+      "index": "europe_ex_uk",
+      "frequency": "annual",
+      "start_date": "2015-01-01",
+      "end_date": "2020-12-31"
+    },
+    "oracle": "none",
+    "reason": "OpenBB compares the (Date, Mkt) index tuple with the date string and fails with a TypeError whenever start_date or end_date is given on a table with a Mkt column"
+  },
+  {
+    "name": "index-scandinavia",
+    "route": "famafrench/international_index_returns",
+    "params": {
+      "index": "scandinavia",
+      "frequency": "annual"
+    },
+    "oracle": "none",
+    "reason": "OpenBB looks for the archive member Ind_Scandinavia.Dat; the archive spells it Ind_Scandanavia.Dat, so OpenBB fails with 'not found in available indexes'"
+  },
+  {
+    "name": "index-ratios-dates",
+    "route": "famafrench/international_index_returns",
+    "params": {
+      "index": "uk",
+      "measure": "ratios",
+      "start_date": "2015-01-01",
+      "end_date": "2020-12-31"
+    },
+    "oracle": "none",
+    "reason": "OpenBB compares the (Date, Mkt) index tuple with the date string and fails with a TypeError whenever start_date or end_date is given on a table with a Mkt column"
+  },
+  {
+    "name": "country-uk-usd-monthly",
+    "route": "famafrench/country_portfolio_returns",
+    "params": {}
+  },
+  {
+    "name": "country-austria-local-annual",
+    "route": "famafrench/country_portfolio_returns",
+    "params": {
+      "country": "austria",
+      "measure": "local",
+      "frequency": "annual"
+    }
+  },
+  {
+    "name": "country-hong-kong-ratios",
+    "route": "famafrench/country_portfolio_returns",
+    "params": {
+      "country": "hong_kong",
+      "measure": "ratios"
+    }
+  },
+  {
+    "name": "country-netherlands-ex-dividends",
+    "route": "famafrench/country_portfolio_returns",
+    "params": {
+      "country": "netherlands",
+      "dividends": false
+    }
+  },
+  {
+    "name": "country-japan-dates",
+    "route": "famafrench/country_portfolio_returns",
+    "params": {
+      "country": "japan",
+      "start_date": "2020-01-01",
+      "end_date": "2020-12-31"
+    },
+    "oracle": "none",
+    "reason": "OpenBB compares the (Date, Mkt) index tuple with the date string and fails with a TypeError whenever start_date or end_date is given on a table with a Mkt column"
+  },
+  {
+    "name": "country-germany-ratios-dates",
+    "route": "famafrench/country_portfolio_returns",
+    "params": {
+      "country": "germany",
+      "measure": "ratios",
+      "start_date": "2010-01-01",
+      "end_date": "2020-12-31"
+    }
+  },
+  {
+    "name": "country-uk-local-monthly-not-required",
+    "route": "famafrench/country_portfolio_returns",
+    "params": {
+      "measure": "local",
+      "all_data_items_required": false
+    }
+  },
+  {
+    "name": "us-portfolios-6-weekly",
+    "route": "famafrench/us_portfolio_returns",
+    "params": {
+      "portfolio": "6_portfolios_2x3_weekly",
+      "start_date": "2024-01-01",
+      "end_date": "2024-01-31"
+    }
+  },
+  {
+    "name": "regional-portfolios-japan-6-daily",
+    "route": "famafrench/regional_portfolio_returns",
+    "params": {
+      "portfolio": "japan_6_portfolios_me_op_daily",
+      "start_date": "2024-01-01",
+      "end_date": "2024-01-12"
+    }
+  },
+  {
+    "name": "us-portfolios-industry-5-annual-wout-div",
+    "route": "famafrench/us_portfolio_returns",
+    "params": {
+      "portfolio": "5_industry_portfolios_wout_div",
+      "frequency": "annual",
+      "measure": "equal",
+      "start_date": "2018-01-01"
+    }
+  }
+]

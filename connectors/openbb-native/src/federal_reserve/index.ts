@@ -9,7 +9,7 @@ import regional from './regional/index.js'
 export default defineProvider({
   name: 'federal_reserve',
   credentials: [],
-  status: 'todo',
+  status: 'ported',
   routes: { ...core.routes, ...regional.routes },
   skipped: { ...core.skipped, ...regional.skipped },
 })

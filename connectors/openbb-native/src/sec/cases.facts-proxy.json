@@ -1,0 +1,8 @@
+[
+  {"name": "exec-comp-cspi", "route": "sec/executive_compensation", "params": {"symbol": "CSPI"}},
+  {"name": "beneficial-ug", "route": "sec/beneficial_ownership", "params": {"symbol": "UG"}},
+  {"name": "pvp-ug", "route": "sec/pay_versus_performance", "params": {"symbol": "UG"}},
+  {"name": "pvp-cspi", "route": "sec/pay_versus_performance", "params": {"symbol": "CSPI"}},
+  {"name": "mgmt-ug", "route": "sec/management_profiles", "params": {"symbol": "UG"}},
+  {"name": "mgmt-cspi", "route": "sec/management_profiles", "params": {"symbol": "CSPI"}, "fixture": false, "reason": "the 10-K (500 KB compressed) and proxy it reads exceed the recording budget; mgmt-ug records the same code path"}
+]
