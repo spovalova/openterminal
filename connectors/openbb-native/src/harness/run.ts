@@ -45,6 +45,8 @@ export async function askOpenbb(base: string, route: string, sent: ValidatedPara
 
 export type NativeRunOptions = {
   fetch?: typeof fetch
+  /** A replay passes a sleep that returns at once. */
+  sleep?: (ms: number) => Promise<void>
   now?: Date
   env?: Record<string, string | undefined>
   log?: (msg: string) => void
@@ -56,7 +58,7 @@ export async function runNative(provider: string, route: string, sent: Validated
   if (!handler) throw new Error(`${provider} has no native handler for ${route}`)
   const now = opts.now
   // A fresh cache per run: a recording must hold every download its replay asks for.
-  const ctx = createNativeCtx({ cache: new Map(), ...(opts.fetch ? { fetch: opts.fetch } : {}), ...(opts.env ? { env: opts.env } : {}), ...(opts.log ? { log: opts.log } : {}), ...(now ? { now: () => new Date(now.getTime()) } : {}) })
+  const ctx = createNativeCtx({ cache: new Map(), ...(opts.sleep ? { sleep: opts.sleep } : {}), ...(opts.fetch ? { fetch: opts.fetch } : {}), ...(opts.env ? { env: opts.env } : {}), ...(opts.log ? { log: opts.log } : {}), ...(now ? { now: () => new Date(now.getTime()) } : {}) })
   return jsonRows(await handler(nativeParams(sent), ctx))
 }
 
@@ -115,7 +117,7 @@ export async function runCaseLive(provider: string, c: Case, opts: { base?: stri
 /** Offline: rerun the handler on a recording. Same native rows as recorded, and parity with OpenBB's recorded rows. */
 export async function runCaseReplay(c: Case, f: Fixture): Promise<{ rows: Row[]; compare?: CompareResult }> {
   const sent = f.params as ValidatedParams
-  const rows = await runNative(f.provider, c.route, sent, { fetch: replayFetch(f.exchanges), now: new Date(f.recordedAt), env: replayEnv(f.provider) })
+  const rows = await runNative(f.provider, c.route, sent, { fetch: replayFetch(f.exchanges), sleep: async () => {}, now: new Date(f.recordedAt), env: replayEnv(f.provider) })
   return { rows, ...(f.openbb ? { compare: compareRows(f.openbb, rows, c.compare) } : {}) }
 }
 

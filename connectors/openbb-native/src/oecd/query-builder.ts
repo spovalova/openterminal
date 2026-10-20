@@ -55,8 +55,6 @@ export function buildUrl(dataflow: string, startDate: string | undefined, endDat
   return url
 }
 
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
-
 /**
  * One GET, retried when the API says it is being asked too often (429, waiting as long as it asks, 15 to 90 s) and,
  * once or twice, when its server fails for a moment (`_make_request` retries only the first; the OECD API answers a
@@ -71,13 +69,13 @@ export async function makeRequest(ctx: NativeCtx, url: string): Promise<{ status
       const retryAfter = Number.parseInt(res.headers.get('Retry-After') ?? '', 10)
       const seconds = Number.isNaN(retryAfter) ? 15 * (attempt + 1) : retryAfter
       await res.text().catch(() => '')
-      await sleep(Math.min(Math.max(seconds, 15), 90) * 1000)
+      await ctx.sleep(Math.min(Math.max(seconds, 15), 90) * 1000)
       continue
     }
     if (res.status >= 500 && serverErrors < 2) {
       serverErrors++
       await res.text().catch(() => '')
-      await sleep(2000 * serverErrors)
+      await ctx.sleep(2000 * serverErrors)
       continue
     }
     return { status: res.status, statusText: res.statusText, text: await res.text() }
