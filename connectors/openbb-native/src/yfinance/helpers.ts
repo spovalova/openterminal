@@ -148,3 +148,22 @@ export function wallParts(seconds: number, timeZone: string): { date: string; ti
   for (const part of f.formatToParts(new Date(seconds * 1000))) p[part.type] = part.value
   return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}:${p.second}` }
 }
+
+/**
+ * Python's `round(x, digits)`: the exact value of the double decides, and an exact tie goes to the even digit (JavaScript's
+ * toFixed sends exact ties up, and x * 100 can fall on the wrong side of a tie).
+ */
+export function pyRound(x: number, digits: number): number {
+  if (!Number.isFinite(x)) return x
+  const exact = Math.abs(x).toFixed(Math.min(100, digits + 40))
+  const [whole, frac = ''] = exact.split('.')
+  const kept = frac.slice(0, digits)
+  const rest = frac.slice(digits)
+  const tie = /^50*$/.test(rest)
+  let scaled = BigInt(whole! + kept)
+  const up = rest[0] !== undefined && (rest[0] > '5' || (rest[0] === '5' && !tie) || (tie && scaled % 2n === 1n))
+  if (up) scaled += 1n
+  const text = scaled.toString().padStart(digits + 1, '0')
+  const out = Number(`${text.slice(0, text.length - digits)}${digits ? '.' : ''}${text.slice(text.length - digits)}`)
+  return x < 0 ? -out : out
+}
