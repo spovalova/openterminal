@@ -1,1 +1,197 @@
-[]
+[
+  {
+    "name": "quote-ry",
+    "route": "equity/price/quote",
+    "params": { "symbol": "RY" },
+    "compare": { "volatile": ["last_price", "open", "high", "low", "volume", "prev_close", "change", "change_percent", "vwap", "ma_21", "ma_50", "ma_200", "volume_avg_10d", "volume_avg_30d", "volume_avg_50d", "market_cap_all_classes", "MarketCap", "averageVolume20D", "year_high", "year_low", "pe", "price_to_book", "price_to_cf", "return_on_equity", "return_on_assets", "debt_to_equity", "eps", "beta", "alpha", "div_yield"] },
+    "reason": "live quote: OpenBB and the native side fetch seconds apart, so prices, volumes and the ratios built on the price may move"
+  },
+  {
+    "name": "historical-ry-sep",
+    "route": "equity/price/historical",
+    "params": { "symbol": "RY", "start_date": "2026-09-01", "end_date": "2026-09-30" }
+  },
+  {
+    "name": "historical-weekly-multi",
+    "route": "equity/price/historical",
+    "params": { "symbol": "RY,TD", "start_date": "2026-08-01", "end_date": "2026-09-30", "interval": "1W" }
+  },
+  {
+    "name": "historical-hourly",
+    "route": "equity/price/historical",
+    "params": { "symbol": "RY", "start_date": "2026-09-01", "end_date": "2026-09-02", "interval": "60m" }
+  },
+  {
+    "name": "historical-unadjusted",
+    "route": "equity/price/historical",
+    "params": { "symbol": "RY", "start_date": "2026-09-01", "end_date": "2026-09-10", "adjustment": "unadjusted" }
+  },
+  {
+    "name": "etf-historical-xiu",
+    "route": "etf/historical",
+    "params": { "symbol": "XIU", "start_date": "2026-09-01", "end_date": "2026-09-15" }
+  },
+  {
+    "name": "index-historical-tsx",
+    "route": "index/price/historical",
+    "params": { "symbol": "^TSX", "start_date": "2026-09-01", "end_date": "2026-09-30" }
+  },
+  {
+    "name": "currency-historical-usdcad",
+    "route": "currency/price/historical",
+    "params": { "symbol": "USDCAD", "start_date": "2026-09-01", "end_date": "2026-09-30" }
+  },
+  {
+    "name": "currency-historical-weekly",
+    "route": "currency/price/historical",
+    "params": { "symbol": "EURCAD,GBPCAD", "start_date": "2026-08-01", "end_date": "2026-09-30", "interval": "week" }
+  },
+  {
+    "name": "futures-historical-cgb",
+    "route": "derivatives/futures/historical",
+    "params": { "symbol": "CGB", "start_date": "2026-08-03", "end_date": "2026-08-14" }
+  },
+  {
+    "name": "profile-ry-td",
+    "route": "equity/profile",
+    "params": { "symbol": "RY,TD" }
+  },
+  {
+    "name": "earnings-sep-1-2",
+    "route": "equity/calendar/earnings",
+    "params": { "start_date": "2026-09-01", "end_date": "2026-09-02" }
+  },
+  {
+    "name": "gainers-price-performer",
+    "route": "equity/discovery/gainers",
+    "params": { "category": "price_performer" },
+    "compare": { "rows": "overlap", "minOverlap": 0.6, "keys": ["symbol"], "volatile": ["price", "change", "percent_change", "volume"] },
+    "reason": "live ranking: the list and the prices move between OpenBB's call and the native one"
+  },
+  {
+    "name": "gainers-dividend",
+    "route": "equity/discovery/gainers",
+    "params": { "category": "dividend" },
+    "compare": { "rows": "overlap", "minOverlap": 0.6, "keys": ["symbol"], "volatile": ["price", "change", "percent_change", "volume", "dividend_yield"] },
+    "reason": "live ranking: the list, the prices and the yield built on them move between OpenBB's call and the native one"
+  },
+  {
+    "name": "consensus-ry-td",
+    "route": "equity/estimates/consensus",
+    "params": { "symbol": "RY,TD" },
+    "compare": { "volatile": ["target_upside"] },
+    "reason": "the upside is measured against the live price"
+  },
+  {
+    "name": "dividends-ry",
+    "route": "equity/fundamental/dividends",
+    "params": { "symbol": "RY" }
+  },
+  {
+    "name": "filings-ry-sep",
+    "route": "equity/fundamental/filings",
+    "params": { "symbol": "RY", "start_date": "2026-09-01", "end_date": "2026-09-30" }
+  },
+  {
+    "name": "splits-shop",
+    "route": "equity/fundamental/historical_splits",
+    "params": { "symbol": "SHOP" }
+  },
+  {
+    "name": "insider-trading-ry",
+    "route": "equity/ownership/insider_trading",
+    "params": { "symbol": "RY" }
+  },
+  {
+    "name": "insider-trading-ry-summary",
+    "route": "equity/ownership/insider_trading",
+    "params": { "symbol": "RY", "summary": true }
+  },
+  {
+    "name": "insider-transactions-ry",
+    "route": "tmx/equity/ownership/insider_transactions",
+    "params": { "symbol": "RY", "period": "3m" }
+  },
+  {
+    "name": "news-ry",
+    "route": "news/company",
+    "params": { "symbol": "RY", "limit": 5 }
+  },
+  {
+    "name": "index-available",
+    "route": "index/available",
+    "params": {}
+  },
+  {
+    "name": "index-constituents-tx60",
+    "route": "index/constituents",
+    "params": { "symbol": "^TX60" }
+  },
+  {
+    "name": "index-sectors-tsx",
+    "route": "index/sectors",
+    "params": { "symbol": "^TSX" }
+  },
+  {
+    "name": "index-snapshots-ca",
+    "route": "index/snapshots",
+    "params": { "region": "ca" },
+    "compare": { "volatile": ["price", "volume", "change", "change_percent", "openPrice", "dayHigh", "dayLow", "year_high", "year_low", "bid", "ask"] },
+    "reason": "live quotes: OpenBB and the native side fetch seconds apart"
+  },
+  {
+    "name": "index-snapshots-us",
+    "route": "index/snapshots",
+    "params": { "region": "us" },
+    "compare": { "volatile": ["price", "volume", "change", "change_percent", "openPrice", "dayHigh", "dayLow", "year_high", "year_low", "bid", "ask"] },
+    "reason": "live quotes: OpenBB and the native side fetch seconds apart"
+  },
+  {
+    "name": "movers-gainers-tsx",
+    "route": "tmx/markets/movers",
+    "params": { "category": "gainers", "exchange": "tsx", "limit": 8 },
+    "compare": { "rows": "overlap", "minOverlap": 0.5, "keys": ["symbol"], "volatile": ["price", "change", "change_percent", "open", "high", "low", "volume", "trade_volume"] },
+    "reason": "live ranking: the list and the prices move between OpenBB's call and the native one"
+  },
+  {
+    "name": "movers-route-defaults",
+    "route": "tmx/markets/movers",
+    "params": {},
+    "compare": { "rows": "overlap", "minOverlap": 0.5, "keys": ["symbol"], "volatile": ["price", "change", "change_percent", "open", "high", "low", "volume", "trade_volume"] },
+    "reason": "live ranking: the list and the prices move between OpenBB's call and the native one. OpenBB drops the route's default category and limit (NASDAQ's), so TMX's gainers and 25 rows apply"
+  },
+  {
+    "name": "movers-nasdaq-route-losers",
+    "route": "nasdaq/markets/movers",
+    "params": { "category": "losers", "exchange": "tsx", "limit": 8 },
+    "compare": { "rows": "overlap", "minOverlap": 0.5, "keys": ["symbol"], "volatile": ["price", "change", "change_percent", "open", "high", "low", "volume", "trade_volume"] },
+    "reason": "live ranking: the list and the prices move between OpenBB's call and the native one"
+  },
+  {
+    "name": "short-interest-ry",
+    "route": "tmx/markets/short_interest",
+    "params": { "symbol": "RY,TD" }
+  },
+  {
+    "name": "rankings-tsx30",
+    "route": "tmx/equity/rankings",
+    "params": { "ranking": "tsx30" }
+  },
+  {
+    "name": "rankings-venture50",
+    "route": "tmx/equity/rankings",
+    "params": { "ranking": "venture50" }
+  },
+  {
+    "name": "symbol-reference",
+    "route": "tmx/equity/symbol_reference",
+    "params": { "symbol": "RY,AAPL,ZZZZ" }
+  },
+  {
+    "name": "trades-ry",
+    "route": "tmx/markets/trades",
+    "params": { "symbol": "RY", "limit": 5 },
+    "compare": { "rows": "overlap", "minOverlap": 0.4, "keys": ["date", "price", "volume", "buyer_id", "seller_id"] },
+    "reason": "live tape: trades print between OpenBB's call and the native one, so the newest rows differ"
+  }
+]
