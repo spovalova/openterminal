@@ -152,7 +152,7 @@ Three connectors ship in the box. Each publishes the routes it answers as **desc
 | Connector | Key | Routes |
 |---|---|---|
 | `openbb` | none for the keyless providers | every GET route of your local OpenBB Platform API, generated from its `openapi.json` (834 on OpenBB 5.0.0), through whatever providers your install has |
-| `yahoo` | none | the five yahoo-finance2 endpoints: `search`, `quote`, `chart`, `options`, `quoteSummary` (with its modules) |
+| `yahoo` | none | the five yahoo-finance2 endpoints: `search`, `quote`, `chart`, `options`, `quoteSummary` (with its modules), and `news` (the search module's news list) |
 | `finnhub` | free | `quote`, `company-news`, `calendar/earnings` |
 
 A query is a **route** (`{ connector, route, params }`), a **recipe** (`{ recipe, params }`), or a **transform** (`{ inputs, code }`, pandas in a Pyodide sandbox). Frames carry a field config per column (unit, label, format, priority) from the **annotations** in `packages/core/annotations.yml`, so a fraction from one provider and a percent from another both render and read as percent. Any route, plus these recipes:
@@ -163,7 +163,7 @@ A query is a **route** (`{ connector, route, params }`), a **recipe** (`{ recipe
 | `search` | q | table | openbb `equity/search`, yahoo `search` + transform | Resolve a free-text name or ticker to symbols. One query per call; batch by calling it in parallel. |
 | `quote` | symbols[] | stat | yahoo `quote`, openbb `equity/price/quote`, finnhub `quote` | Latest price, day change, volume, market state and extended-hours price per symbol. |
 | `ohlcv` | symbols[], interval?=1m\|5m\|15m\|1h\|…, range?=1d\|5d\|1mo\|3mo\|…, start? | price | openbb `equity/price/historical`, yahoo `chart` | Price bars per symbol over a range at an interval, long format with a symbol column. |
-| `news` | symbols[], limit? | table | openbb `news/company`, finnhub `company-news` + transform | Recent headlines per symbol, newest first. |
+| `news` | symbols[], limit? | table | openbb `news/company`, yahoo `news`, finnhub `company-news` + transform | Recent headlines per symbol, newest first. |
 | `earnings` | symbols[], from, to | table | openbb `equity/calendar/earnings`, yahoo `quoteSummary`, finnhub `calendar/earnings` + transform | Earnings dates inside a date window; session is bmo, amc or null. The market-wide calendar, cut to the symbols. |
 | `profile` | symbols[] | facts | openbb `equity/profile`, yahoo `quoteSummary` | Who the company is: name, exchange, sector, industry, market cap, employees, beta, description. |
 | `metrics` | symbols[] | table | openbb `equity/fundamental/metrics`, yahoo `quoteSummary` | Valuation and quality snapshot per symbol: multiples, margins, growth, returns, leverage, yield. |

@@ -181,5 +181,23 @@
     ],
     "providers": [],
     "fields": [{ "name": "symbol", "type": "string" }]
+  },
+  {
+    "connector": "yahoo",
+    "route": "news",
+    "summary": "Recent news headlines per symbol, newest first",
+    "description": "yahoo-finance2 search with quotesCount 0: the news Yahoo Finance ties to each symbol, no API key. One call per symbol, merged newest first and de-duplicated by link. Columns match the OpenBB news routes: date, title, publisher, url, symbols (the tickers Yahoo relates to the story, comma separated).",
+    "params": [
+      { "name": "symbol", "type": "string[]", "required": true, "description": "Ticker symbols" },
+      { "name": "limit", "type": "integer", "required": false, "default": 20, "description": "Headlines to ask Yahoo for per symbol" }
+    ],
+    "providers": [],
+    "fields": [
+      { "name": "date", "type": "time", "description": "Published at" },
+      { "name": "title", "type": "string" },
+      { "name": "publisher", "type": "string" },
+      { "name": "url", "type": "string" },
+      { "name": "symbols", "type": "string", "description": "Tickers Yahoo relates to the story, comma separated" }
+    ]
   }
 ]

@@ -12,6 +12,7 @@ import {
   defineConnector,
   inferFrame,
   parseAnnotations,
+  parseRecipes,
   ttlForRoute,
   type Descriptor,
   type Frame,
@@ -290,6 +291,61 @@ describe('ConnectorRegistry.run', () => {
     expect(c2).not.toBe(c1)
     expect(c2.connectors()).not.toContain('keyed') // missing_config connectors are left out
     expect(r.connectors().map((c) => c.status)).toEqual(['ok', 'missing_config'])
+    expect(r.recipes().length).toBeGreaterThanOrEqual(22)
+  })
+})
+
+describe('ConnectorRegistry.usableRecipes', () => {
+  const quote = (connector: string, route = 'equity/price/quote') => ({ connector, route, params: { symbol: '{symbols}' } })
+  const recipe = (name: string, dataset: object) => ({ name, title: name, params: { type: 'object', properties: { symbols: { type: 'array', items: { type: 'string' } } }, required: ['symbols'] }, view: { preset: 'table' }, ...dataset })
+  const recipes = parseRecipes([
+    recipe('on_acme', { routes: [quote('acme')] }),
+    recipe('falls_back', { routes: [quote('openbb'), quote('acme')] }),
+    recipe('openbb_only', { routes: [quote('openbb')] }),
+    recipe('unlisted_route', { routes: [quote('acme', 'equity/price/nope')] }),
+    recipe('needs_a_key', { routes: [quote('keyed')] }),
+    recipe('half_dead', { data: { a: { routes: [quote('acme')] }, b: { routes: [quote('openbb')] }, main: { inputs: ['a', 'b'], code: 'result = a' } } }),
+    recipe('graph', { data: { raw: { routes: [quote('openbb'), quote('acme')] }, main: { inputs: ['raw'], code: 'result = raw' } } }),
+  ])
+  const keyed = defineConnector({ name: 'keyed', config: z.object({ apiKey: z.string().min(1) }), descriptors: () => [{ ...quoteDescriptor, connector: 'keyed' }], call: async () => inferFrame([], { connector: 'keyed' }) })
+  const names = (rs: readonly Recipe[]) => rs.map((r) => r.name)
+
+  it('keeps a recipe with at least one route on a registered, healthy connector that lists it', async () => {
+    const r = new ConnectorRegistry({ recipes })
+    r.register(acme, {})
+    r.register(keyed, {}) // missing_config: registered but not healthy
+    expect(names(await r.usableRecipes())).toEqual(['on_acme', 'falls_back', 'graph'])
+    // recipes() still lists everything: running a hidden recipe keeps its "connector is not registered" error.
+    expect(names(r.recipes())).toHaveLength(recipes.length)
+    await expect(r.run({ recipe: 'openbb_only', params: { symbols: ['NVDA'] } })).rejects.toThrow(/connector "openbb" is not registered/)
+  })
+
+  it('needs every route dataset of a recipe to have a usable route, not just one', async () => {
+    const r = new ConnectorRegistry({ recipes })
+    r.register(acme, {})
+    expect(names(await r.usableRecipes())).not.toContain('half_dead')
+    r.register(defineConnector({ name: 'openbb', config: z.object({}), descriptors: () => [{ ...quoteDescriptor, connector: 'openbb' }], call: async () => inferFrame([], { connector: 'openbb' }) }), {})
+    expect(names(await r.usableRecipes())).toContain('half_dead')
+    expect(names(await r.usableRecipes())).toContain('openbb_only')
+  })
+
+  it('follows registration: a key saved later brings the recipe back, and a connector whose catalog is empty hides its recipes', async () => {
+    const r = new ConnectorRegistry({ recipes })
+    r.register(acme, {})
+    expect(names(await r.usableRecipes())).not.toContain('needs_a_key')
+    r.register(keyed, { apiKey: 'k' })
+    expect(names(await r.usableRecipes())).toContain('needs_a_key')
+    // OpenBB registered but unreachable: its descriptors fail, the catalog lists nothing, its recipes are dead.
+    const down = defineConnector({ name: 'openbb', config: z.object({}), descriptors: async () => { throw new Error('connect ECONNREFUSED') }, call: async () => inferFrame([], { connector: 'openbb' }) })
+    r.register(down, {})
+    expect(names(await r.usableRecipes())).not.toContain('openbb_only')
+    expect(names(await r.usableRecipes())).toContain('falls_back')
+  })
+
+  it('hides every built-in recipe from a registry whose connectors serve none of their routes', async () => {
+    const r = new ConnectorRegistry({ recipes: builtinRecipes() })
+    r.register(acme, {})
+    expect(await r.usableRecipes()).toEqual([])
     expect(r.recipes().length).toBeGreaterThanOrEqual(22)
   })
 })

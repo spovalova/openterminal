@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { RECIPE_PARAMS_INPUT, applyAnnotations, controlFor, datasetFieldsFrom, expandRecipe, parseRecipes, recipeDatasets, recipeDescriptor, recipeParams, recipeParamsFrame, recipeParamsSchema, recipeRouteAlternatives, recipeSummaryLines, renameColumns, renderValue, titleFor, validateRecipe, type Frame, type Recipe } from '../src/index.js'
+import { RECIPE_PARAMS_INPUT, applyAnnotations, controlFor, datasetFieldsFrom, expandRecipe, parseRecipes, recipeDatasets, recipeDescriptor, recipeParams, recipeParamsFrame, recipeParamsSchema, recipeRouteAlternatives, recipeSummaryLines, recipeUsable, renameColumns, renderValue, titleFor, validateRecipe, type Frame, type Recipe } from '../src/index.js'
 import { builtinAnnotations, builtinRecipes } from '../src/node.js'
 
 const recipes = builtinRecipes()
@@ -57,10 +57,31 @@ describe('recipes.yml', () => {
     expect(routesOf('search', 'yahoo')).toEqual(['search'])
     expect(routesOf('metrics', 'yahoo')).toEqual(['quoteSummary'])
     expect(routesOf('quote', 'finnhub')).toEqual(['quote'])
+    expect(routesOf('news', 'yahoo')).toEqual(['news'])
     expect(routesOf('news', 'finnhub')).toEqual(['company-news'])
     expect(routesOf('earnings', 'finnhub')).toEqual(['calendar/earnings'])
     const yahooRoutes = new Set(recipes.flatMap((r) => Object.values(recipeDatasets(r)).flatMap((ds) => ('routes' in ds ? ds.routes.filter((x) => x.connector === 'yahoo').map((x) => x.route) : []))))
-    expect([...yahooRoutes].sort()).toEqual(['chart', 'options', 'quote', 'quoteSummary', 'search'])
+    expect([...yahooRoutes].sort()).toEqual(['chart', 'news', 'options', 'quote', 'quoteSummary', 'search'])
+  })
+  it('news reads OpenBB first, then keyless yahoo, then finnhub (which needs a key), so a fresh install without OpenBB still has headlines', () => {
+    expect(recipeRouteAlternatives(by('news')).map((r) => `${r.connector}/${r.route}`)).toEqual(['openbb/news/company', 'yahoo/news', 'finnhub/company-news'])
+    const e = expandRecipe(by('news'), { symbols: 'TSLA, MU', limit: 8 })
+    expect(e.routes[1]).toEqual({ connector: 'yahoo', route: 'news', params: { symbol: ['TSLA', 'MU'], limit: 8 } })
+  })
+  it('recipeUsable keeps a recipe with a callable route in every route dataset and drops the rest', () => {
+    const yahooOnly = (connector: string) => connector === 'yahoo'
+    const usable = (callable: (connector: string, route: string) => boolean) => recipes.filter((r) => recipeUsable(r, callable)).map((r) => r.name)
+    expect(usable(() => false)).toEqual([])
+    expect(usable(() => true)).toEqual(recipes.map((r) => r.name))
+    const names = usable(yahooOnly)
+    expect(names).toEqual(expect.arrayContaining(['search', 'quote', 'ohlcv', 'news', 'options', 'earnings']))
+    // OpenBB-only recipes: no yahoo or finnhub route to fall back on.
+    for (const gone of ['financials', 'volatility', 'calendar', 'ipos', 'movers', 'macro', 'yield_curve', 'screener']) expect(names, gone).not.toContain(gone)
+    // The route has to be one the connector lists, not just the connector: only `quote` reads yahoo's `quote`.
+    expect(usable((c, route) => c === 'yahoo' && route === 'quote')).toEqual(['quote'])
+    // Every dataset needs one: financials has three route datasets, so one callable dataset is not enough.
+    const income = recipeRouteAlternatives(by('financials'))[0]!
+    expect(recipeUsable(by('financials'), (c, route) => c === income.connector && route === income.route)).toBe(false)
   })
   it('gives every recipe a preset the shape of its frame supports and a size', () => {
     expect(by('ohlcv').view.preset).toBe('price')

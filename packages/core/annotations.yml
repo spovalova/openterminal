@@ -308,6 +308,9 @@ annotations:
   "yahoo:quote:marketCap": { unit: usd, format: compact, label: Mkt cap, priority: 5 }
   "yahoo:quote:fiftyTwoWeekHigh": { unit: usd, format: price, label: 52w high, priority: 6 }
   "yahoo:quote:fiftyTwoWeekLow": { unit: usd, format: price, label: 52w low, priority: 6 }
+  "yahoo:news:title": { label: Headline, priority: 1 }
+  "yahoo:news:publisher": { label: Source, priority: 3 }
+  "yahoo:news:symbols": { label: Symbols, priority: 5 }
   "yahoo:chart:adjclose": { unit: usd, format: price, label: Adj close, priority: 6 }
   "yahoo:options:strike": { unit: usd, format: price, label: Strike, priority: 1, role: x }
   "yahoo:options:lastPrice": { unit: usd, format: price, label: Last, priority: 3 }

@@ -1,10 +1,11 @@
 // Yahoo `descriptors()` and `call(route, params, ctx)` (PLAN.md section 17): the five yahoo-finance2 endpoints
-// as routes, answered through core's `inferFrame`. No unit conversion here: frames carry Yahoo's values
-// (fractions where Yahoo sends fractions) and the annotations say what they are.
+// as routes, plus `news` (the news list of the search module), answered through core's `inferFrame`. No unit
+// conversion here: frames carry Yahoo's values (fractions where Yahoo sends fractions) and the annotations say
+// what they are.
 import { inferFrame, parseDescriptors, type CallHandler, type Descriptor, type Frame, type ValidatedParams } from '@openterminal/core'
 // Imported, not read from disk, so the release bundle carries it inline.
 import descriptorsJson from './descriptors.json' with { type: 'json' }
-import type { ChartOptions, ChartResultArray, OptionsResult, QuoteSummaryModules, QuoteSummaryResult, YahooClient } from './client.js'
+import type { ChartOptions, ChartResultArray, OptionsResult, QuoteSummaryModules, QuoteSummaryResult, SearchResult, YahooClient } from './client.js'
 import { fanOut, normalizeSymbols } from './fanout.js'
 import { nyDate, utcDate } from './time.js'
 
@@ -28,12 +29,12 @@ export function pickExpiration(listed: Date[], today: string, requested?: string
 }
 
 let memo: Descriptor[] | undefined
-/** The five yahoo-finance2 endpoints as descriptors, from descriptors.json, validated once. */
+/** The five yahoo-finance2 endpoints and `news` as descriptors, from descriptors.json, validated once. */
 export function yahooDescriptors(): Descriptor[] {
   return (memo ??= parseDescriptors(descriptorsJson))
 }
 
-export const YAHOO_ROUTES = ['search', 'quote', 'chart', 'options', 'quoteSummary'] as const
+export const YAHOO_ROUTES = ['search', 'quote', 'chart', 'options', 'quoteSummary', 'news'] as const
 export type YahooRoute = (typeof YAHOO_ROUTES)[number]
 
 const strings = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : typeof v === 'string' ? v.split(',') : [])
@@ -91,6 +92,14 @@ export function chartRowsV2(symbol: string, result: ChartResultArray, events: st
     return out.sort((a, b) => (a.date as Date).getTime() - (b.date as Date).getTime())
   }
   return result.quotes.filter((q) => q.close !== null && q.close !== undefined).map((q): Row => ({ symbol, ...q }))
+}
+
+/**
+ * One symbol's news from a search result as rows in the OpenBB news routes' columns: `date`, `title`, `publisher`,
+ * `url`, and `symbols` (the tickers Yahoo relates to the story, else the symbol asked for).
+ */
+export function newsRows(symbol: string, result: Pick<SearchResult, 'news'>): Row[] {
+  return (result.news ?? []).map((n): Row => ({ date: n.providerPublishTime, title: n.title, publisher: n.publisher, url: n.link, symbols: n.relatedTickers?.length ? n.relatedTickers.join(',') : symbol }))
 }
 
 /** Every contract of a chain as rows: `type`, the contract's own fields, the underlying's price. */
@@ -159,6 +168,21 @@ export function makeCall(client: () => YahooClient, now: () => Date): CallHandle
         const modules = strings(params.modules) as QuoteSummaryModules[]
         const perSymbol = await fanOut(symbols, async (symbol) => summaryRows(symbol, await client().quoteSummary(symbol, { modules })), { ctx, kind: 'quoteSummary' })
         return frame('quoteSummary', perSymbol.flat())
+      }
+      case 'news': {
+        const symbols = normalizeSymbols(strings(params.symbol))
+        const limit = Number(params.limit ?? 20)
+        const perSymbol = await fanOut(symbols, async (symbol) => newsRows(symbol, await client().search(symbol, { quotesCount: 0, newsCount: limit })), { ctx, kind: 'news' })
+        // A story that mentions several of the symbols comes back once per search; keep it once, newest first.
+        const at = (r: Row) => (r.date instanceof Date ? r.date.getTime() : 0)
+        const rows: Row[] = []
+        const seen = new Set<unknown>()
+        for (const r of perSymbol.flat().sort((a, b) => at(b) - at(a))) {
+          if (seen.has(r.url)) continue
+          seen.add(r.url)
+          rows.push(r)
+        }
+        return frame('news', rows)
       }
       default:
         throw new Error(`yahoo does not answer route "${route}" (routes: ${YAHOO_ROUTES.join(', ')})`)

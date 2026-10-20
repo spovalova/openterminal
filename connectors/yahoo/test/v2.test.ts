@@ -1,10 +1,10 @@
-// The five yahoo-finance2 endpoints as routes (PLAN.md section 17), answered from the recorded fixtures through
+// The five yahoo-finance2 endpoints as routes, and news (PLAN.md section 17), answered from the recorded fixtures through
 // inferFrame. No network: the fake client replays the fixtures.
 import { describe, expect, it } from 'vitest'
 import { DescriptorSchema, parseParams, type Descriptor } from '@openterminal/core'
 import { createYahooConnector } from '../src/index.js'
-import { chartRowsV2, daysBetween, flattenDeep, makeCall, pickExpiration, summaryRows, yahooDescriptors, YAHOO_ROUTES } from '../src/call.js'
-import { fakeClient, objects, testCtx, V12_NOW } from './helpers.js'
+import { chartRowsV2, daysBetween, flattenDeep, makeCall, newsRows, pickExpiration, summaryRows, yahooDescriptors, YAHOO_ROUTES } from '../src/call.js'
+import { fakeClient, fixtures, objects, testCtx, V12_NOW } from './helpers.js'
 
 const descriptors = yahooDescriptors()
 const by = (route: string): Descriptor => descriptors.find((d) => d.route === route)!
@@ -25,12 +25,13 @@ async function run(route: string, params: Record<string, unknown>, overrides: Pa
 }
 
 describe('descriptors.json', () => {
-  it('holds exactly the five yahoo-finance2 endpoints the recipes name, all valid, and the connector exposes them', async () => {
+  it('holds exactly the five yahoo-finance2 endpoints and news that the recipes name, all valid, and the connector exposes them', async () => {
     expect(descriptors.map((d) => d.route)).toEqual([...YAHOO_ROUTES])
     expect(descriptors.every((d) => DescriptorSchema.safeParse(d).success && d.connector === 'yahoo' && d.providers.length === 0)).toBe(true)
     expect(by('chart').params.map((p) => `${p.name}:${p.type}${p.required ? '!' : ''}`)).toEqual(['symbol:string[]!', 'period1:date!', 'period2:date', 'interval:string', 'includePrePost:boolean', 'events:string'])
     expect(by('quoteSummary').params.find((p) => p.name === 'modules')).toMatchObject({ type: 'string[]', required: true, enum: expect.arrayContaining(['financialData', 'calendarEvents', 'topHoldings']) })
     expect(by('quoteSummary').fields.map((f) => f.name)).toEqual(['symbol']) // inference fills the rest
+    expect(by('news').params.map((p) => `${p.name}:${p.type}${p.required ? '!' : ''}`)).toEqual(['symbol:string[]!', 'limit:integer'])
     const { connector } = build()
     expect(connector.name).toBe('yahoo')
     expect(connector.config.safeParse({}).success).toBe(true)
@@ -79,6 +80,49 @@ describe('call: quote and search', () => {
     expect(client.calls.search).toEqual([['micron', { quotesCount: 10, newsCount: 0 }]])
     expect(rows.length).toBeGreaterThan(0)
     expect(rows[0]).toMatchObject({ query: 'micron', symbol: 'MU', exchange: 'NMS', quoteType: 'EQUITY' })
+  })
+})
+
+describe('call: news', () => {
+  const NEWS = fixtures.news().byTerm
+  it('asks the search module for news only, newsCount stories, and answers the columns the OpenBB news routes do', async () => {
+    const { frame, rows, client } = await run('news', { symbol: 'tsla', limit: 5 })
+    expect(client.calls.search).toEqual([['TSLA', { quotesCount: 0, newsCount: 5 }]])
+    expect(frame.columns).toEqual([
+      { name: 'date', type: 'time' },
+      { name: 'title', type: 'string' },
+      { name: 'publisher', type: 'string' },
+      { name: 'url', type: 'string' },
+      { name: 'symbols', type: 'string' },
+    ])
+    expect(rows).toHaveLength(5)
+    const first = NEWS.TSLA!.news[0]!
+    expect(rows[0]).toEqual({ date: first.providerPublishTime.getTime(), title: first.title, publisher: first.publisher, url: first.link, symbols: first.relatedTickers!.join(',') })
+    expect(rows.every((r) => typeof r.date === 'number' && /^https:\/\//.test(String(r.url)) && String(r.symbols).split(',').includes('TSLA'))).toBe(true)
+    expect(frame.meta.connector).toBe('yahoo')
+  })
+  it('defaults to twenty stories per symbol', async () => {
+    const { client } = await run('news', { symbol: ['TSLA'] })
+    expect(client.calls.search[0]![1]).toEqual({ quotesCount: 0, newsCount: 20 })
+  })
+  it('merges several symbols newest first and keeps a story both searches returned once', async () => {
+    const { rows, client } = await run('news', { symbol: ['TSLA', 'NVDA'] })
+    expect(client.calls.search.map(([term]) => term)).toEqual(['TSLA', 'NVDA'])
+    expect(rows).toHaveLength(10)
+    const dates = rows.map((r) => r.date as number)
+    expect(dates).toEqual([...dates].sort((a, b) => b - a))
+    const twice = await run('news', { symbol: ['TSLA', 'TSLA2'], limit: 5 }, { search: async () => NEWS.TSLA! })
+    expect(twice.rows).toHaveLength(5) // the same five stories from both searches
+  })
+  it('names the asked symbol when Yahoo relates the story to none, skips a failing symbol, and answers no rows for a term with no news', async () => {
+    expect(newsRows('MU', { news: [{ uuid: 'u', title: 'T', publisher: 'P', link: 'https://example.com/a', providerPublishTime: new Date('2026-10-20T12:00:00Z'), type: 'STORY' }] })).toEqual([{ date: new Date('2026-10-20T12:00:00Z'), title: 'T', publisher: 'P', url: 'https://example.com/a', symbols: 'MU' }])
+    const { rows, ctx } = await run('news', { symbol: ['NVDA', 'BAD'], limit: 5 })
+    expect(rows).toHaveLength(5)
+    expect(ctx.logs.some((l) => /news: skipped BAD/.test(l))).toBe(true)
+    const none = await run('news', { symbol: 'ZQXV' }, { search: async () => NEWS['zqxv-no-such-company']! }) // the symbol is upper-cased, the fixture's key is not
+    expect(none.rows).toEqual([])
+    expect(none.frame.columns.map((c) => c.name)).toEqual(['date', 'title', 'publisher', 'url', 'symbols'])
+    await expect(run('news', { symbol: 'BAD' })).rejects.toThrow(/news failed for every input/)
   })
 })
 

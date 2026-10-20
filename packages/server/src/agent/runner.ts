@@ -116,7 +116,19 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
       const turns: NonNullable<RunLogRow['turns']> = []
       let continued = false
 
-      const recipes = deps.registry.recipes?.() ?? []
+      // Only the recipes that can run: one whose routes all sit on connectors that are not registered (OpenBB not
+      // configured) or do not list them would be offered to the agent, called, and fail every time.
+      const allRecipes = deps.registry.recipes?.() ?? []
+      let recipes = allRecipes
+      try {
+        recipes = (await deps.registry.usableRecipes?.()) ?? allRecipes
+      } catch (err) {
+        log(`[agent] recipe availability unknown, offering every recipe: ${errorMessage(err)}`)
+      }
+      if (recipes.length < allRecipes.length) {
+        const kept = new Set(recipes.map((r) => r.name))
+        log(`[agent] hiding ${allRecipes.length - recipes.length} recipes with no usable route: ${allRecipes.filter((r) => !kept.has(r.name)).map((r) => r.name).join(', ')}`)
+      }
       const connectors = deps.registry
         .connectors()
         .filter((c) => c.status === 'ok')
@@ -292,7 +304,8 @@ export function createRunner(deps: RunnerDeps): AgentRunner {
           // The model used tools and then said nothing (live finding, 2026-10-18). Ask once more, without tools.
           continued = true
           log('[agent] model ended with no reply text; asking once more without tools')
-          const history = (await result.finalStep).response.messages as ModelMessage[]
+          // All steps' messages: the final step's alone is the empty turn, and the tool results before it would be lost.
+          const history = (await result.responseMessages) as ModelMessage[]
           const more = streamText({
             model: deps.model,
             system: systemMessage,

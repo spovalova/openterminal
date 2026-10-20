@@ -242,6 +242,16 @@ export function recipeRouteAlternatives(r: Recipe): RecipeRoute[] {
   return first?.routes ?? []
 }
 
+/**
+ * Whether a recipe can run with the routes `callable` says exist: every dataset that reads routes needs at least one
+ * alternative that is, since a dataset with none fails the whole recipe. `when` is ignored (the params are not known
+ * yet), so a recipe whose routes are all callable but for some params stays. The registry's `usableRecipes` passes
+ * "the connector is registered and healthy and its catalog lists the route".
+ */
+export function recipeUsable(r: Recipe, callable: (connector: string, route: string) => boolean): boolean {
+  return Object.values(recipeDatasets(r)).every((ds) => !('routes' in ds) || ds.routes.some((x) => callable(x.connector, x.route)))
+}
+
 /** The title template rendered with the params: arrays joined with ", ", missing params dropped, whitespace collapsed. */
 export function titleFor(r: Pick<Recipe, 'title'>, params: Record<string, unknown>): string {
   const ctx: FilterCtx = { now: Date.now() }
