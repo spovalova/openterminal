@@ -141,9 +141,16 @@ export function todayNy(ctx: NativeCtx): string {
   return wallParts(Math.floor(ctx.now().getTime() / 1000), 'America/New_York').date
 }
 
+// Building a formatter is far dearer than using one, and a price history asks for thousands of times; there are few zones.
+const formatters = new Map<string, Intl.DateTimeFormat>()
+
 /** Date and time of a unix timestamp as the wall clock reads in a time zone. */
 export function wallParts(seconds: number, timeZone: string): { date: string; time: string } {
-  const f = new Intl.DateTimeFormat('en-CA', { timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  let f = formatters.get(timeZone)
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-CA', { timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    formatters.set(timeZone, f)
+  }
   const p: Record<string, string> = {}
   for (const part of f.formatToParts(new Date(seconds * 1000))) p[part.type] = part.value
   return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}:${p.second}` }

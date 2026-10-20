@@ -75,6 +75,8 @@ export type HistoryOptions = {
   adjustDividends?: boolean
   /** Dates of daily and coarser bars as "YYYY-MM-DDT00:00:00" rather than "YYYY-MM-DD". */
   datetimes?: boolean
+  /** Intraday windows that begin at a time of day rather than at midnight: "YYYY-MM-DDTHH:MM:SS" on the exchange's clock. */
+  startAt?: string
 }
 
 /**
@@ -104,7 +106,7 @@ export async function priceHistory(ctx: NativeCtx, symbol: string, o: HistoryOpt
 export function barRows(chart: Chart, o: HistoryOptions, intraday: boolean): Row[] {
   // Intraday windows run from midnight of the start date to midnight after the end date, both included, on the
   // exchange's clock; daily and coarser bars are in the window when their own date is.
-  const from = `${o.start}T00:00:00`
+  const from = o.startAt ?? `${o.start}T00:00:00`
   const to = `${addDays(o.end, 1)}T00:00:00`
   const bars = chart.bars.filter((b) => {
     if (b.close === null) return false

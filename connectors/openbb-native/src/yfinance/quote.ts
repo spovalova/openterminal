@@ -42,7 +42,7 @@ function unwrap(v: unknown): unknown {
   if (isRecord(v) && 'raw' in v) return v.raw
   if (Array.isArray(v)) return v.map(unwrap)
   if (isRecord(v)) return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, unwrap(x)]))
-  return typeof v === 'string' ? v.replace(/ /g, ' ') : v
+  return typeof v === 'string' ? v.replaceAll('\u00a0', ' ') : v
 }
 
 /** What yfinance's `Ticker.info` holds: the five modules, then the v7 quote's own fields over them. */

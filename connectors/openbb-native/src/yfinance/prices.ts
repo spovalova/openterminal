@@ -18,19 +18,41 @@ function intervalOf(params: NativeParams): string {
   return interval
 }
 
-/** How far back a window starts when the caller names no start date: a year, or what Yahoo still serves of intraday data. */
-export function defaultStart(interval: string, today: string): string {
-  if (interval === '1m') return addDays(today, -6)
-  if (isIntraday(interval) && interval !== '60m' && interval !== '1h') return addDays(today, -59)
+type Kind = 'equity' | 'index' | 'crypto' | 'currency' | 'futures'
+
+/**
+ * How many days back a window starts when the caller names no start date. Daily and coarser data go back a year; intraday
+ * data goes back as far as Yahoo serves it, which each kind of symbol takes a little differently.
+ */
+const LOOKBACK_DAYS: Record<Kind, { '1m': number; minutes: number; hours: number }> = {
+  equity: { '1m': 6, minutes: 59, hours: 365 },
+  index: { '1m': 6, minutes: 59, hours: 29 },
+  crypto: { '1m': 4, minutes: 58, hours: 30 },
+  currency: { '1m': 6, minutes: 58, hours: 29 },
+  futures: { '1m': 5, minutes: 58, hours: 30 },
+}
+
+/** How far back a window starts when the caller names no start date. */
+export function defaultStart(interval: string, today: string, kind: Kind = 'equity'): string {
+  const back = LOOKBACK_DAYS[kind]
+  if (interval === '1m') return addDays(today, -back['1m'])
+  if (interval === '60m' || interval === '1h') return addDays(today, -back.hours)
+  if (isIntraday(interval)) return addDays(today, -back.minutes)
   return addDays(today, -365)
 }
 
 /** The inclusive window a call asks for: an end date not after the start means "until today". */
-export function windowOf(params: NativeParams, interval: string, ctx: NativeCtx): { start: string; end: string } {
+export function windowOf(params: NativeParams, interval: string, ctx: NativeCtx, kind: Kind = 'equity'): { start: string; end: string; startAt?: string } {
   const today = todayNy(ctx)
-  const start = typeof params.start_date === 'string' && params.start_date ? params.start_date : defaultStart(interval, today)
-  const given = typeof params.end_date === 'string' && params.end_date ? params.end_date : undefined
-  return { start, end: given && given > start ? given : today }
+  const given = typeof params.start_date === 'string' && params.start_date ? params.start_date : undefined
+  const start = given ?? defaultStart(interval, today, kind)
+  const end = typeof params.end_date === 'string' && params.end_date && params.end_date > start ? params.end_date : today
+  // Round the clock, a month of hourly crypto bars is thirty days back to the hour.
+  if (!given && kind === 'crypto' && (interval === '1h' || interval === '60m')) {
+    const back = new Date(ctx.now().getTime() - 30 * 86_400_000).toISOString()
+    return { start: back.slice(0, 10), end, startAt: `${back.slice(0, 13)}:00:00` }
+  }
+  return { start, end }
 }
 
 /** Symbols one after the other (Yahoo rate-limits), one with no data left out; sorted by date, then symbol. */
@@ -78,7 +100,7 @@ export function indexSymbol(input: string): string {
 
 export async function indexHistorical(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
   const interval = intervalOf(params)
-  const { start, end } = windowOf(params, interval, ctx)
+  const { start, end } = windowOf(params, interval, ctx, 'index')
   const symbols = [...new Set(symbolsOf(params).map(indexSymbol))]
   // Yahoo's index hours include the closing print at 16:00, which only comes with the extended session.
   return manySymbols(symbols, (symbol) => priceHistory(ctx, symbol, { interval, start, end, prepost: true }))
@@ -92,9 +114,9 @@ export function cryptoSymbol(input: string): string {
 
 export async function cryptoHistorical(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
   const interval = intervalOf(params)
-  const { start, end } = windowOf(params, interval, ctx)
+  const { start, end, startAt } = windowOf(params, interval, ctx, 'crypto')
   const symbols = [...new Set(symbolsOf(params).map(cryptoSymbol))]
-  return manySymbols(symbols, (symbol) => priceHistory(ctx, symbol, { interval, start, end }))
+  return manySymbols(symbols, (symbol) => priceHistory(ctx, symbol, { interval, start, end, ...(startAt ? { startAt } : {}) }))
 }
 
 /** `EURUSD` is Yahoo's `EURUSD=X`. */
@@ -105,7 +127,7 @@ export function currencySymbol(input: string): string {
 
 export async function currencyHistorical(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
   const interval = intervalOf(params)
-  const { start, end } = windowOf(params, interval, ctx)
+  const { start, end } = windowOf(params, interval, ctx, 'currency')
   const symbols = [...new Set(symbolsOf(params).map(currencySymbol))]
   return manySymbols(symbols, (symbol) => priceHistory(ctx, symbol, { interval, start, end }))
 }
@@ -130,7 +152,7 @@ export async function futuresContract(ctx: NativeCtx, root: string, expiration: 
 
 export async function futuresHistorical(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
   const interval = intervalOf(params)
-  const { start, end } = windowOf(params, interval, ctx)
+  const { start, end } = windowOf(params, interval, ctx, 'futures')
   const expiration = typeof params.expiration === 'string' && params.expiration ? params.expiration : undefined
   const symbols = symbolsOf(params)
   const resolved = new Map<string, string>()

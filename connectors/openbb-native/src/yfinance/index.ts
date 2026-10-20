@@ -1,32 +1,34 @@
 import { defineProvider } from '../types.js'
 import { companyCalendar, earningsCalendar, economyCalendar, ipoCalendar, splitsCalendar } from './calendars.js'
 import { consensus, earningsEstimates, epsRevisions, epsTrend, growthEstimates, priceTarget, recommendationTrend, revenueEstimates } from './estimates.js'
-import { filings, historicalEps, historicalMarketCap } from './fundamentals.js'
 import { dividends, historicalSplits } from './events.js'
+import { filings, historicalEps, historicalMarketCap } from './fundamentals.js'
+import { fundAllocation, fundHoldings, fundInfo, fundPerformance, fundRatings, fundRisk } from './funds.js'
 import { futuresCurve } from './futures.js'
+import { equityMetrics, equityProfile, equityQuote, etfInfo, management, shareStatistics } from './info.js'
 import { optionsChains } from './options.js'
 import { insiderPurchases, insiderRoster, insiderTrading, institutionalHolders, majorHolders, mutualFundHolders } from './ownership.js'
+import { cryptoHistorical, currencyHistorical, equityHistorical, etfHistorical, fundsHistorical, futuresHistorical, indexAvailable, indexHistorical } from './prices.js'
+import { privateCompanies } from './private.js'
+import { equityScreener } from './screener.js'
 import { companyNews, news, search } from './search.js'
 import { industryOverview, industryTopGrowth, industryTopPerforming, sectorIndustries, sectorOverview, sectorTopCompanies, sectorTopFunds } from './sectors.js'
-import { fundAllocation, fundHoldings, fundInfo, fundPerformance, fundRatings, fundRisk } from './funds.js'
 import { balanceSheet, cashFlow, incomeStatement } from './statements.js'
-import { equityMetrics, equityProfile, equityQuote, etfInfo, management, shareStatistics } from './info.js'
-import { cryptoHistorical, currencyHistorical, equityHistorical, etfHistorical, fundsHistorical, futuresHistorical, indexAvailable, indexHistorical } from './prices.js'
 
 export default defineProvider({
   name: 'yfinance',
   credentials: [],
-  status: 'todo',
+  status: 'ported',
   routes: {
     'crypto/price/historical': cryptoHistorical,
+    'currency/price/historical': currencyHistorical,
+    'derivatives/futures/curve': futuresCurve,
+    'derivatives/futures/historical': futuresHistorical,
     'derivatives/options/chains': optionsChains,
     'economy/calendar': economyCalendar,
     'equity/calendar/earnings': earningsCalendar,
     'equity/calendar/ipo': ipoCalendar,
     'equity/calendar/splits': splitsCalendar,
-    'currency/price/historical': currencyHistorical,
-    'derivatives/futures/curve': futuresCurve,
-    'derivatives/futures/historical': futuresHistorical,
     'equity/estimates/consensus': consensus,
     'equity/estimates/price_target': priceTarget,
     'equity/fundamental/balance': balanceSheet,
@@ -44,11 +46,12 @@ export default defineProvider({
     'equity/price/historical': equityHistorical,
     'equity/price/quote': equityQuote,
     'equity/profile': equityProfile,
+    'equity/screener': equityScreener,
     'etf/historical': etfHistorical,
     'etf/info': etfInfo,
     'index/available': indexAvailable,
-    'news/company': companyNews,
     'index/price/historical': indexHistorical,
+    'news/company': companyNews,
     'yfinance/company_calendar': companyCalendar,
     'yfinance/estimates/earnings': earningsEstimates,
     'yfinance/estimates/eps_revisions': epsRevisions,
@@ -72,6 +75,7 @@ export default defineProvider({
     'yfinance/ownership/institutional': institutionalHolders,
     'yfinance/ownership/major': majorHolders,
     'yfinance/ownership/mutual_fund': mutualFundHolders,
+    'yfinance/private_companies': privateCompanies,
     'yfinance/search': search,
     'yfinance/sectors/industries': sectorIndustries,
     'yfinance/sectors/overview': sectorOverview,
