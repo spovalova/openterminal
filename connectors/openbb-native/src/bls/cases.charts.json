@@ -1,0 +1,534 @@
+[
+  {
+    "name": "cpi-by-category",
+    "route": "bls/cpi/by_category",
+    "params": {}
+  },
+  {
+    "name": "cpi-by-category-line",
+    "route": "bls/cpi/by_category_line",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "cpi-by-region",
+    "route": "bls/cpi/by_region",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "cpi-by-metro",
+    "route": "bls/cpi/by_metro",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "cpi-average-prices",
+    "route": "bls/cpi/average_prices",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-civilian-unemployment-rate",
+    "route": "bls/employment_situation/civilian_unemployment_rate",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-civilian-unemployment",
+    "route": "bls/employment_situation/civilian_unemployment",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-unemployment-by-education",
+    "route": "bls/employment_situation/unemployment_by_education",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-unemployment-by-veteran-status",
+    "route": "bls/employment_situation/unemployment_by_veteran_status",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-reasons-for-unemployment",
+    "route": "bls/employment_situation/reasons_for_unemployment",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-duration-of-unemployment",
+    "route": "bls/employment_situation/duration_of_unemployment",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-long-term-unemployed-share",
+    "route": "bls/employment_situation/long_term_unemployed_share",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-labor-underutilization",
+    "route": "bls/employment_situation/labor_underutilization",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-labor-force-participation-rate",
+    "route": "bls/employment_situation/labor_force_participation_rate",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-employment-population-ratio",
+    "route": "bls/employment_situation/employment_population_ratio",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-civilian-employment",
+    "route": "bls/employment_situation/civilian_employment",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-not-in-labor-force-want-a-job",
+    "route": "bls/employment_situation/not_in_labor_force_want_a_job",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-not-in-labor-force-indicators",
+    "route": "bls/employment_situation/not_in_labor_force_indicators",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-employment-levels-by-industry",
+    "route": "bls/employment_situation/employment_levels_by_industry",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-average-weekly-hours-production",
+    "route": "bls/employment_situation/average_weekly_hours_production",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "employment-situation-employment-change-by-industry-ci",
+    "route": "bls/employment_situation/employment_change_by_industry_ci",
+    "params": {}
+  },
+  {
+    "name": "employment-situation-employment-by-industry-monthly-changes",
+    "route": "bls/employment_situation/employment_by_industry_monthly_changes",
+    "params": {}
+  },
+  {
+    "name": "employment-situation-employment-and-hourly-earnings-by-industry",
+    "route": "bls/employment_situation/employment_and_hourly_earnings_by_industry",
+    "params": {}
+  },
+  {
+    "name": "employment-situation-employment-and-weekly-earnings-by-industry",
+    "route": "bls/employment_situation/employment_and_weekly_earnings_by_industry",
+    "params": {}
+  },
+  {
+    "name": "ppi-final-demand-1m",
+    "route": "bls/ppi/final_demand_1m",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "ppi-final-demand-12m",
+    "route": "bls/ppi/final_demand_12m",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "ppi-final-demand-components-1m",
+    "route": "bls/ppi/final_demand_components_1m",
+    "params": {}
+  },
+  {
+    "name": "ppi-final-demand-components-12m",
+    "route": "bls/ppi/final_demand_components_12m",
+    "params": {}
+  },
+  {
+    "name": "ppi-intermediate-unprocessed-1m",
+    "route": "bls/ppi/intermediate_unprocessed_1m",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "ppi-intermediate-unprocessed-12m",
+    "route": "bls/ppi/intermediate_unprocessed_12m",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "ppi-intermediate-processed-1m",
+    "route": "bls/ppi/intermediate_processed_1m",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "ppi-intermediate-processed-12m",
+    "route": "bls/ppi/intermediate_processed_12m",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "ppi-intermediate-services-1m",
+    "route": "bls/ppi/intermediate_services_1m",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "ppi-intermediate-services-12m",
+    "route": "bls/ppi/intermediate_services_12m",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "productivity-by-sector",
+    "route": "bls/productivity/by_sector",
+    "params": {}
+  },
+  {
+    "name": "productivity-nonfarm-business-productivity",
+    "route": "bls/productivity/nonfarm_business_productivity",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "productivity-nonfarm-business-labor-costs",
+    "route": "bls/productivity/nonfarm_business_labor_costs",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "productivity-manufacturing-productivity",
+    "route": "bls/productivity/manufacturing_productivity",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "productivity-manufacturing-labor-costs",
+    "route": "bls/productivity/manufacturing_labor_costs",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "productivity-nonfarm-business-indexes",
+    "route": "bls/productivity/nonfarm_business_indexes",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "productivity-manufacturing-indexes",
+    "route": "bls/productivity/manufacturing_indexes",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "productivity-nonfinancial-corporations-indexes",
+    "route": "bls/productivity/nonfinancial_corporations_indexes",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "jolts-unemp-per-opening",
+    "route": "bls/jolts/unemp_per_opening",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "jolts-openings-hires-seps-levels",
+    "route": "bls/jolts/openings_hires_seps_levels",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "jolts-openings-hires-seps-rates",
+    "route": "bls/jolts/openings_hires_seps_rates",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "jolts-hires-seps-rates",
+    "route": "bls/jolts/hires_seps_rates",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "jolts-openings-by-industry",
+    "route": "bls/jolts/openings_by_industry",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "jolts-openings-hires-seps-by-region",
+    "route": "bls/jolts/openings_hires_seps_by_region",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "jolts-beveridge-curve",
+    "route": "bls/jolts/beveridge_curve",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "productivity-tfp-combined-inputs-output",
+    "route": "bls/productivity/tfp_combined_inputs_output",
+    "params": {}
+  },
+  {
+    "name": "productivity-tfp-percent-change",
+    "route": "bls/productivity/tfp_percent_change",
+    "params": {}
+  },
+  {
+    "name": "productivity-tfp-output-and-inputs",
+    "route": "bls/productivity/tfp_output_and_inputs",
+    "params": {}
+  },
+  {
+    "name": "productivity-tfp-contributions",
+    "route": "bls/productivity/tfp_contributions",
+    "params": {}
+  },
+  {
+    "name": "productivity-tfp-ict-trends",
+    "route": "bls/productivity/tfp_ict_trends",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "productivity-tfp-fire-trends",
+    "route": "bls/productivity/tfp_fire_trends",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "productivity-wr-productivity-change",
+    "route": "bls/productivity/wr_productivity_change",
+    "params": {}
+  },
+  {
+    "name": "productivity-wr-productivity-by-period",
+    "route": "bls/productivity/wr_productivity_by_period",
+    "params": {}
+  },
+  {
+    "name": "productivity-wr-indexes-by-sector",
+    "route": "bls/productivity/wr_indexes_by_sector",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "productivity-wr-lp-by-industry",
+    "route": "bls/productivity/wr_lp_by_industry",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "productivity-wr-1yr-change",
+    "route": "bls/productivity/wr_1yr_change",
+    "params": {}
+  },
+  {
+    "name": "productivity-wr-longterm-change",
+    "route": "bls/productivity/wr_longterm_change",
+    "params": {}
+  },
+  {
+    "name": "productivity-wr-labor-cost-by-sector",
+    "route": "bls/productivity/wr_labor_cost_by_sector",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "productivity-mm-productivity-change",
+    "route": "bls/productivity/mm_productivity_change",
+    "params": {}
+  },
+  {
+    "name": "productivity-mm-productivity-by-period",
+    "route": "bls/productivity/mm_productivity_by_period",
+    "params": {}
+  },
+  {
+    "name": "productivity-mm-indexes-by-industry",
+    "route": "bls/productivity/mm_indexes_by_industry",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "productivity-mm-1yr-change",
+    "route": "bls/productivity/mm_1yr_change",
+    "params": {}
+  },
+  {
+    "name": "productivity-mm-longterm-change",
+    "route": "bls/productivity/mm_longterm_change",
+    "params": {}
+  },
+  {
+    "name": "productivity-mm-labor-cost-by-industry",
+    "route": "bls/productivity/mm_labor_cost_by_industry",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "import-export-price-indexes",
+    "route": "bls/import_export/price_indexes",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "import-export-imports-by-category",
+    "route": "bls/import_export/imports_by_category",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "import-export-exports-by-category",
+    "route": "bls/import_export/exports_by_category",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "import-export-imports-by-origin",
+    "route": "bls/import_export/imports_by_origin",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "import-export-exports-by-grains",
+    "route": "bls/import_export/exports_by_grains",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  },
+  {
+    "name": "import-export-air-passenger-fares",
+    "route": "bls/import_export/air_passenger_fares",
+    "params": {
+      "start_date": "2022-01-01",
+      "end_date": "2023-12-31"
+    }
+  }
+]
