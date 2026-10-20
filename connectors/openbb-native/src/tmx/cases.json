@@ -1,1 +1,431 @@
-[]
+[
+  {
+    "name": "quote-ry",
+    "route": "equity/price/quote",
+    "params": { "symbol": "RY" },
+    "compare": { "volatile": ["last_price", "open", "high", "low", "volume", "prev_close", "change", "change_percent", "vwap", "ma_21", "ma_50", "ma_200", "volume_avg_10d", "volume_avg_30d", "volume_avg_50d", "market_cap_all_classes", "MarketCap", "averageVolume20D", "year_high", "year_low", "pe", "price_to_book", "price_to_cf", "return_on_equity", "return_on_assets", "debt_to_equity", "eps", "beta", "alpha", "div_yield"] },
+    "reason": "live quote: OpenBB keeps TMX quotes in its response cache for a minute and shares trade after the close, so prices, volumes and the ratios built on the price differ"
+  },
+  {
+    "name": "historical-ry-sep",
+    "route": "equity/price/historical",
+    "params": { "symbol": "RY", "start_date": "2026-09-01", "end_date": "2026-09-30" }
+  },
+  {
+    "name": "historical-weekly-multi",
+    "route": "equity/price/historical",
+    "params": { "symbol": "RY,TD", "start_date": "2026-08-01", "end_date": "2026-09-30", "interval": "1W" }
+  },
+  {
+    "name": "historical-hourly",
+    "route": "equity/price/historical",
+    "params": { "symbol": "RY", "start_date": "2026-09-01", "end_date": "2026-09-02", "interval": "60m" }
+  },
+  {
+    "name": "historical-unadjusted",
+    "route": "equity/price/historical",
+    "params": { "symbol": "RY", "start_date": "2026-09-01", "end_date": "2026-09-10", "adjustment": "unadjusted" }
+  },
+  {
+    "name": "etf-historical-xiu",
+    "route": "etf/historical",
+    "params": { "symbol": "XIU", "start_date": "2026-09-01", "end_date": "2026-09-15" }
+  },
+  {
+    "name": "index-historical-tsx",
+    "route": "index/price/historical",
+    "params": { "symbol": "^TSX", "start_date": "2026-09-01", "end_date": "2026-09-30" }
+  },
+  {
+    "name": "currency-historical-usdcad",
+    "route": "currency/price/historical",
+    "params": { "symbol": "USDCAD", "start_date": "2026-09-01", "end_date": "2026-09-30" }
+  },
+  {
+    "name": "currency-historical-weekly",
+    "route": "currency/price/historical",
+    "params": { "symbol": "EURCAD,GBPCAD", "start_date": "2026-08-01", "end_date": "2026-09-30", "interval": "week" }
+  },
+  {
+    "name": "futures-historical-cgb",
+    "route": "derivatives/futures/historical",
+    "params": { "symbol": "CGB", "start_date": "2026-08-03", "end_date": "2026-08-14" }
+  },
+  {
+    "name": "profile-ry-td",
+    "route": "equity/profile",
+    "params": { "symbol": "RY,TD" }
+  },
+  {
+    "name": "earnings-sep-1-2",
+    "route": "equity/calendar/earnings",
+    "params": { "start_date": "2026-09-01", "end_date": "2026-09-02" }
+  },
+  {
+    "name": "gainers-price-performer",
+    "route": "equity/discovery/gainers",
+    "params": { "category": "price_performer" },
+    "compare": { "rows": "overlap", "minOverlap": 0.6, "keys": ["symbol"], "volatile": ["price", "change", "percent_change", "volume"] },
+    "reason": "live ranking: the list and the prices move between OpenBB's call and the native one"
+  },
+  {
+    "name": "gainers-dividend",
+    "route": "equity/discovery/gainers",
+    "params": { "category": "dividend" },
+    "compare": { "rows": "overlap", "minOverlap": 0.6, "keys": ["symbol"], "volatile": ["price", "change", "percent_change", "volume", "dividend_yield"] },
+    "reason": "live ranking: the list, the prices and the yield built on them move between OpenBB's call and the native one"
+  },
+  {
+    "name": "gainers-cdr",
+    "route": "equity/discovery/gainers",
+    "params": { "category": "cdr" },
+    "oracle": "none",
+    "reason": "OpenBB fails on this list: TMX leaves some CDR names empty, its check_metric validator turns them into 0 and the name field rejects it. The port leaves such names out, so its rows are pinned as they are"
+  },
+  {
+    "name": "consensus-ry-td",
+    "route": "equity/estimates/consensus",
+    "params": { "symbol": "RY,TD" },
+    "compare": { "volatile": ["target_upside"] },
+    "reason": "the upside is measured against the live price"
+  },
+  {
+    "name": "dividends-ry",
+    "route": "equity/fundamental/dividends",
+    "params": { "symbol": "RY", "start_date": "2026-01-01", "end_date": "2026-06-30" }
+  },
+  {
+    "name": "filings-ry-sep",
+    "route": "equity/fundamental/filings",
+    "params": { "symbol": "RY", "start_date": "2026-09-01", "end_date": "2026-09-30" }
+  },
+  {
+    "name": "splits-shop",
+    "route": "equity/fundamental/historical_splits",
+    "params": { "symbol": "SHOP" }
+  },
+  {
+    "name": "insider-trading-ry",
+    "route": "equity/ownership/insider_trading",
+    "params": { "symbol": "RY" }
+  },
+  {
+    "name": "insider-trading-ry-summary",
+    "route": "equity/ownership/insider_trading",
+    "params": { "symbol": "RY", "summary": true }
+  },
+  {
+    "name": "insider-transactions-ry",
+    "route": "tmx/equity/ownership/insider_transactions",
+    "params": { "symbol": "RY", "period": "3m" }
+  },
+  {
+    "name": "news-ry",
+    "route": "news/company",
+    "params": { "symbol": "RY", "limit": 5 }
+  },
+  {
+    "name": "index-available",
+    "route": "index/available",
+    "params": {}
+  },
+  {
+    "name": "index-constituents-tx60",
+    "route": "index/constituents",
+    "params": { "symbol": "^TX60" }
+  },
+  {
+    "name": "index-sectors-tsx",
+    "route": "index/sectors",
+    "params": { "symbol": "^TSX" }
+  },
+  {
+    "name": "index-snapshots-ca",
+    "route": "index/snapshots",
+    "params": { "region": "ca" },
+    "compare": { "volatile": ["price", "volume", "change", "change_percent", "openPrice", "dayHigh", "dayLow", "year_high", "year_low", "bid", "ask"] },
+    "reason": "live quotes: OpenBB keeps TMX quotes in its response cache for a minute and the market trades after the close"
+  },
+  {
+    "name": "index-snapshots-us",
+    "route": "index/snapshots",
+    "params": { "region": "us" },
+    "compare": { "volatile": ["price", "volume", "change", "change_percent", "openPrice", "dayHigh", "dayLow", "year_high", "year_low", "bid", "ask"] },
+    "reason": "live quotes: OpenBB keeps TMX quotes in its response cache for a minute and the market trades after the close"
+  },
+  {
+    "name": "movers-gainers-tsx",
+    "route": "tmx/markets/movers",
+    "params": { "category": "gainers", "exchange": "tsx", "limit": 8 },
+    "compare": { "rows": "overlap", "minOverlap": 0.5, "keys": ["symbol"], "volatile": ["price", "change", "change_percent", "open", "high", "low", "volume", "trade_volume"] },
+    "reason": "live ranking: the list and the prices move between OpenBB's call and the native one"
+  },
+  {
+    "name": "movers-route-defaults",
+    "route": "tmx/markets/movers",
+    "params": {},
+    "compare": { "rows": "overlap", "minOverlap": 0.5, "keys": ["symbol"], "volatile": ["price", "change", "change_percent", "open", "high", "low", "volume", "trade_volume"] },
+    "reason": "live ranking: the list and the prices move between OpenBB's call and the native one. OpenBB drops the route's default category and limit (NASDAQ's), so TMX's gainers and 25 rows apply"
+  },
+  {
+    "name": "movers-nasdaq-route-losers",
+    "route": "nasdaq/markets/movers",
+    "params": { "category": "losers", "exchange": "tsx", "limit": 8 },
+    "compare": { "rows": "overlap", "minOverlap": 0.5, "keys": ["symbol"], "volatile": ["price", "change", "change_percent", "open", "high", "low", "volume", "trade_volume"] },
+    "reason": "live ranking: the list and the prices move between OpenBB's call and the native one"
+  },
+  {
+    "name": "short-interest-ry",
+    "route": "tmx/markets/short_interest",
+    "params": { "symbol": "RY,TD" }
+  },
+  {
+    "name": "rankings-tsx30",
+    "route": "tmx/equity/rankings",
+    "params": { "ranking": "tsx30" }
+  },
+  {
+    "name": "rankings-venture50",
+    "route": "tmx/equity/rankings",
+    "params": { "ranking": "venture50" }
+  },
+  {
+    "name": "symbol-reference",
+    "route": "tmx/equity/symbol_reference",
+    "params": { "symbol": "RY,AAPL,ZZZZ" }
+  },
+  {
+    "name": "trades-ry",
+    "route": "tmx/markets/trades",
+    "params": { "symbol": "RY", "limit": 5 },
+    "compare": { "rows": "overlap", "minOverlap": 0.4, "keys": ["date", "price", "volume", "buyer_id", "seller_id"] },
+    "reason": "live tape: trades print between OpenBB's call and the native one, so the newest rows differ"
+  },
+  {
+    "name": "balance-ry-annual",
+    "route": "equity/fundamental/balance",
+    "params": { "symbol": "RY", "limit": 2 }
+  },
+  {
+    "name": "balance-shop-quarter",
+    "route": "equity/fundamental/balance",
+    "params": { "symbol": "SHOP", "period": "quarter", "limit": 2 }
+  },
+  {
+    "name": "income-ry-annual",
+    "route": "equity/fundamental/income",
+    "params": { "symbol": "RY", "limit": 2 }
+  },
+  {
+    "name": "income-shop-quarter",
+    "route": "equity/fundamental/income",
+    "params": { "symbol": "SHOP", "period": "quarter", "limit": 3 }
+  },
+  {
+    "name": "cash-ry-default-limit",
+    "route": "equity/fundamental/cash",
+    "params": { "symbol": "RY" }
+  },
+  {
+    "name": "cash-shop-quarter",
+    "route": "equity/fundamental/cash",
+    "params": { "symbol": "SHOP", "period": "quarter", "limit": 2 }
+  },
+  {
+    "name": "options-chains-ry",
+    "route": "derivatives/options/chains",
+    "params": { "symbol": "RY" },
+    "compare": { "volatile": ["underlying_price", "open_interest", "volume", "last_trade_price", "last_trade_time", "tick", "prev_close", "change", "change_percent", "open", "high", "low", "bid", "bid_size", "ask", "ask_size", "implied_volatility", "delta", "gamma", "theta", "vega", "rho"] },
+    "reason": "live chain: quotes, sizes and the greeks computed from them move between OpenBB's call and the native one; the contracts themselves are compared exactly"
+  },
+  {
+    "name": "options-chains-eod-ry",
+    "route": "derivatives/options/chains",
+    "params": { "symbol": "RY", "date": "2026-10-16" },
+    "oracle": "none",
+    "reason": "OpenBB's end-of-day path fails on the Montreal Exchange's current CSV (28 columns where it maps 21 by position: 'Length mismatch'); the port reads the columns by name, so its rows are pinned as they are"
+  },
+  {
+    "name": "options-chains-eod-weekend-agf",
+    "route": "derivatives/options/chains",
+    "params": { "symbol": "AGF.B", "date": "2026-10-17" },
+    "oracle": "none",
+    "reason": "OpenBB's end-of-day path fails on the Montreal Exchange's current CSV (28 columns where it maps 21 by position: 'Length mismatch'); the port reads the columns by name. A Saturday moves to the next trading day and AGF.B resolves to its option symbol AGF"
+  },
+  {
+    "name": "covered-calls-ry",
+    "route": "tmx/derivatives/options/covered_calls",
+    "params": { "symbol": "RY" },
+    "compare": { "rows": "overlap", "minOverlap": 0.7, "keys": ["symbol", "expiration", "strike"], "volatile": ["underlying_price", "total_return", "premium_return", "capital_gain", "bid", "bid_size", "ask", "ask_size", "volume", "open_interest"] },
+    "reason": "live screen: which contracts clear the thresholds and their quotes move between OpenBB's call and the native one"
+  },
+  {
+    "name": "futures-instruments-default",
+    "route": "derivatives/futures/instruments",
+    "params": {}
+  },
+  {
+    "name": "futures-instruments-index-derivatives",
+    "route": "derivatives/futures/instruments",
+    "params": { "asset_class": "index_derivative" }
+  },
+  {
+    "name": "futures-instruments-equity-options",
+    "route": "derivatives/futures/instruments",
+    "params": { "asset_class": "equity_option", "instrument_type": "option" }
+  },
+  {
+    "name": "futures-instruments-etf-options",
+    "route": "derivatives/futures/instruments",
+    "params": { "asset_class": "etf_option", "instrument_type": "option" }
+  },
+  {
+    "name": "search-query",
+    "route": "equity/search",
+    "params": { "query": "royal", "limit": 10 },
+    "compare": { "volatile": ["market_cap"] },
+    "reason": "the directory carries live market capitalisations"
+  },
+  {
+    "name": "search-symbol-only",
+    "route": "equity/search",
+    "params": { "query": "TD", "symbol_only": true, "limit": 5 },
+    "compare": { "volatile": ["market_cap"] },
+    "reason": "the directory carries live market capitalisations"
+  },
+  {
+    "name": "search-phrase",
+    "route": "equity/search",
+    "params": { "query": "royal bank", "limit": 5 },
+    "compare": { "volatile": ["market_cap"] },
+    "reason": "the directory carries live market capitalisations"
+  },
+  {
+    "name": "search-browse",
+    "route": "equity/search",
+    "params": { "limit": 10 },
+    "compare": { "rows": "overlap", "minOverlap": 0.8, "keys": ["symbol"], "volatile": ["market_cap"] },
+    "reason": "the largest listings by live market capitalisation: the order of close neighbours can change between OpenBB's directory sweep (kept a day) and the native one"
+  },
+  {
+    "name": "screener-default",
+    "route": "equity/screener",
+    "params": { "limit": 5 },
+    "compare": { "rows": "overlap", "minOverlap": 0.6, "keys": ["symbol"], "volatile": ["price", "intraday_price", "intraday_market_cap", "market_cap", "volume", "price_change", "performance_7d", "performance_30d", "performance_90d", "performance_ytd", "change_52w", "pe_ratio", "ps_ratio", "pb_ratio", "pcf_ratio", "dividend_yield", "above_52w_high", "below_52w_low", "volume_previous_day", "volume_avg_10d", "volume_avg_30d", "volume_avg_50d", "volume_avg_90d", "trade_value_avg_90d"] },
+    "reason": "live screen: market capitalisations, prices and the ratios built on them move, and OpenBB keeps its directory sweep for a day"
+  },
+  {
+    "name": "screener-energy-filters",
+    "route": "equity/screener",
+    "params": { "sector": "energy", "optionable": true, "pe_ratio_max": 20, "dividend_yield_min": 2, "sort_by": "dividend_yield", "limit": 8 },
+    "compare": { "rows": "overlap", "minOverlap": 0.5, "keys": ["symbol"], "volatile": ["price", "intraday_price", "intraday_market_cap", "market_cap", "volume", "price_change", "performance_7d", "performance_30d", "performance_90d", "performance_ytd", "change_52w", "pe_ratio", "ps_ratio", "pb_ratio", "pcf_ratio", "dividend_yield", "above_52w_high", "below_52w_low", "volume_previous_day", "volume_avg_10d", "volume_avg_30d", "volume_avg_50d", "volume_avg_90d", "trade_value_avg_90d"] },
+    "reason": "live screen: which companies clear the filters and their prices move between OpenBB's call and the native one"
+  },
+  {
+    "name": "screener-etf-directory",
+    "route": "equity/screener",
+    "params": { "symbol_type": "ETF", "exchange": "TSX", "limit": 5, "sort_by": "symbol", "sort_order": "ASC" },
+    "compare": { "volatile": ["market_cap"] },
+    "reason": "the directory carries live market capitalisations"
+  },
+  {
+    "name": "screener-futures",
+    "route": "equity/screener",
+    "params": { "symbol_type": "Future", "limit": 6 },
+    "compare": { "rows": "overlap", "minOverlap": 0.5, "keys": ["symbol"], "volatile": ["price", "open", "high", "low", "net_change", "volume", "open_interest", "transactions", "settlement_price"] },
+    "reason": "live session summary: the most active contracts and their prices move between OpenBB's call and the native one"
+  },
+  {
+    "name": "screener-index-quotes",
+    "route": "equity/screener",
+    "params": { "symbol_type": "Index", "limit": 5 },
+    "compare": { "rows": "overlap", "minOverlap": 0.4, "keys": ["symbol"], "volatile": ["price", "open", "high", "low", "prev_close", "price_change", "net_change", "volume", "high_52w", "low_52w", "market_cap"] },
+    "reason": "live quotes: the most active indices and their prices move between OpenBB's call and the native one"
+  },
+  {
+    "name": "etf-info",
+    "route": "etf/info",
+    "params": { "symbol": "XIU,XEQT" },
+    "fixture": false,
+    "reason": "every ETF route reads the 8 MB ETF universe file, about 970 KB compressed, over the 768 KB per-body recording budget"
+  },
+  {
+    "name": "etf-holdings-xiu",
+    "route": "etf/holdings",
+    "params": { "symbol": "XIU" },
+    "fixture": false,
+    "reason": "every ETF route reads the 8 MB ETF universe file, about 970 KB compressed, over the 768 KB per-body recording budget"
+  },
+  {
+    "name": "etf-sectors",
+    "route": "etf/sectors",
+    "params": { "symbol": "XIU,XEQT" },
+    "fixture": false,
+    "reason": "every ETF route reads the 8 MB ETF universe file, about 970 KB compressed, over the 768 KB per-body recording budget"
+  },
+  {
+    "name": "etf-countries",
+    "route": "etf/countries",
+    "params": { "symbol": "XEQT,ZSP,VCN" },
+    "fixture": false,
+    "reason": "every ETF route reads the 8 MB ETF universe file, about 970 KB compressed, over the 768 KB per-body recording budget"
+  },
+  {
+    "name": "etf-search-query",
+    "route": "etf/search",
+    "params": { "query": "XEQT" },
+    "compare": { "volatile": ["unit_price", "close", "prev_close", "volume_avg_daily", "avg_volume", "avg_volume_30d"] },
+    "fixture": false,
+    "reason": "every ETF route reads the 8 MB ETF universe file, about 970 KB compressed, over the 768 KB per-body recording budget; the file refreshes through the day, so prices may move"
+  },
+  {
+    "name": "etf-search-filters",
+    "route": "etf/search",
+    "params": { "fund_family": "bmo_etf", "asset_class": "preferred_share", "currency": "CAD", "sort_by": "aum" },
+    "compare": { "volatile": ["unit_price", "close", "prev_close", "volume_avg_daily", "avg_volume", "avg_volume_30d"] },
+    "fixture": false,
+    "reason": "every ETF route reads the 8 MB ETF universe file, about 970 KB compressed, over the 768 KB per-body recording budget; the file refreshes through the day, so prices may move"
+  },
+  {
+    "name": "etf-search-div-freq-esg",
+    "route": "etf/search",
+    "params": { "div_freq": "monthly", "esg": true, "currency": "CAD", "sort_by": "return_1y" },
+    "compare": { "volatile": ["unit_price", "close", "prev_close", "volume_avg_daily", "avg_volume", "avg_volume_30d"] },
+    "fixture": false,
+    "reason": "every ETF route reads the 8 MB ETF universe file, about 970 KB compressed, over the 768 KB per-body recording budget; the file refreshes through the day, so prices may move"
+  },
+  {
+    "name": "quote-index-multi",
+    "route": "equity/price/quote",
+    "params": { "symbol": "^TSX,RY,ZZZZ" },
+    "compare": { "volatile": ["last_price", "open", "high", "low", "volume", "prev_close", "change", "change_percent", "vwap", "ma_21", "ma_50", "ma_200", "volume_avg_10d", "volume_avg_30d", "volume_avg_50d", "market_cap_all_classes", "MarketCap", "averageVolume20D", "year_high", "year_low", "pe", "price_to_book", "price_to_cf", "return_on_equity", "return_on_assets", "debt_to_equity", "eps", "beta", "alpha", "div_yield"] },
+    "reason": "live quote: OpenBB keeps TMX quotes in its response cache for a minute and shares trade after the close, so prices, volumes and the ratios built on the price differ"
+  },
+  {
+    "name": "quote-futures-batch",
+    "route": "equity/price/quote",
+    "params": { "symbol": "/CGB" }
+  },
+  {
+    "name": "earnings-default-window",
+    "route": "equity/calendar/earnings",
+    "params": {}
+  },
+  {
+    "name": "filings-default-window",
+    "route": "equity/fundamental/filings",
+    "params": { "symbol": "LUC" }
+  },
+  {
+    "name": "news-multi",
+    "route": "news/company",
+    "params": { "symbol": "RY,TD", "limit": 3 }
+  },
+  {
+    "name": "search-us-query",
+    "route": "equity/search",
+    "params": { "query": "apple", "country": "US", "limit": 5 },
+    "compare": { "volatile": ["market_cap"] },
+    "reason": "the directory carries live market capitalisations"
+  }
+]
