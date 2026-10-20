@@ -56,13 +56,6 @@ export function bool(params: NativeParams, key: string, fallback: boolean): bool
   return /^(true|1|yes)$/i.test(String(v))
 }
 
-export function int(params: NativeParams, key: string): number | undefined {
-  const v = params[key]
-  if (v === undefined || v === null || v === '') return undefined
-  const n = Number(v)
-  return Number.isFinite(n) ? Math.trunc(n) : undefined
-}
-
 export function list(params: NativeParams, key: string): string[] {
   const v = params[key]
   if (v === undefined || v === null || v === '') return []
@@ -121,12 +114,6 @@ export function snakeCase(s: string): string {
     .replace(/([a-z])([0-9])/g, '$1_$2')
     .replace(/-/g, '_')
     .toLowerCase()
-}
-
-/** pydantic's `alias_generators.to_camel`. */
-export function camelCase(s: string): string {
-  const pascal = s.replace(/(^|_)([a-z0-9])/g, (_, __, c: string) => c.toUpperCase())
-  return pascal.charAt(0).toLowerCase() + pascal.slice(1)
 }
 
 /** Python's string ordering (by code point) as a comparator. */

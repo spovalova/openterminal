@@ -151,12 +151,3 @@ export function renameColumns(frame: Frame, map: Record<string, string>): Frame 
   const columns = frame.columns.map((c) => map[c] ?? c)
   return { columns, rows: frame.rows.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [map[k] ?? k, v]))) }
 }
-
-/** Python's `<` ordering of two ISO dates or strings, for `sort_values`. */
-export function byKey<T>(key: (x: T) => string): (a: T, b: T) => number {
-  return (a, b) => {
-    const x = key(a)
-    const y = key(b)
-    return x < y ? -1 : x > y ? 1 : 0
-  }
-}
