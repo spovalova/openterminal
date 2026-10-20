@@ -1,0 +1,5 @@
+[
+  { "name": "calendar-2024-03", "route": "economy/calendar", "params": { "start_date": "2024-03-01", "end_date": "2024-03-31" } },
+  { "name": "calendar-employment-situation-2024-h1", "route": "economy/calendar", "params": { "start_date": "2024-01-01", "end_date": "2024-06-30", "release": "Employment Situation" } },
+  { "name": "calendar-cpi-2025-q1", "route": "economy/calendar", "params": { "start_date": "2025-01-01", "end_date": "2025-03-31", "release": "consumer price" } }
+]

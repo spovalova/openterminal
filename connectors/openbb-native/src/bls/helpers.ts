@@ -40,7 +40,7 @@ export function fetchPageOrNull(ctx: NativeCtx, url: string, headers: Record<str
 /** A bls.gov file (xlsx, zip, pdf) as bytes. */
 export function fetchFile(ctx: NativeCtx, url: string, headers: Record<string, string> = { 'User-Agent': BLS_USER_AGENT, Accept: '*/*' }): Promise<Uint8Array> {
   return ctx.cache(`bls:file:${url}`, HOUR_MS, async () => {
-    const res = await ctx.http.response(url, { headers })
+    const res = await ctx.http.response(url, { headers, timeoutMs: 120_000 })
     if (res.status !== 200) throw new Error(`BLS returned HTTP ${res.status} fetching ${url}.`)
     return new Uint8Array(await res.arrayBuffer())
   })

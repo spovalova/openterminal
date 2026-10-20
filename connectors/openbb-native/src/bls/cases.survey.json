@@ -1,0 +1,12 @@
+[
+  { "name": "survey-search-jolts-total-nonfarm-hires-rate", "route": "economy/survey/bls_search", "params": { "category": "jolts", "query": "Total nonfarm;Hires;Rate" } },
+  { "name": "survey-search-ixp-code-extras", "route": "economy/survey/bls_search", "params": { "category": "ixp", "query": "EIUID020", "include_extras": true },
+    "compare": { "volatile": ["end_period", "end_year"] },
+    "reason": "OpenBB reads a catalog snapshot built on 2026-09-28; the native side reads BLS's current series files, so the last observed period of an active series has moved on" },
+  { "name": "survey-search-cpi-average-price-eggs", "route": "economy/survey/bls_search", "params": { "category": "cpi", "query": "Average Price;eggs;Midwest" },
+    "compare": { "volatile": ["end_period", "end_year"] },
+    "reason": "OpenBB reads a catalog snapshot built on 2026-09-28; the native side reads BLS's current series files, so the ranking by last observed period can differ" },
+  { "name": "survey-series-ixp-new-series", "route": "economy/survey/bls_series", "params": { "symbol": "EIUID0206", "category": "ixp" }, "fixture": false, "reason": "needs bls_api_key; live parity pending a key" },
+  { "name": "survey-series-cpi-calculations-2022-2023", "route": "economy/survey/bls_series", "params": { "symbol": "CUUR0000SA0,CUSR0000SA0", "start_date": "2022-01-01", "end_date": "2023-12-31" }, "fixture": false, "reason": "needs bls_api_key; live parity pending a key" },
+  { "name": "survey-series-ppi-annual-average-no-calcs", "route": "economy/survey/bls_series", "params": { "symbol": "WPUFD4", "category": "ppi", "start_date": "2021-01-01", "end_date": "2023-12-31", "calculations": false, "annual_average": true }, "fixture": false, "reason": "needs bls_api_key; live parity pending a key" }
+]
