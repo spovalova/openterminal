@@ -2,7 +2,7 @@
 // openbb_federal_reserve/models/{primary_dealer_fails,primary_dealer_positioning}.py (OpenBB Platform 5.0.0,
 // Apache-2.0); modified: plain maps instead of pandas frames and pydantic models.
 import type { NativeCtx, NativeParams, Row } from '../../types.js'
-import { inRange, request, str } from './helpers.js'
+import { EmptyDataError, inRange, request, str } from './helpers.js'
 import { FAILS_SERIES_TO_TITLE, POSITION_GROUPS_TO_SERIES, POSITION_SERIES_TO_FIELD } from './primary-dealer-series.js'
 
 type Observation = { asofdate: string; keyid: string; value: string }
@@ -36,7 +36,7 @@ export async function primaryDealerFails(params: NativeParams, ctx: NativeCtx): 
   } catch {
     throw new Error('Failed to fetch data from the Federal Reserve API.')
   }
-  if (data.length === 0) throw new Error('No data returned from the Federal Reserve API.')
+  if (data.length === 0) throw new EmptyDataError('No data returned from the Federal Reserve API.')
 
   // DataFrame.pivot(index="asofdate", columns="title", values="value"): a repeated (date, title) is an error.
   const byDate = new Map<string, Map<string, number>>()
@@ -97,7 +97,7 @@ export async function primaryDealerPositioning(params: NativeParams, ctx: Native
   const names = POSITION_SERIES_TO_FIELD.dealer_position!
 
   const results = (await Promise.all(symbols.map((s) => timeseries(ctx, `https://markets.newyorkfed.org/api/pd/get/${s}.json`)))).flat()
-  if (results.length === 0) throw new Error('The request was returned empty.')
+  if (results.length === 0) throw new EmptyDataError('The request was returned empty.')
 
   const records = results
     .map((r) => ({ date: r.asofdate.slice(0, 10), name: names[r.keyid], value: asInt(r.value) }))

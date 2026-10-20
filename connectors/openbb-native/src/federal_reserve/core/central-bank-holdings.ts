@@ -2,7 +2,7 @@
 // and the SomaHoldings class of utils/ny_fed_api.py (OpenBB Platform 5.0.0, Apache-2.0); modified: plain rows instead
 // of pydantic models.
 import type { NativeCtx, NativeParams, Row } from '../../types.js'
-import { dropNil, request, str, snakeCase } from './helpers.js'
+import { dropNil, EmptyDataError, request, snakeCase, str } from './helpers.js'
 
 const BASE_URL = 'https://markets.newyorkfed.org/api'
 const AGENCY_HOLDING_TYPES: Record<string, string> = { all: 'all', agency_debts: 'agency%20debts', mbs: 'mbs', cmbs: 'cmbs' }
@@ -53,7 +53,7 @@ async function asOfDates(ctx: NativeCtx): Promise<string[]> {
 
 async function holdingsOf(ctx: NativeCtx, url: string): Promise<Row[]> {
   const holdings = ((await fetchSoma(ctx, url)).soma?.holdings as Row[] | undefined) ?? []
-  if (holdings.length === 0) throw new Error('No data was returned for the given query.')
+  if (holdings.length === 0) throw new EmptyDataError('No data was returned for the given query.')
   return holdings
 }
 
@@ -94,7 +94,7 @@ async function treasuryHoldings(ctx: NativeCtx, o: Fetch): Promise<Row[]> {
 
 async function summary(ctx: NativeCtx): Promise<Row[]> {
   const rows = ((await fetchSoma(ctx, `${BASE_URL}/soma/summary.json`)).soma?.summary as Row[] | undefined) ?? []
-  if (rows.length === 0) throw new Error('There was an error with the request and was returned empty.')
+  if (rows.length === 0) throw new EmptyDataError('There was an error with the request and was returned empty.')
   return rows
 }
 

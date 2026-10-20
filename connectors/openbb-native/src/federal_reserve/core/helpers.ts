@@ -2,9 +2,29 @@
 // Platform 5.0.0, Apache-2.0); modified: plain rows instead of pandas frames and pydantic models.
 import { BROWSER_UA, type RequestOptions } from '../../http.js'
 import { parseCsv } from '../../lib/csv.js'
-import type { NativeCtx, NativeParams, Row } from '../../types.js'
+import type { NativeCtx, NativeHandler, NativeParams, Row } from '../../types.js'
 
 export const DAY_MS = 24 * 3600 * 1000
+
+/** OpenBB's `EmptyDataError`: the API answers it with HTTP 204, which the connector reads as no rows. */
+export class EmptyDataError extends Error {
+  constructor(message = 'The request was returned empty.') {
+    super(message)
+    this.name = 'EmptyDataError'
+  }
+}
+
+/** Handlers answer an `EmptyDataError` with no rows, as the API's 204 does. */
+export function emptyAsNoRows(handler: NativeHandler): NativeHandler {
+  return async (params, ctx) => {
+    try {
+      return await handler(params, ctx)
+    } catch (err) {
+      if (err instanceof EmptyDataError) return []
+      throw err
+    }
+  }
+}
 
 /** Headers every request carries (requests sends a browser user agent through OpenBB's `get_user_agent`). */
 export const HEADERS: Record<string, string> = { 'User-Agent': BROWSER_UA }
@@ -79,6 +99,19 @@ export async function ddpCsv(ctx: NativeCtx, rel: string, series: string): Promi
   return { header: all[5] ?? [], rows: all.slice(6) }
 }
 
+const NAMED_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', reg: '®', copy: '©', ndash: '–', mdash: '—', lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”', hellip: '…', deg: '°', eacute: 'é' }
+
+/** `html.unescape` for the entities the Fed's pages use: the common named ones and numeric references. */
+export function unescapeHtml(s: string): string {
+  return s.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z][a-z0-9]*);/gi, (whole, body: string) => {
+    if (body[0] === '#') {
+      const code = body[1]!.toLowerCase() === 'x' ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10)
+      return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole
+    }
+    return NAMED_ENTITIES[body.toLowerCase()] ?? whole
+  })
+}
+
 /** pydantic's `alias_generators.to_snake`. */
 export function snakeCase(s: string): string {
   return s
@@ -94,6 +127,43 @@ export function snakeCase(s: string): string {
 export function camelCase(s: string): string {
   const pascal = s.replace(/(^|_)([a-z0-9])/g, (_, __, c: string) => c.toUpperCase())
   return pascal.charAt(0).toLowerCase() + pascal.slice(1)
+}
+
+/** Python's string ordering (by code point) as a comparator. */
+export const cmp = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
+
+/** `pandas.read_csv(StringIO(text))`: the header row with repeated names made unique (`X`, `X.1`, …), then the records. */
+export function readCsvFrame(text: string): { columns: string[]; rows: string[][] } {
+  const [header = [], ...rows] = parseCsv(text)
+  const seen = new Map<string, number>()
+  const columns = header.map((name) => {
+    const n = seen.get(name) ?? 0
+    seen.set(name, n + 1)
+    return n === 0 ? name : `${name}.${n}`
+  })
+  return { columns, rows }
+}
+
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+
+/** `to_datetime(s, format="%b %Y" | "%b %d, %Y", errors="coerce")` as "YYYY-MM-DD", undefined when it does not parse. */
+export function parseMonthDate(s: string): string | undefined {
+  const m = /^([A-Za-z]{3}) (?:(\d{1,2}), )?(\d{4})$/.exec(s.trim())
+  if (!m) return undefined
+  const month = MONTHS.indexOf(m[1]!.toLowerCase()) + 1
+  if (month === 0) return undefined
+  const day = m[2] === undefined ? 1 : Number(m[2])
+  const iso = `${m[3]}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  return Number.isNaN(Date.parse(`${iso}T00:00:00Z`)) || new Date(`${iso}T00:00:00Z`).getUTCDate() !== day ? undefined : iso
+}
+
+/** `pandas.to_numeric(s, errors="coerce")` on a text cell. */
+export function toNumeric(s: string | undefined): number | undefined {
+  if (s === undefined) return undefined
+  const t = s.trim()
+  if (t === '' || /^(nan|na|n\/a|null|none)$/i.test(t)) return undefined
+  const n = Number(t)
+  return Number.isFinite(n) ? n : undefined
 }
 
 /** Round half to even, as Python's `round()`. */

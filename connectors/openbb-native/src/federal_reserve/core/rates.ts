@@ -2,7 +2,7 @@
 // Ported from openbb_federal_reserve/models/{sofr,federal_funds_rate,overnight_bank_funding_rate}.py (OpenBB Platform
 // 5.0.0, Apache-2.0); modified: one function for the three NY Fed reference-rate endpoints instead of three models.
 import type { NativeCtx, NativeParams, Row } from '../../types.js'
-import { request, str, today } from './helpers.js'
+import { EmptyDataError, request, str, today } from './helpers.js'
 
 const ALIASES: Record<string, string> = {
   effectiveDate: 'date',
@@ -33,7 +33,7 @@ async function referenceRate(spec: Spec, params: NativeParams, ctx: NativeCtx): 
   const end = str(params, 'end_date') ?? today(ctx)
   const body = await ctx.http.json<{ refRates?: Row[] }>(`${spec.url}?startDate=${start}&endDate=${end}`, request())
   const raw = body.refRates ?? []
-  if (raw.length === 0) throw new Error('No data was returned for the given query.')
+  if (raw.length === 0) throw new EmptyDataError('No data was returned for the given query.')
   const rows = raw.map((d) => {
     const out: Row = {}
     for (const [k, v] of Object.entries(d)) {

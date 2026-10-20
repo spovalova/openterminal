@@ -4,7 +4,7 @@
 import { parse } from 'node-html-parser'
 import type { NativeCtx, NativeParams, Row } from '../../types.js'
 import historicalJson from './assets/fomc-historical-releases.json' with { type: 'json' }
-import { DAY_MS, request, str } from './helpers.js'
+import { DAY_MS, EmptyDataError, request, str } from './helpers.js'
 
 type Doc = { date: string; doc_type: string; doc_format: string; url: string }
 
@@ -53,6 +53,6 @@ export async function fomcDocuments(params: NativeParams, ctx: NativeCtx): Promi
   else docs = [...(await currentDocuments(ctx)), ...historical]
 
   const filtered = docs.filter((d) => (!year || Number(d.date.split('-')[0]) === year) && (documentType === 'all' || d.doc_type === documentType))
-  if (filtered.length === 0) throw new Error('No FOMC documents found.')
+  if (filtered.length === 0) throw new EmptyDataError('No FOMC documents found.')
   return filtered.sort((a, b) => b.date.localeCompare(a.date)).map((d) => ({ ...d }))
 }
