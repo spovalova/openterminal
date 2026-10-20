@@ -1,12 +1,266 @@
 [
-  { "name": "bills-119-hjres", "route": "uscongress/bills", "params": { "congress": 119, "bill_type": "hjres", "start_date": "2025-01-01", "end_date": "2025-03-31" } },
-  { "name": "bills-119-sconres-asc-offset", "route": "uscongress/bills", "params": { "congress": 119, "bill_type": "sconres", "sort_by": "asc", "limit": 5, "offset": 2 } },
-  { "name": "bill-info-119-hjres-1", "route": "uscongress/bill_info", "params": { "bill_id": "119-hjres-1" } },
-  { "name": "laws-119-private", "route": "uscongress/laws", "params": { "congress": 119, "law_type": "private" } },
-  { "name": "laws-119-public-asc", "route": "uscongress/laws", "params": { "congress": 119, "sort_by": "asc", "limit": 5, "offset": 3 }, "fixture": false, "reason": "the public-law archive of the 119th Congress is 3.3 MB, over the 768 KB recording limit" },
-  { "name": "calendars-118-senate-mostrecent", "route": "uscongress/calendars", "params": { "congress": 118, "chamber": "senate", "calendar_date": "mostrecent" } },
-  { "name": "calendars-118-both-limit", "route": "uscongress/calendars", "params": { "congress": 118, "chamber": "both", "limit": 6, "offset": 2, "sort_by": "asc" } },
-  { "name": "mandated-reports-118", "route": "uscongress/mandated_reports", "params": { "congress": 118, "limit": 5 } },
-  { "name": "amendments-119-hamdt", "route": "uscongress/amendments", "params": { "congress": 119, "amendment_type": "hamdt", "start_date": "2025-02-01", "end_date": "2025-02-28", "limit": 20 }, "fixture": false, "reason": "amendments are read from the BILLSTATUS archives of every bill type of the Congress (45 MB), over the 768 KB recording limit" },
-  { "name": "amendment-info-119-hamdt-1", "route": "uscongress/amendment_info", "params": { "amendment_id": "119-hamdt-1" }, "fixture": false, "reason": "amendments are read from the BILLSTATUS archives of every bill type of the Congress (45 MB), over the 768 KB recording limit" }
+  {
+    "name": "bills-119-hjres",
+    "route": "uscongress/bills",
+    "params": {
+      "congress": 119,
+      "bill_type": "hjres",
+      "start_date": "2025-01-01",
+      "end_date": "2025-03-31"
+    }
+  },
+  {
+    "name": "bills-119-sconres-asc-offset",
+    "route": "uscongress/bills",
+    "params": {
+      "congress": 119,
+      "bill_type": "sconres",
+      "sort_by": "asc",
+      "limit": 5,
+      "offset": 2
+    }
+  },
+  {
+    "name": "bill-info-119-hjres-1",
+    "route": "uscongress/bill_info",
+    "params": {
+      "bill_id": "119-hjres-1"
+    }
+  },
+  {
+    "name": "laws-119-private",
+    "route": "uscongress/laws",
+    "params": {
+      "congress": 119,
+      "law_type": "private"
+    }
+  },
+  {
+    "name": "laws-119-public-asc",
+    "route": "uscongress/laws",
+    "params": {
+      "congress": 119,
+      "sort_by": "asc",
+      "limit": 5,
+      "offset": 3
+    },
+    "fixture": false,
+    "reason": "the public-law archive of the 119th Congress is 3.3 MB, over the 768 KB recording limit"
+  },
+  {
+    "name": "calendars-118-senate-mostrecent",
+    "route": "uscongress/calendars",
+    "params": {
+      "congress": 118,
+      "chamber": "senate",
+      "calendar_date": "mostrecent"
+    }
+  },
+  {
+    "name": "calendars-118-both-limit",
+    "route": "uscongress/calendars",
+    "params": {
+      "congress": 118,
+      "chamber": "both",
+      "limit": 6,
+      "offset": 2,
+      "sort_by": "asc"
+    }
+  },
+  {
+    "name": "mandated-reports-118",
+    "route": "uscongress/mandated_reports",
+    "params": {
+      "congress": 118,
+      "limit": 5
+    }
+  },
+  {
+    "name": "amendments-119-hamdt",
+    "route": "uscongress/amendments",
+    "params": {
+      "congress": 119,
+      "amendment_type": "hamdt",
+      "start_date": "2025-02-01",
+      "end_date": "2025-02-28",
+      "limit": 20
+    },
+    "fixture": false,
+    "reason": "amendments are read from the BILLSTATUS archives of every bill type of the Congress (45 MB), over the 768 KB recording limit"
+  },
+  {
+    "name": "amendment-info-119-hamdt-1",
+    "route": "uscongress/amendment_info",
+    "params": {
+      "amendment_id": "119-hamdt-1"
+    },
+    "fixture": false,
+    "reason": "amendments are read from the BILLSTATUS archives of every bill type of the Congress (45 MB), over the 768 KB recording limit"
+  },
+  {
+    "name": "members-ohio-senators",
+    "route": "uscongress/members",
+    "params": {
+      "chamber": "senate",
+      "state": "OH"
+    }
+  },
+  {
+    "name": "members-vermont-independents",
+    "route": "uscongress/members",
+    "params": {
+      "state": "vt",
+      "party": "independent"
+    }
+  },
+  {
+    "name": "member-votes-sanders-119",
+    "route": "uscongress/member_votes",
+    "params": {
+      "bioguide_id": "S000033",
+      "congress": 119,
+      "limit": 10
+    }
+  },
+  {
+    "name": "member-votes-klobuchar-recent",
+    "route": "uscongress/member_votes",
+    "params": {
+      "bioguide_id": "K000367",
+      "limit": 6
+    }
+  },
+  {
+    "name": "member-legislation-sanders-119",
+    "route": "uscongress/member_legislation",
+    "params": {
+      "bioguide_id": "S000033",
+      "congress": 119
+    },
+    "compare": {
+      "keys": [
+        "bill_id",
+        "role"
+      ]
+    },
+    "fixture": false,
+    "reason": "sponsored bills are read from the BILLSTATUS archives of every bill type of the Congress (45 MB), over the 768 KB recording limit"
+  },
+  {
+    "name": "committee-info-ssaf00",
+    "route": "uscongress/committee_info",
+    "params": {
+      "chamber": "senate",
+      "committee": "ssaf00"
+    }
+  },
+  {
+    "name": "committee-info-subcommittee",
+    "route": "uscongress/committee_info",
+    "params": {
+      "chamber": "senate",
+      "committee": "ssaf00",
+      "subcommittee": "ssaf13"
+    }
+  },
+  {
+    "name": "committee-documents-118-meetings",
+    "route": "uscongress/committee_documents",
+    "params": {
+      "congress": 118,
+      "chamber": "senate",
+      "committee": "ssaf00",
+      "doc_type": "meeting"
+    },
+    "compare": {
+      "keys": [
+        "package_id"
+      ]
+    },
+    "reason": "GovInfo's search returns equally ranked items in a different order on every call, so rows are matched by package_id and the order is not compared; the queries have fewer results than the page size, so the same set comes back"
+  },
+  {
+    "name": "committee-documents-118-house-reports",
+    "route": "uscongress/committee_documents",
+    "params": {
+      "congress": 118,
+      "chamber": "house",
+      "committee": "hsag00",
+      "doc_type": "report"
+    },
+    "compare": {
+      "keys": [
+        "package_id"
+      ]
+    },
+    "reason": "GovInfo's search returns equally ranked items in a different order on every call, so rows are matched by package_id and the order is not compared; the queries have fewer results than the page size, so the same set comes back"
+  },
+  {
+    "name": "committee-documents-118-publications",
+    "route": "uscongress/committee_documents",
+    "params": {
+      "congress": 118,
+      "chamber": "senate",
+      "committee": "ssaf00",
+      "doc_type": "publication",
+      "limit": 10
+    },
+    "compare": {
+      "keys": [
+        "package_id"
+      ]
+    },
+    "reason": "GovInfo's search returns equally ranked items in a different order on every call, so rows are matched by package_id and the order is not compared; the queries have fewer results than the page size, so the same set comes back"
+  },
+  {
+    "name": "search-plaw-capers",
+    "route": "uscongress/search",
+    "params": {
+      "query": "Capers",
+      "collection": "PLAW",
+      "limit": 20
+    },
+    "compare": {
+      "keys": [
+        "package_id"
+      ]
+    },
+    "reason": "GovInfo's search returns equally ranked items in a different order on every call, so rows are matched by package_id and the order is not compared; the queries have fewer results than the page size, so the same set comes back"
+  },
+  {
+    "name": "search-capers-dates",
+    "route": "uscongress/search",
+    "params": {
+      "query": "Capers",
+      "collection": "PLAW",
+      "start_date": "2009-01-01",
+      "end_date": "2012-12-31"
+    },
+    "compare": {
+      "keys": [
+        "package_id"
+      ]
+    },
+    "reason": "GovInfo's search returns equally ranked items in a different order on every call, so rows are matched by package_id and the order is not compared; the queries have fewer results than the page size, so the same set comes back"
+  },
+  {
+    "name": "bills-107-hjres-needs-key",
+    "route": "uscongress/bills",
+    "params": {
+      "congress": 107,
+      "bill_type": "hjres",
+      "limit": 5
+    },
+    "fixture": false,
+    "reason": "needs congress_gov_api_key; live parity pending a key"
+  },
+  {
+    "name": "bill-info-107-hjres-1-needs-key",
+    "route": "uscongress/bill_info",
+    "params": {
+      "bill_id": "107-hjres-1"
+    },
+    "fixture": false,
+    "reason": "needs congress_gov_api_key; live parity pending a key"
+  }
 ]
