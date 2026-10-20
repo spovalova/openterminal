@@ -188,7 +188,6 @@ export function pyFloat(text: string): number {
   throw new Error(`could not convert string to float: '${text}'`)
 }
 
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 /** Parses XML/XSD files into usable structures (`XBRLParser`). */
 export class XBRLParser {
@@ -227,7 +226,7 @@ export class XBRLParser {
         return await get()
       } catch (exc) {
         if (!XBRLParser.isTransientFetchError(exc)) throw exc
-        await sleep(LINKBASE_RETRY_BACKOFF_S * 2 ** attempt * 1000)
+        await ctx.sleep(LINKBASE_RETRY_BACKOFF_S * 2 ** attempt * 1000)
       }
     }
     return get()

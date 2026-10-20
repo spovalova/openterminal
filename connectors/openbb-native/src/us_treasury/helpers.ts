@@ -53,7 +53,6 @@ export function buildFilters(conditions: [string, string, string | undefined][])
 
 type Page = { data?: Row[]; meta?: Record<string, unknown>; error?: unknown; message?: unknown }
 
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 /**
  * `get_fiscal_data`: every page of a FiscalData table. The literal "null" and blank strings become missing values;
@@ -78,7 +77,7 @@ export async function getFiscalData(ctx: NativeCtx, endpoint: string, opts: { fi
         if (err instanceof Error && err.message.startsWith('FiscalData API error')) throw err
         lastError = err
       }
-      await sleep(2 ** attempt * 1000)
+      await ctx.sleep(2 ** attempt * 1000)
     }
     throw new Error(`FiscalData request failed after ${MAX_RETRIES} attempts -> ${url}`, { cause: lastError })
   }

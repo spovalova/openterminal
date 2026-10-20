@@ -13,7 +13,8 @@ catalog/openbb.json          every OpenBB route: params (with providers and defa
 src/<provider>/index.ts      defineProvider({ name, credentials, status, routes, skipped })
 src/<provider>/<route>.ts    one handler per route (or a few related routes), plus helpers.ts
 src/<provider>/cases.json    the provider's parity cases (cases.<part>.json when a provider is ported in parts)
-src/lib/                     csv.ts, xml.ts (fast-xml-parser), xlsx.ts (fflate); node-html-parser for HTML
+src/lib/                     csv, xml (fast-xml-parser), xlsx and legacy xls, zip (fflate), pdf-text, html-tables,
+                             urlencode, sdmx; node-html-parser for HTML
 test/fixtures/<provider>/    recorded cases (<case>.json.gz) and their response bodies (bodies/<hash>.gz)
 ```
 
@@ -53,10 +54,11 @@ Apply OpenBB's own defaults for any param that is absent, following the provider
 - **Time:** only through `ctx.now()`, never `Date.now()` or `new Date()`. Replays run at the recorded instant.
 - **Credentials:** only through `ctx.credential('fred_api_key')`. Throw `MissingCredential` when a key is required and absent.
 - **Caching:** cache directories and other slow, rarely changing downloads with `ctx.cache(key, ttlMs, load)`. Do not use module-level variables.
+- **Waiting:** wait between retries with `ctx.sleep(ms)`, never `setTimeout`. A replay skips the wait.
 - **Headers:** send the headers the Python code sends. `BROWSER_UA` is there for sites that drop requests from non-browser user agents.
 - **Unsupported params:** throw `NativeUnsupported` for a param value the port cannot handle. The connector then retries on the API.
-- **Dependencies:** no new runtime dependencies without asking first. `src/lib` covers CSV, XML, XLSX and zip, and node-html-parser covers HTML.
-- **Skipping:** skip a route only when it cannot work without Python. Examples are TLS impersonation through `curl_cffi` when plain requests are blocked, or PDF parsing, which has no shared helper yet. Put it in `skipped` with a reason.
+- **Dependencies:** no new runtime dependencies without asking first. `src/lib` covers CSV, XML, Excel (.xlsx and .xls), zip, PDF text and HTML tables, and node-html-parser covers HTML.
+- **Skipping:** skip a route only when it cannot work without Python, for example TLS impersonation through `curl_cffi` when plain requests are blocked. Put it in `skipped` with a reason.
 
 ## Parity cases
 

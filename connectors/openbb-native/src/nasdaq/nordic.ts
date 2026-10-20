@@ -158,7 +158,6 @@ const BASIS: Record<string, string> = { before_tax: 'beforeTax', after_tax: 'aft
 const DIRECTORY_PAGE_SIZE = 1000
 const DIRECTORY_ATTEMPTS = 3
 const DIRECTORY_BACKOFF_MS = 500
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 const cmp = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
 
@@ -191,13 +190,13 @@ async function directoryPage(ctx: NativeCtx, path: string, query: string, page: 
       data = (await getNasdaqData(ctx, url)) ?? {}
     } catch (err) {
       if (attempt === DIRECTORY_ATTEMPTS - 1) throw err
-      await sleep(DIRECTORY_BACKOFF_MS * (attempt + 1))
+      await ctx.sleep(DIRECTORY_BACKOFF_MS * (attempt + 1))
       continue
     }
     const rows = pageRows(data)
     const pages = Math.trunc(Number((data.pagination ?? {}).totalPages || 1))
     if (rows.length || page === 1 || attempt === DIRECTORY_ATTEMPTS - 1) return [rows, pages]
-    await sleep(DIRECTORY_BACKOFF_MS * (attempt + 1))
+    await ctx.sleep(DIRECTORY_BACKOFF_MS * (attempt + 1))
   }
   return [[], 1]
 }

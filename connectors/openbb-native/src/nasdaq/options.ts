@@ -31,7 +31,6 @@ const EXCHANGE_MAP: Record<string, string> = {
 /** The keys a contract row carries, in the model's order. */
 const COLUMNS = ['underlying_symbol', 'underlying_price', 'contract_symbol', 'expiration', 'strike', 'option_type', 'last_trade_price', 'change', 'bid', 'ask', 'bid_size', 'ask_size', 'volume', 'open_interest', 'open', 'high', 'low', 'prev_close', 'contract_high', 'contract_low', 'tick', 'exchange', 'implied_volatility', 'delta', 'gamma', 'theta', 'vega', 'rho']
 
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 /** The underlying price out of the chain's lastTrade banner, "AAPL $333.02 +11.36 …". */
 function underlyingPrice(lastTrade: string): number | null {
@@ -140,7 +139,7 @@ export async function optionsChains(params: NativeParams, ctx: NativeCtx): Promi
       try {
         sides = await getContractDetail(ctx, symbol, expiration, strike, assetClass)
       } catch {
-        await sleep(RETRY_BACKOFF_MS * (attempt + 1))
+        await ctx.sleep(RETRY_BACKOFF_MS * (attempt + 1))
         continue
       }
       for (const [side, fields] of Object.entries(sides)) if (fields) detail.set(`${expiration}|${strike}|${side}`, fields)

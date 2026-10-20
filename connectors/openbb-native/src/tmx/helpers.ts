@@ -295,7 +295,7 @@ export async function gql<T = Row>(ctx: NativeCtx, operation: string, query: str
     const res = await ctx.http.response(GQL_URL, { method: 'POST', headers, body, timeoutMs: 120_000 })
     text = await res.text()
     if (attempt < 2 && (res.status === 429 || res.status >= 500) && !text.trimStart().startsWith('{')) {
-      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)))
+      await ctx.sleep(400 * (attempt + 1))
       continue
     }
     break

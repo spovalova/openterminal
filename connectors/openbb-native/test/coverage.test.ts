@@ -45,13 +45,14 @@ describe('providers', () => {
         expect(providerFixtureBytes(p.name)).toBeLessThanOrEqual(MAX_PROVIDER_FIXTURE_BYTES)
       })
 
-      it('reads the clock, the network and credentials only through ctx', () => {
+      it('reads the clock, the network, credentials and waits only through ctx', () => {
         for (const file of sources(new URL(`src/${p.name}/`, PACKAGE_DIR))) {
           const text = readFileSync(file, 'utf8').replace(/\/\/.*$/gm, '')
           const rel = file.slice(file.indexOf('/src/'))
           expect(text, `${rel}: use ctx.now()`).not.toMatch(/\bDate\.now\(|\bnew Date\(\s*\)/)
           expect(text, `${rel}: use ctx.credential()`).not.toMatch(/process\.env/)
           expect(text, `${rel}: use ctx.http`).not.toMatch(/(^|[^.\w])fetch\(/m)
+          expect(text, `${rel}: wait with ctx.sleep(), so a replay does not`).not.toMatch(/\bsetTimeout\(/)
         }
       })
 
