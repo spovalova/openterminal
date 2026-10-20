@@ -28,11 +28,15 @@ function requestBodyText(body: unknown): string | undefined {
   return String(body)
 }
 
-function isText(contentType: string, bytes: Uint8Array): boolean {
-  if (/json|text|xml|csv|javascript|html/i.test(contentType)) return true
+/**
+ * Stored as text only when the bytes are valid UTF-8 without NULs, whatever the content type says: an .xlsx is
+ * `application/vnd.openxmlformats-…sheet` (it matches /xml/) but is a zip, and text decoding would corrupt it.
+ */
+function isText(bytes: Uint8Array): boolean {
+  if (bytes.includes(0)) return false
   try {
     new TextDecoder('utf-8', { fatal: true }).decode(bytes)
-    return !bytes.includes(0)
+    return true
   } catch {
     return false
   }
@@ -60,7 +64,7 @@ export function recordingFetch(inner: typeof fetch = fetch, secrets: Record<stri
       if (KEEP_HEADERS.has(k) && k !== 'set-cookie') headers.push([k, v])
     })
     for (const c of res.headers.getSetCookie()) headers.push(['set-cookie', c])
-    const text = isText(res.headers.get('content-type') ?? '', bytes)
+    const text = isText(bytes)
     const reqBody = requestBodyText(init?.body)
     exchanges.push({
       method: (init?.method ?? 'GET').toUpperCase(),
