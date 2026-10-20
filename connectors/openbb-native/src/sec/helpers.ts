@@ -21,22 +21,17 @@ export const DEFAULT_EXPIRE_S = 7 * DAY_S
 
 const REQUEST_INTERVAL_MS = 1000 / 9
 let nextSlot = 0
-/** Contexts whose responses came from a recording: nothing to protect there, so no waiting. */
-const replaying = new WeakSet<NativeCtx>()
 
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
-
-/** Wait `ms` between batches of requests, as OpenBB's `asyncio.sleep` does; not while replaying a recording. */
+/** Wait `ms` between batches of requests, as OpenBB's `asyncio.sleep` does (ctx.sleep: no wait while replaying). */
 export async function pause(ctx: NativeCtx, ms: number): Promise<void> {
-  if (!replaying.has(ctx)) await sleep(ms)
+  await ctx.sleep(ms)
 }
 
 async function secRateLimit(ctx: NativeCtx): Promise<void> {
-  if (replaying.has(ctx)) return
   const now = performance.now()
   const at = Math.max(now, nextSlot)
   nextSlot = at + REQUEST_INTERVAL_MS
-  if (at > now) await sleep(at - now)
+  if (at > now) await ctx.sleep(at - now)
 }
 
 export type SecRequestOptions = Omit<RequestOptions, 'headers'> & { headers?: Record<string, string> }
@@ -47,10 +42,8 @@ export async function secResponse(ctx: NativeCtx, url: string, opts: SecRequestO
   for (let attempt = 0; ; attempt++) {
     await secRateLimit(ctx)
     const res = await ctx.http.response(url, { ...opts, headers })
-    // A response built by the replay layer has no URL; a real one always does.
-    if (res.url === '') replaying.add(ctx)
-    if (res.status === 429 && attempt < 2 && !replaying.has(ctx)) {
-      await sleep(1500 * (attempt + 1))
+    if (res.status === 429 && attempt < 2) {
+      await ctx.sleep(1500 * (attempt + 1))
       continue
     }
     return res

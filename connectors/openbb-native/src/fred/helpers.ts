@@ -61,7 +61,6 @@ const TTL_BY_PATH: Record<string, number> = {
   '/geofred/regional/data': DAY,
 }
 
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 /** The URL with the key taken out, as the cache key and in anything a person may read. */
 export function redact(url: string): string {
@@ -118,7 +117,7 @@ async function fetchOnce(ctx: NativeCtx, url: string, opts: GetOptions): Promise
     attempt++
     if (attempt > MAX_RETRIES) throw new Error(RATE_LIMIT_MESSAGE)
     const backoff = limited >= 0 ? limited : Math.min(DEFAULT_BACKOFF_MS * 2 ** (attempt - 1), MAX_BACKOFF_MS)
-    await sleep(Math.max(backoff, MIN_INTERVAL_MS))
+    await ctx.sleep(Math.max(backoff, MIN_INTERVAL_MS))
   }
 }
 

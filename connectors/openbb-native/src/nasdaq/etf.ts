@@ -158,7 +158,6 @@ export async function etfInfo(params: NativeParams, ctx: NativeCtx): Promise<Row
 const MAX_CONCURRENCY = 8
 const MAX_ATTEMPTS = 3
 const RETRY_BACKOFF_MS = 500
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 function filterValue(map: Record<string, string>, params: NativeParams, name: string, fallback: string): string {
   const key = String(params[name] ?? fallback)
@@ -192,7 +191,7 @@ export async function etfSearch(params: NativeParams, ctx: NativeCtx): Promise<R
         try {
           return pageRows(await getNasdaqData(ctx, `${base}&offset=${offset}`))
         } catch {
-          await sleep(RETRY_BACKOFF_MS * (attempt + 1))
+          await ctx.sleep(RETRY_BACKOFF_MS * (attempt + 1))
         }
       }
       return []

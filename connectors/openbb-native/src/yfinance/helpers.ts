@@ -16,22 +16,21 @@ export const Q2 = 'https://query2.finance.yahoo.com'
 
 type Session = { cookie: string; crumb: string }
 
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 /** Run `attempt`; on HTTP 429 wait a little longer each time and try again (Yahoo rate-limits aggressively). */
-export async function withBackoff<T>(attempt: () => Promise<T>): Promise<T> {
+export async function withBackoff<T>(ctx: NativeCtx, attempt: () => Promise<T>): Promise<T> {
   for (let i = 0; ; i++) {
     try {
       return await attempt()
     } catch (err) {
       if (!(err instanceof NativeHttpError) || err.status !== 429 || i >= BACKOFF_MS.length) throw err
-      await sleep(BACKOFF_MS[i]!)
+      await ctx.sleep(BACKOFF_MS[i]!)
     }
   }
 }
 
 async function openSession(ctx: NativeCtx): Promise<Session> {
-  return withBackoff(async () => {
+  return withBackoff(ctx, async () => {
     const first = await ctx.http.response('https://fc.yahoo.com', { headers: BASE_HEADERS })
     await first.arrayBuffer().catch(() => undefined)
     const cookie = first.headers
@@ -64,7 +63,7 @@ async function once(ctx: NativeCtx, url: string, opts: YahooRequest, generation:
 export async function yahooResponse(ctx: NativeCtx, url: string, opts: YahooRequest = {}): Promise<Response> {
   let generation = 0
   for (;;) {
-    const res = await withBackoff(async () => {
+    const res = await withBackoff(ctx, async () => {
       const r = await once(ctx, url, opts, generation)
       if (r.status === 429) throw new NativeHttpError(429, url, await r.text().catch(() => ''))
       return r

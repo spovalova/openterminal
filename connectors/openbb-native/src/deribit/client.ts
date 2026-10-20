@@ -17,7 +17,6 @@ export function buildUrl(method: string, params: Params = {}): string {
   return qs ? `${url}?${qs}` : url
 }
 
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 /** Pauses before asking again when the exchange says the request rate was exceeded (OpenBB does not ask again). */
 const RATE_LIMIT_PAUSES_MS = [300, 600, 1200, 2400, 4800]
@@ -29,7 +28,7 @@ export async function request<T = any>(ctx: NativeCtx, method: string, params: P
     try {
       const res = await ctx.http.response(buildUrl(method, params), { timeoutMs: REQUEST_TIMEOUT_MS })
       if (res.status === TOO_MANY_REQUESTS && attempt < RATE_LIMIT_PAUSES_MS.length) {
-        await sleep(RATE_LIMIT_PAUSES_MS[attempt]!)
+        await ctx.sleep(RATE_LIMIT_PAUSES_MS[attempt]!)
         continue
       }
       if (res.status !== 200) {

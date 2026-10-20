@@ -6,7 +6,6 @@ import { BROWSER_UA } from '../http.js'
 import type { NativeCtx, Row } from '../types.js'
 import { QUERY_API_PAGE_LIMIT, QUERY_API_URL, TRACE_ATTEMPTS, TRACE_BACKOFF, TRACE_CONCURRENCY, TRACE_ORIGIN, TRACE_PAGE_LIMIT, TRACE_REFERER, TRACE_RETRY_CODES, TRACE_URL, USER_AGENT } from './constants.js'
 
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 // ---- query API (api.finra.org) ----
 
@@ -113,7 +112,7 @@ export async function openTraceSession(ctx: NativeCtx): Promise<TraceSession> {
       })
       if (!TRACE_RETRY_CODES.includes(res.status) || attempt + 1 === TRACE_ATTEMPTS) break
       await res.arrayBuffer()
-      await sleep(TRACE_BACKOFF * 2 ** attempt * 1000)
+      await ctx.sleep(TRACE_BACKOFF * 2 ** attempt * 1000)
     }
     const text = await res.text()
     let body: TracePage | undefined

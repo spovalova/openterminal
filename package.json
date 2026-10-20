@@ -22,7 +22,8 @@
     "bench": "node scripts/prompt-bench.mjs",
     "release:bundle": "node scripts/release/bundle.mjs",
     "release:npm": "node scripts/release/npm.mjs",
-    "release:smoke": "node scripts/release/smoke.mjs"
+    "release:smoke": "node scripts/release/smoke.mjs",
+    "native:e2e": "tsx scripts/native-e2e.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

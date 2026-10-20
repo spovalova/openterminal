@@ -29,9 +29,9 @@ Cursor made the code editor conversational without taking the editor away. Open 
 - **Ask, don't click.** "Is NVDA's drop today news or just the market?" becomes four live widgets and a two-sentence diagnosis. A follow-up rewrites the workspace. You never assemble the answer from eight tabs again.
 - **Every number is traceable.** The agent cannot type a price. It can only run queries, and the reply links each claim to the widget that shows it. Figures in the reply are checked against the frames it saw.
 - **Open and local.** MIT licensed. One process on localhost plus your browser. No accounts, no hosted backend, no telemetry. Keys never leave the machine.
-- **Any route, not a fixed catalog.** A connector publishes its routes as descriptors (OpenBB generates 800+ from its own OpenAPI document); the agent searches them, runs them, and derives new frames from them with pandas. Twenty-four recipes cover the common questions; hand-written annotations keep the units honest.
+- **Any route, not a fixed catalog.** A connector publishes its routes as descriptors (OpenBB's 834 routes ship built in, answered in process by TypeScript ports of its providers); the agent searches them, runs them, and derives new frames from them with pandas. Twenty-four recipes cover the common questions; hand-written annotations keep the units honest.
 - **Model-agnostic.** Anthropic or OpenAI through the Vercel AI SDK. The default is Claude Opus 5.5; change one line of config to swap it.
-- **Works before you add a key.** Prices, charts, search, options and fundamentals come from Yahoo on first run. Add a free Finnhub key for news, or point it at a local OpenBB Platform for dozens of providers.
+- **Works before you add a key.** OpenBB's keyless data providers are built in, ported to TypeScript: prices, option chains with Greeks and implied volatility, fundamentals, SEC filings, insider and institutional holdings, earnings and economic calendars, Treasury yields, Fed, BLS, OECD and IMF data, all with nothing to install. Yahoo is the fallback; a free Finnhub key adds another.
 
 ## How it works
 
@@ -109,7 +109,7 @@ Saved to ~/.openterminal/config.yml (readable only by you).
 
   Open Terminal 0.1.0  http://127.0.0.1:4242
 
-  connectors  openbb (not running), yahoo, finnhub (off: add it on the Data page)
+  connectors  openbb, yahoo, finnhub (off: add it on the Data page)
   agent       claude-opus-5-5 (anthropic)
   data        ~/.openterminal
   log         ~/.openterminal/openterminal.log
@@ -134,14 +134,16 @@ Without one, the app explains how to add it and you can still build workspaces b
 
 **Add news** with a free [Finnhub](https://finnhub.io) key on the Data page in the app. It is saved to the same file. Finnhub also answers quotes and the earnings calendar, so tables survive a Yahoo outage.
 
-**Add everything else** with [OpenBB Platform](https://docs.openbb.co/platform), which the `openbb` connector talks to over HTTP on your machine:
+**OpenBB's data, built in.** The `openbb` connector answers OpenBB Platform's routes itself: its providers are ported to TypeScript in [connectors/openbb-native](connectors/openbb-native/README.md) (Apache-2.0, like OpenBB since V5), so nothing is installed and no Python runs. 883 of OpenBB 5.0.0's 912 route-provider pairs are native, checked against OpenBB's own answers by parity tests that are recorded and replayed offline in CI (the FRED and EIA routes that need a key are checked against OpenBB's Python on sample responses until one is available). yfinance, nasdaq, cboe, sec, finra, federal_reserve, bls, oecd, imf, ecb, tmx and the rest need no key. FRED, EIA and older Congress.gov data need yours, in `config.yml`:
 
-```sh
-pip install "openbb[routers]" openbb-yfinance
-openbb-api
+```yaml
+connectors:
+  - name: openbb
+    config:
+      credentials: { fred_api_key: ..., eia_api_key: ... }   # or FRED_API_KEY / EIA_API_KEY in the environment
 ```
 
-Python 3.10 to 3.12. When the API answers at `http://127.0.0.1:6900`, its 800+ routes join the catalog, every recipe routes to it first, and Yahoo and Finnhub become fallbacks. When it is not running the miss costs nothing. yfinance, nasdaq, cboe, sec, finra, federal_reserve, bls and oecd need no key; FMP, Polygon, Intrinio, Tiingo, FRED, EIA and others take keys you keep on the OpenBB side. Routes whose provider is ported to TypeScript ([connectors/openbb-native](connectors/openbb-native/README.md), Apache-2.0 like OpenBB since V5) answer with no install at all; the API adds whatever is not ported yet. Details and per-route provider overrides: [connectors/openbb/README.md](connectors/openbb/README.md).
+The few routes not ported (CFTC's DTCC swap data, three Nasdaq Nordic fact-sheet routes, and pages that only answer a real browser) still work when a local [OpenBB Platform](https://docs.openbb.co/platform) API runs at `http://127.0.0.1:6900` (`pip install "openbb[routers]" openbb-yfinance`, then `openbb-api`); the connector sends them there and answers everything else itself. Details and per-route provider overrides: [connectors/openbb/README.md](connectors/openbb/README.md).
 
 **Your data stays in `~/.openterminal`**: `config.yml`, the SQLite store (workspaces, your recipes, the frame cache) and the catalog cache. Set `OPENTERMINAL_HOME` to use another directory. A `~/.terminal` from before the rename is copied there on the first start and left in place.
 
@@ -151,7 +153,7 @@ Three connectors ship in the box. Each publishes the routes it answers as **desc
 
 | Connector | Key | Routes |
 |---|---|---|
-| `openbb` | none for the keyless providers | every GET route of your local OpenBB Platform API, generated from its `openapi.json` (834 on OpenBB 5.0.0), through whatever providers your install has |
+| `openbb` | none for the keyless providers | OpenBB Platform's 834 routes, answered in process by TypeScript ports of its 20 providers (883 of 912 route-provider pairs); a running OpenBB API adds the rest and any extension you install |
 | `yahoo` | none | the five yahoo-finance2 endpoints: `search`, `quote`, `chart`, `options`, `quoteSummary` (with its modules), and `news` (the search module's news list) |
 | `finnhub` | free | `quote`, `company-news`, `calendar/earnings` |
 

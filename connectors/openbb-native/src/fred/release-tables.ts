@@ -11,7 +11,6 @@ import { searchSeries } from './search.js'
 type Json = Record<string, any>
 const D = data as unknown as Json
 
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 // ---- units ---------------------------------------------------------------------------------------------------------------
 
@@ -30,7 +29,7 @@ async function releaseSeries(ctx: NativeCtx, key: string, releaseId: string | nu
         break
       } catch {
         if (attempt === TRIES - 1) return found
-        await sleep(2 ** attempt * 1000)
+        await ctx.sleep(2 ** attempt * 1000)
       }
     }
     found.push(...page)

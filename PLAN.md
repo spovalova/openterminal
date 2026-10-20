@@ -892,3 +892,24 @@ The user's direction (2026-10-20): port all of OpenBB's providers to TypeScript,
    - Update the README's connector section.
    - Decide whether OpenBB's install hint stays in onboarding.
 
+### Status (2026-10-21)
+- **Merged:** #33 to #48.
+  - **Native:** 883 of the 912 route-provider pairs, across all 20 providers. 19 providers are `ported`, and cftc is `todo`.
+  - **Skipped, with reasons, left to the API: 15.**
+    - 8 FFIEC NIC routes and 2 CIRO bond routes sit behind a Cloudflare browser check (TLS impersonation).
+    - finra `equity/search` and `equity/profile` read FINRA's Market Data Center, which no longer exists. OpenBB fails on them too.
+    - 3 nasdaq Nordic fact-sheet routes need PDF text, now portable on `src/lib/pdf-text.ts`.
+  - **Not ported yet: 14**, cftc's DTCC swap-data family. The porting agent's draft is kept outside the repo.
+- **Tests:** 1,882 parity cases. Every case that can be recorded is replayed offline in CI; the large downloads run live only.
+  - FRED (36) and EIA's API routes (204) need keys this machine lacks. Their cases are live-only until a key exists, and unit tests check them against OpenBB's Python run on the same sample responses.
+- **End to end:** `pnpm native:e2e` runs every built-in recipe with only the native ports (no OpenBB API, no yahoo, no finnhub). 24 of 24 answer.
+- **Harness lessons, all fixed:**
+  - Binary bodies are recorded by UTF-8 validity, not content type.
+  - The caller's Content-Type wins.
+  - OpenBB gets 300 s per parity call.
+  - `ctx.sleep` lets a replay skip the waits, and the coverage test bans `setTimeout` in provider code.
+  - OpenBB quirks the ports reproduce: `filter_extra_params` drops a param equal to its default, and the API re-snakes field names (`co2_*` becomes `co_2_*`).
+- **Running it:** with ten bots at once, the oracle API needed watching.
+  - OpenBB's on-disk cache (`~/OpenBBUserData/cache`) grew by gigabytes, and its systemd memory cap (3 GB) made it swap until it stopped answering.
+  - A disk guard and a watchdog kept it up.
+
