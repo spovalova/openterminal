@@ -27,7 +27,7 @@ function parseMember(text: string): Record<string, string>[] {
 
 /** `download_zip_file`: one report's rows for a symbol, with the renamed columns and parsed dates and prices. */
 async function downloadZipFile(ctx: NativeCtx, url: string, symbol: string | undefined, useCache: boolean): Promise<Row[]> {
-  const bytes = (await cachedRequest(ctx, url, { kind: 'bytes', headers: HEADERS, useCache, expireS: DEFAULT_EXPIRE_S })) as Uint8Array
+  const bytes = (await cachedRequest(ctx, url, { kind: 'bytes', headers: HEADERS, useCache, expireS: DEFAULT_EXPIRE_S, timeoutMs: 120_000 })) as Uint8Array
   const files = Object.entries(unzipSync(bytes))
   let table: Record<string, string>[]
   const single = files.length === 1 ? files[0]![1] : undefined

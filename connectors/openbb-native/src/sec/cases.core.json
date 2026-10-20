@@ -10,6 +10,16 @@
     "params": { "cik": "320193", "form_type": "8-K", "start_date": "2024-01-01", "end_date": "2024-03-31", "limit": 5 }
   },
   {
+    "name": "company-filings-xom-legacy-cik",
+    "route": "sec/company_filings",
+    "params": { "symbol": "XOM", "form_type": "10-K", "start_date": "2024-01-01", "end_date": "2025-12-31" }
+  },
+  {
+    "name": "company-filings-legacy-form-name",
+    "route": "sec/company_filings",
+    "params": { "symbol": "AAPL", "form_type": "SC_13G", "start_date": "2023-01-01", "end_date": "2024-12-31", "limit": 2 }
+  },
+  {
     "name": "search-apple",
     "route": "equity/search",
     "params": { "query": "apple" }

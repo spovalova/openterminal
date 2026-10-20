@@ -69,7 +69,6 @@ const TRANSACTION_CODE_MAP: Record<string, string> = {
 
 const TIMELINESS_MAP: Record<string, string> = { E: 'Early', L: 'Late', Empty: 'On-time' }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- xmltodict output: dicts, lists, strings and None, as Python reads them
 type Any = any
 type Dict = Record<string, Any>
 

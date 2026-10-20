@@ -129,7 +129,7 @@ export async function getMfAndEtfMap(ctx: NativeCtx, useCache = true): Promise<F
 
 /** `get_all_ciks`: every entity name in EDGAR's CIK lookup file with its CIK (a 40 MB download). */
 export async function getAllCiks(ctx: NativeCtx, useCache = true): Promise<{ Institution: string; 'CIK Number': string }[]> {
-  const data = await cachedRequest(ctx, 'https://www.sec.gov/Archives/edgar/cik-lookup-data.txt', { kind: 'latin1', headers: SEC_HEADERS, useCache, expireS: REFERENCE_EXPIRE_S })
+  const data = await cachedRequest(ctx, 'https://www.sec.gov/Archives/edgar/cik-lookup-data.txt', { kind: 'latin1', headers: SEC_HEADERS, useCache, expireS: REFERENCE_EXPIRE_S, timeoutMs: 180_000 })
   const out: { Institution: string; 'CIK Number': string }[] = []
   for (const line of data.split('\n')) {
     // DataFrame rows are the first two ":"-separated cells; a row of one cell (the empty last line) has no CIK and is dropped.
