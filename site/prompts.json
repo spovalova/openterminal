@@ -1,0 +1,127 @@
+{
+  "about": "The example prompts on the landing page (index.html, between <!-- prompts:start --> and <!-- prompts:end -->), with the run that produced each screenshot. Each prompt text is exactly what was sent. To change the set: run the prompt on a scratch server (scripts/prompt-bench.mjs), score it (scripts/accept.mjs), screenshot the workspace at 1440x900 with the conversation panel open (2x, WebP), then update this file and the matching tab and panel in index.html; packages/ui/test/site.test.ts fails when the two disagree.",
+  "run": {
+    "date": "2026-10-19",
+    "model": "claude-opus-5-5",
+    "server": "branch build on a scratch port over a fresh OPENTERMINAL_HOME (config.yml only); connectors openbb (OpenBB Platform 5.0.0), yahoo, finnhub",
+    "commands": [
+      "BASE=http://127.0.0.1:4311 node scripts/prompt-bench.mjs <names> --out <dir>",
+      "BASE=http://127.0.0.1:4311 CHROMIUM_PATH=<chrome> node scripts/accept.mjs --runs <dir> --out <dir> --prefix landing-"
+    ]
+  },
+  "prompts": [
+    {
+      "id": "neoclouds",
+      "title": "Neoclouds, compared",
+      "tag": "comparison · fundamentals",
+      "prompt": "Compare the neoclouds",
+      "bench": "neoclouds",
+      "image": "assets/prompt-neoclouds.webp",
+      "workspace": "Neocloud comparison",
+      "widgets": 6,
+      "steps": 8,
+      "failedSteps": 0,
+      "seconds": 54,
+      "verified": [25, 25],
+      "checklist": { "1440x900": "pass", "1920x1080": "pass" },
+      "tokens": { "input": 180738, "cacheRead": 121872, "output": 5412 }
+    },
+    {
+      "id": "tsla-earnings",
+      "title": "TSLA into earnings",
+      "tag": "earnings · implied move",
+      "prompt": "TSLA reports soon. How did it react to the last few reports and what's expected this time?",
+      "bench": "tsla-earnings",
+      "image": "assets/prompt-tsla-earnings.webp",
+      "workspace": "TSLA earnings setup",
+      "widgets": 7,
+      "steps": 9,
+      "failedSteps": 0,
+      "seconds": 55,
+      "verified": [21, 21],
+      "checklist": { "1440x900": "pass", "1920x1080": "pass" },
+      "tokens": { "input": 171977, "cacheRead": 127590, "output": 5419 }
+    },
+    {
+      "id": "mag7-corr",
+      "title": "Mag 7 correlation",
+      "tag": "pandas transform · heatmap",
+      "prompt": "Correlation of the Mag 7 over 6 months",
+      "bench": "accept-mag7-corr",
+      "image": "assets/prompt-mag7-corr.webp",
+      "workspace": "Mag 7 correlation",
+      "widgets": 4,
+      "steps": 5,
+      "failedSteps": 0,
+      "seconds": 31,
+      "verified": [13, 13],
+      "checklist": { "1440x900": "pass", "1920x1080": "pass" },
+      "tokens": { "input": 96050, "cacheRead": 67538, "output": 3259 }
+    },
+    {
+      "id": "tsla-puts",
+      "title": "TSLA puts",
+      "tag": "option chain · IV · open interest",
+      "prompt": "TSLA puts for next Friday, what's IV like and where is the open interest?",
+      "bench": "tsla-puts",
+      "image": "assets/prompt-tsla-puts.webp",
+      "workspace": "TSLA puts into earnings",
+      "widgets": 6,
+      "steps": 8,
+      "failedSteps": 0,
+      "seconds": 46,
+      "verified": [30, 30],
+      "checklist": { "1440x900": "fill: the volatility card at 51% of its cell (60% wanted)", "1920x1080": "pass" },
+      "tokens": { "input": 138122, "cacheRead": 93360, "output": 4151 }
+    },
+    {
+      "id": "spy-backtest",
+      "title": "SPY 50/200 backtest",
+      "tag": "backtest in pandas",
+      "prompt": "Backtest a 50/200 SMA cross on SPY since 2020",
+      "bench": "accept-spy-backtest",
+      "image": "assets/prompt-spy-backtest.webp",
+      "workspace": "SPY SMA cross backtest",
+      "widgets": 4,
+      "steps": 5,
+      "failedSteps": 0,
+      "seconds": 51,
+      "verified": [15, 15],
+      "checklist": { "1440x900": "pass", "1920x1080": "pass" },
+      "tokens": { "input": 101409, "cacheRead": 70206, "output": 6257 }
+    },
+    {
+      "id": "amd-rsi",
+      "title": "AMD momentum",
+      "tag": "RSI · MACD · quote · news",
+      "prompt": "RSI and MACD on AMD",
+      "bench": "accept-amd-rsi",
+      "image": "assets/prompt-amd-rsi.webp",
+      "workspace": "AMD RSI & MACD",
+      "widgets": 5,
+      "steps": 5,
+      "failedSteps": 0,
+      "seconds": 26,
+      "verified": [11, 11],
+      "checklist": { "1440x900": "pass", "1920x1080": "pass" },
+      "tokens": { "input": 82796, "cacheRead": 49033, "output": 2782 }
+    }
+  ],
+  "notShown": [
+    {
+      "prompt": "What happened to NVDA last week? Daily candles, the news by day, and tell me whether it was semis-wide (SOXX) or NVDA specific.",
+      "verified": [13, 13],
+      "why": "a strong workspace, but the reply says it cannot give the news by day (every headline in the feed carried the same date stamp)"
+    },
+    {
+      "prompt": "P/E over time for NVDA",
+      "verified": [11, 11],
+      "why": "the P/E-now card rendered its headline number as a dash in this run"
+    },
+    {
+      "prompt": "RSI and MACD on AMD",
+      "verified": [11, 11],
+      "why": "first run: one step called a tool that does not exist and was rejected (recovered); the rerun above was clean"
+    }
+  ]
+}
