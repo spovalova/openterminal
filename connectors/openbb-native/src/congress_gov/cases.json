@@ -1,1 +1,12 @@
-[]
+[
+  { "name": "bills-119-hjres", "route": "uscongress/bills", "params": { "congress": 119, "bill_type": "hjres", "start_date": "2025-01-01", "end_date": "2025-03-31" } },
+  { "name": "bills-119-sconres-asc-offset", "route": "uscongress/bills", "params": { "congress": 119, "bill_type": "sconres", "sort_by": "asc", "limit": 5, "offset": 2 } },
+  { "name": "bill-info-119-hjres-1", "route": "uscongress/bill_info", "params": { "bill_id": "119-hjres-1" } },
+  { "name": "laws-119-private", "route": "uscongress/laws", "params": { "congress": 119, "law_type": "private" } },
+  { "name": "laws-119-public-asc", "route": "uscongress/laws", "params": { "congress": 119, "sort_by": "asc", "limit": 5, "offset": 3 }, "fixture": false, "reason": "the public-law archive of the 119th Congress is 3.3 MB, over the 768 KB recording limit" },
+  { "name": "calendars-118-senate-mostrecent", "route": "uscongress/calendars", "params": { "congress": 118, "chamber": "senate", "calendar_date": "mostrecent" } },
+  { "name": "calendars-118-both-limit", "route": "uscongress/calendars", "params": { "congress": 118, "chamber": "both", "limit": 6, "offset": 2, "sort_by": "asc" } },
+  { "name": "mandated-reports-118", "route": "uscongress/mandated_reports", "params": { "congress": 118, "limit": 5 } },
+  { "name": "amendments-119-hamdt", "route": "uscongress/amendments", "params": { "congress": 119, "amendment_type": "hamdt", "start_date": "2025-02-01", "end_date": "2025-02-28", "limit": 20 }, "fixture": false, "reason": "amendments are read from the BILLSTATUS archives of every bill type of the Congress (45 MB), over the 768 KB recording limit" },
+  { "name": "amendment-info-119-hamdt-1", "route": "uscongress/amendment_info", "params": { "amendment_id": "119-hamdt-1" }, "fixture": false, "reason": "amendments are read from the BILLSTATUS archives of every bill type of the Congress (45 MB), over the 768 KB recording limit" }
+]
