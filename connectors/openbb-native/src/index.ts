@@ -6,7 +6,7 @@ import catalogJson from '../catalog/openbb.json' with { type: 'json' }
 import { PROVIDERS } from './providers.js'
 import type { NativeHandler, ProviderDef } from './types.js'
 
-export { defineProvider, NativeUnsupported, MissingCredential, type NativeCtx, type NativeHandler, type NativeParams, type ProviderDef, type Row } from './types.js'
+export { defineProvider, NativeUnsupported, MissingCredential, type NativeCtx, type NativeHandler, type NativeParams, type ProviderDef, type ProviderPart, type Row } from './types.js'
 export { createNativeHttp, NativeHttpError, withQuery, BROWSER_UA, type NativeHttp, type RequestOptions, type Query } from './http.js'
 export { createNativeCtx, type NativeCtxOptions } from './ctx.js'
 export { ROUTE_PROVIDER_PREFERENCE, defaultProvider, withProvider, applicableParams, toQuery, nativeParams } from './params.js'

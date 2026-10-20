@@ -12,7 +12,7 @@ The one exception is `src/yfinance/`. It is an independent implementation on yah
 catalog/openbb.json          every OpenBB route: params (with providers and defaults), providers, fields (pnpm snapshot)
 src/<provider>/index.ts      defineProvider({ name, credentials, status, routes, skipped })
 src/<provider>/<route>.ts    one handler per route (or a few related routes), plus helpers.ts
-src/<provider>/cases.json    the provider's parity cases
+src/<provider>/cases.json    the provider's parity cases (cases.<part>.json when a provider is ported in parts)
 src/lib/                     csv.ts, xml.ts (fast-xml-parser), xlsx.ts (fflate); node-html-parser for HTML
 test/fixtures/<provider>/    recorded cases (<case>.json.gz) and their response bodies (bodies/<hash>.gz)
 ```
