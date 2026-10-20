@@ -17,6 +17,8 @@ packages/
   web/        React app: shell, state, WebSocket client, palette, Data page, the three-tab editor, views (src/views)
   cli/        `npx openterminal` → starts the server on localhost, opens the browser; first-run key prompt, banner,
               daily update check
+  desktop/    the desktop app: Electron around the release bundle (server in a utility process, window, tray,
+              updates), electron-builder, its smoke test
 connectors/
   openbb/     no key; every GET route of a local OpenBB Platform API, descriptors generated from its openapi.json
   yahoo/      no key; the five yahoo-finance2 endpoints as routes (descriptors.json)
@@ -78,7 +80,7 @@ server  ──  done { workspaceId, message }                       message = { 
 
 `failed { workspaceId, error }` can replace anything after `started`. The client can also send `cancel { workspaceId }`, `refresh { widgetId, workspaceId?, dataset? }` (re-runs a widget bypassing the cache) and `focus { workspaceId }` (which workspace polls). The schemas are `ClientMsgSchema` and `ServerMsgSchema` in `packages/core/src/protocol.ts`.
 
-HTTP, under `/api`: `GET /api/health` (connectors, recipes, llm); workspaces CRUD, export and import; `GET /api/widgets/:id/frame?workspace=&dataset=`; `GET /api/connectors`, `PUT /api/connectors/:name/config`; `GET /api/catalog?q=`, `GET /api/catalog/:connector`, `POST /api/catalog/probe`; `GET/PUT /api/recipes`; `POST /api/query`; `GET/PUT /api/settings/:key` (`ticker`, `providers`); `GET /api/runs`; `GET /api/store`.
+HTTP, under `/api`: `GET /api/health` (connectors, recipes, llm); workspaces CRUD, export and import; `GET /api/widgets/:id/frame?workspace=&dataset=`; `GET /api/connectors`, `PUT /api/connectors/:name/config`; `GET/PUT /api/llm` (the onboarding key: saved to config.yml, never returned); `GET /api/catalog?q=`, `GET /api/catalog/:connector`, `POST /api/catalog/probe`; `GET/PUT /api/recipes`; `POST /api/query`; `GET/PUT /api/settings/:key` (`ticker`, `providers`); `GET /api/runs`; `GET /api/store`.
 
 ## The web app
 
@@ -119,6 +121,8 @@ HTTP, under `/api`: `GET /api/health` (connectors, recipes, llm); workspaces CRU
 | `npx openterminal`: flags, first-run key prompt, banner, update check | `packages/cli` |
 | Where runtime files are (recipes, annotations, web app, Pyodide, wheels, the transform worker), from source or the release bundle | `packages/core/src/resources.ts` (`resources()`) |
 | The release bundle, the npm package, the smoke test | `scripts/release/` |
+| Only this machine's pages may call the server (Host and Origin checks) | `packages/server/src/guard.ts` |
+| The desktop app (main process, its pure parts, electron-builder config, smoke test) and the release workflow | `packages/desktop`, `deploy/release.yml` (belongs in `.github/workflows/`) |
 | Connectors | `connectors/<name>/src` |
 | Config, store, catalog cache, user recipes and annotations on disk | `~/.openterminal/config.yml`, `terminal.db`, `catalog/`, `recipes.yml`, `annotations.yml` (override the directory with `OPENTERMINAL_HOME`) |
 

@@ -9,8 +9,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: SERVER, changeOrigin: true },
-      '/ws': { target: SERVER, ws: true, changeOrigin: true },
+      // The server refuses state-changing requests from other origins (packages/server/src/guard.ts), so the dev
+      // proxy presents the server's own origin.
+      '/api': { target: SERVER, changeOrigin: true, headers: { origin: SERVER } },
+      '/ws': { target: SERVER, ws: true, changeOrigin: true, headers: { origin: SERVER } },
     },
   },
   test: {

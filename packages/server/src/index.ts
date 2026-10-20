@@ -1,6 +1,7 @@
 // @openterminal/server: config, connectors, store, executor, HTTP + WebSocket app, and startServer.
 export { startServer, DEFAULT_PORT, DEFAULT_WEB_DIST, type StartOptions, type RunningServer } from './main.js'
 export { createApp, type App, type AppDeps, type InflightRun } from './app.js'
+export { checkRequest, localOnly, allowedOriginsFromEnv, LOOPBACK_HOSTS, type GuardOptions } from './guard.js'
 export {
   loadConfig,
   normalizeConfig,

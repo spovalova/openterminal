@@ -1,0 +1,26 @@
+{
+  "name": "@openterminal/desktop",
+  "productName": "Open Terminal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open Terminal as a desktop app: the release bundle's server in an Electron utility process, a window on it, a tray.",
+  "license": "MIT",
+  "author": "Open Terminal",
+  "homepage": "https://terminal.spova.ai",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "package": "node scripts/build.mjs",
+    "start": "node scripts/build.mjs --no-package && electron ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "electron": "44.9.1",
+    "electron-builder": "26.15.3",
+    "electron-updater": "6.8.9",
+    "openterminal": "workspace:*",
+    "typescript": "~5.9.0",
+    "vitest": "^5.0.5"
+  }
+}

@@ -83,13 +83,25 @@ A workspace you keep. Re-run the same prompt each day: pre-market quotes, who re
 
 ## Quick start
 
+The desktop app, for macOS, Windows and Linux:
+
+```sh
+curl -fsSL https://terminal.spova.ai/install | sh          # macOS, Linux
+```
+
+```powershell
+irm https://terminal.spova.ai/install.ps1 | iex             # Windows (PowerShell)
+```
+
+Nothing else to install: the app carries its own runtime, the server, the web app and the Python runtime for transforms (Pyodide with pandas, numpy and scipy). Or download it from [Releases](https://github.com/spovalova/openterminal/releases/latest): `OpenTerminal-mac-arm64.dmg` (Apple silicon), `-mac-x64.dmg` (Intel), `-win-x64-setup.exe`, `-linux-x86_64.AppImage`, `-linux-amd64.deb` and the arm64 builds. The builds are not signed: the install script avoids the macOS and Windows warnings a browser download gets. The app works with no keys: quotes, charts, search, option chains and fundamentals come from Yahoo through the built-in `yahoo` connector. The first time, it asks for an Anthropic or OpenAI key so the agent can answer; skip it to start with a sample workspace. Closing the window keeps it in the tray or menu bar; it updates itself from GitHub Releases.
+
+With Node 22.13 or later, the same app runs in your browser:
+
 ```sh
 npx openterminal
 ```
 
-Node 22.13 or later. One local process, nothing else to install: the package carries the server, the built web app and the Python runtime for transforms (Pyodide with pandas, numpy and scipy). It opens `http://localhost:4242` and works with no keys: quotes, charts, search, option chains and fundamentals come from Yahoo through the built-in `yahoo` connector. (The `openterminal` package is built and tested but not on npm yet; until it is, run it from source below.)
-
-The first start in a terminal asks for an Anthropic API key, hidden as you type; Enter skips. Then it says where everything is:
+It opens `http://localhost:4242`. (The `openterminal` package is built and tested but not on npm yet; until it is, run it from source below.) The first start in a terminal asks for an Anthropic API key, hidden as you type; Enter skips. Then it says where everything is:
 
 ```
 Anthropic API key for the agent (Enter to skip):
@@ -109,7 +121,7 @@ Once a day it asks GitHub whether a newer release is out and says so in one line
 
 **From source**, with Node 22.13+ and pnpm: `git clone https://github.com/spovalova/openterminal && cd openterminal && pnpm install && pnpm --filter @openterminal/web build && node packages/cli/bin/openterminal.js`, or `pnpm dev` while you work on it.
 
-**Add an LLM key** later, or an OpenAI one: set `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`) in your environment, or write it to `~/.openterminal/config.yml`:
+**Add an LLM key** later, or an OpenAI one: paste it on the start screen, set `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`) in your environment, or write it to `~/.openterminal/config.yml`:
 
 ```yaml
 llm:
@@ -225,6 +237,8 @@ pnpm bench        # run scripts/prompts.json against a running server and score 
 pnpm release:bundle   # dist/release/lib: the whole app in one directory that runs on Node alone
 pnpm release:npm      # dist/release/npm-pack/openterminal-<version>.tgz from that bundle (packed, not published)
 pnpm release:smoke dist/release/lib   # start it on a spare port: health, the web app, one pandas transform
+pnpm --filter @openterminal/desktop start     # the desktop app on that bundle (Electron, from source)
+pnpm --filter @openterminal/desktop package   # its installers for this machine in packages/desktop/release
 ```
 
 | Path | What lives there |
@@ -234,6 +248,7 @@ pnpm release:smoke dist/release/lib   # start it on a spare port: health, the we
 | `packages/ui` | design system |
 | `packages/web` | React app, the editor and the Data page, views |
 | `packages/cli` | the `npx openterminal` entry point |
+| `packages/desktop` | the desktop app: Electron around the release bundle, its installers and updates |
 | `connectors/*` | `openbb`, `yahoo`, `finnhub` |
 | `deploy/` | systemd units for an always-on instance |
 | `docs/` | [architecture](docs/architecture.md), [vocabulary](docs/vocabulary.md), [writing a connector](docs/writing-a-connector.md), probe and bench notes |
@@ -263,10 +278,6 @@ Cut on purpose, each checked against the three use cases above. Add nothing back
 - Order execution and broker connectors
 - Crypto connectors and non-US tickers
 - Auth, hosting, multi-user
-
-## Future work
-
-- A desktop app with a one-line install (decided 2026-10-20): Open Terminal as an Electron app for macOS, Windows and Linux, installed with `curl -fsSL https://terminal.spova.ai/install | sh` or `irm https://terminal.spova.ai/install.ps1 | iex`, unsigned, updating from GitHub Releases. It wraps the release bundle that `npx openterminal` already runs (`scripts/release/`). Design in [PLAN.md](PLAN.md) section 18.
 
 ## Contributing
 
