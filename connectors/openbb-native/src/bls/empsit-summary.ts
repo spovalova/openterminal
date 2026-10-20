@@ -20,7 +20,7 @@ const FLOAT_RE = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/
 /** A summary cell (`$`, commas, `%`) as a number; blanks are null (`_to_value`). */
 function toValue(text: string | undefined): number | null {
   if (text === undefined) return null
-  const cleaned = text.replace(/ /g, ' ').replace(/\$/g, '').replace(/,/g, '').replace(/%/g, '').trim()
+  const cleaned = text.replace(/\u00a0/g, ' ').replace(/\$/g, '').replace(/,/g, '').replace(/%/g, '').trim()
   return NO_VALUE.has(cleaned) || !FLOAT_RE.test(cleaned) ? null : Number(cleaned)
 }
 

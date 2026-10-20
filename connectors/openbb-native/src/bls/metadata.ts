@@ -161,7 +161,10 @@ export function categoryCatalog(ctx: NativeCtx, category: string): Promise<Catal
     // The cache writes a CSV without all-empty columns, and pandas reads its NA strings back as missing values.
     const seen = new Set<string>()
     const columns: string[] = []
-    for (const r of rows) for (const k of Object.keys(r)) if (!seen.has(k)) (seen.add(k), columns.push(k))
+    for (const r of rows) for (const k of Object.keys(r)) if (!seen.has(k)) {
+      seen.add(k)
+      columns.push(k)
+    }
     const normalised = rows.map((r) => Object.fromEntries(columns.map((c) => [c, r[c] === undefined || r[c] === null || PANDAS_NA.has(r[c]!) ? null : r[c]!])))
     const keep = columns.filter((c) => normalised.some((r) => r[c] !== null))
     return { columns: keep, rows: normalised.map((r) => Object.fromEntries(keep.map((c) => [c, r[c]!]))), codes }

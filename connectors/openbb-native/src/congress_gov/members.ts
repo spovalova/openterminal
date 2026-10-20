@@ -204,7 +204,7 @@ function legislationIndex(ctx: NativeCtx, congress: number, type: string): Promi
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       bytes = new Uint8Array(await res.arrayBuffer())
     } catch (err) {
-      throw new Error(`Failed to download data from ${url} -> ${err instanceof Error ? err.message : String(err)}`)
+      throw new Error(`Failed to download data from ${url} -> ${err instanceof Error ? err.message : String(err)}`, { cause: err })
     }
     const archive = parseBillArchive(bytes)
     const meta: LegIndex['meta'] = new Map()

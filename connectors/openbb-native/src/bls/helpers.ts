@@ -159,7 +159,7 @@ const FLOAT_RE = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/
 /** A numeric cell (thousands commas, trailing %) as a number; blanks and markers are null (`_to_num`). */
 export function toNum(text: unknown): number | null {
   if (text === null || text === undefined) return null
-  const cleaned = String(text).replace(/ /g, ' ').trim().replace(/%+$/, '').replace(/,/g, '').trim()
+  const cleaned = String(text).replace(/\u00a0/g, ' ').trim().replace(/%+$/, '').replace(/,/g, '').trim()
   if (NO_NUMBER.has(cleaned) || !FLOAT_RE.test(cleaned)) return null
   return Number(cleaned)
 }

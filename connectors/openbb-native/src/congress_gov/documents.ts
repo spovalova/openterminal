@@ -87,7 +87,7 @@ function loadCalendars(ctx: NativeCtx, congress: number, chamber: string): Promi
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         text = new TextDecoder('utf-8').decode(await res.arrayBuffer())
       } catch (err) {
-        throw new Error(`Failed to download data from ${url} -> ${err instanceof Error ? err.message : String(err)}`)
+        throw new Error(`Failed to download data from ${url} -> ${err instanceof Error ? err.message : String(err)}`, { cause: err })
       }
       for (const m of text.matchAll(/CCAL-(\d+)([hs])cal-(\d{4}-\d{2}-\d{2})/g)) {
         if (Number(m[1]) !== congress || m[2] !== code || seen.has(m[0])) continue

@@ -105,7 +105,7 @@ const SF_TABLES: Record<string, { label: string; url: string }> = {
 const SF_CANONICAL: Record<string, string> = { fd_id: 'ppi-fdidsf', commodity: 'ppi-commsf', forecast: 'ppi-seafac' }
 
 /** Trimmed, NBSP-cleaned text of a tag (`_cell_text`). */
-const cellText = (node: HTMLElement | undefined): string => (node ? textOf(node).replace(/ /g, ' ').trim() : '')
+const cellText = (node: HTMLElement | undefined): string => (node ? textOf(node).replace(/\u00a0/g, ' ').trim() : '')
 
 function sfFloat(value: string): number | null {
   if (value === '' || value === '-' || value === '(NA)') return null

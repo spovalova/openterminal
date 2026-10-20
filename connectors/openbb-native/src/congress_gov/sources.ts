@@ -18,7 +18,7 @@ export async function wssearch(ctx: NativeCtx, query: string, o: { offset?: numb
   try {
     return await ctx.http.json<Rec>(WSSEARCH_URL, { method: 'POST', body: { query, offset: o.offset ?? 0, pageSize: o.pagesize ?? 20, sortBy: o.sort ?? '2', historical: false } })
   } catch (err) {
-    throw new Error(`GovInfo search failed for '${query}' -> ${err instanceof Error ? err.message : String(err)}`)
+    throw new Error(`GovInfo search failed for '${query}' -> ${err instanceof Error ? err.message : String(err)}`, { cause: err })
   }
 }
 

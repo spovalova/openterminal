@@ -55,6 +55,8 @@ function validDate(y: number, m: number, d: number): string | null {
 
 /** Python's `str.splitlines()` for the separators that can occur in these files. */
 const splitLines = (text: string): string[] => {
+  // Python's str.splitlines boundaries, file separators included.
+  // eslint-disable-next-line no-control-regex
   const lines = text.split(/\r\n|[\n\r\v\f\x1c\x1d\x1e\x85\u2028\u2029]/)
   if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop()
   return lines
@@ -63,7 +65,7 @@ const splitLines = (text: string): string[] => {
 const TITLE_RE = /^TABLE\s+(\d+):\s*(.+?)\s+estimated.*?between\s+(\w+)\s+(\d{4})\s+and\s+(\w+)\s+(\d{4})\s*[,.]?/i
 const DATA_LINE_RE = /^(.+?)\s{2,}(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)(?:\s+(YES))?\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)(?:\s+(YES))?\s*$/
 const SOURCE_RE = /SOURCE:.*?,\s*(\w+)\s+(\d{1,2}),\s+(\d{4})/i
-const SECTION_RE = /^\s+([A-Z][A-Z \-]+)\s*$/
+const SECTION_RE = /^\s+([A-Z][A-Z -]+)\s*$/
 
 /** Python's `str.title()` for the upper-case section names. */
 const titleCase = (s: string): string => s.toLowerCase().replace(/(^|[^a-z])([a-z])/g, (_m, a: string, b: string) => a + b.toUpperCase())

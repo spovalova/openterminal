@@ -24,7 +24,7 @@ async function get(ctx: NativeCtx, path: string, key: string, params: Record<str
   try {
     data = await ctx.http.json(`${BASE}/${path.replace(/^\/+/, '')}`, { query: { format: 'json', api_key: key, ...params }, timeoutMs: 30_000 })
   } catch (err) {
-    throw new Error(`Congress.gov API request failed -> ${path}: ${err instanceof Error ? err.message : String(err)}`)
+    throw new Error(`Congress.gov API request failed -> ${path}: ${err instanceof Error ? err.message : String(err)}`, { cause: err })
   }
   if (typeof data !== 'object' || data === null || Array.isArray(data)) throw new Error(`Unexpected Congress.gov API response for ${path}: ${JSON.stringify(data)}`)
   if ((data as Rec).error) throw new Error(`Congress.gov API error for ${path}: ${String((data as Rec).error)}`)

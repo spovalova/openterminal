@@ -35,13 +35,13 @@ const CI_SHEET_META: Record<string, [string, string | null]> = {
 type Sheet = Cell[][]
 
 /** Collapse newlines and non-breaking spaces in a header or label cell (`_norm`). */
-const norm = (v: unknown): string => (v === null || v === undefined ? '' : squish(String(v).replace(/ /g, ' ')))
+const norm = (v: unknown): string => (v === null || v === undefined ? '' : squish(String(v).replace(/\u00a0/g, ' ')))
 
 /** A CES numeric cell as (value, significant): a trailing `*` flags significance, `.` is not available (`_to_value`). */
 function toValue(cell: Cell | undefined): [number | null, boolean] {
   if (cell === null || cell === undefined || typeof cell === 'boolean') return [null, false]
   if (typeof cell === 'number') return [cell, false]
-  let text = cell.replace(/ /g, ' ').trim()
+  let text = cell.replace(/\u00a0/g, ' ').trim()
   const significant = text.endsWith('*')
   if (significant) text = text.slice(0, -1).trim()
   if (['', '.', '-', '(NA)', 'N.A.', 'NA'].includes(text)) return [null, significant]
@@ -52,7 +52,7 @@ function toValue(cell: Cell | undefined): [number | null, boolean] {
 /** A peak/trough `MON-YYYY` cell as the first of that month (`_to_mon_year`). */
 function toMonYear(cell: Cell | undefined): string | null {
   if (cell === null || cell === undefined) return null
-  const text = String(cell).replace(/ /g, ' ').trim().replace(/\*+$/, '').trim()
+  const text = String(cell).replace(/\u00a0/g, ' ').trim().replace(/\*+$/, '').trim()
   const m = /^([A-Za-z]{3})-(\d{4})/.exec(text)
   const month = m ? MONTHS[m[1]!.toLowerCase()] : undefined
   return m && month ? isoDate(Number(m[2]), month, 1) : null

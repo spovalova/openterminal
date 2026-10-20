@@ -13,7 +13,7 @@ export const BULKDATA = `${GOVINFO}/bulkdata`
 export const BILLSTATUS_MIN_CONGRESS = 108
 export const BILL_TYPES = ['hr', 's', 'hjres', 'sjres', 'hconres', 'sconres', 'hres', 'sres'] as const
 
-export type Rec = Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
+export type Rec = Record<string, any>
 
 const HOUR_MS = 3600 * 1000
 
@@ -49,7 +49,7 @@ export function downloadBulk(ctx: NativeCtx, url: string): Promise<Uint8Array> {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       return new Uint8Array(await res.arrayBuffer())
     } catch (err) {
-      throw new Error(`Failed to download data from ${url} -> ${err instanceof Error ? err.message : String(err)}`)
+      throw new Error(`Failed to download data from ${url} -> ${err instanceof Error ? err.message : String(err)}`, { cause: err })
     }
   })
 }
