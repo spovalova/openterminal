@@ -471,37 +471,26 @@ EOF
   ot_step menu "Open Terminal, in your app menu"
 }
 
-# AppImages mount themselves with FUSE 2; without libfuse.so.2 they do not start. Print the fix, never run it.
+# The AppImage carries the static type-2 runtime, so it needs no libfuse2: only a fusermount helper (fuse3, or the
+# older fuse) to mount itself. Without one it still runs with APPIMAGE_EXTRACT_AND_RUN=1, slower to start. Print the
+# fix, never run it.
 ot_fuse() {
-  for ot_lib in /lib/*/libfuse.so.2 /lib64/libfuse.so.2 /lib/libfuse.so.2 /usr/lib/*/libfuse.so.2 /usr/lib64/libfuse.so.2 /usr/lib/libfuse.so.2; do
-    if [ -e "$ot_lib" ]; then
-      return 0
-    fi
-  done
-  for ot_ldconfig in ldconfig /sbin/ldconfig; do
-    if ot_has "$ot_ldconfig" && "$ot_ldconfig" -p 2>/dev/null | grep -q 'libfuse\.so\.2'; then
-      return 0
-    fi
-  done
+  if ot_has fusermount3 || ot_has fusermount; then
+    return 0
+  fi
   ot_id='' ot_like=''
   if [ -r /etc/os-release ]; then
     ot_id=$(sed -n 's/^ID=//p' /etc/os-release | tr -d '"')
     ot_like=$(sed -n 's/^ID_LIKE=//p' /etc/os-release | tr -d '"')
   fi
   case " $ot_id $ot_like " in
-    *" ubuntu "* | *" debian "*)
-      # Ubuntu 24.04 and Debian 13 renamed the package libfuse2t64.
-      ot_pkg=libfuse2
-      if ot_has apt-cache && apt-cache show libfuse2t64 >/dev/null 2>&1; then
-        ot_pkg=libfuse2t64
-      fi
-      ot_fix="sudo apt install $ot_pkg" ;;
-    *" fedora "* | *" rhel "* | *" centos "*) ot_fix="sudo dnf install fuse-libs" ;;
-    *" arch "*) ot_fix="sudo pacman -S fuse2" ;;
-    *" opensuse"* | *" suse "*) ot_fix="sudo zypper install libfuse2" ;;
-    *) ot_fix="install FUSE 2 (libfuse2) with your package manager" ;;
+    *" ubuntu "* | *" debian "*) ot_fix="sudo apt install fuse3" ;;
+    *" fedora "* | *" rhel "* | *" centos "*) ot_fix="sudo dnf install fuse3" ;;
+    *" arch "*) ot_fix="sudo pacman -S fuse3" ;;
+    *" opensuse"* | *" suse "*) ot_fix="sudo zypper install fuse3" ;;
+    *) ot_fix="install fuse3 with your package manager" ;;
   esac
-  ot_warn fuse "AppImages need FUSE 2, which is not installed. Fix: $ot_fix"
+  ot_warn fuse "AppImages mount with FUSE, which is not installed. Fix: $ot_fix (or start it with APPIMAGE_EXTRACT_AND_RUN=1)"
 }
 
 # ---------- PATH (Linux) ----------
