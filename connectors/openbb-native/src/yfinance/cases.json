@@ -1,1 +1,24 @@
-[]
+[
+  { "name": "equity-historical-aapl-sep", "route": "equity/price/historical", "params": { "symbol": "AAPL", "start_date": "2026-09-01", "end_date": "2026-09-30" } },
+  { "name": "equity-historical-multi-weekly", "route": "equity/price/historical", "params": { "symbol": "AAPL,MSFT", "start_date": "2026-08-03", "end_date": "2026-09-30", "interval": "1W" } },
+  { "name": "equity-historical-dividend-adjusted", "route": "equity/price/historical", "params": { "symbol": "AAPL", "start_date": "2026-08-06", "end_date": "2026-08-14", "adjustment": "splits_and_dividends" } },
+  { "name": "equity-historical-split", "route": "equity/price/historical", "params": { "symbol": "NVDA", "start_date": "2024-06-05", "end_date": "2024-06-12" } },
+  { "name": "equity-historical-hourly", "route": "equity/price/historical", "params": { "symbol": "AAPL", "start_date": "2026-08-10", "end_date": "2026-08-12", "interval": "1h" } },
+  { "name": "equity-historical-monthly", "route": "equity/price/historical", "params": { "symbol": "MSFT", "start_date": "2026-01-01", "end_date": "2026-06-30", "interval": "1M", "include_actions": false } },
+  { "name": "equity-historical-5d", "route": "equity/price/historical", "params": { "symbol": "AAPL", "start_date": "2026-08-05", "end_date": "2026-09-15", "interval": "5d" } },
+  { "name": "equity-historical-quarterly-midstart", "route": "equity/price/historical", "params": { "symbol": "AAPL", "start_date": "2026-01-15", "end_date": "2026-09-30", "interval": "1Q" } },
+  { "name": "equity-historical-no-data-symbol", "route": "equity/price/historical", "params": { "symbol": "MSFT,ZZZZZQ", "start_date": "2026-09-28", "end_date": "2026-09-30" } },
+  { "name": "etf-historical-spy", "route": "etf/historical", "params": { "symbol": "SPY", "start_date": "2026-09-15", "end_date": "2026-09-25" } },
+  { "name": "index-historical-names", "route": "index/price/historical", "params": { "symbol": "SPX,dow_dji,VIX", "start_date": "2026-09-28", "end_date": "2026-10-02" } },
+  { "name": "index-historical-hourly", "route": "index/price/historical", "params": { "symbol": "^GSPC", "start_date": "2026-10-15", "end_date": "2026-10-16", "interval": "1h" } },
+  { "name": "index-available", "route": "index/available", "params": {} },
+  { "name": "crypto-historical-btc", "route": "crypto/price/historical", "params": { "symbol": "BTCUSD,ETHUSD", "start_date": "2026-09-28", "end_date": "2026-10-02" } },
+  { "name": "crypto-historical-hourly", "route": "crypto/price/historical", "params": { "symbol": "BTC-USD", "start_date": "2026-10-15", "end_date": "2026-10-16", "interval": "1h" } },
+  { "name": "currency-historical-eurusd", "route": "currency/price/historical", "params": { "symbol": "EURUSD", "start_date": "2026-09-28", "end_date": "2026-10-02" } },
+  { "name": "currency-historical-hourly", "route": "currency/price/historical", "params": { "symbol": "EURUSD,JPY=X", "start_date": "2026-10-12", "end_date": "2026-10-13", "interval": "1h" } },
+  { "name": "futures-historical-cl", "route": "derivatives/futures/historical", "params": { "symbol": "CL", "start_date": "2026-09-28", "end_date": "2026-10-01" } },
+  { "name": "futures-historical-expiration", "route": "derivatives/futures/historical", "params": { "symbol": "CL,ES", "expiration": "2026-12", "start_date": "2026-09-28", "end_date": "2026-10-01" } },
+  { "name": "futures-historical-hourly", "route": "derivatives/futures/historical", "params": { "symbol": "ES", "start_date": "2026-10-12", "end_date": "2026-10-13", "interval": "1h" } },
+  { "name": "funds-historical-spy", "route": "yfinance/funds/historical", "params": { "symbol": "SPY,VFINX", "start_date": "2026-09-28", "end_date": "2026-10-02" } },
+  { "name": "funds-historical-weekly", "route": "yfinance/funds/historical", "params": { "symbol": "SPY", "start_date": "2026-09-01", "end_date": "2026-09-30", "interval": "1W" } }
+]
