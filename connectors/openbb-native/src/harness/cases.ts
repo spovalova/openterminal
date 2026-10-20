@@ -1,6 +1,7 @@
 // Parity cases: src/<provider>/cases.json, a list of calls that pin a ported route to OpenBB's answer. Every ported
-// route has at least one. A case may relax the comparison only with a reason (live data, a known OpenBB bug).
-import { existsSync, readFileSync } from 'node:fs'
+// route has at least one. A case may relax the comparison only with a reason (live data, a known OpenBB bug). A
+// provider ported in parts keeps one file per part (cases.<part>.json); names are unique across them.
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { z } from 'zod'
 
 export const PACKAGE_DIR = new URL('../../', import.meta.url)
@@ -45,19 +46,30 @@ export const CaseSchema = z
 
 export type Case = z.infer<typeof CaseSchema>
 
-export function casesPath(provider: string): URL {
-  return new URL(`src/${provider}/cases.json`, PACKAGE_DIR)
+export function casesPath(provider: string, part?: string): URL {
+  return new URL(`src/${provider}/cases${part ? `.${part}` : ''}.json`, PACKAGE_DIR)
+}
+
+/** The provider's case files: cases.json and cases.<part>.json. */
+export function caseFiles(provider: string): URL[] {
+  const dir = new URL(`src/${provider}/`, PACKAGE_DIR)
+  if (!existsSync(dir)) return []
+  return readdirSync(dir)
+    .filter((f) => /^cases(\.[a-z0-9-]+)?\.json$/.test(f))
+    .sort()
+    .map((f) => new URL(f, dir))
 }
 
 export function loadCases(provider: string): Case[] {
-  const path = casesPath(provider)
-  if (!existsSync(path)) return []
-  const raw = JSON.parse(readFileSync(path, 'utf8')) as unknown
-  const cases = z.array(CaseSchema).parse(raw)
+  const cases: Case[] = []
   const seen = new Set<string>()
-  for (const c of cases) {
-    if (seen.has(c.name)) throw new Error(`${provider}: duplicate case name ${c.name}`)
-    seen.add(c.name)
+  for (const file of caseFiles(provider)) {
+    const raw = JSON.parse(readFileSync(file, 'utf8')) as unknown
+    for (const c of z.array(CaseSchema).parse(raw)) {
+      if (seen.has(c.name)) throw new Error(`${provider}: duplicate case name ${c.name}`)
+      seen.add(c.name)
+      cases.push(c)
+    }
   }
   return cases
 }

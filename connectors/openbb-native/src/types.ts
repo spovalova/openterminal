@@ -42,6 +42,9 @@ export type ProviderDef = {
   skipped?: Record<string, string>
 }
 
+/** Part of a provider ported separately (federal_reserve: core and regional); index.ts spreads the parts together. */
+export type ProviderPart = { routes: Record<string, NativeHandler>; skipped?: Record<string, string> }
+
 export function defineProvider(def: ProviderDef): ProviderDef {
   if (!/^[a-z][a-z0-9_]*$/.test(def.name)) throw new Error(`provider name must be OpenBB's lowercase name: ${def.name}`)
   for (const route of Object.keys(def.routes)) {
