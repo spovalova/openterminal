@@ -1,11 +1,11 @@
 // usda/urban_influence_codes, provider usda. Ported from openbb_government_us/usda/models/urban_influence_codes.py and
 // utils/ers_urban_influence_codes.py (OpenBB Platform 5.0.0, Apache-2.0); modified: plain rows instead of pydantic models;
-// the legacy .xls vintages are read with src/usda/xls.ts instead of pandas and xlrd.
+// the legacy .xls vintages are read with src/lib/xls.ts instead of pandas and xlrd.
 import type { Cell } from '../lib/xlsx.js'
 import type { NativeCtx, NativeParams, Row } from '../types.js'
 import { csvDictRows, fetchErsFile, fetchErsText, nullTokensToNone, pyInt, sortedBy } from './helpers.js'
 import { cellStr, pdObj, sheetNamed, sheetRecords, STATE_NAMES, zfill } from './helpers-g.js'
-import { readXls } from './xls.js'
+import { readXls } from '../lib/xls.js'
 
 const DEFAULT_VINTAGE = '2024'
 const VINTAGES = ['2024', '2013', '2003', '1993']

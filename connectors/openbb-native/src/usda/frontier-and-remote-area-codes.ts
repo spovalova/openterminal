@@ -1,12 +1,12 @@
 // usda/frontier_and_remote_area_codes, provider usda. Ported from openbb_government_us/usda/models/frontier_and_remote_area_codes.py
 // and utils/ers_frontier_and_remote_area_codes.py (OpenBB Platform 5.0.0, Apache-2.0); modified: plain rows instead of pydantic
-// models; the 2020 and 2010 workbooks are read with src/lib/xlsx.ts and the 2000 one with src/usda/xls.ts.
+// models; the 2020 and 2010 workbooks are read with src/lib/xlsx.ts and the 2000 one with src/lib/xls.ts.
 import type { Cell } from '../lib/xlsx.js'
 import { readXlsx } from '../lib/xlsx.js'
 import type { NativeCtx, NativeParams, Row } from '../types.js'
 import { fetchErsFile, nullTokensToNone, pyFloat } from './helpers.js'
 import { cellStr, sortByText } from './helpers-g.js'
-import { readXls } from './xls.js'
+import { readXls } from '../lib/xls.js'
 
 const DEFAULT_YEAR = '2020'
 const DEFAULT_STATE = 'MT'

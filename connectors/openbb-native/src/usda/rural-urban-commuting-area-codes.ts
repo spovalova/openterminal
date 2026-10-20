@@ -1,12 +1,12 @@
 // usda/rural_urban_commuting_area_codes, provider usda. Ported from openbb_government_us/usda/models/rural_urban_commuting_area_codes.py
 // and utils/ers_rural_urban_commuting_area_codes.py (OpenBB Platform 5.0.0, Apache-2.0); modified: plain rows instead of pydantic
-// models; the 2010 workbook is read with src/lib/xlsx.ts and the 2000 and 1990 ones with src/usda/xls.ts.
+// models; the 2010 workbook is read with src/lib/xlsx.ts and the 2000 and 1990 ones with src/lib/xls.ts.
 import type { Cell } from '../lib/xlsx.js'
 import { readXlsx } from '../lib/xlsx.js'
 import type { NativeCtx, NativeParams, Row } from '../types.js'
 import { csvDictRows, fetchErsFile, fetchErsText, nullTokensToNone, pyFloat } from './helpers.js'
 import { pyFloatRepr, sheetNamed, sortByText, STATE_NAMES, xlrdRows, xlrdStr, zfill } from './helpers-g.js'
-import { readXls } from './xls.js'
+import { readXls } from '../lib/xls.js'
 
 const DEFAULT_TABLE = 'tract_2020'
 const DEFAULT_STATE = 'DE'

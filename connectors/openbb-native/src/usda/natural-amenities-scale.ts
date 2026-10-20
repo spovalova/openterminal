@@ -1,10 +1,10 @@
 // usda/natural_amenities_scale, provider usda. Ported from openbb_government_us/usda/models/natural_amenities_scale.py and
 // utils/ers_natural_amenities_scale.py (OpenBB Platform 5.0.0, Apache-2.0); modified: plain rows instead of pydantic models;
-// the legacy .xls workbook is read with src/usda/xls.ts instead of xlrd.
+// the legacy .xls workbook is read with src/lib/xls.ts instead of xlrd.
 import type { NativeCtx, NativeParams, Row } from '../types.js'
 import { fetchErsFile, nullTokensToNone, pyFloat, sortedBy } from './helpers.js'
 import { sheetNamed, xlrdRows, xlrdStr } from './helpers-g.js'
-import { readXls } from './xls.js'
+import { readXls } from '../lib/xls.js'
 
 const MEDIA_PATH = '/media/6172/natural-amenities-scale-including-the-6-components-for-us-counties.xls'
 const SHEET = 'NATAMENF'

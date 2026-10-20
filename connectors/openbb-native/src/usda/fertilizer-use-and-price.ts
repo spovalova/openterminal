@@ -1,10 +1,10 @@
 // usda/fertilizer_use_and_price, provider usda. Ported from openbb_government_us/usda/models/fertilizer_use_and_price.py and
 // utils/ers_fertilizer_use_and_price.py (OpenBB Platform 5.0.0, Apache-2.0); modified: plain rows instead of pydantic models;
-// the legacy .xls workbook is read with src/usda/xls.ts instead of xlrd.
+// the legacy .xls workbook is read with src/lib/xls.ts instead of xlrd.
 import type { NativeCtx, NativeParams, Row } from '../types.js'
 import { fetchErsFile, isNullToken, nullTokensToNone, optInt, optString, pyFloat, sortedBy } from './helpers.js'
 import { xlrdRows, xlrdStr } from './helpers-g.js'
-import { readXls } from './xls.js'
+import { readXls } from '../lib/xls.js'
 
 const DEFAULT_TABLE = 'us_plant_nutrient_consumption'
 const WORKBOOK_MEDIA = '/media/5291/all-fertilizer-use-and-price-tables-in-a-single-workbook.xls'

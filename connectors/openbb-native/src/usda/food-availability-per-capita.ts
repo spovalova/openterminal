@@ -1,11 +1,11 @@
 // usda/food_availability_per_capita, provider usda. Ported from openbb_government_us/usda/models/food_availability_per_capita_data_system.py
 // and utils/ers_food_availability_per_capita_data_system.py (OpenBB Platform 5.0.0, Apache-2.0); modified: plain rows instead of
-// pydantic models; the nutrient workbook (a legacy .xls) is read with src/usda/xls.ts instead of xlrd.
+// pydantic models; the nutrient workbook (a legacy .xls) is read with src/lib/xls.ts instead of xlrd.
 import { parseCsv } from '../lib/csv.js'
 import type { NativeCtx, NativeParams, Row } from '../types.js'
 import { decodeText, fetchErsFile, nullTokensToNone, optInt, optString, pyFloat } from './helpers.js'
 import { sheetNamed, xlrdRows } from './helpers-g.js'
-import { readXls } from './xls.js'
+import { readXls } from '../lib/xls.js'
 
 const DATA_SYSTEMS = ['food_availability', 'loss_adjusted', 'nutrient']
 const DEFAULT_DATA_SYSTEM = 'food_availability'

@@ -1,11 +1,11 @@
 // usda/commuting_zones_and_labor_market_areas, provider usda. Ported from openbb_government_us/usda/models/commuting_zones_and_labor_market_areas.py
 // and utils/ers_commuting_zones_and_labor_market_areas.py (OpenBB Platform 5.0.0, Apache-2.0); modified: plain rows instead of
-// pydantic models; the 2000 and 1980/1990 workbooks are read with src/usda/xls.ts instead of pandas and xlrd.
+// pydantic models; the 2000 and 1980/1990 workbooks are read with src/lib/xls.ts instead of pandas and xlrd.
 import type { Cell } from '../lib/xlsx.js'
 import type { NativeCtx, NativeParams, Row } from '../types.js'
 import { csvDictRows, decodeText, fetchErsFile, nullTokensToNone, pyFloat, readZip, sortedBy } from './helpers.js'
 import { cellStr, pdObj, sheetNamed, sheetRecords, zfill } from './helpers-g.js'
-import { readXls } from './xls.js'
+import { readXls } from '../lib/xls.js'
 
 const DEFAULT_VINTAGE = '2020'
 

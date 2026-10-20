@@ -1,10 +1,10 @@
 // usda/rural_urban_continuum_codes, provider usda. Ported from openbb_government_us/usda/models/rural_urban_continuum_codes.py
 // and utils/ers_rural_urban_continuum_codes.py (OpenBB Platform 5.0.0, Apache-2.0); modified: plain rows instead of pydantic
-// models; the 2013 and 2003 workbooks are read with src/usda/xls.ts instead of xlrd.
+// models; the 2013 and 2003 workbooks are read with src/lib/xls.ts instead of xlrd.
 import type { NativeCtx, NativeParams, Row } from '../types.js'
 import { cell, csvDictRows, fetchErsFile, fetchErsText, nullTokensToNone } from './helpers.js'
 import { cleanText, parsePopulation, pdStr, pickParam, sheetNamed, sheetRecords, sortByText, STATE_NAMES } from './helpers-g.js'
-import { readXls } from './xls.js'
+import { readXls } from '../lib/xls.js'
 
 const DEFAULT_VINTAGE = '2023'
 

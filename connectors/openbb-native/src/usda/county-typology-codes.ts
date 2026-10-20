@@ -1,11 +1,11 @@
 // usda/county_typology_codes, provider usda. Ported from openbb_government_us/usda/models/county_typology_codes.py and
 // utils/ers_county_typology_codes.py (OpenBB Platform 5.0.0, Apache-2.0); modified: plain rows instead of pydantic models;
-// the legacy .xls editions are read with src/usda/xls.ts instead of pandas and xlrd.
+// the legacy .xls editions are read with src/lib/xls.ts instead of pandas and xlrd.
 import type { Cell } from '../lib/xlsx.js'
 import type { NativeCtx, NativeParams, Row } from '../types.js'
 import { csvDictRows, decodeText, fetchErsFile, nullTokensToNone, sortedBy } from './helpers.js'
 import { intOfFloatText, pdObj, sheetNamed, sheetRecords, STATE_FIPS_ABBR, STATE_NAMES, textOf, zfill } from './helpers-g.js'
-import { readXls } from './xls.js'
+import { readXls } from '../lib/xls.js'
 
 const DEFAULT_VINTAGE = '2025'
 const STATE_ABBRS = Object.keys(STATE_NAMES).filter((s) => !['PR', 'AS', 'GU', 'MP', 'VI'].includes(s))
