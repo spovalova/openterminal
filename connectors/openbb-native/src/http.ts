@@ -66,7 +66,9 @@ export function createNativeHttp(fetchImpl: typeof fetch = fetch, base: { signal
   async function response(url: string, opts: RequestOptions = {}): Promise<Response> {
     const full = withQuery(url, opts.query)
     const { body, contentType } = encodeBody(opts)
-    const headers: Record<string, string> = { ...(contentType ? { 'content-type': contentType } : {}), ...opts.headers }
+    // The caller's own Content-Type (any casing) wins over the one the body implies; two of them get some servers to 403.
+    const callerType = Object.keys(opts.headers ?? {}).some((k) => k.toLowerCase() === 'content-type')
+    const headers: Record<string, string> = { ...(contentType && !callerType ? { 'content-type': contentType } : {}), ...opts.headers }
     const timeout = AbortSignal.timeout(opts.timeoutMs ?? base.timeoutMs ?? DEFAULT_TIMEOUT_MS)
     const signal = base.signal ? AbortSignal.any([base.signal, timeout]) : timeout
     const init: RequestInit = { method: opts.method ?? (body === undefined ? 'GET' : 'POST'), headers, signal }
