@@ -7,7 +7,7 @@ import { priceHistory } from './chart.js'
 import { addDays, compact, todayNy, symbolsOf, yahooResponse } from './helpers.js'
 import { quoteSummary, tickerInfo } from './quote.js'
 
-/** SEC filings Yahoo lists for each symbol, newest first across symbols. */
+/** SEC filings Yahoo lists for each symbol, newest first within a symbol. */
 export async function filings(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
   const rows: Row[] = []
   for (const symbol of symbolsOf(params)) {
@@ -15,7 +15,7 @@ export async function filings(params: NativeParams, ctx: NativeCtx): Promise<Row
     const list = ((result?.secFilings as Row | undefined)?.filings ?? []) as Row[]
     for (const f of list) rows.push(compact({ filing_date: f.date, report_type: f.type, report_url: f.edgarUrl, symbol, title: f.title }))
   }
-  return rows.sort((a, b) => String(b.filing_date).localeCompare(String(a.filing_date)))
+  return rows
 }
 
 /**
