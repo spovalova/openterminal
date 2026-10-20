@@ -679,7 +679,7 @@ html.js:not(.tabs-ready)[data-os="linux"] .get-panel[data-os="linux"] {
   gap: 12px 24px;
   margin-top: 24px;
 }
-.hero .get-links .btn {
+.get-links .btn {
   min-height: 44px;
 }
 .text-link {
@@ -792,6 +792,16 @@ html.js:not(.tabs-ready)[data-os="linux"] .get-panel[data-os="linux"] {
 }
 .statement p .dim {
   color: var(--fg-3);
+}
+/* The download card sits right under the statement, so the statement gives up its bottom padding to it. */
+.statement-lead {
+  padding-bottom: 0;
+}
+.get-section {
+  padding-bottom: clamp(56px, 8vw, 104px);
+}
+.get-section .get-hero {
+  margin-top: 40px;
 }
 .statement .sub {
   max-width: 62ch;
