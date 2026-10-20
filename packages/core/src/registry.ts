@@ -7,7 +7,7 @@ import type { FieldConfig } from './fields.js'
 import type { Frame, Lineage } from './frame.js'
 import { MS } from './clock.js'
 import { isRecipeQuery, isRouteQuery, isTransformQuery, QueryV2Schema, type AnyQueryInput, type RecipeQuery, type RouteQuery, type TransformQuery } from './query.js'
-import { RECIPE_PARAMS_INPUT, expandRecipe, recipeMap, recipeParamsFrame, recipeVersion, renameColumns, type Recipe, type RecipeRouteQuery } from './recipes.js'
+import { RECIPE_PARAMS_INPUT, expandRecipe, recipeMap, recipeParamsFrame, recipeUsable, recipeVersion, renameColumns, type Recipe, type RecipeRouteQuery } from './recipes.js'
 import { checkTransformInputs, checkTransformOutput, isTransformError, type TransformEngine } from './transform.js'
 import { globToRegExp } from './annotations.js'
 
@@ -38,6 +38,8 @@ export interface Registry {
   catalog?(): Promise<Catalog>
   /** The recipes the registry resolves. */
   recipes?(): Recipe[]
+  /** The recipes that can run now: each has a route on a registered, healthy connector whose catalog lists it. What the agent is offered. */
+  usableRecipes?(): Promise<Recipe[]>
 }
 
 export class RegistryError extends Error {
@@ -161,6 +163,16 @@ export class ConnectorRegistry implements Registry {
 
   recipes(): Recipe[] {
     return [...this.recipeList]
+  }
+
+  /**
+   * The recipes with a callable route in every route dataset (`recipeUsable`): a route is callable when its connector
+   * is registered and healthy (the catalog holds only those) and lists it. A recipe whose routes all point at OpenBB
+   * when OpenBB is not configured or not answering is left out, so the agent is not offered a query that can only fail.
+   */
+  async usableRecipes(): Promise<Recipe[]> {
+    const catalog = await this.catalog()
+    return this.recipeList.filter((r) => recipeUsable(r, (connector, route) => catalog.get(connector, route) !== undefined))
   }
 
   /** Replace the recipe list (after a user promotes a widget to a recipe). */

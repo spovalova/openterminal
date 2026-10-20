@@ -36,6 +36,8 @@ export type DividendsFixture = { recordedAt: Date; bySymbol: Record<string, { me
 
 export const fixtures = {
   search: () => loadFixture<SearchFixture>('search'),
+  /** Search results asked for news only (`quotesCount: 0, newsCount: 5`): TSLA, NVDA, and a term with none. */
+  news: () => loadFixture<SearchFixture>('news'),
   quote: () => loadFixture<QuoteFixture>('quote'),
   chart: () => loadFixture<ChartFixture>('chart'),
   quoteSummary: () => loadFixture<SummaryFixture>('quoteSummary'),
@@ -54,12 +56,14 @@ export type Calls = {
 }
 
 /**
- * A YahooClient backed by the fixtures. Chart lookups are by `${symbol}-${interval}` (or the dividends fixture
- * when `events` asks for them); pass `chartKeys` to alias requests onto a recorded key. quoteSummary serves only
- * the requested modules, merged from the calendarEvents and v1.2 fixtures. Override any method to simulate failures.
+ * A YahooClient backed by the fixtures. Search lookups are by term (the news fixture when `newsCount` asks for news).
+ * Chart lookups are by `${symbol}-${interval}` (or the dividends fixture when `events` asks for them); pass `chartKeys`
+ * to alias requests onto a recorded key. quoteSummary serves only the requested modules, merged from the
+ * calendarEvents and v1.2 fixtures. Override any method to simulate failures.
  */
 export function fakeClient(overrides: Partial<YahooClient> & { chartKeys?: Record<string, string> } = {}): YahooClient & { calls: Calls } {
   const search = fixtures.search()
+  const news = fixtures.news()
   const quote = fixtures.quote()
   const chart = fixtures.chart()
   const summary = fixtures.quoteSummary()
@@ -71,7 +75,8 @@ export function fakeClient(overrides: Partial<YahooClient> & { chartKeys?: Recor
   const base: YahooClient = {
     async search(term, opts) {
       calls.search.push([term, opts])
-      const r = search.byTerm[term]
+      // A search that asks for news is the news route's; the other one is the symbol lookup's.
+      const r = ((opts.newsCount ?? 0) > 0 ? news : search).byTerm[term]
       if (!r) throw new Error(`no search fixture for ${JSON.stringify(term)}`)
       return r
     },

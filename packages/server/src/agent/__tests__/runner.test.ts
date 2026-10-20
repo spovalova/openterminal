@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { ConnectorRegistry, WIDGET_CHIP_RE, WidgetV2Schema, type ServerMsg, type WidgetV2 } from '@openterminal/core'
+import { ConnectorRegistry, WIDGET_CHIP_RE, WidgetV2Schema, parseRecipes, type ServerMsg, type WidgetV2 } from '@openterminal/core'
 import { MemoryRunLog } from '../../runlog.js'
 import { createRunner, AgentAbortError } from '../runner.js'
 import { MAX_TOOL_CALLS } from '../tools.js'
-import { collectEmit, createFakeRegistry, scriptedModel, systemPromptSentOn, toolResultsSentOn, workspace, type Turn, type TurnScript } from './helpers.js'
-import { routesConnector } from '../../../test/fake-connector.js'
+import { AGENT_ROUTES, collectEmit, createFakeRegistry, scriptedModel, systemPromptSentOn, toolResultsSentOn, workspace, type Turn, type TurnScript } from './helpers.js'
+import { recipesForRoutes, routesConnector } from '../../../test/fake-connector.js'
 
 const MEMORY = ['MU', 'SNDK', 'WDC', 'STX']
 /** A recipe query. */
@@ -259,11 +259,69 @@ describe('empty reply backstop', () => {
     ])
   })
 
+  it('carries the tool calls and results of every earlier step into the re-ask, not only the last step', async () => {
+    const turns: TurnScript[] = [
+      { toolCalls: [rq('quote', { symbols: ['MU'] })] },
+      { toolCalls: [rq('news', { symbols: ['MU'], limit: 2 })] },
+      { text: '' },
+      { text: 'MU is at $100.00, down 1.5% today.' },
+    ]
+    const { promise, model } = run(turns)
+    const message = await promise
+    expect(message.text).toBe('MU is at $100.00, down 1.5% today.')
+    expect(model.doStreamCalls).toHaveLength(4)
+    // The re-ask (call 4) sees the results of both tool turns, in order, and the calls that produced them.
+    const results = toolResultsSentOn(model, 3) as { ok: boolean; query: { recipe: string } }[]
+    expect(results.map((x) => x.query.recipe)).toEqual(['quote', 'news'])
+    expect(results.every((x) => x.ok)).toBe(true)
+    const prompt = model.doStreamCalls[3]!.prompt
+    const calls = prompt.flatMap((m) => (m.role === 'assistant' ? m.content.filter((c) => c.type === 'tool-call') : []))
+    expect(calls).toHaveLength(2)
+    const resultIds = prompt.flatMap((m) => (m.role === 'tool' ? m.content.map((c) => c.type === 'tool-result' && c.toolCallId) : []))
+    expect(resultIds).toEqual(calls.map((c) => c.type === 'tool-call' && c.toolCallId))
+    expect(prompt.at(-1)!.role).toBe('user')
+  })
+
   it('does not continue when the model wrote a reply, nor when it never used a tool', async () => {
     const { promise, model } = run([{ text: '' }])
     const message = await promise
     expect(message.text).toBe('')
     expect(model.doStreamCalls).toHaveLength(1)
+  })
+})
+
+describe('dead recipes', () => {
+  // OpenBB is not configured here: a recipe whose only route is on it can never run.
+  const dead = parseRecipes([
+    { name: 'ghost_curve', title: 'Ghost curve {symbols}', summary: 'Ghost quote curve per symbol', params: { type: 'object', properties: { symbols: { type: 'array', items: { type: 'string' } } }, required: ['symbols'] }, view: { preset: 'table' }, routes: [{ connector: 'openbb', route: 'fixedincome/ghost', params: { symbol: '{symbols}' } }] },
+  ])
+  const registryWithDeadRecipe = () => {
+    const registry = new ConnectorRegistry({ recipes: [...recipesForRoutes('fake', AGENT_ROUTES, {}), ...dead] })
+    registry.register(routesConnector('fake', AGENT_ROUTES), {})
+    return registry
+  }
+
+  it('keeps a recipe whose connector is not registered out of the prompt and out of find_route, and keeps the rest', async () => {
+    const turns: Turn[] = [{ toolCalls: [{ name: 'find_route', input: { query: 'ghost quote curve' } }] }, { text: 'Nothing matched.' }]
+    const { promise, model } = run(turns, { registry: registryWithDeadRecipe() })
+    await promise
+    const system = systemPromptSentOn(model, 0)
+    expect(system).toMatch(/^- quote\(symbols\[\]\)/m)
+    expect(system).not.toContain('ghost_curve')
+    const [found] = toolResultsSentOn(model, 1) as { ok: boolean; recipes: string[] }[]
+    expect(found!.recipes).toContain('quote')
+    expect(found!.recipes).not.toContain('ghost_curve')
+  })
+
+  it('refuses a widget on the dead recipe as unknown instead of letting it fail every refresh', async () => {
+    const widget = { title: 'Ghost', size: 'md', data: { main: r('ghost_curve', { symbols: ['MU'] }) }, view: { preset: 'table' } }
+    const turns: Turn[] = [{ toolCalls: [{ name: 'set_workspace', input: { widgets: [widget] } }] }, { text: 'Could not build it.' }]
+    const { promise, model, messages } = run(turns, { registry: registryWithDeadRecipe() })
+    await promise
+    const [res] = toolResultsSentOn(model, 1) as { ok: boolean; errors: string[] }[]
+    expect(res!.ok).toBe(false)
+    expect(res!.errors[0]).toMatch(/unknown recipe "ghost_curve"/)
+    expect(widgetsOf(messages)).toHaveLength(0)
   })
 })
 

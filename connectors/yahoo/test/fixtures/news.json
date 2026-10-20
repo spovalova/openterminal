@@ -1,0 +1,364 @@
+{
+  "recordedAt": "2026-10-20T18:20:58.558Z",
+  "byTerm": {
+    "TSLA": {
+      "explains": [],
+      "count": 5,
+      "quotes": [],
+      "news": [
+        {
+          "uuid": "448dd843-f946-49d9-ad35-7ae4ee326fa6",
+          "title": "Stock market today: Dow rises, S&P 500, Nasdaq climb as oil prices ease, chip stocks trim losses",
+          "publisher": "Yahoo Finance",
+          "link": "https://finance.yahoo.com/markets/live/stock-market-today-dow-rises-sp-500-nasdaq-climb-as-dip-buying-resumes-165236471.html",
+          "providerPublishTime": "2026-10-20T17:35:26.000Z",
+          "type": "STORY",
+          "thumbnail": {
+            "resolutions": [
+              {
+                "url": "https://d29szjachogqwa.cloudfront.net/images/2026-10/594e0e08-dcf5-445d-a071-5434225ae7be",
+                "width": 3704,
+                "height": 2469,
+                "tag": "original"
+              },
+              {
+                "url": "https://s.yimg.com/lo/mysterio/api/DF7E36B4E66DFE4C1282306503CE3E47280C874D7919679C832840B0C778EE18/subgraphmysterio/resizefill_w140_h140/https:%2F%2Fd29szjachogqwa.cloudfront.net%2Fimages%2F2026-10%2F594e0e08-dcf5-445d-a071-5434225ae7be",
+                "width": 140,
+                "height": 140,
+                "tag": "140x140"
+              }
+            ]
+          },
+          "relatedTickers": [
+            "^DJI",
+            "^IXIC",
+            "^GSPC",
+            "BZ=F",
+            "META",
+            "NFLX",
+            "GM",
+            "TSLA",
+            "CL=F",
+            "UAL",
+            "0158S0.KQ"
+          ]
+        },
+        {
+          "uuid": "641d4ca2-7116-38e8-b993-2cf55b612473",
+          "title": "Tesla's Earnings Will Put Its AI Spending to the Test",
+          "publisher": "GuruFocus.com",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/teslas-earnings-put-ai-spending-171715355.html",
+          "providerPublishTime": "2026-10-20T17:17:15.000Z",
+          "type": "STORY",
+          "relatedTickers": [
+            "TSLA"
+          ]
+        },
+        {
+          "uuid": "5b7d9dec-d185-4b1f-857c-54c032099c97",
+          "title": "Earnings live updates: All eyes on Musk and Meta as Q3 earnings rev up",
+          "publisher": "Yahoo Finance",
+          "link": "https://finance.yahoo.com/markets/live/earnings-live-updates-all-eyes-on-musk-and-meta-as-q3-earnings-roll-on-134152191.html",
+          "providerPublishTime": "2026-10-20T17:05:50.000Z",
+          "type": "STORY",
+          "thumbnail": {
+            "resolutions": [
+              {
+                "url": "https://d29szjachogqwa.cloudfront.net/images/2026-10/4a5846fa-940b-47e3-a660-84ae14d53dbb",
+                "width": 3500,
+                "height": 2333,
+                "tag": "original"
+              },
+              {
+                "url": "https://s.yimg.com/lo/mysterio/api/3BC597A32D84B21331B7EF787BD9DA537D92EFBB5555F5E1DBAC56EC35237439/subgraphmysterio/resizefill_w140_h140/https:%2F%2Fd29szjachogqwa.cloudfront.net%2Fimages%2F2026-10%2F4a5846fa-940b-47e3-a660-84ae14d53dbb",
+                "width": 140,
+                "height": 140,
+                "tag": "140x140"
+              }
+            ]
+          },
+          "relatedTickers": [
+            "SPCX",
+            "META",
+            "TSLA",
+            "^GSPC",
+            "IBM",
+            "GM",
+            "UAL",
+            "PG"
+          ]
+        },
+        {
+          "uuid": "5105568a-59fb-3649-8806-ec138cc9243f",
+          "title": "Stocks mostly rise as oil, US yields ease; euro edges up",
+          "publisher": "Reuters",
+          "link": "https://finance.yahoo.com/markets/world-indices/articles/asian-shares-tumble-oil-rises-021045839.html",
+          "providerPublishTime": "2026-10-20T16:53:08.000Z",
+          "type": "STORY",
+          "thumbnail": {
+            "resolutions": [
+              {
+                "url": "https://media.zenfs.com/en/reuters.com/b311528037b357b2e6862f68e23260d4.jpg",
+                "width": 800,
+                "height": 573,
+                "tag": "original"
+              },
+              {
+                "url": "https://s.yimg.com/lo/mysterio/api/6F2F821151BEDE94B1A90523D01FE23E054A9A6D9095332213DDC3EFE20B261D/subgraphmysterio/resizefill_w140_h140/https:%2F%2Fmedia.zenfs.com%2Fen%2Freuters.com%2Fb311528037b357b2e6862f68e23260d4.jpg",
+                "width": 140,
+                "height": 140,
+                "tag": "140x140"
+              }
+            ]
+          },
+          "relatedTickers": [
+            "^DJI",
+            "EUR=X",
+            "META",
+            "CL=F",
+            "SPCX",
+            "TSLA",
+            "AMZN"
+          ]
+        },
+        {
+          "uuid": "b25b197b-8f33-4960-bf9c-7be287edd793",
+          "title": "Tesla Q3 preview: Delivery outlook, cash flow, and a dash of merger speculation on tap",
+          "publisher": "Yahoo Finance",
+          "link": "https://finance.yahoo.com/markets/stocks/article/tesla-q3-preview-delivery-outlook-cash-flow-and-a-dash-of-merger-speculation-on-tap-160637755.html",
+          "providerPublishTime": "2026-10-20T16:06:37.000Z",
+          "type": "STORY",
+          "thumbnail": {
+            "resolutions": [
+              {
+                "url": "https://d29szjachogqwa.cloudfront.net/images/user-uploaded/screenshot-2026-10-15-at-81007-pm_5822.png",
+                "width": 2546,
+                "height": 1448,
+                "tag": "original"
+              },
+              {
+                "url": "https://s.yimg.com/lo/mysterio/api/9F44D004287AE15B9BDD11EEAD8BD106B69C1660B22B10FE7DF517C980F33068/subgraphmysterio/resizefill_w140_h140/https:%2F%2Fd29szjachogqwa.cloudfront.net%2Fimages%2Fuser-uploaded%2Fscreenshot-2026-10-15-at-81007-pm_5822.png",
+                "width": 140,
+                "height": 140,
+                "tag": "140x140"
+              }
+            ]
+          },
+          "relatedTickers": [
+            "TSLA",
+            "SPCX"
+          ]
+        }
+      ],
+      "nav": [],
+      "lists": [],
+      "researchReports": [],
+      "screenerFieldResults": [],
+      "totalTime": 157,
+      "timeTakenForQuotes": 425,
+      "timeTakenForNews": 600,
+      "timeTakenForAlgowatchlist": 400,
+      "timeTakenForPredefinedScreener": 400,
+      "timeTakenForCrunchbase": 400,
+      "timeTakenForNav": 400,
+      "timeTakenForResearchReports": 0,
+      "timeTakenForQuestions": 0,
+      "timeTakenForScreenerField": 0,
+      "timeTakenForCulturalAssets": 0,
+      "timeTakenForSearchLists": 0
+    },
+    "NVDA": {
+      "explains": [],
+      "count": 5,
+      "quotes": [],
+      "news": [
+        {
+          "uuid": "2e6fb43f-0245-36f1-9cb6-d974d56b43d4",
+          "title": "Where Will VGT Be in 20 Years? Here's What History Suggests.",
+          "publisher": "Motley Fool",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/where-vgt-20-years-heres-180200356.html",
+          "providerPublishTime": "2026-10-20T18:02:00.000Z",
+          "type": "STORY",
+          "thumbnail": {
+            "resolutions": [
+              {
+                "url": "https://media.zenfs.com/en/motleyfool.com/a4fb8e94d592d17e0bd824a8455dedbe.jpg",
+                "width": 1281,
+                "height": 961,
+                "tag": "original"
+              },
+              {
+                "url": "https://s.yimg.com/lo/mysterio/api/BC2DB2B20CEAF2103A8082728647E28D576783F50416F68BE43EA51D1891856A/subgraphmysterio/resizefill_w140_h140/https:%2F%2Fmedia.zenfs.com%2Fen%2Fmotleyfool.com%2Fa4fb8e94d592d17e0bd824a8455dedbe.jpg",
+                "width": 140,
+                "height": 140,
+                "tag": "140x140"
+              }
+            ]
+          },
+          "relatedTickers": [
+            "VGT",
+            "NVDA"
+          ]
+        },
+        {
+          "uuid": "06ab46b7-1581-362e-aba9-fa450dd98c7d",
+          "title": "Bot Auto’s Secret to an Affordable Future",
+          "publisher": "FreightWaves",
+          "link": "https://finance.yahoo.com/technology/ai/articles/bot-auto-secret-affordable-future-175518709.html",
+          "providerPublishTime": "2026-10-20T17:55:18.000Z",
+          "type": "STORY",
+          "thumbnail": {
+            "resolutions": [
+              {
+                "url": "https://media.zenfs.com/en/freightwaves_373/2ee38c77abe6a88c43537bc6067b9f88.png",
+                "width": 1080,
+                "height": 607,
+                "tag": "original"
+              },
+              {
+                "url": "https://s.yimg.com/lo/mysterio/api/B0F26BEE566F407A094A865C4FFAC4C5A5D77614623634BA001E4B5AD158A227/subgraphmysterio/resizefill_w140_h140/https:%2F%2Fmedia.zenfs.com%2Fen%2Ffreightwaves_373%2F2ee38c77abe6a88c43537bc6067b9f88.png",
+                "width": 140,
+                "height": 140,
+                "tag": "140x140"
+              }
+            ]
+          },
+          "relatedTickers": [
+            "0992.HK",
+            "NVDA"
+          ]
+        },
+        {
+          "uuid": "993a10b8-6883-3fd6-abdb-98814dc8daf4",
+          "title": "Better Nuclear Energy Stock to Buy After the Sell-Off: Oklo vs. X-Energy",
+          "publisher": "Motley Fool",
+          "link": "https://finance.yahoo.com/energy/articles/better-nuclear-energy-stock-buy-175000068.html",
+          "providerPublishTime": "2026-10-20T17:50:00.000Z",
+          "type": "STORY",
+          "thumbnail": {
+            "resolutions": [
+              {
+                "url": "https://media.zenfs.com/en/motleyfool.com/ab87d3dc37df21b7b23cb18698224643.jpg",
+                "width": 1400,
+                "height": 933,
+                "tag": "original"
+              },
+              {
+                "url": "https://s.yimg.com/lo/mysterio/api/5C264571F2F798A19F6DEDF951D0314F3BB23D018F33F27DFF68E887E8F0CD54/subgraphmysterio/resizefill_w140_h140/https:%2F%2Fmedia.zenfs.com%2Fen%2Fmotleyfool.com%2Fab87d3dc37df21b7b23cb18698224643.jpg",
+                "width": 140,
+                "height": 140,
+                "tag": "140x140"
+              }
+            ]
+          },
+          "relatedTickers": [
+            "XE",
+            "OKLO",
+            "NVDA"
+          ]
+        },
+        {
+          "uuid": "54e32439-b62d-384e-bd87-9dec89d091ca",
+          "title": "When Interest Rates Move, These 7 Income Stocks React Very Differently",
+          "publisher": "Motley Fool",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/interest-rates-move-7-income-173900594.html",
+          "providerPublishTime": "2026-10-20T17:39:00.000Z",
+          "type": "STORY",
+          "thumbnail": {
+            "resolutions": [
+              {
+                "url": "https://media.zenfs.com/en/motleyfool.com/5185ebbf4c16162bd0d3776f4f330e4c.jpg",
+                "width": 1199,
+                "height": 778,
+                "tag": "original"
+              },
+              {
+                "url": "https://s.yimg.com/lo/mysterio/api/265834E613288FEF86847F9731322DB9CADE894906800DC301E4D3E9730FAA5C/subgraphmysterio/resizefill_w140_h140/https:%2F%2Fmedia.zenfs.com%2Fen%2Fmotleyfool.com%2F5185ebbf4c16162bd0d3776f4f330e4c.jpg",
+                "width": 140,
+                "height": 140,
+                "tag": "140x140"
+              }
+            ]
+          },
+          "relatedTickers": [
+            "NVDA",
+            "AGNC"
+          ]
+        },
+        {
+          "uuid": "5cb5850a-800e-3a69-a47a-e421e4b4ce51",
+          "title": "Why Klaviyo Stock Rallied Today",
+          "publisher": "Motley Fool",
+          "link": "https://finance.yahoo.com/markets/stocks/articles/why-klaviyo-stock-rallied-today-173847313.html",
+          "providerPublishTime": "2026-10-20T17:38:47.000Z",
+          "type": "STORY",
+          "thumbnail": {
+            "resolutions": [
+              {
+                "url": "https://media.zenfs.com/en/motleyfool.com/14d1f1550f002359db1530b5e47f884f.jpg",
+                "width": 1400,
+                "height": 890,
+                "tag": "original"
+              },
+              {
+                "url": "https://s.yimg.com/lo/mysterio/api/981BC619A44CB08A22CF09EA10BA830CAC62650000810A2D23B84F89EBF78D79/subgraphmysterio/resizefill_w140_h140/https:%2F%2Fmedia.zenfs.com%2Fen%2Fmotleyfool.com%2F14d1f1550f002359db1530b5e47f884f.jpg",
+                "width": 140,
+                "height": 140,
+                "tag": "140x140"
+              }
+            ]
+          },
+          "relatedTickers": [
+            "KVYO",
+            "BRZE",
+            "NVDA",
+            "CRM"
+          ]
+        }
+      ],
+      "nav": [],
+      "lists": [],
+      "researchReports": [],
+      "screenerFieldResults": [],
+      "totalTime": 149,
+      "timeTakenForQuotes": 432,
+      "timeTakenForNews": 600,
+      "timeTakenForAlgowatchlist": 400,
+      "timeTakenForPredefinedScreener": 400,
+      "timeTakenForCrunchbase": 400,
+      "timeTakenForNav": 400,
+      "timeTakenForResearchReports": 0,
+      "timeTakenForQuestions": 0,
+      "timeTakenForScreenerField": 0,
+      "timeTakenForCulturalAssets": 0,
+      "timeTakenForSearchLists": 0
+    },
+    "zqxv-no-such-company": {
+      "explains": [],
+      "count": 1,
+      "quotes": [],
+      "news": [],
+      "nav": [
+        {
+          "navName": "Beverages - Non-Alcoholic",
+          "navUrl": "https://finance.yahoo.com/sectors/consumer-defensive/beverages-non-alcoholic"
+        }
+      ],
+      "lists": [],
+      "researchReports": [],
+      "screenerFieldResults": [],
+      "totalTime": 79,
+      "timeTakenForQuotes": 408,
+      "timeTakenForNews": 600,
+      "timeTakenForAlgowatchlist": 400,
+      "timeTakenForPredefinedScreener": 400,
+      "timeTakenForCrunchbase": 400,
+      "timeTakenForNav": 400,
+      "timeTakenForResearchReports": 0,
+      "timeTakenForQuestions": 0,
+      "timeTakenForScreenerField": 0,
+      "timeTakenForCulturalAssets": 0,
+      "timeTakenForSearchLists": 0
+    }
+  }
+}

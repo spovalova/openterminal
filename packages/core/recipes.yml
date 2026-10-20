@@ -8,7 +8,8 @@
 # A route's `when` keeps it only for matching params. `note` records what the v1 handler did on top of the raw
 # route, which phase 1 either moves into the connector's `call` or into a transform dataset.
 #
-# Yahoo routes are yahoo-finance2 endpoints: search, quote, chart, options, quoteSummary (with `modules`).
+# Yahoo routes are yahoo-finance2 endpoints: search, quote, chart, options, quoteSummary (with `modules`), and news
+# (the news list of the search module).
 # Finnhub routes are its REST paths: quote, company-news, calendar/earnings.
 
 recipes:
@@ -133,6 +134,10 @@ recipes:
             provider: nasdaq
             params: { symbol: "{symbols}", limit: "{limit}" }
             note: rows carry a comma-separated `symbols`; v1 attributed each row to the first requested symbol it listed and deduped by url.
+          - connector: yahoo
+            route: news
+            params: { symbol: "{symbols}", limit: "{limit}" }
+            note: no key; the same columns as the openbb route (`date`, `title`, `publisher`, `url`, `symbols`), the `limit` newest per symbol. What a fresh install without OpenBB reads.
           - connector: finnhub
             route: company-news
             params: { symbol: "{symbols|first}", from: "{limit|days_ago:7}", to: "{limit|today}" }

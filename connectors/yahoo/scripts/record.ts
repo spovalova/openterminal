@@ -31,6 +31,13 @@ for (const term of ['micron', 'sandisk', 'SPY', 'zqxv-no-such-company']) {
 }
 save('search', { recordedAt: now.toISOString(), byTerm: search })
 
+// The news route asks the search module for news only (no quotes), five stories a term.
+const news: Record<string, unknown> = {}
+for (const term of ['TSLA', 'NVDA', 'zqxv-no-such-company']) {
+  news[term] = await yf.search(term, { quotesCount: 0, newsCount: 5 })
+}
+save('news', { recordedAt: now.toISOString(), byTerm: news })
+
 save('quote', { recordedAt: now.toISOString(), symbols: ['MU', 'NVDA', 'SPY'], result: await yf.quote(['MU', 'NVDA', 'SPY']) })
 
 const charts: Record<string, unknown> = {}

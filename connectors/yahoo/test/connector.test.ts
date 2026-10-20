@@ -4,7 +4,7 @@ import yahoo, { YAHOO_ROUTES, createYahooConnector } from '../src/index.js'
 import { V12_NOW, fakeClient } from './helpers.js'
 
 describe('connector', () => {
-  it('is named yahoo, takes an empty config, and answers the five yahoo-finance2 routes', async () => {
+  it('is named yahoo, takes an empty config, and answers the five yahoo-finance2 routes and news', async () => {
     expect(yahoo.name).toBe('yahoo')
     expect(yahoo.config.safeParse({}).success).toBe(true)
     expect((await yahoo.descriptors()).map((d) => d.route)).toEqual([...YAHOO_ROUTES])
@@ -25,6 +25,10 @@ describe('connector', () => {
     expect(summary.columns.map((c) => c.name)).toContain('financialData.targetMeanPrice')
     const search = await registry.run({ connector: 'yahoo', route: 'search', params: { q: 'micron' } })
     expect(frameToObjects(search)[0]).toMatchObject({ query: 'micron', symbol: 'MU' })
+    const news = await registry.run({ connector: 'yahoo', route: 'news', params: { symbol: ['TSLA'], limit: 5 } })
+    expect(news.columns.map((c) => c.name)).toEqual(['date', 'title', 'publisher', 'url', 'symbols'])
+    expect(news.rows).toHaveLength(5)
+    expect(news.meta).toMatchObject({ connector: 'yahoo', ttl: 5 * 60_000, lineage: { connector: 'yahoo', route: 'news' } })
     await expect(registry.run({ connector: 'yahoo', route: 'chart', params: { symbol: 'MU' } })).rejects.toThrow(/"period1" is required/)
   })
 
