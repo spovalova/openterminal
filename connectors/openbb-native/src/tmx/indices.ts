@@ -120,7 +120,7 @@ const SNAPSHOT_FLOATS = ['total_market_value', 'number_of_constituents', 'consti
 /** index/snapshots: the S&P/TSX indices (`ca`) or the NASDAQ ones (`us`) with their latest level and performance. */
 export async function indexSnapshots(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
   const region = oneOf(params, 'region', ['ca', 'us'] as const, 'ca')
-  let results: Row[] = []
+  let results: Row[]
 
   if (region === 'ca') {
     const data = await indexFile(ctx, boolParam(params, 'use_cache', true))

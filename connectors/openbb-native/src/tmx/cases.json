@@ -193,5 +193,114 @@
     "params": { "symbol": "RY", "limit": 5 },
     "compare": { "rows": "overlap", "minOverlap": 0.4, "keys": ["date", "price", "volume", "buyer_id", "seller_id"] },
     "reason": "live tape: trades print between OpenBB's call and the native one, so the newest rows differ"
+  },
+  {
+    "name": "balance-ry-annual",
+    "route": "equity/fundamental/balance",
+    "params": { "symbol": "RY", "limit": 2 }
+  },
+  {
+    "name": "balance-shop-quarter",
+    "route": "equity/fundamental/balance",
+    "params": { "symbol": "SHOP", "period": "quarter", "limit": 2 }
+  },
+  {
+    "name": "income-ry-annual",
+    "route": "equity/fundamental/income",
+    "params": { "symbol": "RY", "limit": 2 }
+  },
+  {
+    "name": "income-shop-quarter",
+    "route": "equity/fundamental/income",
+    "params": { "symbol": "SHOP", "period": "quarter", "limit": 3 }
+  },
+  {
+    "name": "cash-ry-default-limit",
+    "route": "equity/fundamental/cash",
+    "params": { "symbol": "RY" }
+  },
+  {
+    "name": "cash-shop-quarter",
+    "route": "equity/fundamental/cash",
+    "params": { "symbol": "SHOP", "period": "quarter", "limit": 2 }
+  },
+  {
+    "name": "options-chains-ry",
+    "route": "derivatives/options/chains",
+    "params": { "symbol": "RY" },
+    "compare": { "volatile": ["underlying_price", "open_interest", "volume", "last_trade_price", "last_trade_time", "tick", "prev_close", "change", "change_percent", "open", "high", "low", "bid", "bid_size", "ask", "ask_size", "implied_volatility", "delta", "gamma", "theta", "vega", "rho"] },
+    "reason": "live chain: quotes, sizes and the greeks computed from them move between OpenBB's call and the native one; the contracts themselves are compared exactly"
+  },
+  {
+    "name": "covered-calls-ry",
+    "route": "tmx/derivatives/options/covered_calls",
+    "params": { "symbol": "RY" },
+    "compare": { "rows": "overlap", "minOverlap": 0.7, "keys": ["symbol", "expiration", "strike"], "volatile": ["underlying_price", "total_return", "premium_return", "capital_gain", "bid", "bid_size", "ask", "ask_size", "volume", "open_interest"] },
+    "reason": "live screen: which contracts clear the thresholds and their quotes move between OpenBB's call and the native one"
+  },
+  {
+    "name": "futures-instruments-default",
+    "route": "derivatives/futures/instruments",
+    "params": {},
+    "compare": { "ignore": ["expiry_cycle", "has_long_term_options"] },
+    "reason": "expiry_cycle and has_long_term_options come from a PDF (cycles_opt_en.pdf, read with pdfplumber in Python) the port does not read; only one futures row (SMO) has them"
+  },
+  {
+    "name": "futures-instruments-index-derivatives",
+    "route": "derivatives/futures/instruments",
+    "params": { "asset_class": "index_derivative" },
+    "compare": { "ignore": ["expiry_cycle", "has_long_term_options"] },
+    "reason": "expiry_cycle and has_long_term_options come from a PDF (cycles_opt_en.pdf, read with pdfplumber in Python) the port does not read"
+  },
+  {
+    "name": "futures-instruments-etf-options",
+    "route": "derivatives/futures/instruments",
+    "params": { "asset_class": "etf_option", "instrument_type": "option" },
+    "compare": { "ignore": ["expiry_cycle", "has_long_term_options"] },
+    "reason": "expiry_cycle and has_long_term_options come from a PDF (cycles_opt_en.pdf, read with pdfplumber in Python) the port does not read"
+  },
+  {
+    "name": "etf-info",
+    "route": "etf/info",
+    "params": { "symbol": "XIU,XEQT" },
+    "fixture": false,
+    "reason": "every ETF route reads the 8 MB ETF universe file, about 970 KB compressed, over the 768 KB per-body recording budget"
+  },
+  {
+    "name": "etf-holdings-xiu",
+    "route": "etf/holdings",
+    "params": { "symbol": "XIU" },
+    "fixture": false,
+    "reason": "every ETF route reads the 8 MB ETF universe file, about 970 KB compressed, over the 768 KB per-body recording budget"
+  },
+  {
+    "name": "etf-sectors",
+    "route": "etf/sectors",
+    "params": { "symbol": "XIU,XEQT" },
+    "fixture": false,
+    "reason": "every ETF route reads the 8 MB ETF universe file, about 970 KB compressed, over the 768 KB per-body recording budget"
+  },
+  {
+    "name": "etf-countries",
+    "route": "etf/countries",
+    "params": { "symbol": "XEQT,ZSP,VCN" },
+    "fixture": false,
+    "reason": "every ETF route reads the 8 MB ETF universe file, about 970 KB compressed, over the 768 KB per-body recording budget"
+  },
+  {
+    "name": "etf-search-query",
+    "route": "etf/search",
+    "params": { "query": "XEQT" },
+    "compare": { "volatile": ["unit_price", "close", "prev_close", "volume_avg_daily", "avg_volume", "avg_volume_30d"] },
+    "fixture": false,
+    "reason": "every ETF route reads the 8 MB ETF universe file, about 970 KB compressed, over the 768 KB per-body recording budget; the file refreshes through the day, so prices may move"
+  },
+  {
+    "name": "etf-search-filters",
+    "route": "etf/search",
+    "params": { "fund_family": "bmo_etf", "asset_class": "preferred_share", "currency": "CAD", "sort_by": "aum" },
+    "compare": { "volatile": ["unit_price", "close", "prev_close", "volume_avg_daily", "avg_volume", "avg_volume_30d"] },
+    "fixture": false,
+    "reason": "every ETF route reads the 8 MB ETF universe file, about 970 KB compressed, over the 768 KB per-body recording budget; the file refreshes through the day, so prices may move"
   }
 ]

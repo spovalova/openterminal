@@ -99,7 +99,7 @@ export async function equityHistorical(params: NativeParams, ctx: NativeCtx): Pr
 
   const perSymbol = await Promise.all(
     symbols.map(async (symbol) => {
-      let data: Row[] = []
+      let data: Row[]
       if (interval === 'day') data = await dailyPriceHistory(ctx, symbol, start, end, adjustment)
       else if (interval === 'week' || interval === 'month') data = await weeklyOrMonthly(ctx, symbol, start, end, interval)
       else data = await intradayPriceHistory(ctx, symbol, start, end, interval)

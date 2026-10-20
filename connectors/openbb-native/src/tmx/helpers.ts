@@ -278,7 +278,7 @@ export async function gql<T = Row>(ctx: NativeCtx, operation: string, query: str
     Referer: referer,
     'User-Agent': BROWSER_UA,
   }
-  let text = ''
+  let text: string
   for (let attempt = 0; ; attempt++) {
     const res = await ctx.http.response(GQL_URL, { method: 'POST', headers, body, timeoutMs: 120_000 })
     text = await res.text()
