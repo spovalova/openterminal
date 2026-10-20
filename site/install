@@ -1,0 +1,628 @@
+#!/bin/sh
+# Open Terminal installer for macOS and Linux.
+#
+#   curl -fsSL https://terminal.spova.ai/install | sh
+#
+# macOS: downloads the app (OpenTerminal-mac-<arch>.zip) from GitHub Releases, checks it against the release's
+# SHA256SUMS, quits Open Terminal if it is running, puts Open Terminal.app in /Applications (or ~/Applications when
+# /Applications needs an administrator) and opens it. The app is not signed with an Apple Developer ID; a file that
+# curl downloads carries no quarantine flag, so it opens without a Gatekeeper prompt. The app's Update runs this
+# same script.
+#
+# Linux: downloads the AppImage for this machine, checks it the same way, puts it at
+# ~/.local/share/openterminal/OpenTerminal.AppImage, links ~/.local/bin/openterminal to it, adds Open Terminal to the
+# app menu and puts ~/.local/bin on PATH.
+#
+# It never uses sudo and never touches your data in ~/.openterminal.
+#
+# Environment:
+#   OPENTERMINAL_VERSION       a specific version (0.1.0 or v0.1.0) instead of the latest release
+#   OPENTERMINAL_INSTALL_BASE  a base URL or a local directory holding the release assets and SHA256SUMS
+#   OPENTERMINAL_APP_DIR       macOS: the folder for Open Terminal.app (default /Applications, else ~/Applications)
+#   OPENTERMINAL_NO_LAUNCH     1: macOS: do not open the app at the end
+#   NO_COLOR                   plain output
+# Options:
+#   --no-modify-path           Linux: do not add ~/.local/bin to PATH in your shell's startup file
+#
+# Everything below is a function called on the last line, so a download cut short runs nothing.
+
+set -eu
+
+OT_REPO="https://github.com/spovalova/openterminal"
+OT_SITE="https://terminal.spova.ai"
+OT_APP="Open Terminal.app"
+
+ot_usage() {
+  cat <<EOF
+Open Terminal installer for macOS and Linux
+
+  curl -fsSL $OT_SITE/install | sh
+  curl -fsSL $OT_SITE/install | sh -s -- --no-modify-path
+
+Options:
+  --no-modify-path   Linux: do not add ~/.local/bin to PATH in your shell's startup file
+  -h, --help         show this help
+
+Environment:
+  OPENTERMINAL_VERSION       install this version (0.1.0 or v0.1.0) instead of the latest
+  OPENTERMINAL_INSTALL_BASE  base URL or local directory with the release assets and SHA256SUMS
+  OPENTERMINAL_APP_DIR       macOS: folder for Open Terminal.app (default /Applications, else ~/Applications)
+  OPENTERMINAL_NO_LAUNCH     1: macOS: do not open the app at the end
+  NO_COLOR                   plain output
+EOF
+}
+
+# ---------- output ----------
+
+ot_style() {
+  B='' D='' G='' R='' Y='' X=''
+  if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-}" != dumb ]; then
+    B=$(printf '\033[1m') D=$(printf '\033[2m') G=$(printf '\033[32m') R=$(printf '\033[31m') Y=$(printf '\033[33m') X=$(printf '\033[0m')
+  fi
+  case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
+    *[Uu][Tt][Ff]-8* | *[Uu][Tt][Ff]8*) OK='✓' NO='✗' WARN='!' ABOUT='≈' PENDING='·' ;;
+    *) OK='+' NO='x' WARN='!' ABOUT='~' PENDING='-' ;;
+  esac
+}
+
+# A finished step: "  ✓ label      value".
+ot_step() {
+  printf '  %s%s%s %-10s %s\n' "$G" "$OK" "$X" "$1" "$2"
+}
+
+ot_warn() {
+  printf '  %s%s%s %-10s %s\n' "$Y" "$WARN" "$X" "$1" "$2" >&2
+}
+
+# A failed step, any hint lines indented under it, then exit 1.
+ot_die() {
+  printf '  %s%s %-10s%s %s\n' "$R" "$NO" "$1" "$X" "$2" >&2
+  shift 2
+  for ot_line in "$@"; do
+    [ -z "$ot_line" ] || printf '  %13s%s\n' '' "$ot_line" >&2
+  done
+  printf '\n' >&2
+  exit 1
+}
+
+# ~ for $HOME in paths shown to the user.
+ot_tilde() {
+  case $1 in
+    "$HOME"/*) printf '%s/%s' '~' "${1#"$HOME"/}" ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
+
+ot_has() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+ot_size() {
+  awk -v b="$1" -v about="$ABOUT" 'BEGIN {
+    if (b >= 1048576) printf "%s%.0f MB", about, b / 1048576
+    else if (b >= 1024) printf "%s%.0f KB", about, b / 1024
+    else printf "%d bytes", b
+  }'
+}
+
+# ---------- platform ----------
+
+ot_platform() {
+  ot_kernel=$(uname -s 2>/dev/null || echo unknown)
+  ot_machine=$(uname -m 2>/dev/null || echo unknown)
+  ot_note=''
+  ot_other="Other systems: $OT_REPO#quick-start"
+  case $ot_kernel in
+    Darwin) OS=mac OS_NAME=macOS ;;
+    Linux) OS=linux OS_NAME=Linux ;;
+    MINGW* | MSYS* | CYGWIN* | Windows_NT)
+      ot_die platform "this is the macOS and Linux installer; on Windows, in PowerShell:" \
+        "irm $OT_SITE/install.ps1 | iex" ;;
+    *)
+      ot_die platform "Open Terminal is built for macOS, Windows and Linux; this is $ot_kernel $ot_machine." "$ot_other" ;;
+  esac
+  case $ot_machine in
+    x86_64 | amd64 | x64) ARCH=x64 ;;
+    arm64 | aarch64 | armv8* | arm64e) ARCH=arm64 ;;
+    *)
+      ot_die platform "Open Terminal is built for $OS_NAME x64 and arm64; this machine is $OS_NAME $ot_machine." "$ot_other" ;;
+  esac
+
+  if [ "$OS" = mac ] && [ "$ARCH" = x64 ]; then
+    # An x64 shell on Apple silicon runs under Rosetta; the native app is faster.
+    if [ "$(sysctl -n sysctl.proc_translated 2>/dev/null || echo 0)" = 1 ] || [ "$(sysctl -n hw.optional.arm64 2>/dev/null || echo 0)" = 1 ]; then
+      ARCH=arm64 ot_note=' (Apple silicon, the native app rather than Rosetta)'
+    fi
+  fi
+
+  if [ "$OS" = linux ]; then
+    if [ -f /etc/alpine-release ] || { ot_has ldd && ldd --version 2>&1 | grep -qi musl; }; then
+      ot_die platform "this Linux uses musl (Alpine or similar); the AppImage and the .deb need glibc." "$ot_other"
+    fi
+    if [ "$ARCH" = arm64 ] && [ "$(getconf LONG_BIT 2>/dev/null || echo 64)" = 32 ]; then
+      ot_die platform "this is a 64-bit kernel with a 32-bit userland; the Linux builds are 64-bit only." "$ot_other"
+    fi
+  fi
+
+  if [ "$OS" = mac ]; then
+    ASSET="OpenTerminal-mac-$ARCH.zip"
+  elif [ "$ARCH" = x64 ]; then
+    ASSET=OpenTerminal-linux-x86_64.AppImage DEB=OpenTerminal-linux-amd64.deb
+  else
+    ASSET=OpenTerminal-linux-arm64.AppImage DEB=OpenTerminal-linux-arm64.deb
+  fi
+  ot_step platform "$OS_NAME $ARCH$ot_note"
+}
+
+# ---------- tools ----------
+
+ot_tools() {
+  if ot_has curl; then
+    DL=curl
+  elif ot_has wget; then
+    DL=wget
+  else
+    ot_die tools "needs curl or wget to download; install one and run this again."
+  fi
+  for ot_tool in mktemp awk sed mkdir mv rm ln cp chmod readlink; do
+    ot_has "$ot_tool" || ot_die tools "needs $ot_tool; install it and run this again."
+  done
+  if ot_has sha256sum; then
+    SHA=sha256sum
+  elif ot_has shasum; then
+    SHA=shasum
+  elif ot_has openssl; then
+    SHA=openssl
+  else
+    ot_die tools "needs sha256sum, shasum or openssl to verify the download; install one and run this again."
+  fi
+  if [ "$OS" = mac ] && ! ot_has ditto && ! ot_has unzip; then
+    ot_die tools "needs ditto or unzip to unpack the app."
+  fi
+}
+
+ot_sha256() {
+  case $SHA in
+    sha256sum) sha256sum "$1" | awk '{ print $1 }' ;;
+    shasum) shasum -a 256 "$1" | awk '{ print $1 }' ;;
+    openssl) openssl dgst -sha256 "$1" | awk '{ print $NF }' ;;
+  esac
+}
+
+# ---------- download ----------
+
+# ot_fetch <url or path> <dest> <show progress: 0|1>. Without progress, the downloader's error message goes to
+# $TMP/fetch.err for the failure hint.
+ot_fetch() {
+  : >"$TMP/fetch.err"
+  case $1 in
+    http://* | https://*) ;;
+    *)
+      if [ ! -f "$1" ]; then
+        echo "no such file: $1" >"$TMP/fetch.err"
+        return 1
+      fi
+      cp "$1" "$2"
+      return ;;
+  esac
+  if [ "$DL" = curl ]; then
+    # An https URL may only redirect to https; a plain http base (a local mirror) is taken as given.
+    ot_proto='=http,https'
+    case $1 in https://*) ot_proto='=https' ;; esac
+    if [ "$3" = 1 ]; then
+      curl -fL --retry 3 --connect-timeout 20 --proto "$ot_proto" --progress-bar -o "$2" "$1"
+    else
+      curl -fsSL --retry 3 --connect-timeout 20 --proto "$ot_proto" -o "$2" "$1" 2>"$TMP/fetch.err"
+    fi
+  elif wget --version 2>/dev/null | grep -q 'GNU Wget'; then
+    if [ "$3" = 1 ] && wget --help 2>&1 | grep -q -- --show-progress; then
+      wget -q --show-progress --progress=bar:force:noscroll --tries=3 --timeout=20 -O "$2" "$1"
+    else
+      wget -nv --tries=3 --timeout=20 -O "$2" "$1" 2>"$TMP/fetch.err"
+    fi
+  else
+    # BusyBox and other minimal wgets: the common options only.
+    wget -q -O "$2" "$1" 2>"$TMP/fetch.err"
+  fi
+}
+
+# The downloader's last error line, for a hint.
+ot_fetch_error() {
+  tail -n 1 "$TMP/fetch.err" 2>/dev/null | tr -d '\r'
+}
+
+# Where releases/latest points: .../releases/tag/v<version>, or .../releases when nothing is published yet.
+ot_latest_url() {
+  if [ "$DL" = curl ]; then
+    curl -fsSIL --connect-timeout 20 --proto '=https' -o /dev/null -w '%{url_effective}' "$OT_REPO/releases/latest" 2>/dev/null
+  elif wget --version 2>/dev/null | grep -q 'GNU Wget'; then
+    wget -S --spider --max-redirect=0 --timeout=20 "$OT_REPO/releases/latest" 2>&1 | sed -n 's/^ *[Ll]ocation: *//p' | tr -d '\r' | tail -n 1
+  fi
+}
+
+# BASE (where the assets are) and VERSION (when known before the download).
+ot_resolve() {
+  VERSION=$WANT
+  if [ -n "${OPENTERMINAL_INSTALL_BASE:-}" ]; then
+    BASE=${OPENTERMINAL_INSTALL_BASE%/}
+    case $BASE in file://*) BASE=${BASE#file://} ;; esac
+    return
+  fi
+  if [ -n "$WANT" ]; then
+    BASE="$OT_REPO/releases/download/v$WANT"
+    return
+  fi
+  # Pin the latest release's tag, so the checksums and the app come from the same release.
+  BASE="$OT_REPO/releases/latest/download"
+  ot_latest=$(ot_latest_url || true)
+  case $ot_latest in
+    */releases/tag/v*)
+      ot_tag=${ot_latest##*/releases/tag/v}
+      case $ot_tag in
+        '' | *[!0-9A-Za-z.+-]*) ;;
+        *)
+          VERSION=$ot_tag
+          BASE="$OT_REPO/releases/download/v$VERSION" ;;
+      esac ;;
+    */releases | */releases/)
+      ot_die download "no release of Open Terminal is published yet." \
+        "Releases: $OT_REPO/releases" \
+        "Until then, build it from source: $OT_REPO#quick-start" ;;
+  esac
+}
+
+ot_download() {
+  ot_fetch "$BASE/SHA256SUMS" "$TMP/SHA256SUMS" 0 || ot_die download "could not get $BASE/SHA256SUMS" \
+    "$(ot_fetch_error)" \
+    "Releases: $OT_REPO/releases"
+  EXPECTED=$(awk -v f="$ASSET" '{ n = $2; sub(/^\*/, "", n); sub(/^\.\//, "", n); if (n == f) { print tolower($1); exit } }' "$TMP/SHA256SUMS")
+  [ -n "$EXPECTED" ] || ot_die download "SHA256SUMS at $BASE has no entry for $ASSET" \
+    "This release may not include $OS_NAME $ARCH: $OT_REPO/releases"
+
+  ot_progress=0
+  case $BASE in
+    http://* | https://*) if [ -t 1 ] && [ -t 2 ]; then ot_progress=1; fi ;;
+  esac
+  if [ "$ot_progress" = 1 ]; then
+    printf '  %s%s %-10s %s%s\n' "$D" "$PENDING" download "$ASSET" "$X"
+  fi
+  if ! ot_fetch "$BASE/$ASSET" "$TMP/$ASSET" "$ot_progress"; then
+    ot_die download "could not get $BASE/$ASSET" "$(ot_fetch_error)" "Releases: $OT_REPO/releases"
+  fi
+  if [ "$ot_progress" = 1 ]; then
+    # Replace the pending line and the progress bar with the finished step.
+    printf '\033[1A\033[2K\033[1A\033[2K'
+  fi
+  BYTES=$(wc -c <"$TMP/$ASSET" | tr -d ' ')
+
+  ot_actual=$(ot_sha256 "$TMP/$ASSET" | tr 'ABCDEF' 'abcdef')
+  if [ "$ot_actual" != "$EXPECTED" ]; then
+    ot_step download "$ASSET ($(ot_size "$BYTES"))"
+    ot_die verify "sha256 mismatch for $ASSET; nothing was installed." \
+      "expected $EXPECTED" \
+      "got      $ot_actual" \
+      "Try again; if it persists, report it: $OT_REPO/issues"
+  fi
+}
+
+# ---------- macOS ----------
+
+# The folder for the app: where it already is when that is writable, else /Applications when writable (an admin
+# account), else ~/Applications.
+ot_mac_folder() {
+  if [ -n "${OPENTERMINAL_APP_DIR:-}" ]; then
+    APPS=${OPENTERMINAL_APP_DIR%/}
+  elif [ -d "/Applications/$OT_APP" ] && [ -w /Applications ]; then
+    APPS=/Applications
+  elif [ -d "$HOME/Applications/$OT_APP" ]; then
+    APPS="$HOME/Applications"
+  elif [ -w /Applications ]; then
+    APPS=/Applications
+  else
+    APPS="$HOME/Applications"
+  fi
+  [ -d "$APPS" ] || MADE_APPS=1
+  mkdir -p "$APPS" || ot_die install "could not create $(ot_tilde "$APPS")"
+}
+
+# The version in an app bundle's Info.plist (an XML plist, as electron-builder writes it).
+ot_plist_version() {
+  awk '/<key>CFBundleShortVersionString<\/key>/ { found = 1; next }
+    found { sub(/.*<string>/, ""); sub(/<\/string>.*/, ""); print; exit }' "$1" 2>/dev/null
+}
+
+ot_mac_running() {
+  ot_has pgrep && pgrep -f "$OT_APP/Contents/MacOS/" >/dev/null 2>&1
+}
+
+# Ask a running Open Terminal to quit (as Cmd-Q would), and wait for it.
+ot_mac_quit() {
+  ot_mac_running || return 0
+  osascript -e 'if application "Open Terminal" is running then tell application "Open Terminal" to quit' >/dev/null 2>&1 || true
+  ot_wait=0
+  while ot_mac_running && [ "$ot_wait" -lt 20 ]; do
+    sleep 1
+    ot_wait=$((ot_wait + 1))
+  done
+  if ot_mac_running; then
+    pkill -TERM -f "$OT_APP/Contents/MacOS/" >/dev/null 2>&1 || true
+    sleep 2
+  fi
+  ot_step quit "the running Open Terminal"
+}
+
+ot_mac_install() {
+  ot_mac_folder
+  STAGE=$(mktemp -d "$APPS/.openterminal-install.XXXXXX") || ot_die install "could not write to $(ot_tilde "$APPS")"
+  if ot_has ditto; then
+    ditto -x -k "$TMP/$ASSET" "$STAGE/unpacked" || ot_die install "could not unpack $ASSET"
+  else
+    unzip -q "$TMP/$ASSET" -d "$STAGE/unpacked" || ot_die install "could not unpack $ASSET"
+  fi
+  ot_new="$STAGE/unpacked/$OT_APP"
+  if [ ! -f "$ot_new/Contents/Info.plist" ]; then
+    ot_die install "$ASSET does not hold $OT_APP; nothing was installed."
+  fi
+  ot_version=$(ot_plist_version "$ot_new/Contents/Info.plist")
+  if [ -n "$WANT" ] && [ -n "$ot_version" ] && [ "$ot_version" != "$WANT" ]; then
+    ot_die install "asked for $WANT but $ASSET is $ot_version; nothing was installed."
+  fi
+  [ -z "$ot_version" ] || VERSION=$ot_version
+  ot_step download "Open Terminal${VERSION:+ $VERSION} ($(ot_size "$BYTES"))"
+  ot_step verify sha256
+
+  ot_mac_quit
+  # Swap in by rename: the new app appears whole or not at all, and the old one goes only once it is in place.
+  ot_dest="$APPS/$OT_APP"
+  ot_old=''
+  if [ -e "$ot_dest" ]; then
+    ot_old="$STAGE/replaced.app"
+    mv "$ot_dest" "$ot_old" || ot_die install "could not replace $(ot_tilde "$ot_dest")"
+  fi
+  if ! mv "$ot_new" "$ot_dest"; then
+    [ -z "$ot_old" ] || mv "$ot_old" "$ot_dest"
+    ot_die install "could not move the app into $(ot_tilde "$APPS")"
+  fi
+  ot_step install "$(ot_tilde "$ot_dest")"
+  if [ "$APPS" = "$HOME/Applications" ] && [ -d "/Applications/$OT_APP" ] && [ -z "${OPENTERMINAL_APP_DIR:-}" ]; then
+    ot_warn install "an older copy stays in /Applications; replacing it needs an administrator."
+  fi
+
+  if [ "${OPENTERMINAL_NO_LAUNCH:-}" = 1 ]; then
+    LAUNCHED=0
+  elif open "$ot_dest" >/dev/null 2>&1; then
+    LAUNCHED=1
+    ot_step open "Open Terminal"
+  else
+    LAUNCHED=0
+    ot_warn open "could not open it; it is in $(ot_tilde "$APPS")."
+  fi
+}
+
+# ---------- Linux ----------
+
+ot_linux_install() {
+  SHARE="$HOME/.local/share/openterminal"
+  BIN="$HOME/.local/bin"
+  [ -d "$HOME/.local" ] || MADE_LOCAL=1
+  [ -d "$HOME/.local/share" ] || MADE_DATA=1
+  [ -d "$SHARE" ] || MADE_SHARE=1
+  mkdir -p "$SHARE"
+  ot_step download "Open Terminal${VERSION:+ $VERSION} ($(ot_size "$BYTES"))"
+  ot_step verify sha256
+
+  # Copy beside the target, then rename over it: a running copy keeps its file, the next start gets the new one.
+  ot_dest="$SHARE/OpenTerminal.AppImage"
+  STAGE=$(mktemp "$SHARE/.OpenTerminal.AppImage.XXXXXX")
+  cp "$TMP/$ASSET" "$STAGE"
+  chmod 755 "$STAGE"
+  mv -f "$STAGE" "$ot_dest" || ot_die install "could not move the AppImage into $(ot_tilde "$SHARE")"
+  STAGE=''
+  ot_step install "$(ot_tilde "$ot_dest")"
+
+  mkdir -p "$BIN"
+  ot_link="$BIN/openterminal"
+  ot_replaced=''
+  if [ -L "$ot_link" ]; then
+    [ "$(readlink "$ot_link")" = "$ot_dest" ] || ot_replaced=$(readlink "$ot_link")
+  elif [ -e "$ot_link" ]; then
+    ot_replaced='a file'
+    mv "$ot_link" "$ot_link.bak"
+  fi
+  ln -sfn "$ot_dest" "$ot_link"
+  ot_step link "$(ot_tilde "$ot_link")"
+  if [ "$ot_replaced" = 'a file' ]; then
+    ot_warn link "moved the file that was there to $(ot_tilde "$ot_link").bak"
+  elif [ -n "$ot_replaced" ]; then
+    ot_warn link "replaced the link that pointed to $ot_replaced"
+  fi
+
+  ot_linux_menu "$ot_dest"
+  ot_path
+  ot_fuse
+}
+
+# The menu entry, with the app's mark as its icon.
+ot_linux_menu() {
+  ot_data=${XDG_DATA_HOME:-$HOME/.local/share}
+  ot_icon="$ot_data/icons/hicolor/scalable/apps/openterminal.svg"
+  ot_desktop="$ot_data/applications/openterminal.desktop"
+  mkdir -p "$(dirname "$ot_icon")" "$(dirname "$ot_desktop")"
+  cat >"$ot_icon" <<'EOF'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#0c0c0c"/>
+  <path d="M9 6v20M5 12h8v8H5zM23 4v24M19 10h8v12h-8z" fill="#d400ff" stroke="#d400ff" stroke-width="2" stroke-linejoin="round"/>
+</svg>
+EOF
+  cat >"$ot_desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Open Terminal
+Comment=The open-source, AI-native terminal for traders
+Exec="$1" %U
+TryExec=$1
+Icon=$ot_icon
+Terminal=false
+Categories=Office;Finance;
+EOF
+  if ot_has update-desktop-database; then
+    update-desktop-database "$(dirname "$ot_desktop")" >/dev/null 2>&1 || true
+  fi
+  ot_step menu "Open Terminal, in your app menu"
+}
+
+# AppImages mount themselves with FUSE 2; without libfuse.so.2 they do not start. Print the fix, never run it.
+ot_fuse() {
+  for ot_lib in /lib/*/libfuse.so.2 /lib64/libfuse.so.2 /lib/libfuse.so.2 /usr/lib/*/libfuse.so.2 /usr/lib64/libfuse.so.2 /usr/lib/libfuse.so.2; do
+    if [ -e "$ot_lib" ]; then
+      return 0
+    fi
+  done
+  for ot_ldconfig in ldconfig /sbin/ldconfig; do
+    if ot_has "$ot_ldconfig" && "$ot_ldconfig" -p 2>/dev/null | grep -q 'libfuse\.so\.2'; then
+      return 0
+    fi
+  done
+  ot_id='' ot_like=''
+  if [ -r /etc/os-release ]; then
+    ot_id=$(sed -n 's/^ID=//p' /etc/os-release | tr -d '"')
+    ot_like=$(sed -n 's/^ID_LIKE=//p' /etc/os-release | tr -d '"')
+  fi
+  case " $ot_id $ot_like " in
+    *" ubuntu "* | *" debian "*)
+      # Ubuntu 24.04 and Debian 13 renamed the package libfuse2t64.
+      ot_pkg=libfuse2
+      if ot_has apt-cache && apt-cache show libfuse2t64 >/dev/null 2>&1; then
+        ot_pkg=libfuse2t64
+      fi
+      ot_fix="sudo apt install $ot_pkg" ;;
+    *" fedora "* | *" rhel "* | *" centos "*) ot_fix="sudo dnf install fuse-libs" ;;
+    *" arch "*) ot_fix="sudo pacman -S fuse2" ;;
+    *" opensuse"* | *" suse "*) ot_fix="sudo zypper install libfuse2" ;;
+    *) ot_fix="install FUSE 2 (libfuse2) with your package manager" ;;
+  esac
+  ot_warn fuse "AppImages need FUSE 2, which is not installed. Fix: $ot_fix"
+}
+
+# ---------- PATH (Linux) ----------
+
+ot_on_path() {
+  case ":${PATH:-}:" in
+    *":$BIN:"* | *":$BIN/:"*) return 0 ;;
+  esac
+  return 1
+}
+
+# Append the PATH line to one startup file, once.
+ot_rc_add() {
+  if [ -f "$1" ] && grep -qF "$OT_LINE" "$1"; then
+    return
+  fi
+  mkdir -p "$(dirname "$1")"
+  if [ -s "$1" ]; then
+    # Start on a fresh line, with a blank line before ours.
+    [ -z "$(tail -c 1 "$1")" ] || printf '\n' >>"$1"
+    printf '\n' >>"$1"
+  fi
+  printf '# Open Terminal\n%s\n' "$OT_LINE" >>"$1"
+  OT_ADDED="$OT_ADDED${OT_ADDED:+, }$(ot_tilde "$1")"
+}
+
+# Add ~/.local/bin to PATH in the startup file of the user's shell, once.
+ot_path() {
+  PATH_STATE=on
+  ot_on_path && return
+  if [ "$MODIFY_PATH" = 0 ]; then
+    PATH_STATE=off
+    return
+  fi
+  PATH_STATE=new
+  OT_ADDED=''
+  # shellcheck disable=SC2016 # written as is, expanded by the shell that reads the file
+  OT_LINE='export PATH="$HOME/.local/bin:$PATH"'
+  case $(basename "${SHELL:-sh}") in
+    zsh) ot_rc_add "${ZDOTDIR:-$HOME}/.zshrc" ;;
+    bash) ot_rc_add "$HOME/.bashrc" ;;
+    fish)
+      # shellcheck disable=SC2016
+      OT_LINE='fish_add_path "$HOME/.local/bin"'
+      ot_rc_add "${XDG_CONFIG_HOME:-$HOME/.config}/fish/config.fish" ;;
+    *) ot_rc_add "$HOME/.profile" ;;
+  esac
+  [ -z "$OT_ADDED" ] || ot_step path "added ~/.local/bin in $OT_ADDED"
+}
+
+# ---------- main ----------
+
+ot_cleanup() {
+  ot_status=$?
+  [ -z "$TMP" ] || rm -rf "$TMP"
+  [ -z "$STAGE" ] || rm -rf "$STAGE"
+  if [ "$ot_status" != 0 ]; then
+    # A failed first install leaves no empty directories behind.
+    [ "$MADE_APPS" = 0 ] || rmdir "$APPS" 2>/dev/null || true
+    [ "$MADE_SHARE" = 0 ] || rmdir "$SHARE" 2>/dev/null || true
+    [ "$MADE_DATA" = 0 ] || rmdir "$HOME/.local/share" 2>/dev/null || true
+    [ "$MADE_LOCAL" = 0 ] || rmdir "$HOME/.local" 2>/dev/null || true
+  fi
+}
+
+ot_main() {
+  MODIFY_PATH=1
+  for ot_arg in "$@"; do
+    case $ot_arg in
+      --no-modify-path) MODIFY_PATH=0 ;;
+      -h | --help)
+        ot_usage
+        return ;;
+      *)
+        ot_usage >&2
+        printf '\nunknown option: %s\n' "$ot_arg" >&2
+        exit 2 ;;
+    esac
+  done
+
+  ot_style
+  if [ -z "${HOME:-}" ] || [ ! -d "$HOME" ]; then
+    ot_die setup "HOME is not set to a directory."
+  fi
+  WANT=${OPENTERMINAL_VERSION:-}
+  WANT=${WANT#v}
+  case $WANT in
+    *[!0-9A-Za-z.+-]*) ot_die setup "OPENTERMINAL_VERSION=$OPENTERMINAL_VERSION is not a version (like 0.1.0)." ;;
+  esac
+
+  TMP='' STAGE='' APPS='' SHARE='' LAUNCHED=0 PATH_STATE=on
+  MADE_APPS=0 MADE_LOCAL=0 MADE_DATA=0 MADE_SHARE=0
+  trap ot_cleanup EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' HUP TERM
+
+  printf '\n  %sOpen Terminal installer%s\n' "$B" "$X"
+  ot_platform
+  ot_tools
+  TMP=$(mktemp -d "${TMPDIR:-/tmp}/openterminal.XXXXXX")
+  ot_resolve
+  ot_download
+  if [ "$OS" = mac ]; then
+    ot_mac_install
+    printf '\n'
+    if [ "$LAUNCHED" = 1 ]; then
+      printf '  Open Terminal is in %s. To update, run this again or use Update in the app.\n' "$(ot_tilde "$APPS")"
+    else
+      printf '  Start it:  %sopen -a "Open Terminal"%s, or from %s\n' "$B" "$X" "$(ot_tilde "$APPS")"
+    fi
+  else
+    ot_linux_install
+    printf '\n'
+    case $PATH_STATE in
+      on) printf '  Start it:  %sopenterminal%s, or Open Terminal in your app menu\n' "$B" "$X" ;;
+      new) printf '  Start it:  %sopenterminal%s in a new terminal, or Open Terminal in your app menu\n' "$B" "$X" ;;
+      off) printf '  Start it:  %s~/.local/bin/openterminal%s, or Open Terminal in your app menu\n' "$B" "$X" ;;
+    esac
+    printf '  %sPrefer a package? %s is on %s/releases%s\n' "$D" "$DEB" "$OT_REPO" "$X"
+  fi
+  printf '\n'
+}
+
+ot_main "$@"

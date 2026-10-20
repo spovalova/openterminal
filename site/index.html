@@ -25,7 +25,14 @@
     <meta name="twitter:image" content="https://raw.githubusercontent.com/spovalova/openterminal/main/site/assets/og.jpg" />
 
     <script>
+      // Before first paint: script is on, and which system's download to show (app.js does the rest). Phones and
+      // anything unknown get macOS.
       document.documentElement.classList.add('js')
+      try {
+        var platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || ''
+        var os = /^win/i.test(platform) ? 'windows' : /linux|x11|cros|chrome os/i.test(platform) && !/android/i.test(navigator.userAgent) ? 'linux' : 'mac'
+        document.documentElement.setAttribute('data-os', os)
+      } catch (e) {}
     </script>
     <script src="app.js" defer></script>
   </head>
@@ -33,6 +40,7 @@
     <svg class="sprite" aria-hidden="true">
       <symbol id="i-mark" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#1d1d1d" /><path d="M9 6v20M5 12h8v8H5zM23 4v24M19 10h8v12h-8z" fill="#d400ff" stroke="#d400ff" stroke-width="2" stroke-linejoin="round" /></symbol>
       <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" /></symbol>
+      <symbol id="i-down" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M8 2.5v8m-3.5-3.5L8 10.5 11.5 7M3 13.5h10" /></symbol>
       <symbol id="i-copy" viewBox="0 0 16 16"><path fill="currentColor" d="M5 1.5A1.5 1.5 0 0 1 6.5 0h7A1.5 1.5 0 0 1 15 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 5 8.5Zm1.5-.25a.25.25 0 0 0-.25.25v7c0 .14.11.25.25.25h7a.25.25 0 0 0 .25-.25v-7a.25.25 0 0 0-.25-.25ZM1 6.5A1.5 1.5 0 0 1 2.5 5H3v1.25h-.5a.25.25 0 0 0-.25.25v7c0 .14.11.25.25.25h7a.25.25 0 0 0 .25-.25V13H11v.5A1.5 1.5 0 0 1 9.5 15h-7A1.5 1.5 0 0 1 1 13.5Z" /></symbol>
     </svg>
     <a class="skip" href="#main">Skip to content</a>
@@ -54,7 +62,7 @@
         </nav>
         <a class="btn btn-sm" href="https://github.com/spovalova/openterminal">
           <svg width="16" height="16" aria-hidden="true"><use href="#i-github" /></svg>
-          Download
+          GitHub
         </a>
       </div>
     </header>
@@ -65,16 +73,9 @@
           <p class="eyebrow mono"><span class="live" aria-hidden="true"></span>Open source<span class="sep" aria-hidden="true">/</span>MIT<span class="sep" aria-hidden="true">/</span>runs on localhost</p>
           <h1 id="hero-title">The <span class="nowrap">open-source,</span> <span class="nowrap">AI-native</span> terminal for traders.</h1>
           <p class="lead">Ask a question. Get a live workspace of charts, tables and option chains, and an answer that points at them. <strong>Runs on your machine, with your keys,</strong> on data sources anyone can add.</p>
-          <div class="cta">
-            <a class="btn btn-primary" href="https://github.com/spovalova/openterminal">
-              <svg width="18" height="18" aria-hidden="true"><use href="#i-github" /></svg>
-              Download from GitHub
-            </a>
-            <a class="btn" href="#install">Quick start <span aria-hidden="true">↓</span></a>
-          </div>
           <ul class="facts mono" aria-label="At a glance">
             <li>MIT licensed</li>
-            <li>Node 22+</li>
+            <li>macOS · Windows · Linux</li>
             <li>No accounts, no backend, no telemetry</li>
             <li>Any route · 24 recipes · 9 presets</li>
           </ul>
@@ -89,10 +90,69 @@
         </div>
       </section>
 
-      <section class="statement" aria-label="The idea">
+      <section class="statement statement-lead" aria-label="The idea">
         <div class="wrap">
           <p>Cursor made the code editor conversational without taking the editor away. <span class="dim">Open Terminal does the same for the trading terminal.</span></p>
           <p class="sub">The prompt builds and rewrites the workspace, and the workspace stays a real terminal: every widget is a query you can open, edit and re-run by hand.</p>
+        </div>
+      </section>
+
+      <section class="get-section" id="download" aria-label="Download Open Terminal">
+        <div class="wrap">
+          <!-- install:hero: right under the Cursor statement (the user's placement). One tab per system (macOS, Windows, Linux; the default follows the visitor's system). Without script every system shows, one after another. -->
+          <div class="get get-hero">
+            <div class="get-head">
+              <div class="os-tabs" role="tablist" aria-label="Download for">
+                <button class="os-tab" type="button" role="tab" id="hero-tab-mac" aria-controls="hero-mac" aria-selected="true" data-os="mac">macOS</button>
+                <button class="os-tab" type="button" role="tab" id="hero-tab-windows" aria-controls="hero-windows" aria-selected="false" tabindex="-1" data-os="windows">Windows</button>
+                <button class="os-tab" type="button" role="tab" id="hero-tab-linux" aria-controls="hero-linux" aria-selected="false" tabindex="-1" data-os="linux">Linux</button>
+              </div>
+            </div>
+            <div class="get-panel" id="hero-mac" role="tabpanel" aria-labelledby="hero-tab-mac" data-os="mac">
+              <p class="get-os mono">macOS</p>
+              <div class="cmd"><span class="prompt" aria-hidden="true">$</span><code id="cmd-hero-mac">curl -fsSL https://terminal.spova.ai/<wbr />install | sh</code><button class="copy" type="button" data-copy-target="cmd-hero-mac" aria-label="Copy the install command for macOS"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></div>
+              <p class="get-note"><span class="tag-rec">Recommended</span> Paste it into Terminal. It puts Open Terminal in Applications and opens it, with no security prompt.</p>
+              <div class="get-files">
+                <span class="get-files-k">Or the .dmg</span>
+                <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-mac-arm64.dmg">Apple silicon<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
+                <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-mac-x64.dmg">Intel<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
+              </div>
+              <p class="get-fine">The app is not signed with an Apple Developer ID yet, so the first time you open it from the .dmg, macOS asks you to confirm: <b>System Settings → Privacy &amp; Security → Open Anyway</b>.</p>
+            </div>
+            <div class="get-panel" id="hero-windows" role="tabpanel" aria-labelledby="hero-tab-windows" data-os="windows">
+              <p class="get-os mono">Windows</p>
+              <div class="get-primary">
+                <a class="btn btn-primary" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-win-x64-setup.exe"><svg width="16" height="16" aria-hidden="true"><use href="#i-down" /></svg>Download for Windows</a>
+                <span class="get-meta mono">.exe · x64 · Windows 10 and 11</span>
+              </div>
+              <p class="get-fine">The setup is not signed with a code-signing certificate yet, so SmartScreen says “Windows protected your PC”: choose <b>More info → Run anyway</b>.</p>
+              <p class="get-alt">Or install it from PowerShell, with no prompt:</p>
+              <div class="cmd"><span class="prompt" aria-hidden="true">PS&gt;</span><code id="cmd-hero-windows">irm https://terminal.spova.ai/<wbr />install.ps1 | iex</code><button class="copy" type="button" data-copy-target="cmd-hero-windows" aria-label="Copy the install command for Windows PowerShell"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></div>
+            </div>
+            <div class="get-panel" id="hero-linux" role="tabpanel" aria-labelledby="hero-tab-linux" data-os="linux">
+              <p class="get-os mono">Linux</p>
+              <div class="cmd"><span class="prompt" aria-hidden="true">$</span><code id="cmd-hero-linux">curl -fsSL https://terminal.spova.ai/<wbr />install | sh</code><button class="copy" type="button" data-copy-target="cmd-hero-linux" aria-label="Copy the install command for Linux"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></div>
+              <p class="get-note">Installs the AppImage, adds Open Terminal to your app menu, and an <code>openterminal</code> command.</p>
+              <div class="get-files">
+                <span class="get-files-k">Or download</span>
+                <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-linux-x86_64.AppImage">AppImage x64<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
+                <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-linux-arm64.AppImage">AppImage arm64<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
+                <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-linux-amd64.deb">.deb amd64<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
+                <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-linux-arm64.deb">.deb arm64<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
+              </div>
+              <p class="get-fine">AppImages need FUSE 2 (<code>libfuse2</code>); the installer tells you if it is missing.</p>
+            </div>
+          </div>
+          <div class="get-next">
+            <p>For developers: <code>npx openterminal</code> runs it headless, in your browser <span class="soon mono">on npm soon</span></p>
+            <div class="get-links">
+              <a class="btn" href="https://github.com/spovalova/openterminal/releases/latest">
+                <svg width="16" height="16" aria-hidden="true"><use href="#i-github" /></svg>
+                Download from GitHub
+              </a>
+              <a class="text-link" href="#install">Install guide <span aria-hidden="true">↓</span></a>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -378,29 +438,69 @@
         </div>
       </section>
 
-      <section class="section" id="install" aria-labelledby="install-title">
+<section class="section" id="install" aria-labelledby="install-title">
         <div class="wrap">
           <div class="section-head">
             <span class="label mono" style="--swatch: var(--up)"><b>06</b> Install</span>
             <h2 id="install-title">Run it on your machine.</h2>
-            <p>Clone it and start it. It works with no keys: quotes, charts, search, option chains and fundamentals come from Yahoo through the built-in <code>yahoo</code> connector. <code>npx openterminal</code> becomes the one-line start once the package is on npm; until then, run it from a clone.</p>
+            <p>Open Terminal is a desktop app for macOS, Windows and Linux. It is open source and not code-signed yet (signing takes paid Apple and Microsoft certificates), so every release publishes its SHA-256 checksums, and the install commands check them for you.</p>
           </div>
           <div class="install">
             <ol class="install-steps">
               <li>
-                <h3>Clone and start</h3>
-                <figure class="code">
-                  <figcaption class="code-head"><span>shell · Node 22 and pnpm</span><button class="copy" type="button" data-copy-target="code-clone" aria-label="Copy the commands"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></figcaption>
-                  <pre><code id="code-clone">git clone https://github.com/spovalova/openterminal.git
-cd openterminal
-pnpm install
-pnpm dev</code></pre>
-                </figure>
-                <p>The server starts on <code>:4242</code> and the app on <code>http://localhost:5173</code>. Open it and type a ticker or a question.</p>
+                <h3>Install</h3>
+                <!-- install:install: one tab per system (macOS, Windows, Linux; the default follows the visitor's system). Without script every system shows, one after another. -->
+                <div class="get">
+                  <div class="get-head">
+                    <div class="os-tabs" role="tablist" aria-label="Download for">
+                      <button class="os-tab" type="button" role="tab" id="install-tab-mac" aria-controls="install-mac" aria-selected="true" data-os="mac">macOS</button>
+                      <button class="os-tab" type="button" role="tab" id="install-tab-windows" aria-controls="install-windows" aria-selected="false" tabindex="-1" data-os="windows">Windows</button>
+                      <button class="os-tab" type="button" role="tab" id="install-tab-linux" aria-controls="install-linux" aria-selected="false" tabindex="-1" data-os="linux">Linux</button>
+                    </div>
+                  </div>
+                  <div class="get-panel" id="install-mac" role="tabpanel" aria-labelledby="install-tab-mac" data-os="mac">
+                    <p class="get-os mono">macOS</p>
+                    <div class="cmd"><span class="prompt" aria-hidden="true">$</span><code id="cmd-install-mac">curl -fsSL https://terminal.spova.ai/<wbr />install | sh</code><button class="copy" type="button" data-copy-target="cmd-install-mac" aria-label="Copy the install command for macOS"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></div>
+                    <p class="get-note"><span class="tag-rec">Recommended</span> Paste it into Terminal. It puts Open Terminal in Applications and opens it, with no security prompt.</p>
+                    <div class="get-files">
+                      <span class="get-files-k">Or the .dmg</span>
+                      <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-mac-arm64.dmg">Apple silicon<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
+                      <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-mac-x64.dmg">Intel<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
+                    </div>
+                    <p class="get-fine">The app is not signed with an Apple Developer ID yet, so the first time you open it from the .dmg, macOS asks you to confirm: <b>System Settings → Privacy &amp; Security → Open Anyway</b>.</p>
+                  </div>
+                  <div class="get-panel" id="install-windows" role="tabpanel" aria-labelledby="install-tab-windows" data-os="windows">
+                    <p class="get-os mono">Windows</p>
+                    <div class="get-primary">
+                      <a class="btn btn-primary" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-win-x64-setup.exe"><svg width="16" height="16" aria-hidden="true"><use href="#i-down" /></svg>Download for Windows</a>
+                      <span class="get-meta mono">.exe · x64 · Windows 10 and 11</span>
+                    </div>
+                    <p class="get-fine">The setup is not signed with a code-signing certificate yet, so SmartScreen says “Windows protected your PC”: choose <b>More info → Run anyway</b>.</p>
+                    <p class="get-alt">Or install it from PowerShell, with no prompt:</p>
+                    <div class="cmd"><span class="prompt" aria-hidden="true">PS&gt;</span><code id="cmd-install-windows">irm https://terminal.spova.ai/<wbr />install.ps1 | iex</code><button class="copy" type="button" data-copy-target="cmd-install-windows" aria-label="Copy the install command for Windows PowerShell"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></div>
+                  </div>
+                  <div class="get-panel" id="install-linux" role="tabpanel" aria-labelledby="install-tab-linux" data-os="linux">
+                    <p class="get-os mono">Linux</p>
+                    <div class="cmd"><span class="prompt" aria-hidden="true">$</span><code id="cmd-install-linux">curl -fsSL https://terminal.spova.ai/<wbr />install | sh</code><button class="copy" type="button" data-copy-target="cmd-install-linux" aria-label="Copy the install command for Linux"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></div>
+                    <p class="get-note">Installs the AppImage, adds Open Terminal to your app menu, and an <code>openterminal</code> command.</p>
+                    <div class="get-files">
+                      <span class="get-files-k">Or download</span>
+                      <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-linux-x86_64.AppImage">AppImage x64<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
+                      <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-linux-arm64.AppImage">AppImage arm64<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
+                      <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-linux-amd64.deb">.deb amd64<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
+                      <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-linux-arm64.deb">.deb arm64<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
+                    </div>
+                    <p class="get-fine">AppImages need FUSE 2 (<code>libfuse2</code>); the installer tells you if it is missing.</p>
+                  </div>
+                </div>
+              </li>
+              <li>
+                <h3>Ask it something</h3>
+                <p>Open it from Applications, the Start menu or your app menu (on Linux, <code>openterminal</code> works too), then type a ticker or a question. It works with no keys: quotes, charts, search, option chains and fundamentals come from Yahoo through the built-in <code>yahoo</code> connector.</p>
               </li>
               <li>
                 <h3>Add an LLM key</h3>
-                <p>Set <code>ANTHROPIC_API_KEY</code> (or <code>OPENAI_API_KEY</code>) in your environment, or write it to <code>~/.openterminal/config.yml</code>. Without one you can still build workspaces by hand in the widget editor.</p>
+                <p>Write it to <code>~/.openterminal/config.yml</code> (or set <code>ANTHROPIC_API_KEY</code> or <code>OPENAI_API_KEY</code> when you start it from a terminal). Without one you can still build workspaces by hand in the widget editor.</p>
                 <figure class="code">
                   <figcaption class="code-head"><span>~/.openterminal/config.yml</span><button class="copy" type="button" data-copy-target="code-config" aria-label="Copy the config"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></figcaption>
                   <pre><code id="code-config">llm:
@@ -424,11 +524,43 @@ openbb-api</code></pre>
               </li>
             </ol>
             <ul class="aside">
-              <li><span class="k">Needs</span><span class="v">Node 22+ and pnpm</span></li>
-              <li><span class="k">Runs</span><span class="v">One local process and your browser</span></li>
+              <li><span class="k">Runs on</span><span class="v">macOS 11+, Windows 10+ and Linux, x64 or arm64</span></li>
+              <li><span class="k">Signed</span><span class="v">Not yet. Open source, with SHA-256 checksums on every release</span></li>
               <li><span class="k">Your data</span><span class="v"><code>~/.openterminal</code>: config, workspaces, recipes, the frame cache</span></li>
+              <li><span class="k">Update</span><span class="v">Update in the app, or run the install command again</span></li>
               <li><span class="k">License</span><span class="v"><a href="https://github.com/spovalova/openterminal/blob/main/LICENSE">MIT</a></span></li>
               <li><span class="k">Full guide</span><span class="v"><a href="https://github.com/spovalova/openterminal#quick-start">Quick start in the README ↗</a></span></li>
+            </ul>
+          </div>
+
+          <div class="other" id="other-ways">
+            <h3>Other ways</h3>
+            <ul class="ways">
+              <li>
+                <h4>Every download</h4>
+                <p>Each release has a .dmg and a .zip for macOS, the setup .exe for Windows, an AppImage and a .deb for Linux, and <code>SHA256SUMS</code>. To check a file you downloaded:</p>
+                <figure class="code">
+                  <figcaption class="code-head"><span>shell · in the download folder</span><button class="copy" type="button" data-copy-target="code-verify" aria-label="Copy the command"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></figcaption>
+                  <pre><code id="code-verify">shasum -a 256 -c SHA256SUMS --ignore-missing</code></pre>
+                </figure>
+                <p><a class="text-link" href="https://github.com/spovalova/openterminal/releases/latest">GitHub Releases ↗</a></p>
+              </li>
+              <li>
+                <h4>For developers <span class="opt">on npm soon</span></h4>
+                <div class="cmd cmd-solo"><span class="prompt" aria-hidden="true">$</span><code id="cmd-npx">npx openterminal</code><button class="copy" type="button" data-copy-target="cmd-npx" aria-label="Copy the command"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></div>
+                <p>Headless: the server starts and opens <code>http://localhost:4242</code> in your browser. Needs Node 22 or newer.</p>
+              </li>
+              <li>
+                <h4>From source</h4>
+                <figure class="code">
+                  <figcaption class="code-head"><span>shell · Node 22 and pnpm</span><button class="copy" type="button" data-copy-target="code-clone" aria-label="Copy the commands"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></figcaption>
+                  <pre><code id="code-clone">git clone https://github.com/spovalova/openterminal.git
+cd openterminal
+pnpm install
+pnpm dev</code></pre>
+                </figure>
+                <p>The server starts on <code>:4242</code>, the app on <code>http://localhost:5173</code>.</p>
+              </li>
             </ul>
           </div>
         </div>
@@ -437,13 +569,13 @@ openbb-api</code></pre>
       <section class="closing" aria-labelledby="closing-title">
         <div class="wrap">
           <h2 id="closing-title">Your terminal. Your keys. Your machine.</h2>
-          <p>Free and open source under the MIT license. Download it from GitHub, ask it a question, and open any widget to see the query behind it.</p>
+          <p>Free and open source under the MIT license, for macOS, Windows and Linux. Install it, ask it a question, and open any widget to see the query behind it.</p>
           <div class="cta">
-            <a class="btn btn-primary" href="https://github.com/spovalova/openterminal">
+            <a class="btn btn-primary" href="#top"><svg width="18" height="18" aria-hidden="true"><use href="#i-down" /></svg>Download Open Terminal</a>
+            <a class="btn" href="https://github.com/spovalova/openterminal/releases/latest">
               <svg width="18" height="18" aria-hidden="true"><use href="#i-github" /></svg>
               Download from GitHub
             </a>
-            <a class="btn" href="https://github.com/spovalova/openterminal/archive/refs/heads/main.zip">Download .zip <span class="hint">main</span></a>
           </div>
         </div>
       </section>
