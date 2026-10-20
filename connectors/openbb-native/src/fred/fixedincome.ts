@@ -264,7 +264,7 @@ export async function tipsYields(params: NativeParams, ctx: NativeCtx): Promise<
       ...(text(params, 'frequency') ? { frequency: text(params, 'frequency')! } : {}),
       ...(text(params, 'aggregation_method') ? { aggregation_method: text(params, 'aggregation_method')! } : {}),
       ...(text(params, 'transform') ? { transform: text(params, 'transform')! } : {}),
-      use_cache: useCache(params),
+      // The route's own use_cache is not handed on: OpenBB builds this query without it.
     })
   } catch (err) {
     throw new Error(err instanceof Error && err.message ? err.message : 'FRED request failed (Error).', { cause: err })

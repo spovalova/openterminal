@@ -32,9 +32,6 @@ function lookup(map: Record<string, string>, key: string): string {
 
 // ---- a single series, one observation per row ---------------------------------------------------------------------
 
-/** `float(v)` for an observation, None when it is not a number (`value_validate`: only a ValueError is caught). */
-const observationRate = (v: unknown): number | null => (typeof v === 'string' && v.trim() !== '' ? toFloat(v) : toFloat(v))
-
 type Single = { id: (params: NativeParams) => string; selectColumns: boolean }
 
 /** The routes that read one series: its observations are the rows, the value as `rate`. */
@@ -43,7 +40,8 @@ function single(spec: Single): NativeHandler {
     const key = apiKey(ctx)
     const observations = await getObservations(ctx, spec.id(params), key, { start: text(params, 'start_date'), end: text(params, 'end_date'), useCache: useCache(params) })
     return observations.map((o) => {
-      const rate = observationRate(o.value)
+      // `float(v)`, or None where that raises (`value_validate`: FRED writes a missing value as ".").
+      const rate = toFloat(o.value)
       // IORB and SONIA keep only the date and the value; the others hand the whole observation to the model.
       const row: Row = spec.selectColumns ? { date: o.date } : { realtime_start: o.realtime_start, realtime_end: o.realtime_end, date: o.date }
       if (rate !== null) row.rate = rate
