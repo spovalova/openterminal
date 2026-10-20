@@ -362,6 +362,7 @@ Each of these is a real feature someone will ask for. Cutting them is what keeps
 - Economic calendar, options flow, filings, fundamentals kinds
 - Auto-generated settings forms (connectors page with a key field per connector instead)
 - Desktop packaging (Tauri later), auth, hosting, multi-user
+- One-command install like opencode or Claude Code (user, 2026-10-20): `curl -fsSL <site>/install | sh` fetches a bundled package (a single executable or a tarball with its own Node runtime, the server, the built web app and the vendored Pyodide) and links `openterminal` onto PATH, with no clone or pnpm step. The install script can be served from the landing page (`site/`). Until then `npx openterminal` is the one-command start, and the landing page shows the clone flow.
 
 ## 10. Milestones
 

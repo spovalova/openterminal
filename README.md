@@ -241,6 +241,10 @@ Cut on purpose, each checked against the three use cases above. Add nothing back
 - Crypto connectors and non-US tickers
 - Desktop packaging, auth, hosting, multi-user
 
+## Future work
+
+- One-command install, the way opencode and Claude Code do it: `curl -fsSL <site>/install | sh` downloads one bundled package (Node runtime, server, built web app, the Python runtime for transforms) and puts `openterminal` on your PATH. No clone, no pnpm. `npx openterminal` is the interim.
+
 ## Contributing
 
 The easiest contribution is a connector: a descriptor file and a `call`, tested against recorded fixtures. The next easiest is a recipe or an annotation: a few lines of YAML. Start with [docs/writing-a-connector.md](docs/writing-a-connector.md). Use the words in [docs/vocabulary.md](docs/vocabulary.md) exactly, in code, docs and commit messages. [docs/architecture.md](docs/architecture.md) is the tour for everything else.
