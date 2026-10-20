@@ -87,9 +87,29 @@ A workspace you keep. Re-run the same prompt each day: pre-market quotes, who re
 npx openterminal
 ```
 
-One local process. It opens `http://localhost:4242` and works with no keys: quotes, charts, search, option chains and fundamentals come from Yahoo through the built-in `yahoo` connector.
+Node 22.13 or later. One local process, nothing else to install: the package carries the server, the built web app and the Python runtime for transforms (Pyodide with pandas, numpy and scipy). It opens `http://localhost:4242` and works with no keys: quotes, charts, search, option chains and fundamentals come from Yahoo through the built-in `yahoo` connector. (The `openterminal` package is built and tested but not on npm yet; until it is, run it from source below.)
 
-**Add an LLM key** to get the agent. Set `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`) in your environment, or write it to `~/.openterminal/config.yml`:
+The first start in a terminal asks for an Anthropic API key, hidden as you type; Enter skips. Then it says where everything is:
+
+```
+Anthropic API key for the agent (Enter to skip):
+Saved to ~/.openterminal/config.yml (readable only by you).
+
+  Open Terminal 0.1.0  http://127.0.0.1:4242
+
+  connectors  openbb (not running), yahoo, finnhub (off: add it on the Data page)
+  agent       claude-opus-5-5 (anthropic)
+  data        ~/.openterminal
+  log         ~/.openterminal/openterminal.log
+
+  ctrl-c to stop
+```
+
+Once a day it asks GitHub whether a newer release is out and says so in one line (no identifiers sent; `OPENTERMINAL_NO_UPDATE_CHECK=1` turns it off). `openterminal --help` lists the flags (`--port`, `--no-open`, `--verbose`, `--version`).
+
+**From source**, with Node 22.13+ and pnpm: `git clone https://github.com/spovalova/openterminal && cd openterminal && pnpm install && pnpm --filter @openterminal/web build && node packages/cli/bin/openterminal.js`, or `pnpm dev` while you work on it.
+
+**Add an LLM key** later, or an OpenAI one: set `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`) in your environment, or write it to `~/.openterminal/config.yml`:
 
 ```yaml
 llm:
@@ -202,6 +222,9 @@ pnpm query openbb equity/price/quote symbol=NVDA provider=yfinance   # one route
 pnpm query openbb --routes bond                               # search a connector's routes
 pnpm probe        # call every route once and record liveness (OpenBB: about ten minutes at --concurrency=4)
 pnpm bench        # run scripts/prompts.json against a running server and score the replies
+pnpm release:bundle   # dist/release/lib: the whole app in one directory that runs on Node alone
+pnpm release:npm      # dist/release/npm-pack/openterminal-<version>.tgz from that bundle (packed, not published)
+pnpm release:smoke dist/release/lib   # start it on a spare port: health, the web app, one pandas transform
 ```
 
 | Path | What lives there |
@@ -239,11 +262,11 @@ Cut on purpose, each checked against the three use cases above. Add nothing back
 - Alerts (a transform with a condition over a dataset), automations, scheduling
 - Order execution and broker connectors
 - Crypto connectors and non-US tickers
-- Desktop packaging, auth, hosting, multi-user
+- Auth, hosting, multi-user
 
 ## Future work
 
-- One-command install, the way opencode and Claude Code do it: `curl -fsSL <site>/install | sh` downloads one bundled package (Node runtime, server, built web app, the Python runtime for transforms) and puts `openterminal` on your PATH. No clone, no pnpm. `npx openterminal` is the interim.
+- A desktop app with a one-line install (decided 2026-10-20): Open Terminal as an Electron app for macOS, Windows and Linux, installed with `curl -fsSL https://terminal.spova.ai/install | sh` or `irm https://terminal.spova.ai/install.ps1 | iex`, unsigned, updating from GitHub Releases. It wraps the release bundle that `npx openterminal` already runs (`scripts/release/`). Design in [PLAN.md](PLAN.md) section 18.
 
 ## Contributing
 

@@ -9,11 +9,12 @@
 //   terminates it too; a worker whose WebAssembly heap passed `memoryMb` is recycled after the run. A terminated
 //   worker is replaced lazily on the next run (cold start again).
 // - Runs are serialised on the single worker; `warmup()` pays the cold start early.
-// - The vendored wheels live in packages/server/pyodide (see scripts/vendor-pyodide.mjs); nothing is fetched.
+// - The vendored wheels live in packages/server/pyodide (see scripts/vendor-pyodide.mjs); nothing is fetched. Every
+//   path (the worker, its Python helpers, Pyodide's own files, the wheels) comes from `resources()`, so the release
+//   bundle finds them in its lib/ directory.
 import { existsSync, readFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
 import {
   checkTransformInputs,
@@ -26,13 +27,13 @@ import {
   type TransformOutput,
   type TransformRunOptions,
 } from '@openterminal/core'
+import { resources } from '@openterminal/core/node'
 import type { ColumnarFrame, RunRequest, RuntimeResult, WorkerData, WorkerMessage } from './protocol.js'
 
 export type { ColumnarFrame } from './protocol.js'
 
-const here = dirname(fileURLToPath(import.meta.url))
-/** Where `vendor-pyodide.mjs` puts the wheels. */
-export const PYODIDE_PACKAGES_DIR = join(here, '../../pyodide')
+/** Where `vendor-pyodide.mjs` puts the wheels (packages/server/pyodide; lib/wheels in the release bundle). */
+export const PYODIDE_PACKAGES_DIR = resources().wheels
 /** What the worker loads at boot; their dependency closure is what is vendored. */
 export const PYODIDE_PACKAGES = ['pandas', 'scipy', 'tzdata'] as const
 
@@ -44,7 +45,7 @@ export type TransformEngineOptions = {
   memoryMb?: number
   /** How long a script may ignore the interrupt before the worker is killed (default 1000 ms). */
   interruptGraceMs?: number
-  /** Directory of vendored wheels (default packages/server/pyodide). */
+  /** Directory of vendored wheels (default `resources().wheels`, packages/server/pyodide from source). */
   packagesDir?: string
   /** Clock for `ot.last_week()` and friends and for `meta.fetchedAt`; injectable for tests. */
   now?: () => number
@@ -71,8 +72,7 @@ export interface ServerTransformEngine extends TransformEngine {
 
 /** The wheels the lock file says `PYODIDE_PACKAGES` need, as file names; missing ones mean the vendoring step was skipped. */
 export function vendoredWheels(packagesDir = PYODIDE_PACKAGES_DIR): { file: string; present: boolean }[] {
-  const require = createRequire(import.meta.url)
-  const lockPath = join(dirname(require.resolve('pyodide/package.json')), 'pyodide-lock.json')
+  const lockPath = join(resources().pyodide, 'pyodide-lock.json')
   const lock = JSON.parse(readFileSync(lockPath, 'utf8')) as { packages: Record<string, { file_name: string; depends: string[] }> }
   const seen = new Set<string>()
   const visit = (name: string) => {
@@ -130,11 +130,21 @@ export function createTransformEngine(opts: TransformEngineOptions = {}): Server
     const missing = vendoredWheels(packagesDir).filter((w) => !w.present)
     if (missing.length > 0) throw new Error(`transform engine: ${missing.length} Pyodide wheel(s) missing from ${packagesDir} (${missing.map((m) => m.file).join(', ')}); run node packages/server/scripts/vendor-pyodide.mjs`)
     const interrupt = new SharedArrayBuffer(1)
-    const workerData: WorkerData = { packagesDir, packages: [...PYODIDE_PACKAGES], allowedImports: [...TRANSFORM_ALLOWED_IMPORTS], interrupt }
-    // Node ≥ 22.18 strips types natively; older 22.x needs the flag. Under tsx the loader is inherited through execArgv.
+    const res = resources()
+    const workerData: WorkerData = {
+      packagesDir,
+      pyodideDir: res.pyodide,
+      scriptsDir: res.transformScripts,
+      packages: [...PYODIDE_PACKAGES],
+      allowedImports: [...TRANSFORM_ALLOWED_IMPORTS],
+      interrupt,
+    }
+    // From source the worker is TypeScript: Node ≥ 22.18 strips types natively, older 22.x needs the flag, and under
+    // tsx the loader is inherited through execArgv. The release bundle's worker is plain JavaScript.
     const features = (process as unknown as { features?: { typescript?: unknown } }).features
-    const execArgv = features?.typescript || process.execArgv.some((a) => a.includes('tsx')) ? undefined : [...process.execArgv, '--experimental-strip-types']
-    const worker = new Worker(new URL('./worker.ts', import.meta.url), { workerData, ...(execArgv ? { execArgv } : {}), stdout: true, stderr: true })
+    const needsStrip = res.transformWorker.endsWith('.ts') && !features?.typescript && !process.execArgv.some((a) => a.includes('tsx'))
+    const execArgv = needsStrip ? [...process.execArgv, '--experimental-strip-types'] : undefined
+    const worker = new Worker(pathToFileURL(res.transformWorker), { workerData, ...(execArgv ? { execArgv } : {}), stdout: true, stderr: true })
     worker.stdout.on('data', () => {})
     worker.stderr.on('data', () => {})
     const t0 = now()

@@ -15,7 +15,8 @@ packages/
               (Pyodide), probe and liveness, agent loop (src/agent)
   ui/         design system: tokens, components, chart theme, preview page
   web/        React app: shell, state, WebSocket client, palette, Data page, the three-tab editor, views (src/views)
-  cli/        `npx openterminal` → starts the server on localhost, opens the browser
+  cli/        `npx openterminal` → starts the server on localhost, opens the browser; first-run key prompt, banner,
+              daily update check
 connectors/
   openbb/     no key; every GET route of a local OpenBB Platform API, descriptors generated from its openapi.json
   yahoo/      no key; the five yahoo-finance2 endpoints as routes (descriptors.json)
@@ -28,6 +29,8 @@ scripts/
   readme-recipes.ts   `pnpm readme:recipes` regenerates the README's recipe table from recipes.yml
   prompt-bench.mjs    `pnpm bench` runs scripts/prompts.json against a running server
   accept.mjs          the visual acceptance loop over the twelve section 17 cases
+  release/            `pnpm release:bundle`, `release:npm`, `release:smoke`: the release bundle (dist/release/lib), the npm
+                      package from it, and the smoke test (PLAN.md section 18)
 ```
 
 `packages/core` is the shared contract: every other package compiles against it and it changes only with the plan. The stack is Zod for every schema, Hono for HTTP and WebSocket, Vite + React, Tailwind for tokens, lightweight-charts 5, cmdk for the palette, the Vercel AI SDK for the agent, Pyodide (CPython, pandas, numpy, scipy in WebAssembly) for transforms, `node:sqlite` for the store, Vitest for tests.
@@ -113,7 +116,9 @@ HTTP, under `/api`: `GET /api/health` (connectors, recipes, llm); workspaces CRU
 | Tokens, components, chart theme, series palette | `packages/ui` |
 | Shell, state (frames keyed by workspace, widget, dataset), socket client, palette, Data page, editor | `packages/web` |
 | Field config pipeline and the views | `packages/web/src/views` |
-| `npx openterminal` | `packages/cli` |
+| `npx openterminal`: flags, first-run key prompt, banner, update check | `packages/cli` |
+| Where runtime files are (recipes, annotations, web app, Pyodide, wheels, the transform worker), from source or the release bundle | `packages/core/src/resources.ts` (`resources()`) |
+| The release bundle, the npm package, the smoke test | `scripts/release/` |
 | Connectors | `connectors/<name>/src` |
 | Config, store, catalog cache, user recipes and annotations on disk | `~/.openterminal/config.yml`, `terminal.db`, `catalog/`, `recipes.yml`, `annotations.yml` (override the directory with `OPENTERMINAL_HOME`) |
 

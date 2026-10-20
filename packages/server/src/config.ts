@@ -1,6 +1,6 @@
 // ~/.openterminal/config.yml: the LLM key and the connector list in priority order.
 // The directory is overridable with OPENTERMINAL_HOME (see home.ts). Created with defaults on first run.
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { Document, parse, parseDocument, isMap, isSeq, YAMLSeq } from 'yaml'
 import { z } from 'zod'
@@ -64,12 +64,31 @@ export function workspacesDir(home: string): string {
   return join(home, 'workspaces')
 }
 
+/** config.yml holds API keys, so it is readable by its owner only. */
+export const CONFIG_FILE_MODE = 0o600
+
 /** Creates the home directory, the workspaces directory, and a default config.yml when missing. Returns the config path. */
 export function ensureHome(home: string): string {
   mkdirSync(workspacesDir(home), { recursive: true })
   const file = configPath(home)
-  if (!existsSync(file)) writeFileSync(file, DEFAULT_CONFIG_YML, 'utf8')
+  if (!existsSync(file)) writeFileSync(file, DEFAULT_CONFIG_YML, { encoding: 'utf8', mode: CONFIG_FILE_MODE })
   return file
+}
+
+/** Replace config.yml atomically (temp file then rename), owner-only. */
+function writeConfigFile(file: string, text: string): void {
+  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`
+  writeFileSync(tmp, text, { encoding: 'utf8', mode: CONFIG_FILE_MODE })
+  // `mode` is masked by the umask; set it outright so the key is never group- or world-readable.
+  chmodSync(tmp, CONFIG_FILE_MODE)
+  renameSync(tmp, file)
+}
+
+/** config.yml as a YAML document (comments kept), an empty map when the file holds something else. */
+function readConfigDocument(file: string): Document {
+  const doc: Document = parseDocument(readFileSync(file, 'utf8'))
+  if (doc.errors.length > 0) throw new Error(`invalid ${file}: ${doc.errors[0]!.message}`)
+  return isMap(doc.contents) ? doc : new Document({})
 }
 
 export type LoadConfigOptions = { home?: string; env?: NodeJS.ProcessEnv }
@@ -130,9 +149,7 @@ export function resolvedLlm(config: Config): { provider: Provider; model: string
  */
 export function saveConnectorConfig(home: string, name: string, config: Record<string, unknown>): Config {
   const file = ensureHome(home)
-  let doc: Document = parseDocument(readFileSync(file, 'utf8'))
-  if (doc.errors.length > 0) throw new Error(`invalid ${file}: ${doc.errors[0]!.message}`)
-  if (!isMap(doc.contents)) doc = new Document({})
+  const doc = readConfigDocument(file)
 
   let seq = doc.get('connectors')
   if (!isSeq(seq)) {
@@ -147,8 +164,19 @@ export function saveConnectorConfig(home: string, name: string, config: Record<s
     list.add(doc.createNode({ name, config }))
   }
 
-  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`
-  writeFileSync(tmp, doc.toString(), 'utf8')
-  renameSync(tmp, file)
+  writeConfigFile(file, doc.toString())
   return normalizeConfig(parse(doc.toString()), process.env, file)
+}
+
+/**
+ * Write the `llm` block (the first-run key prompt in the CLI): provider and key, plus the model when given, replacing
+ * whatever `llm` held and keeping the rest of the file and its comments. Owner-only (mode 600), atomic.
+ */
+export function saveLlmConfig(home: string, llm: { provider: Provider; apiKey: string; model?: string }): Config {
+  const parsed = LlmConfigSchema.parse(llm)
+  const file = ensureHome(home)
+  const doc = readConfigDocument(file)
+  doc.set('llm', doc.createNode({ provider: parsed.provider, ...(parsed.model ? { model: parsed.model } : {}), apiKey: parsed.apiKey }))
+  writeConfigFile(file, doc.toString())
+  return normalizeConfig(parse(doc.toString()), {}, file)
 }

@@ -26,6 +26,9 @@ importers:
       '@types/node':
         specifier: ^22.0.0
         version: 22.20.5
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       eslint:
         specifier: ^10.13.0
         version: 10.13.0(jiti@2.7.0)
@@ -113,6 +116,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@openterminal/core':
+        specifier: workspace:*
+        version: link:../core
       '@openterminal/server':
         specifier: workspace:*
         version: link:../server

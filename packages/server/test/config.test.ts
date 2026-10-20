@@ -1,8 +1,8 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { configPath, loadConfig, normalizeConfig, resolvedLlm, openterminalHome, saveConnectorConfig, workspacesDir, DEFAULT_MODELS } from '../src/config.js'
+import { configPath, loadConfig, normalizeConfig, resolvedLlm, openterminalHome, saveConnectorConfig, saveLlmConfig, workspacesDir, DEFAULT_MODELS } from '../src/config.js'
 
 let home: string
 beforeEach(() => {
@@ -53,5 +53,31 @@ describe('config', () => {
     cfg = saveConnectorConfig(home, 'finnhub', { apiKey: 'def' })
     expect(cfg.connectors).toEqual([{ name: 'openbb' }, { name: 'yahoo' }, { name: 'finnhub', config: { apiKey: 'def' } }])
     expect(loadConfig({ home, env: {} }).connectors).toHaveLength(3)
+  })
+
+  // POSIX modes only; Windows has no group or world bits to check.
+  it.skipIf(process.platform === 'win32')('creates config.yml readable by its owner only', () => {
+    loadConfig({ home, env: {} })
+    expect(statSync(configPath(home)).mode & 0o777).toBe(0o600)
+    saveConnectorConfig(home, 'finnhub', { apiKey: 'abc' })
+    expect(statSync(configPath(home)).mode & 0o777).toBe(0o600)
+  })
+
+  it('writes the llm block from the first-run prompt: owner-only, comments and connectors kept, read back as the key', () => {
+    loadConfig({ home, env: {} })
+    saveConnectorConfig(home, 'finnhub', { apiKey: 'fh' })
+    const cfg = saveLlmConfig(home, { provider: 'anthropic', apiKey: 'sk-ant-dummy' })
+    expect(cfg.llm).toEqual({ provider: 'anthropic', apiKey: 'sk-ant-dummy' })
+    expect(cfg.connectors.map((c) => c.name)).toEqual(['openbb', 'yahoo', 'finnhub'])
+    const text = readFileSync(configPath(home), 'utf8')
+    expect(text).toContain('Keys never leave this machine')
+    expect(text).toMatch(/^llm:\n {2}provider: anthropic\n {2}apiKey: sk-ant-dummy$/m)
+    if (process.platform !== 'win32') expect(statSync(configPath(home)).mode & 0o777).toBe(0o600)
+    // The file key wins over the environment on the next start.
+    expect(loadConfig({ home, env: { ANTHROPIC_API_KEY: 'env' } }).llm?.apiKey).toBe('sk-ant-dummy')
+    // Saving again replaces the block, with a model when given.
+    expect(saveLlmConfig(home, { provider: 'openai', apiKey: 'sk-oa', model: 'gpt-x' }).llm).toEqual({ provider: 'openai', apiKey: 'sk-oa', model: 'gpt-x' })
+    expect(readFileSync(configPath(home), 'utf8').match(/^llm:/gm)).toHaveLength(1)
+    expect(() => saveLlmConfig(home, { provider: 'anthropic', apiKey: '' })).toThrow()
   })
 })
