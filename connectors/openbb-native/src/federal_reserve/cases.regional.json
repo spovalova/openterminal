@@ -41,93 +41,67 @@
   {
     "name": "regional-atlanta-sticky-cpi-annualized",
     "route": "federal_reserve/atlanta/sticky_cpi",
-    "params": { "start_date": "2024-01-01", "end_date": "2024-12-31" },
-    "fixture": false,
-    "reason": "the sticky-price workbook is 294 KB compressed, 4% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+    "params": { "start_date": "2024-01-01", "end_date": "2024-12-31" }
   },
   {
     "name": "regional-atlanta-sticky-cpi-12-month",
     "route": "federal_reserve/atlanta/sticky_cpi",
-    "params": { "transform": "12-month", "start_date": "2024-01-01", "end_date": "2024-06-30" },
-    "fixture": false,
-    "reason": "the sticky-price workbook is 294 KB compressed, 4% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+    "params": { "transform": "12-month", "start_date": "2024-01-01", "end_date": "2024-06-30" }
   },
   {
     "name": "regional-atlanta-taylor-rule",
     "route": "federal_reserve/atlanta/taylor_rule",
-    "params": { "start_date": "2022-01-01", "end_date": "2024-12-31" },
-    "fixture": false,
-    "reason": "the Taylor-rule workbook is 287 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+    "params": { "start_date": "2022-01-01", "end_date": "2024-12-31" }
   },
   {
     "name": "regional-atlanta-taylor-rule-measures-natural-rate",
     "route": "federal_reserve/atlanta/taylor_rule_measures",
-    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" },
-    "fixture": false,
-    "reason": "the Taylor-rule workbook is 287 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" }
   },
   {
     "name": "regional-atlanta-taylor-rule-measures-gap",
     "route": "federal_reserve/atlanta/taylor_rule_measures",
-    "params": { "measure": "gap", "start_date": "2023-01-01", "end_date": "2024-12-31" },
-    "fixture": false,
-    "reason": "the Taylor-rule workbook is 287 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+    "params": { "measure": "gap", "start_date": "2023-01-01", "end_date": "2024-12-31" }
   },
   {
     "name": "regional-atlanta-taylor-rule-measures-fed-funds",
     "route": "federal_reserve/atlanta/taylor_rule_measures",
-    "params": { "measure": "fed_funds", "start_date": "2023-01-01", "end_date": "2024-12-31" },
-    "fixture": false,
-    "reason": "the Taylor-rule workbook is 287 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+    "params": { "measure": "fed_funds", "start_date": "2023-01-01", "end_date": "2024-12-31" }
   },
   {
     "name": "regional-atlanta-taylor-rule-heatmap-latest",
     "route": "federal_reserve/atlanta/taylor_rule_heatmap",
-    "params": {  },
-    "fixture": false,
-    "reason": "the Taylor-rule workbook is 287 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+    "params": {  }
   },
   {
     "name": "regional-atlanta-taylor-rule-heatmap-previous",
     "route": "federal_reserve/atlanta/taylor_rule_heatmap",
-    "params": { "quarter": "previous" },
-    "fixture": false,
-    "reason": "the Taylor-rule workbook is 287 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+    "params": { "quarter": "previous" }
   },
   {
     "name": "regional-atlanta-wage-growth-overall",
     "route": "federal_reserve/atlanta/wage_growth",
-    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" },
-    "fixture": false,
-    "reason": "the wage-growth workbook is 317 KB compressed, 4% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" }
   },
   {
     "name": "regional-atlanta-wage-growth-race",
     "route": "federal_reserve/atlanta/wage_growth",
-    "params": { "cut": "race", "start_date": "2024-01-01", "end_date": "2024-12-31" },
-    "fixture": false,
-    "reason": "the wage-growth workbook is 317 KB compressed, 4% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+    "params": { "cut": "race", "start_date": "2024-01-01", "end_date": "2024-12-31" }
   },
   {
     "name": "regional-atlanta-wage-growth-non-smoothed",
     "route": "federal_reserve/atlanta/wage_growth",
-    "params": { "cut": "non_smoothed", "start_date": "2024-01-01", "end_date": "2024-12-31" },
-    "fixture": false,
-    "reason": "the wage-growth workbook is 317 KB compressed, 4% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+    "params": { "cut": "non_smoothed", "start_date": "2024-01-01", "end_date": "2024-12-31" }
   },
   {
     "name": "regional-atlanta-wage-growth-weighted",
     "route": "federal_reserve/atlanta/wage_growth",
-    "params": { "cut": "weighted", "start_date": "2024-01-01", "end_date": "2024-12-31" },
-    "fixture": false,
-    "reason": "the wage-growth workbook is 317 KB compressed, 4% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+    "params": { "cut": "weighted", "start_date": "2024-01-01", "end_date": "2024-12-31" }
   },
   {
     "name": "regional-atlanta-wage-growth-alternative",
     "route": "federal_reserve/atlanta/wage_growth",
-    "params": { "cut": "alternative", "start_date": "2024-01-01", "end_date": "2024-12-31" },
-    "fixture": false,
-    "reason": "the wage-growth workbook is 317 KB compressed, 4% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+    "params": { "cut": "alternative", "start_date": "2024-01-01", "end_date": "2024-12-31" }
   },
   {
     "name": "regional-cleveland-publication-series",
