@@ -93,6 +93,38 @@ export function findAll(node: Node, tags: readonly string[]): HTMLElement[] {
   return out
 }
 
+/**
+ * Every `<table>` of a page, in order of their start tags (`soup.find_all("table")`). BLS's older pages are so
+ * malformed that node-html-parser loses whole tables when it parses the page in one go (it dropped the first of
+ * two tables of ppi-fdidsf.htm), so each table is cut out by its tags and parsed on its own.
+ */
+export function htmlTables(html: string): HTMLElement[] {
+  const tag = /<(\/?)table\b[^>]*>/gi
+  const tokens = [...html.matchAll(tag)].map((m) => ({ close: m[1] === '/', start: m.index!, end: m.index! + m[0].length }))
+  const out: HTMLElement[] = []
+  tokens.forEach((open, i) => {
+    if (open.close) return
+    let depth = 1
+    let endAt = html.length
+    for (let j = i + 1; j < tokens.length; j++) {
+      depth += tokens[j]!.close ? -1 : 1
+      if (depth === 0) {
+        endAt = tokens[j]!.end
+        break
+      }
+    }
+    const table = parse(html.slice(open.start, endAt)).querySelector('table')
+    if (table) out.push(table)
+  })
+  return out
+}
+
+/** The text of the page's `<title>`, as `soup.title.string` gives it. */
+export function htmlTitle(html: string): string {
+  const m = /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)
+  return m ? textOf(parse(`<title>${m[1]}</title>`)).trim() : ''
+}
+
 /** The anchors that have an href, with it trimmed (`find_all("a", href=True)`). */
 export function anchors(node: Node): { el: HTMLElement; href: string }[] {
   return findAll(node, ['a']).flatMap((el) => {

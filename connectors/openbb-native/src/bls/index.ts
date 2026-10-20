@@ -4,6 +4,7 @@ import { chartRoutes } from './charts.js'
 import { cpiNewsReleaseRoutes } from './cpi-news-release.js'
 import { cpiTableRoutes } from './cpi-tables.js'
 import { documentRoutes } from './documents.js'
+import { ppiRoutes } from './ppi.js'
 
 export default defineProvider({
   name: 'bls',
@@ -15,5 +16,6 @@ export default defineProvider({
     ...cpiNewsReleaseRoutes,
     ...cpiTableRoutes,
     ...documentRoutes,
+    ...ppiRoutes,
   },
 })
