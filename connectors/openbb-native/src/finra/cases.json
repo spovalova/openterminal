@@ -1,1 +1,122 @@
-[]
+[
+  {
+    "name": "otc-aapl",
+    "route": "equity/darkpool/otc",
+    "params": { "symbol": "AAPL" }
+  },
+  {
+    "name": "otc-multi-non-ats",
+    "route": "equity/darkpool/otc",
+    "params": { "symbol": "MSFT,NVDA", "tier": "T1", "is_ats": false }
+  },
+  {
+    "name": "otc-class-share-t2",
+    "route": "equity/darkpool/otc",
+    "params": { "symbol": "brk-b,ccj", "tier": "T2" }
+  },
+  {
+    "name": "otc-tier-latest-week",
+    "route": "equity/darkpool/otc",
+    "params": { "tier": "T1" }
+  },
+  {
+    "name": "short-interest-aapl",
+    "route": "equity/shorts/short_interest",
+    "params": { "symbol": "AAPL" }
+  },
+  {
+    "name": "short-interest-multi-class-share",
+    "route": "equity/shorts/short_interest",
+    "params": { "symbol": "TSLA,BRK.B" }
+  },
+  {
+    "name": "bond-historical-cusip",
+    "route": "finra/fixedincome/bond_historical",
+    "params": { "cusip": "037833EH9", "start_date": "2026-09-01", "end_date": "2026-09-30" }
+  },
+  {
+    "name": "bond-historical-finra-symbol",
+    "route": "finra/fixedincome/bond_historical",
+    "params": { "cusip": "AAPL5231623", "start_date": "2026-09-14", "end_date": "2026-09-18" }
+  },
+  {
+    "name": "bond-historical-treasury",
+    "route": "finra/fixedincome/bond_historical",
+    "params": { "cusip": "91282CRQ6,037833EH9", "start_date": "2026-10-05", "end_date": "2026-10-16" }
+  },
+  {
+    "name": "bond-historical-treasury-symbol",
+    "route": "finra/fixedincome/bond_historical",
+    "params": { "cusip": "TSRYS6527810", "start_date": "2026-10-12", "end_date": "2026-10-16" }
+  },
+  {
+    "name": "bonds-treasury",
+    "route": "finra/fixedincome/bonds",
+    "params": { "bond_type": "TS" },
+    "compare": { "volatile": ["price", "last_sale_yield", "last_trade_date", "last_trade_time", "price_change", "price_change_percent", "price_type"] },
+    "reason": "live TRACE last sales: Treasuries trade all day, so the last-sale columns move between OpenBB's fetch and the native one"
+  },
+  {
+    "name": "bond-prices-cusip",
+    "route": "fixedincome/corporate/bond_prices",
+    "params": { "cusip": "037833EH9" },
+    "compare": { "volatile": ["price", "last_sale_yield", "last_trade_date", "last_trade_time", "price_change", "price_change_percent", "price_type"] },
+    "reason": "live TRACE last sale: the bond may trade between OpenBB's fetch and the native one"
+  },
+  {
+    "name": "bond-prices-issuer-limit",
+    "route": "fixedincome/corporate/bond_prices",
+    "params": { "issuer_name": "apple", "limit": 3 }
+  },
+  {
+    "name": "bond-prices-treasury-filters",
+    "route": "fixedincome/corporate/bond_prices",
+    "params": { "bond_type": "TS", "maturity_date_min": "2030-01-01", "maturity_date_max": "2030-12-31", "coupon_min": 4 },
+    "compare": { "volatile": ["price", "last_sale_yield", "last_trade_date", "last_trade_time", "price_change", "price_change_percent", "price_type"] },
+    "reason": "live TRACE last sales: Treasuries trade all day, so the last-sale columns move between OpenBB's fetch and the native one"
+  },
+  {
+    "name": "bond-prices-two-cusips",
+    "route": "fixedincome/corporate/bond_prices",
+    "params": { "cusip": "037833EH9,91282CRQ6" },
+    "compare": { "volatile": ["price", "last_sale_yield", "last_trade_date", "last_trade_time", "price_change", "price_change_percent", "price_type"] },
+    "reason": "live TRACE last sales: the bonds may trade between OpenBB's fetch and the native one"
+  },
+  {
+    "name": "bond-prices-abs-limit",
+    "route": "fixedincome/corporate/bond_prices",
+    "params": { "bond_type": "ABS", "limit": 5 }
+  },
+  {
+    "name": "bond-prices-tba-agency",
+    "route": "fixedincome/corporate/bond_prices",
+    "params": { "bond_type": "TBA", "issuer_name": "ginnie", "limit": 5 }
+  },
+  {
+    "name": "bond-prices-mbs-limit",
+    "route": "fixedincome/corporate/bond_prices",
+    "params": { "bond_type": "MBS", "limit": 5 }
+  },
+  {
+    "name": "bond-prices-cmo-limit",
+    "route": "fixedincome/corporate/bond_prices",
+    "params": { "bond_type": "CMO", "limit": 5 }
+  },
+  {
+    "name": "bond-prices-corporate-filters",
+    "route": "fixedincome/corporate/bond_prices",
+    "params": { "issuer_name": "microsoft", "coupon_min": 3.5, "coupon_max": 4.5, "maturity_date_min": "2030-01-01", "ytm_max": 6.5, "limit": 5 }
+  },
+  {
+    "name": "bond-prices-matured",
+    "route": "fixedincome/corporate/bond_prices",
+    "params": { "cusip": "037833AK6", "include_matured": true }
+  },
+  {
+    "name": "securities-closed-end-funds",
+    "route": "finra/equity/securities",
+    "params": { "security_type": "closed_end_fund" },
+    "oracle": "none",
+    "reason": "OpenBB fails this route whenever FINRA lists a symbol newer than its bundled classification: it looks the symbol up in the Market Data Center, which now redirects every request to a web page. The native rows are the FINRA symbol list classified from the bundled asset."
+  }
+]

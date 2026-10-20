@@ -4,11 +4,33 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { frameToObjects } from '@openterminal/core'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import openbb from '../src/index.js'
 import { callRoute } from '../src/call.js'
 import { resetDescriptors } from '../src/descriptors.js'
 import { BASE, connectionRefused, fakeCtx, fixture, status } from './helpers.js'
+
+// These tests pin a world where only cboe's equity/price/quote is ported, so they test the connector's routing and
+// not whichever providers @openterminal/openbb-native has ported by now.
+vi.mock('@openterminal/openbb-native', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@openterminal/openbb-native')>()
+  const ported = new Set(['cboe:equity/price/quote'])
+  const isNative = (route: string, provider: string): boolean => ported.has(`${provider}:${route}`)
+  const nativeDescriptors = () =>
+    real.snapshotDescriptors().flatMap((d) => {
+      const providers = d.providers.filter((p) => isNative(d.route, p))
+      return providers.length ? [real.narrowDescriptor(d, providers)] : []
+    })
+  return {
+    ...real,
+    isNative,
+    nativeHandler: (route: string, provider: string) => (isNative(route, provider) ? real.nativeHandler(route, provider) : undefined),
+    nativePairs: () => [...ported].map((k) => ({ provider: k.split(':')[0]!, route: k.slice(k.indexOf(':') + 1) })),
+    nativeDescriptors,
+    nativeDescriptorFor: (route: string) => nativeDescriptors().find((d) => d.route === route),
+    mergeNativeDescriptors: (live: Parameters<typeof real.mergeNativeDescriptors>[0]) => real.mergeNativeDescriptors(live, nativeDescriptors()),
+  }
+})
 
 const OPENAPI_URL = 'http://127.0.0.1:6900/openapi.json'
 
@@ -87,7 +109,7 @@ describe('native path', () => {
 
   it('health is fine without the API when routes are native, and says the API is optional', async () => {
     const down = fakeCtx({ [`${BASE}/coverage/providers`]: connectionRefused() }, { native: 'prefer' })
-    expect(await openbb.health!(down.ctx)).toMatch(/^\d+ routes native · OpenBB API not running at http:\/\/127\.0\.0\.1:6900 \(optional/)
+    expect(await openbb.health!(down.ctx)).toMatch(/^1 routes native · OpenBB API not running at http:\/\/127\.0\.0\.1:6900 \(optional/)
     const up = fakeCtx({ [`${BASE}/coverage/providers`]: fixture('providers') }, { native: 'prefer' })
     expect(await openbb.health!(up.ctx)).toMatch(/^\d+ routes native · OpenBB API at http:\/\/127\.0\.0\.1:6900 · 3 providers/)
   })
