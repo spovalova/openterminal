@@ -1041,6 +1041,49 @@
   ]
  },
  {
+  "name": "emissions-co2-names",
+  "route": "eia/state_electricity_profiles/emissions_by_state_by_fuel",
+  "params": {
+   "state": "TX"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/electricity/state-electricity-profiles/emissions-by-state-by-fuel/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=co2-rate-lbs-mwh&data%5B1%5D=co2-thousand-metric-tons&data%5B2%5D=nox-rate-lbs-mwh&data%5B3%5D=nox-short-tons&data%5B4%5D=so2-rate-lbs-mwh&data%5B5%5D=so2-short-tons&facets%5Bstateid%5D%5B%5D=TX&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"2\",\"dateFormat\":\"YYYY\",\"frequency\":\"annual\",\"data\":[{\"period\":\"2023\",\"fuelid\":\"COL\",\"fuelDescription\":\"Coal\",\"stateid\":\"TX\",\"stateDescription\":\"Texas\",\"co2-rate-lbs-mwh\":\"2100.5\",\"co2-thousand-metric-tons\":\"40000\",\"nox-rate-lbs-mwh\":\"1.2\",\"nox-short-tons\":\"55000\",\"so2-rate-lbs-mwh\":\"2.1\",\"so2-short-tons\":\"90000\",\"extra2\":\"kept\"},{\"period\":\"2024\",\"fuelid\":\"COL\",\"fuelDescription\":\"Coal\",\"stateid\":\"TX\",\"stateDescription\":\"Texas\",\"co2-rate-lbs-mwh\":\"2050\",\"co2-thousand-metric-tons\":\"38000\",\"nox-rate-lbs-mwh\":\"1.1\",\"nox-short-tons\":\"51000\",\"so2-rate-lbs-mwh\":\"2.0\",\"so2-short-tons\":\"85000\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{\"stateid\":[\"TX\"]}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2023-01-01",
+    "fuel": "COL",
+    "fuel_name": "Coal",
+    "state": "TX",
+    "state_name": "Texas",
+    "co_2_rate_lbs_mwh": 2100.5,
+    "co_2_thousand_metric_tons": 40000.0,
+    "nox_rate_lbs_mwh": 1.2,
+    "nox_short_tons": 55000.0,
+    "so_2_rate_lbs_mwh": 2.1,
+    "so_2_short_tons": 90000.0,
+    "extra2": "kept"
+   },
+   {
+    "date": "2024-01-01",
+    "fuel": "COL",
+    "fuel_name": "Coal",
+    "state": "TX",
+    "state_name": "Texas",
+    "co_2_rate_lbs_mwh": 2050.0,
+    "co_2_thousand_metric_tons": 38000.0,
+    "nox_rate_lbs_mwh": 1.1,
+    "nox_short_tons": 51000.0,
+    "so_2_rate_lbs_mwh": 2.0,
+    "so_2_short_tons": 85000.0
+   }
+  ]
+ },
+ {
   "name": "steo-table-01",
   "route": "commodity/short_term_energy_outlook",
   "params": {

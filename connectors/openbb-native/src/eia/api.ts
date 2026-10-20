@@ -5,7 +5,7 @@
 import { urlencode } from '../lib/urlencode.js'
 import type { NativeCtx, Row } from '../types.js'
 import { MissingCredential } from '../types.js'
-import { parsePeriod, snakeCase, type Dataset } from './catalog.js'
+import { aliasSnake, parsePeriod, snakeCase, type Dataset } from './catalog.js'
 
 export const API_BASE = 'https://api.eia.gov/v2'
 export const PAGE_SIZE = 5000
@@ -191,6 +191,9 @@ export function transformRows(spec: Dataset, rows: Json[], dateFormat: string): 
     dropped.add(`${id}-units`)
     if (isNumeric) numeric.add(name)
   }
+  // The fields the model declares (the facets, their names, the columns) are written out in pydantic's snake case:
+  // `co2_rate_lbs_mwh` is `co_2_rate_lbs_mwh`. Anything else the API sends keeps the name it was given.
+  const declared = new Set([...Object.keys(spec.columns), ...Object.keys(spec.facets).flatMap((canonical) => [canonical, `${canonical}_name`])])
   return rows.map((raw) => {
     const period = parsePeriod(String(raw.period), dateFormat)
     const row: Row = { date: period.iso }
@@ -198,7 +201,7 @@ export function transformRows(spec: Dataset, rows: Json[], dateFormat: string): 
       if (key === 'period' || dropped.has(key)) continue
       const name = facetRenames.get(key) || columnRenames.get(key) || snakeCase(key)
       const cell = numeric.has(name) ? toFloat(value) : value
-      if (cell !== null && cell !== undefined) row[name] = cell
+      if (cell !== null && cell !== undefined) row[declared.has(name) ? aliasSnake(name) : name] = cell
     }
     return { row, time: period.time }
   })

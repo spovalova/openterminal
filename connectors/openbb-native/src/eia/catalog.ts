@@ -39,6 +39,17 @@ type Catalog = {
 
 export const CATALOG = catalogJson as unknown as Catalog
 
+/** pydantic's `to_snake`, which OpenBB's models apply to the name of every declared field when they are written out. */
+export function aliasSnake(name: string): string {
+  return name
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
+    .replace(/([a-z])([A-Z])/g, '$1_$2')
+    .replace(/([0-9])([A-Z])/g, '$1_$2')
+    .replace(/([a-z])([0-9])/g, '$1_$2')
+    .replaceAll('-', '_')
+    .toLowerCase()
+}
+
 /** `snake_case`: API identifiers (`coalRankId`, `area-name`) to field names. */
 export function snakeCase(name: string): string {
   return name.replaceAll('-', '_').replace(/(?<=[a-z0-9])(?=[A-Z])/g, '_').toLowerCase()

@@ -312,6 +312,13 @@ add("aeo-default-release", "eia/aeo", "EiaAeo", {}, data_server(aeo_rows, "YYYY"
 tot_rows = [{"period": "2026-06", "msn": "ELETPUS", "msnDescription": "Electricity Net Generation", "value": "Not Available", "unit": "Million Kilowatthours"}, {"period": "2026-05", "msn": "ELETPUS", "msnDescription": "Electricity Net Generation", "value": "310516.9", "unit": "Million Kilowatthours"}]
 add("total-energy-monthly", "eia/total_energy", "EiaTotalEnergy", {"msn": "eletpus"}, data_server(tot_rows, "YYYY-MM", frequency="monthly"))
 
+# ---- declared fields are written in pydantic's snake case: co2 is co_2
+emissions_rows = [
+    {"period": "2023", "fuelid": "COL", "fuelDescription": "Coal", "stateid": "TX", "stateDescription": "Texas", "co2-rate-lbs-mwh": "2100.5", "co2-thousand-metric-tons": "40000", "nox-rate-lbs-mwh": "1.2", "nox-short-tons": "55000", "so2-rate-lbs-mwh": "2.1", "so2-short-tons": "90000", "extra2": "kept"},
+    {"period": "2024", "fuelid": "COL", "fuelDescription": "Coal", "stateid": "TX", "stateDescription": "Texas", "co2-rate-lbs-mwh": "2050", "co2-thousand-metric-tons": "38000", "nox-rate-lbs-mwh": "1.1", "nox-short-tons": "51000", "so2-rate-lbs-mwh": "2.0", "so2-short-tons": "85000"},
+]
+add("emissions-co2-names", "eia/state_electricity_profiles/emissions_by_state_by_fuel", "EiaStateElectricityProfilesEmissionsByStateByFuel", {"state": "TX"}, data_server(emissions_rows, "YYYY"))
+
 # ---- short-term energy outlook
 steo_rows = []
 for sid, desc, unit in (("COPRPUS", "Crude oil production, United States", "million barrels per day"), ("NGPRPUS", "Dry natural gas production, United States", "billion cubic feet per day"), ("WTIPUUS", "WTI crude oil spot price", "dollars per barrel")):
