@@ -1,0 +1,17 @@
+Open Terminal: native OpenBB providers
+Copyright 2026 The Open Terminal authors
+
+This package contains TypeScript ports of data-provider code from the OpenBB
+Platform (https://github.com/OpenBB-finance/OpenBB), Copyright (c) 2021-2026
+OpenBB Inc., licensed under the Apache License, Version 2.0. The provider
+modules under src/<provider>/ were translated from the Python packages
+openbb_<provider> (OpenBB 5.0.0) and modified: they return OpenBB's result
+rows directly, without pydantic models, and run inside Open Terminal.
+
+The yfinance provider (src/yfinance/) is not a port. It is an independent
+implementation on top of yahoo-finance2 (MIT) that reproduces the output
+schema of OpenBB's public API; the AGPL-licensed openbb-yfinance package was
+not used as a source.
+
+The route catalog in catalog/openbb.json is generated from the OpenAPI
+document that OpenBB Platform 5.0.0 serves.

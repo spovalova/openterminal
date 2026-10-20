@@ -1,0 +1,16 @@
+[
+  {
+    "name": "quote-tsla",
+    "route": "equity/price/quote",
+    "params": { "symbol": "TSLA" },
+    "compare": { "volatile": ["bid", "bid_size", "ask", "ask_size", "last_price", "last_tick", "last_timestamp", "open", "high", "low", "close", "volume", "change", "change_percent", "iv30", "iv30_change", "iv30_change_percent"] },
+    "reason": "live quote: OpenBB and the native side fetch seconds apart, so prices, sizes and intraday IV may move"
+  },
+  {
+    "name": "quote-multi-with-index",
+    "route": "equity/price/quote",
+    "params": { "symbol": "AAPL,SPX,VIX" },
+    "compare": { "volatile": ["bid", "bid_size", "ask", "ask_size", "last_price", "last_tick", "last_timestamp", "open", "high", "low", "close", "volume", "change", "change_percent", "iv30", "iv30_change", "iv30_change_percent"] },
+    "reason": "live quote: OpenBB and the native side fetch seconds apart, so prices, sizes and intraday IV may move"
+  }
+]

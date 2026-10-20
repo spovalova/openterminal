@@ -17,7 +17,8 @@ export function fakeCtx(routes: Record<string, Route>, config: Partial<Config> =
   const inits: (RequestInit | undefined)[] = []
   const logs: string[] = []
   const ctx: Ctx<Config> = {
-    config: ConfigSchema.parse(config),
+    // The API path by default; native.test.ts covers the native one.
+    config: ConfigSchema.parse({ native: 'off', ...config }),
     log: (m) => logs.push(m),
     http: {
       async get(url, init) {

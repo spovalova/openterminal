@@ -23,6 +23,13 @@ export const ConfigSchema = z.object({
   /** Basic auth, only when openbb-api runs with --login. */
   username: z.string().optional(),
   password: z.string().optional(),
+  /**
+   * The TypeScript ports of OpenBB's providers (@openterminal/openbb-native, PLAN.md section 19): `prefer` answers every
+   * ported route natively and the rest through the API; `only` never calls the API; `off` always does.
+   */
+  native: z.enum(['prefer', 'only', 'off']).default('prefer'),
+  /** Keys for keyed providers by OpenBB's names (`fred_api_key`, `eia_api_key`, …); also read from FRED_API_KEY etc. */
+  credentials: z.record(z.string().min(1), z.string()).default({}),
 })
 export type Config = z.infer<typeof ConfigSchema>
 
