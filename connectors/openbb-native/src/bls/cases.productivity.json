@@ -1,0 +1,6 @@
+[
+  { "name": "productivity-tables-quarterly", "route": "bls/productivity/tables", "params": { "dataset": "major-sectors-quarterly", "start_date": "2023-01-01", "end_date": "2024-12-31" }, "fixture": false, "reason": "live parity only: the major-sectors workbook is 4.7 MB, over the 768 KB recording limit" },
+  { "name": "productivity-tables-annual", "route": "bls/productivity/tables", "params": { "dataset": "major-sectors-annual", "measure": "Output per worker", "units": "Index (2017=100)", "start_date": "2018-01-01", "end_date": "2024-12-31" }, "fixture": false, "reason": "live parity only: the major-sectors workbook is 4.7 MB, over the 768 KB recording limit" },
+  { "name": "productivity-tables-business-cycles", "route": "bls/productivity/tables", "params": { "dataset": "major-sectors-business-cycles", "sector": "Nonfarm business sector", "measure": "Labor productivity", "units": "Compound annual growth rate" }, "fixture": false, "reason": "live parity only: the major-sectors workbook is 4.7 MB, over the 768 KB recording limit" },
+  { "name": "productivity-tables-total-economy-hours", "route": "bls/productivity/tables", "params": { "dataset": "total-economy-hours-employment", "sector": "Total economy", "measure": "Hours worked", "units": "Billions of hours", "start_date": "2022-01-01", "end_date": "2024-12-31" } }
+]

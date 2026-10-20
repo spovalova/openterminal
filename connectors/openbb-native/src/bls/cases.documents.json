@@ -1,0 +1,13 @@
+[
+  { "name": "cpi-documents-archived-2024", "route": "bls/cpi/documents", "params": { "category": "archived", "start_date": "2024-01-01", "end_date": "2024-12-31" } },
+  { "name": "cpi-documents-current", "route": "bls/cpi/documents", "params": { "category": "current" } },
+  { "name": "employment-situation-documents-archived-2024", "route": "bls/employment_situation/documents", "params": { "category": "archived", "start_date": "2024-01-01", "end_date": "2024-12-31" } },
+  { "name": "real-earnings-documents-archived-2024", "route": "bls/real_earnings/documents", "params": { "category": "archived", "start_date": "2024-01-01", "end_date": "2024-12-31" } },
+  { "name": "import-export-documents-archived-2024", "route": "bls/import_export/documents", "params": { "category": "archived", "start_date": "2024-01-01", "end_date": "2024-12-31" } },
+  { "name": "jolts-documents-archived-2024", "route": "bls/jolts/documents", "params": { "category": "archived", "start_date": "2024-01-01", "end_date": "2024-12-31" } },
+  { "name": "jolts-documents-state-current", "route": "bls/jolts/documents", "params": { "category": "state" } },
+  { "name": "jolts-documents-jltst-all", "route": "bls/jolts/documents", "params": { "category": "all", "release_code": "jltst", "start_date": "2023-01-01", "end_date": "2023-12-31" } },
+  { "name": "ppi-documents-2023", "route": "bls/ppi/documents", "params": { "year": 2023 } },
+  { "name": "productivity-documents-archived-2023", "route": "bls/productivity/documents", "params": { "category": "archived", "start_date": "2023-01-01", "end_date": "2023-12-31" } },
+  { "name": "productivity-documents-labor-current", "route": "bls/productivity/documents", "params": { "category": "labor_productivity" } }
+]

@@ -1,0 +1,7 @@
+[
+  { "name": "jolts-change-analysis-national-t1", "route": "bls/jolts/change_analysis", "params": { "scope": "national", "table_number": 1 } },
+  { "name": "jolts-change-analysis-national-t7", "route": "bls/jolts/change_analysis", "params": { "scope": "national", "table_number": 7 } },
+  { "name": "jolts-change-analysis-state-t3", "route": "bls/jolts/change_analysis", "params": { "scope": "state", "table_number": 3 } },
+  { "name": "jolts-revisions-sa-total-nonfarm", "route": "bls/jolts/revisions", "params": { "seasonally_adjusted": true, "industry_code": "00" }, "fixture": false, "reason": "live parity only: the revision workbook is 1.7 MB (all industries and measures), over the 768 KB recording limit" },
+  { "name": "jolts-revisions-nsa-private-quits", "route": "bls/jolts/revisions", "params": { "seasonally_adjusted": false, "industry_code": "10", "measure": "Quits" }, "fixture": false, "reason": "live parity only: the revision workbook is 1.7 MB (all industries and measures), over the 768 KB recording limit" }
+]

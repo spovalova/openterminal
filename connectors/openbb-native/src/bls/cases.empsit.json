@@ -1,0 +1,4 @@
+[
+  { "name": "employment-situation-summary-household", "route": "bls/employment_situation/summary_household", "params": {} },
+  { "name": "employment-situation-summary-establishment", "route": "bls/employment_situation/summary_establishment", "params": {} }
+]

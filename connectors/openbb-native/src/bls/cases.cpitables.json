@@ -1,0 +1,12 @@
+[
+  { "name": "cpi-relative-importance-2024-t1", "route": "bls/cpi/relative_importance", "params": { "year": 2024, "table": 1 } },
+  { "name": "cpi-relative-importance-2024-t3", "route": "bls/cpi/relative_importance", "params": { "year": 2024, "table": 3 } },
+  { "name": "cpi-relative-importance-latest", "route": "bls/cpi/relative_importance", "params": {} },
+  { "name": "cpi-seasonal-factors-2021", "route": "bls/cpi/seasonal_factors", "params": { "year": 2021 } },
+  { "name": "cpi-supplemental-cpi-u-regional-2025-06", "route": "bls/cpi/supplemental_tables", "params": { "table": "cpi-u-regional", "date": "2025-06-01" } },
+  { "name": "cpi-supplemental-c-cpi-u-2025-06", "route": "bls/cpi/supplemental_tables", "params": { "table": "c-cpi-u", "date": "2025-06-01" } },
+  { "name": "cpi-supplemental-cpi-w-2025-06", "route": "bls/cpi/supplemental_tables", "params": { "table": "cpi-w", "date": "2025-06-01" } },
+  { "name": "cpi-supplemental-historical-index-2026-06", "route": "bls/cpi/supplemental_tables", "params": { "table": "historical-cpi-u-index", "date": "2026-06-01" } },
+  { "name": "cpi-supplemental-historical-averages-2026-06", "route": "bls/cpi/supplemental_tables", "params": { "table": "historical-cpi-u-averages", "date": "2026-06-01" } },
+  { "name": "cpi-supplemental-latest", "route": "bls/cpi/supplemental_tables", "params": {} }
+]

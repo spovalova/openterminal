@@ -1,0 +1,11 @@
+[
+  { "name": "cpi-t1-expenditure-category-2025-03", "route": "bls/cpi/t1_expenditure_category", "params": { "date": "2025-03-01" } },
+  { "name": "cpi-t2-detailed-expenditure-2025-03", "route": "bls/cpi/t2_detailed_expenditure", "params": { "date": "2025-03-01" } },
+  { "name": "cpi-t3-special-aggregates-2025-03", "route": "bls/cpi/t3_special_aggregates", "params": { "date": "2025-03-01" } },
+  { "name": "cpi-t4-selected-areas-2025-03", "route": "bls/cpi/t4_selected_areas", "params": { "date": "2025-03-01" } },
+  { "name": "cpi-t5-chained-vs-cpiu-2025-03", "route": "bls/cpi/t5_chained_vs_cpiu", "params": { "date": "2025-03-01" } },
+  { "name": "cpi-t6-1m-analysis-2025-03", "route": "bls/cpi/t6_1m_analysis", "params": { "date": "2025-03-01" } },
+  { "name": "cpi-t7-12m-analysis-2025-03", "route": "bls/cpi/t7_12m_analysis", "params": { "date": "2025-03-01" } },
+  { "name": "cpi-t1-expenditure-category-latest", "route": "bls/cpi/t1_expenditure_category", "params": {} },
+  { "name": "cpi-t4-selected-areas-latest", "route": "bls/cpi/t4_selected_areas", "params": {} }
+]
