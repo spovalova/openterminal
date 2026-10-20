@@ -26,6 +26,11 @@ const replaying = new WeakSet<NativeCtx>()
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
+/** Wait `ms` between batches of requests, as OpenBB's `asyncio.sleep` does; not while replaying a recording. */
+export async function pause(ctx: NativeCtx, ms: number): Promise<void> {
+  if (!replaying.has(ctx)) await sleep(ms)
+}
+
 async function secRateLimit(ctx: NativeCtx): Promise<void> {
   if (replaying.has(ctx)) return
   const now = performance.now()
@@ -165,4 +170,26 @@ export function containsIgnoreCase(pattern: string): (s: string) => boolean {
 export function padCik(cik: string | number): string {
   const s = String(cik)
   return s.length < 10 ? '0'.repeat(10 - s.length) + s : s
+}
+
+/** What `str.split()` splits on: Python's whitespace, which is not quite JavaScript's (it has no U+FEFF, but has U+001C to U+001F). */
+const PY_WHITESPACE = new RegExp(
+  `[${[...[9, 10, 11, 12, 13, 32, 0x1c, 0x1d, 0x1e, 0x1f, 0x85, 0xa0, 0x1680, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000], ...Array.from({ length: 11 }, (_, i) => 0x2000 + i)].map((c) => `\\u{${c.toString(16)}}`).join('')}]+`,
+  'u',
+)
+
+/** `" ".join(str(value).split())`: Python's whitespace collapsed to single spaces. */
+export function collapseWhitespace(value: string): string {
+  return value.split(PY_WHITESPACE).filter(Boolean).join(' ')
+}
+
+/** `urllib.parse.urlencode`: quote_plus on keys and values (spaces become "+"; only letters, digits and `_.-~` stay). */
+export function urlencode(params: Record<string, string | number>): string {
+  const quote = (s: string) =>
+    encodeURIComponent(s)
+      .replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
+      .replaceAll('%20', '+')
+  return Object.entries(params)
+    .map(([k, v]) => `${quote(k)}=${quote(String(v))}`)
+    .join('&')
 }

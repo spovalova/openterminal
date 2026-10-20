@@ -8,5 +8,66 @@
     "name": "filings-cik-8k-window",
     "route": "equity/fundamental/filings",
     "params": { "cik": "320193", "form_type": "8-K", "start_date": "2024-01-01", "end_date": "2024-03-31", "limit": 5 }
+  },
+  {
+    "name": "search-apple",
+    "route": "equity/search",
+    "params": { "query": "apple" }
+  },
+  {
+    "name": "search-cik",
+    "route": "equity/search",
+    "params": { "query": "320193" }
+  },
+  {
+    "name": "search-fund",
+    "route": "equity/search",
+    "params": { "query": "VTI", "is_fund": true }
+  },
+  {
+    "name": "cik-map-aapl",
+    "route": "sec/cik_map",
+    "params": { "symbol": "AAPL" }
+  },
+  {
+    "name": "cik-map-etf",
+    "route": "sec/cik_map",
+    "params": { "symbol": "VOO" }
+  },
+  {
+    "name": "symbol-map-aapl",
+    "route": "sec/symbol_map",
+    "params": { "query": "320193" }
+  },
+  {
+    "name": "symbol-map-unknown",
+    "route": "sec/symbol_map",
+    "params": { "query": "1" }
+  },
+  {
+    "name": "institutions-berkshire",
+    "route": "sec/institutions_search",
+    "params": { "query": "berkshire hathaway" },
+    "fixture": false,
+    "reason": "the CIK lookup file the route reads is 40 MB; a recording cannot hold it"
+  },
+  {
+    "name": "sic-search-oil",
+    "route": "sec/sic_search",
+    "params": { "query": "oil" },
+    "oracle": "none",
+    "reason": "OpenBB fails with KeyError 'SIC Code': the SEC moved the page and its header row is td, not th; the port follows the redirect and reads the first row as the header"
+  },
+  {
+    "name": "ftd-aapl-2004q1",
+    "route": "equity/shorts/fails_to_deliver",
+    "params": { "symbol": "AAPL", "limit": 1, "skip_reports": 434 }
+  },
+  {
+    "name": "ftd-aapl-2014",
+    "route": "equity/shorts/fails_to_deliver",
+    "params": { "symbol": "AAPL", "limit": 1, "skip_reports": 300 },
+    "fixture": false,
+    "reason": "the 2014 report zip is 1.4 MB and incompressible, over the 768 KB recording limit; the 2004 case records the same code path"
   }
 ]

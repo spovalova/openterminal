@@ -1,0 +1,49 @@
+[
+  {
+    "name": "latest-reports-10k-day",
+    "route": "sec/latest_financial_reports",
+    "params": { "date": "2025-08-29", "report_type": "10-K" }
+  },
+  {
+    "name": "latest-reports-weekend",
+    "route": "sec/latest_financial_reports",
+    "params": { "date": "2025-08-30", "report_type": "10-K" }
+  },
+  {
+    "name": "latest-reports-holiday-10q",
+    "route": "sec/latest_financial_reports",
+    "params": { "date": "2025-12-25", "report_type": "10-Q" }
+  },
+  {
+    "name": "discovery-latest-reports-day",
+    "route": "equity/discovery/latest_financial_reports",
+    "params": { "date": "2025-12-24" }
+  },
+  {
+    "name": "fts-going-concern-window",
+    "route": "sec/full_text_search",
+    "params": { "query": "\"going concern\"", "start_date": "2024-01-02", "end_date": "2024-01-05", "limit": 5 }
+  },
+  {
+    "name": "fts-entity-form",
+    "route": "sec/full_text_search",
+    "params": { "entity": "Tesla", "form_type": "10-K", "limit": 3 }
+  },
+  {
+    "name": "htm-file-8k-cover",
+    "route": "sec/htm_file",
+    "params": { "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000067/aapl-20240502.htm" }
+  },
+  {
+    "name": "htm-file-10k-large",
+    "route": "sec/htm_file",
+    "params": { "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/aapl-20240928.htm" },
+    "fixture": false,
+    "reason": "the 10-K main document is 1.5 MB, and OpenBB's answer repeats it; the two 8-K cases record the same code path"
+  },
+  {
+    "name": "htm-file-8k-exhibit-query-dropped",
+    "route": "sec/htm_file",
+    "params": { "url": "https://www.sec.gov/Archives/edgar/data/320193/000114036124024352/ef20028273_8k.htm?ignored=1#frag" }
+  }
+]
