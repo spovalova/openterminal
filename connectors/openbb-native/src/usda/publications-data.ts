@@ -1,0 +1,48 @@
+// usda/publications series. Ported from openbb_government_us/usda/utils/ers_publications.py (OpenBB Platform 5.0.0, Apache-2.0); modified: generated as data.
+// Generated from the Python constants (OpenBB Platform 5.0.0, Apache-2.0).
+
+export const SERIES_GROUPS: Record<string, string[]> = {
+  'outlook-reports': ['AES', 'CWS', 'FDS', 'FTS', 'GFA', 'LDPM', 'OCE', 'OCS', 'RCS', 'SSSM', 'TBS', 'VGS', 'WHS'],
+  'research-reports': ['AP', 'CCR', 'EB', 'EIB', 'ERR', 'TB'],
+  'discontinued-reports': ['AER', 'AGES', 'AH', 'AIB', 'AIS', 'AR', 'BIO', 'BLA', 'EFAN', 'FANRR', 'FAU', 'IUS', 'MP', 'RA', 'RDRR', 'SB', 'WAOB', 'WRS'],
+}
+
+export const SERIES_CODES: Record<string, string> = {
+  AES: 'Outlook for U.S. Agricultural Trade',
+  CWS: 'Cotton and Wool Outlook',
+  FDS: 'Feed Outlook',
+  FTS: 'Fruit and Tree Nuts Outlook',
+  GFA: 'Food Security Assessment Situation and Outlook',
+  LDPM: 'Livestock, Dairy, and Poultry Outlook',
+  OCE: 'USDA Agricultural Projections',
+  OCS: 'Oil Crops Outlook',
+  RCS: 'Rice Outlook',
+  SSSM: 'Sugar and Sweeteners Outlook',
+  TBS: 'Tobacco Outlook',
+  VGS: 'Vegetables and Pulses Outlook',
+  WHS: 'Wheat Outlook',
+  AP: 'Administrative Publication',
+  CCR: 'Contractor and Cooperator Reports',
+  EB: 'Economic Brief',
+  EIB: 'Economic Information Bulletin',
+  ERR: 'Economic Research Report',
+  TB: 'Technical Bulletin',
+  AER: 'Agricultural Economic Report',
+  AGES: 'AGES',
+  AH: 'Agricultural Handbook',
+  AIB: 'Agricultural Information Bulletin',
+  AIS: 'Agricultural Income and Finance Outlook',
+  AR: 'Agricultural Resources Situation and Outlook',
+  BIO: 'Bioenergy',
+  BLA: 'Bibliographies and Literature of Agriculture',
+  EFAN: 'Electronic Publications from the Food Assistance & Nutrition Research Program',
+  FANRR: 'Food Assistance & Nutrition Research Program',
+  FAU: 'U.S. Agricultural Trade Update',
+  IUS: 'Industrial Uses of Agricultural Materials Situation and Outlook Report',
+  MP: 'Miscellaneous Publication',
+  RA: 'Rural America',
+  RDRR: 'Rural Development Research Report',
+  SB: 'Statistical Bulletin',
+  WAOB: 'WAOB',
+  WRS: 'International Agriculture and Trade Outlook',
+}
