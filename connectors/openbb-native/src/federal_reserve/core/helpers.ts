@@ -99,7 +99,7 @@ export async function ddpCsv(ctx: NativeCtx, rel: string, series: string): Promi
   return { header: all[5] ?? [], rows: all.slice(6) }
 }
 
-const NAMED_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', reg: '®', copy: '©', ndash: '–', mdash: '—', lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”', hellip: '…', deg: '°', eacute: 'é' }
+const NAMED_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0', reg: '®', copy: '©', ndash: '–', mdash: '—', lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”', hellip: '…', deg: '°', eacute: 'é' }
 
 /** `html.unescape` for the entities the Fed's pages use: the common named ones and numeric references. */
 export function unescapeHtml(s: string): string {

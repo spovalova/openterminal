@@ -51,7 +51,7 @@ export async function loadFrame(ctx: NativeCtx, spec: Pick<SeriesSpec, 'url' | '
 
 /** The rows of a spec's file between the start and end dates, sorted by date. */
 export function seriesRows(frame: Frame, spec: SeriesSpec, start: string | undefined, end: string | undefined, dateFormat: string | undefined = spec.dateFormat): Row[] {
-  let f = renameColumns(frame, spec.rename ?? {})
+  const f = renameColumns(frame, spec.rename ?? {})
   const dateColumn = spec.rename?.[spec.dateColumn] ?? spec.dateColumn
   if (!f.columns.includes(dateColumn)) throw new Error(`KeyError: '${spec.dateColumn}'`)
   const out: { date: string; row: Row }[] = []

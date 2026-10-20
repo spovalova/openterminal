@@ -13,6 +13,10 @@ import { primaryDealerFails, primaryDealerPositioning } from './primary-dealers.
 import { effr, obfr, sofr } from './rates.js'
 import { fredMd, fredQd, nationalIndex } from './stl.js'
 import { emptyAsNoRows } from './helpers.js'
+import { callReport, callReportSectioned } from './cdr/call.js'
+import { customPeerGroup } from './cdr/custom.js'
+import { peerGroupAverage, peerGroupBank, peerGroupDistribution, stateAverage } from './cdr/peers.js'
+import { executiveSummary, listOfBanksPeerGroup, ubpr } from './cdr/ubpr.js'
 
 const routes: ProviderPart['routes'] = {
   'economy/central_bank_holdings': centralBankHoldings,
@@ -37,6 +41,16 @@ const routes: ProviderPart['routes'] = {
   'federal_reserve/chicago/publications': publicationsHandler('chicago'),
   'federal_reserve/chicago/retail_trade': retailTrade,
   'federal_reserve/fed_data': fedData,
+  'federal_reserve/ffiec/call_report': callReport,
+  'federal_reserve/ffiec/call_report_sectioned': callReportSectioned,
+  'federal_reserve/ffiec/custom_peer_group': customPeerGroup,
+  'federal_reserve/ffiec/executive_summary': executiveSummary,
+  'federal_reserve/ffiec/list_of_banks_peer_group': listOfBanksPeerGroup,
+  'federal_reserve/ffiec/peer_group_average': peerGroupAverage,
+  'federal_reserve/ffiec/peer_group_bank': peerGroupBank,
+  'federal_reserve/ffiec/peer_group_distribution': peerGroupDistribution,
+  'federal_reserve/ffiec/state_average': stateAverage,
+  'federal_reserve/ffiec/ubpr': ubpr,
   'federal_reserve/international_portfolio_investment': internationalPortfolioInvestment,
   'federal_reserve/money_market_funds': moneyMarketFunds,
   'federal_reserve/ny/business_leaders': businessLeaders,
@@ -67,9 +81,23 @@ const routes: ProviderPart['routes'] = {
   'fixedincome/rate/sofr': sofr,
 }
 
+// The FFIEC National Information Center (www.ffiec.gov/npw) answers only a browser's TLS fingerprint: a plain HTTPS
+// request gets 403 from Cloudflare, and OpenBB reaches it through curl_cffi impersonation, which a plain fetch cannot do.
+const NIC = 'Reads the FFIEC National Information Center (www.ffiec.gov/npw), which blocks plain HTTPS requests (403 from Cloudflare; OpenBB gets in through curl_cffi browser TLS impersonation), so the OpenBB API keeps answering it.'
+const NIC_DATA = 'Reads the FFIEC E.16 country exposure files on www.ffiec.gov, which blocks plain HTTPS requests (403 from Cloudflare; OpenBB gets in through curl_cffi browser TLS impersonation), so the OpenBB API keeps answering it.'
+
 // federal_reserve, core part: see ../index.ts for which routes belong here. An EmptyDataError (the API's HTTP 204)
 // is no rows.
 export default {
   routes: Object.fromEntries(Object.entries(routes).map(([route, handler]) => [route, emptyAsNoRows(handler)])),
-  skipped: {},
+  skipped: {
+    'federal_reserve/ffiec/bhcpr': NIC,
+    'federal_reserve/ffiec/bhcpr_report': NIC,
+    'federal_reserve/ffiec/country_exposure': NIC_DATA,
+    'federal_reserve/ffiec/financial_report': NIC,
+    'federal_reserve/ffiec/financial_report_pdf': NIC,
+    'federal_reserve/ffiec/institution_structure': NIC,
+    'federal_reserve/ffiec/institutions': NIC,
+    'federal_reserve/ffiec/large_holding_companies': NIC,
+  },
 } satisfies ProviderPart

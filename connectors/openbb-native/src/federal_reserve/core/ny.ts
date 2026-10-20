@@ -5,7 +5,7 @@
 import type { NativeCtx, NativeHandler, Row } from '../../types.js'
 import { readCsv, readSheet, strptime, toDate, type Frame, type Value } from './frame.js'
 import { DAY_MS, EmptyDataError, cmp, request, str } from './helpers.js'
-import { coerceNumber, loadFrame, seriesHandler, seriesRows, type SeriesSpec } from './series.js'
+import { coerceNumber, seriesHandler, seriesRows, type SeriesSpec } from './series.js'
 import { firstSheetCells, isIsoDateCell, pivotWide, rectangular, sheetCells } from './workbook.js'
 
 const BASE_URL = 'https://www.newyorkfed.org'

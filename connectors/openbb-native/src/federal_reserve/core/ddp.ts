@@ -109,7 +109,7 @@ function parseStructure(xml: string): Record<string, Record<string, string>> {
   if (!xml.trim()) return {}
   let root: Node
   try {
-    root = parseXml(xml.replace(/^﻿/, ''))
+    root = parseXml(xml.replace(/^\ufeff/, ''))
   } catch {
     return {}
   }
@@ -193,7 +193,7 @@ type Series = { series_id: string; title: string; frequency?: string; unit?: str
 function parseSeries(xml: string): Series[] {
   if (!xml.trim()) return []
   const out: Series[] = []
-  for (const el of descendants(parseXml(xml.replace(/^﻿/, '')), 'Series')) {
+  for (const el of descendants(parseXml(xml.replace(/^\ufeff/, '')), 'Series')) {
     const seriesId = el['@_SERIES_NAME']
     if (!seriesId) continue
     const annotations: Record<string, string> = {}
