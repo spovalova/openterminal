@@ -12,5 +12,212 @@
     "params": { "symbol": "AAPL,SPX,VIX" },
     "compare": { "volatile": ["bid", "bid_size", "ask", "ask_size", "last_price", "last_tick", "last_timestamp", "open", "high", "low", "close", "volume", "change", "change_percent", "iv30", "iv30_change", "iv30_change_percent"] },
     "reason": "live quote: OpenBB and the native side fetch seconds apart, so prices, sizes and intraday IV may move"
+  },
+  {
+    "name": "equity-search-name",
+    "route": "equity/search",
+    "params": { "query": "apple" }
+  },
+  {
+    "name": "equity-search-symbol",
+    "route": "equity/search",
+    "params": { "query": "^TSL", "is_symbol": true }
+  },
+  {
+    "name": "equity-search-na-symbols",
+    "route": "equity/search",
+    "params": { "query": "^NA", "is_symbol": true }
+  },
+  {
+    "name": "historical-aapl-sep",
+    "route": "equity/price/historical",
+    "params": { "symbol": "AAPL", "start_date": "2026-09-01", "end_date": "2026-09-30" }
+  },
+  {
+    "name": "historical-multi",
+    "route": "equity/price/historical",
+    "params": { "symbol": "AAPL,MSFT", "start_date": "2026-09-14", "end_date": "2026-09-18" }
+  },
+  {
+    "name": "historical-index-symbol",
+    "route": "equity/price/historical",
+    "params": { "symbol": "^SPX", "start_date": "2026-09-14", "end_date": "2026-09-18" }
+  },
+  {
+    "name": "historical-intraday",
+    "route": "equity/price/historical",
+    "params": { "symbol": "ANGO", "interval": "1m" }
+  },
+  {
+    "name": "historical-intraday-multi",
+    "route": "equity/price/historical",
+    "params": { "symbol": "ANGO,YETI", "interval": "1m" }
+  },
+  {
+    "name": "historical-open-end",
+    "route": "equity/price/historical",
+    "params": { "symbol": "TSLA", "start_date": "2026-10-12" }
+  },
+  {
+    "name": "etf-historical-spy",
+    "route": "etf/historical",
+    "params": { "symbol": "SPY", "start_date": "2026-09-01", "end_date": "2026-09-30" }
+  },
+  {
+    "name": "index-historical-spx",
+    "route": "index/price/historical",
+    "params": { "symbol": "SPX", "start_date": "2026-09-14", "end_date": "2026-09-18" }
+  },
+  {
+    "name": "index-historical-intraday",
+    "route": "index/price/historical",
+    "params": { "symbol": "VIX", "interval": "1m" }
+  },
+  {
+    "name": "index-historical-eu-intraday",
+    "route": "index/price/historical",
+    "params": { "symbol": "BUK100P", "interval": "1m", "use_cache": false }
+  },
+  {
+    "name": "historical-ndx",
+    "route": "equity/price/historical",
+    "params": { "symbol": "NDX,AAPL", "start_date": "2026-10-12", "end_date": "2026-10-16" }
+  },
+  {
+    "name": "index-historical-multi",
+    "route": "index/price/historical",
+    "params": { "symbol": "SPX,VIX,^DJX", "start_date": "2026-09-14", "end_date": "2026-09-18" }
+  },
+  {
+    "name": "snapshots-au",
+    "route": "index/snapshots",
+    "params": { "region": "au" }
+  },
+  {
+    "name": "snapshots-eu",
+    "route": "index/snapshots",
+    "params": { "region": "eu" },
+    "compare": { "volatile": ["price", "open", "high", "low", "close", "change", "change_percent", "last_trade_time", "status"] },
+    "reason": "live European index levels: OpenBB and the native side fetch seconds apart"
+  },
+  {
+    "name": "snapshots-us",
+    "route": "index/snapshots",
+    "params": { "region": "us" },
+    "compare": { "rows": "overlap", "minOverlap": 0.98, "minCellMatch": 0.999, "volatile": ["price", "open", "high", "low", "close", "prev_close", "change", "change_percent", "bid", "ask", "last_trade_time", "iv30", "iv30_change", "iv30_change_percent", "tick"] },
+    "reason": "live US index levels (811 indices ticking every few seconds): values move between the two fetches, an index may start or stop quoting in between, and an index whose change was zero (left out, as OpenBB drops zeros) can tick to a non-zero change"
+  },
+  {
+    "name": "constituents-au-eod",
+    "route": "index/constituents",
+    "params": { "symbol": "X2CG" }
+  },
+  {
+    "name": "constituents-au-sod",
+    "route": "index/constituents",
+    "params": { "symbol": "X2C", "session": "sod" }
+  },
+  {
+    "name": "constituents-eu",
+    "route": "index/constituents",
+    "params": { "symbol": "BUK100P" },
+    "compare": { "volatile": ["last_price", "open", "high", "low", "close", "volume", "prev_close", "change", "change_percent", "tick", "last_trade_time", "seqno"] },
+    "reason": "live European constituent quotes: OpenBB and the native side fetch seconds apart"
+  },
+  {
+    "name": "documents-all",
+    "route": "cboe/index/documents",
+    "params": {}
+  },
+  {
+    "name": "documents-factsheet",
+    "route": "cboe/index/documents",
+    "params": { "symbol": "BXMU" }
+  },
+  {
+    "name": "documents-category",
+    "route": "cboe/index/documents",
+    "params": { "symbol": "X2C", "category": "Methodology" }
+  },
+  {
+    "name": "curve-current",
+    "route": "derivatives/futures/curve",
+    "params": { "symbol": "VX_EOD" },
+    "compare": { "volatile": ["price"] },
+    "reason": "live VIX futures quotes: OpenBB and the native side fetch seconds apart"
+  },
+  {
+    "name": "curve-current-am",
+    "route": "derivatives/futures/curve",
+    "params": { "symbol": "VX_AM" },
+    "compare": { "volatile": ["price"] },
+    "reason": "the mid-morning TWAP levels settle for the session, but the lookup runs on live quotes seconds apart"
+  },
+  {
+    "name": "curve-date-eod",
+    "route": "derivatives/futures/curve",
+    "params": { "symbol": "VX", "date": "2026-10-14" }
+  },
+  {
+    "name": "curve-date-am",
+    "route": "derivatives/futures/curve",
+    "params": { "symbol": "VX_AM", "date": "2026-10-14" }
+  },
+  {
+    "name": "curve-weekend-date",
+    "route": "derivatives/futures/curve",
+    "params": { "symbol": "VX_EOD", "date": "2026-10-10" }
+  },
+  {
+    "name": "options-chains-ango",
+    "route": "derivatives/options/chains",
+    "params": { "symbol": "ANGO" }
+  },
+  {
+    "name": "options-chains-index",
+    "route": "derivatives/options/chains",
+    "params": { "symbol": "^DJX" }
+  },
+  {
+    "name": "futures-instruments",
+    "route": "derivatives/futures/instruments",
+    "params": {}
+  },
+  {
+    "name": "settlement-date",
+    "route": "cboe/futures/settlement_prices",
+    "params": { "date": "2026-10-16" }
+  },
+  {
+    "name": "settlement-weekend-falls-back",
+    "route": "cboe/futures/settlement_prices",
+    "params": { "date": "2026-10-17" }
+  },
+  {
+    "name": "settlement-archives",
+    "route": "cboe/futures/settlement_prices",
+    "params": { "archives": true }
+  },
+  {
+    "name": "settlement-options",
+    "route": "cboe/futures/settlement_prices",
+    "params": { "date": "2026-10-15", "options": true },
+    "oracle": "none",
+    "reason": "OpenBB fails every options=true call: Cboe's options settlement CSV carries 'CAB' (cabinet trade) in the Price column and the model parses it as a float. The native rows leave that price empty."
+  },
+  {
+    "name": "index-available",
+    "route": "index/available",
+    "params": {}
+  },
+  {
+    "name": "index-search-name",
+    "route": "index/search",
+    "params": { "query": "volatility" }
+  },
+  {
+    "name": "index-search-symbol",
+    "route": "index/search",
+    "params": { "query": "SP", "is_symbol": true }
   }
 ]

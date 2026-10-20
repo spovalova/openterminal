@@ -1,307 +1,312 @@
-// A minimal legacy .xls reader (BIFF8 inside an OLE2 compound file) for the few spreadsheets the Federal Reserve banks
-// still publish in that format (the counterpart of xlsx.ts, same output): sheet names, numbers (NUMBER, RK, MULRK),
-// shared and inline strings, booleans, errors, formula results, and dates where the cell's number format is a date,
-// as xlrd (through pandas.read_excel) gives them. No formulas, styles beyond the number format, charts or macros.
+// A minimal legacy .xls reader (Excel 97-2003, BIFF8 inside an OLE2 compound file) for the workbooks agencies still
+// publish in that format (EIA's Weekly Petroleum Status Report). It reads what xlrd, and so pandas.read_excel, gives:
+// sheet names, cell values (numbers, strings from the shared string table, booleans, cached formula results) and
+// dates where the cell's number format is a date. Error cells and blanks are null. xlsx files go through lib/xlsx.ts.
 import { excelSerialToIso, type Cell, type Sheet } from './xlsx.js'
 
-const SIGNATURE = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]
-const ENDOFCHAIN = 0xfffffffe
-const FREESECT = 0xffffffff
+export type { Cell, Sheet }
 
-const BUILTIN_DATE_FORMATS = new Set([14, 15, 16, 17, 18, 19, 20, 21, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 45, 46, 47, 50, 51, 52, 53, 54, 55, 56, 57, 58])
-const ERRORS: Record<number, string> = { 0x00: '#NULL!', 0x07: '#DIV/0!', 0x0f: '#VALUE!', 0x17: '#REF!', 0x1d: '#NAME?', 0x24: '#NUM!', 0x2a: '#N/A' }
+const OLE_SIGNATURE = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]
+const END_OF_CHAIN = 0xfffffffe
 
-/** Whether the bytes start like an OLE2 compound file (an .xls), as opposed to a zip (.xlsx). */
-export function isXls(bytes: Uint8Array): boolean {
-  return SIGNATURE.every((b, i) => bytes[i] === b)
-}
+/** The bytes of the "Workbook" (or older "Book") stream of an OLE2 compound file. */
+export function readCompoundStream(bytes: Uint8Array, names: readonly string[] = ['Workbook', 'Book']): Uint8Array {
+  if (bytes.length < 512 || OLE_SIGNATURE.some((b, i) => bytes[i] !== b)) throw new Error('not an OLE2 compound file (an .xls workbook)')
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  const sectorSize = 1 << view.getUint16(30, true)
+  const miniSectorSize = 1 << view.getUint16(32, true)
+  const nFat = view.getUint32(44, true)
+  const firstDirSector = view.getUint32(48, true)
+  const miniCutoff = view.getUint32(56, true)
+  const firstMiniFat = view.getUint32(60, true)
+  const nMiniFat = view.getUint32(64, true)
+  const firstDifat = view.getUint32(68, true)
+  const nDifat = view.getUint32(72, true)
+  const sectorOffset = (n: number) => (n + 1) * sectorSize
 
-/** The bytes of the named stream of an OLE2 compound file. */
-function readStream(file: Uint8Array, names: string[]): Uint8Array {
-  const view = new DataView(file.buffer, file.byteOffset, file.byteLength)
-  const sectorSize = 1 << view.getUint16(0x1e, true)
-  const miniSectorSize = 1 << view.getUint16(0x20, true)
-  const cutoff = view.getUint32(0x38, true)
-  const sector = (n: number): Uint8Array => {
-    const at = (n + 1) * sectorSize
-    if (at + sectorSize > file.length) throw new Error('truncated .xls file')
-    return file.subarray(at, at + sectorSize)
-  }
-
-  // The FAT: the sectors listed in the header's DIFAT (then in the DIFAT chain), each holding sector numbers.
-  const difat: number[] = []
-  for (let i = 0; i < 109; i++) difat.push(view.getUint32(0x4c + i * 4, true))
-  let next = view.getUint32(0x44, true)
-  for (let i = 0; i < view.getUint32(0x48, true) && next !== ENDOFCHAIN && next !== FREESECT; i++) {
-    const s = new DataView(sector(next).slice().buffer)
-    for (let j = 0; j < sectorSize / 4 - 1; j++) difat.push(s.getUint32(j * 4, true))
-    next = s.getUint32(sectorSize - 4, true)
+  // The sectors that hold the FAT: 109 listed in the header, then a chain of DIFAT sectors.
+  const fatSectors: number[] = []
+  for (let i = 0; i < 109 && fatSectors.length < nFat; i++) fatSectors.push(view.getUint32(76 + i * 4, true))
+  let difat = firstDifat
+  for (let i = 0; i < nDifat && difat < END_OF_CHAIN; i++) {
+    const at = sectorOffset(difat)
+    for (let j = 0; j < sectorSize / 4 - 1 && fatSectors.length < nFat; j++) fatSectors.push(view.getUint32(at + j * 4, true))
+    difat = view.getUint32(at + sectorSize - 4, true)
   }
   const fat: number[] = []
-  for (const id of difat) {
-    if (id === FREESECT || id === ENDOFCHAIN) continue
-    const s = new DataView(sector(id).slice().buffer)
-    for (let j = 0; j < sectorSize / 4; j++) fat.push(s.getUint32(j * 4, true))
-  }
+  for (const s of fatSectors) for (let j = 0; j < sectorSize / 4; j++) fat.push(view.getUint32(sectorOffset(s) + j * 4, true))
+
   const chain = (start: number, table: number[]): number[] => {
     const out: number[] = []
-    for (let n = start; n !== ENDOFCHAIN && n !== FREESECT && out.length <= table.length; n = table[n] ?? ENDOFCHAIN) out.push(n)
+    for (let s = start; s < END_OF_CHAIN && out.length <= table.length; s = table[s] ?? END_OF_CHAIN) out.push(s)
     return out
   }
-  const readChain = (start: number): Uint8Array => {
-    const parts = chain(start, fat).map(sector)
-    const out = new Uint8Array(parts.length * sectorSize)
-    parts.forEach((p, i) => out.set(p, i * sectorSize))
+  const readChain = (start: number, size: number): Uint8Array => {
+    const out = new Uint8Array(size)
+    let at = 0
+    for (const s of chain(start, fat)) {
+      if (at >= size) break
+      const part = bytes.subarray(sectorOffset(s), sectorOffset(s) + sectorSize)
+      out.set(part.subarray(0, Math.min(part.length, size - at)), at)
+      at += sectorSize
+    }
     return out
   }
 
-  // The directory.
-  const dir = readChain(view.getUint32(0x30, true))
+  // Directory entries: 128 bytes each, name in UTF-16LE.
+  const dir = readChain(firstDirSector, chain(firstDirSector, fat).length * sectorSize)
   const dv = new DataView(dir.buffer, dir.byteOffset, dir.byteLength)
   type Entry = { name: string; type: number; start: number; size: number }
   const entries: Entry[] = []
   for (let at = 0; at + 128 <= dir.length; at += 128) {
-    const len = dv.getUint16(at + 0x40, true)
-    const name = new TextDecoder('utf-16le').decode(dir.subarray(at, at + Math.max(0, len - 2)))
-    entries.push({ name, type: dir[at + 0x42]!, start: dv.getUint32(at + 0x74, true), size: dv.getUint32(at + 0x78, true) })
+    const nameLength = Math.max(0, dv.getUint16(at + 64, true) - 2)
+    entries.push({ name: new TextDecoder('utf-16le').decode(dir.subarray(at, at + nameLength)), type: dir[at + 66]!, start: dv.getUint32(at + 116, true), size: dv.getUint32(at + 120, true) })
   }
-  const entry = names.map((n) => entries.find((e) => e.type === 2 && e.name === n)).find(Boolean)
-  if (!entry) throw new Error('no Workbook stream in the .xls file')
-
-  if (entry.size >= cutoff) return readChain(entry.start).subarray(0, entry.size)
-  // A short stream lives in the mini stream (the root entry's data), addressed through the mini FAT.
   const root = entries.find((e) => e.type === 5)
-  if (!root) throw new Error('no root entry in the .xls file')
-  const mini = readChain(root.start)
-  const miniFatBytes = readChain(view.getUint32(0x3c, true))
-  const mf = new DataView(miniFatBytes.buffer, miniFatBytes.byteOffset, miniFatBytes.byteLength)
+  const wanted = entries.find((e) => e.type === 2 && names.includes(e.name))
+  if (!wanted) throw new Error(`the compound file has no ${names.join(' or ')} stream`)
+  if (wanted.size >= miniCutoff) return readChain(wanted.start, wanted.size)
+
+  // A small stream lives in the mini stream (the root entry's data), in 64-byte sectors addressed by the mini FAT.
+  if (!root) throw new Error('the compound file has no root entry')
+  const mini = readChain(root.start, root.size)
+  const miniFatBytes = readChain(firstMiniFat, nMiniFat * sectorSize)
+  const mv = new DataView(miniFatBytes.buffer, miniFatBytes.byteOffset, miniFatBytes.byteLength)
   const miniFat: number[] = []
-  for (let i = 0; i + 4 <= miniFatBytes.length; i += 4) miniFat.push(mf.getUint32(i, true))
-  const parts = chain(entry.start, miniFat).map((n) => mini.subarray(n * miniSectorSize, (n + 1) * miniSectorSize))
-  const out = new Uint8Array(parts.length * miniSectorSize)
-  parts.forEach((p, i) => out.set(p, i * miniSectorSize))
-  return out.subarray(0, entry.size)
-}
-
-type Record_ = { type: number; data: Uint8Array; at: number }
-
-/** The BIFF records of a stream from `from`, with CONTINUE records kept separate. */
-function* records(stream: Uint8Array, from = 0): Generator<Record_> {
-  const view = new DataView(stream.buffer, stream.byteOffset, stream.byteLength)
-  for (let at = from; at + 4 <= stream.length; ) {
-    const type = view.getUint16(at, true)
-    const len = view.getUint16(at + 2, true)
-    yield { type, data: stream.subarray(at + 4, at + 4 + len), at }
-    at += 4 + len
-  }
-}
-
-/** A BIFF8 string: u8 or u16 length, flags (bit0: 16-bit characters), characters. Returns the text and the bytes used. */
-function unicodeString(data: Uint8Array, at: number, longLength: boolean): { text: string; end: number } {
-  const dv = new DataView(data.buffer, data.byteOffset, data.byteLength)
-  const cch = longLength ? dv.getUint16(at, true) : data[at]!
-  let p = at + (longLength ? 2 : 1)
-  const flags = data[p++]!
-  if (flags & 0x08) p += 2
-  if (flags & 0x04) p += 4
-  const wide = (flags & 0x01) !== 0
-  const bytes = wide ? cch * 2 : cch
-  const text = wide ? new TextDecoder('utf-16le').decode(data.subarray(p, p + bytes)) : latin1(data.subarray(p, p + bytes))
-  return { text, end: p + bytes }
-}
-
-const latin1 = (b: Uint8Array): string => {
-  let s = ''
-  for (const c of b) s += String.fromCharCode(c)
-  return s
-}
-
-/** The shared string table: SST plus its CONTINUE records, whose broken strings restart with a flags byte. */
-function sharedStrings(segments: Uint8Array[]): string[] {
-  const out: string[] = []
-  let seg = 0
-  let pos = 8 // total and unique counts
-  const unique = new DataView(segments[0]!.buffer, segments[0]!.byteOffset).getUint32(4, true)
-  const u16 = (): number => {
-    const d = segments[seg]!
-    const v = d[pos]! | (d[pos + 1]! << 8)
-    pos += 2
-    return v
-  }
-  const skip = (n: number): void => {
-    while (n > 0 && seg < segments.length) {
-      const left = segments[seg]!.length - pos
-      if (n <= left) {
-        pos += n
-        return
-      }
-      n -= left
-      seg++
-      pos = 0
-    }
-  }
-  for (let i = 0; i < unique && seg < segments.length; i++) {
-    if (pos >= segments[seg]!.length) {
-      seg++
-      pos = 0
-      if (seg >= segments.length) break
-    }
-    const cch = u16()
-    const flags = segments[seg]![pos++]!
-    const runs = flags & 0x08 ? u16() : 0
-    let ext = 0
-    if (flags & 0x04) {
-      const d = segments[seg]!
-      ext = (d[pos]! | (d[pos + 1]! << 8) | (d[pos + 2]! << 16) | (d[pos + 3]! << 24)) >>> 0
-      pos += 4
-    }
-    let wide = (flags & 0x01) !== 0
-    let text = ''
-    let left = cch
-    while (left > 0 && seg < segments.length) {
-      const d = segments[seg]!
-      const size = wide ? 2 : 1
-      const take = Math.min(left, Math.floor((d.length - pos) / size))
-      const chunk = d.subarray(pos, pos + take * size)
-      text += wide ? new TextDecoder('utf-16le').decode(chunk) : latin1(chunk)
-      pos += take * size
-      left -= take
-      if (left > 0) {
-        seg++
-        pos = 0
-        if (seg >= segments.length) break
-        wide = (segments[seg]![pos++]! & 0x01) !== 0
-      }
-    }
-    skip(runs * 4 + ext)
-    out.push(text)
+  for (let i = 0; i + 4 <= miniFatBytes.length; i += 4) miniFat.push(mv.getUint32(i, true))
+  const out = new Uint8Array(wanted.size)
+  let at = 0
+  for (const s of chain(wanted.start, miniFat)) {
+    if (at >= wanted.size) break
+    const part = mini.subarray(s * miniSectorSize, (s + 1) * miniSectorSize)
+    out.set(part.subarray(0, Math.min(part.length, wanted.size - at)), at)
+    at += miniSectorSize
   }
   return out
 }
 
-/** A BIFF RK number. */
-function rkValue(rk: number): number {
-  let v: number
-  if (rk & 2) v = rk >> 2
-  else {
-    const b = new DataView(new ArrayBuffer(8))
-    b.setUint32(4, (rk & 0xfffffffc) >>> 0, true)
-    v = b.getFloat64(0, true)
-  }
-  return rk & 1 ? v / 100 : v
+type Rec = { id: number; start: number; end: number }
+
+const REC = { BOF: 0x0809, EOF: 0x000a, CONTINUE: 0x003c, SST: 0x00fc, BOUNDSHEET: 0x0085, DATEMODE: 0x0022, FORMAT: 0x041e, XF: 0x00e0, LABELSST: 0x00fd, LABEL: 0x0204, RSTRING: 0x00d6, NUMBER: 0x0203, RK: 0x027e, MULRK: 0x00bd, FORMULA: 0x0006, STRING: 0x0207, BOOLERR: 0x0205 }
+
+const CELL_RECORDS = new Set([REC.LABELSST, REC.LABEL, REC.RSTRING, REC.NUMBER, REC.RK, REC.MULRK, REC.BOOLERR, REC.FORMULA])
+
+/** Excel's built-in number format ids that show a date or time (xlrd's fmt_code_ranges). */
+function isBuiltinDateFormat(id: number): boolean {
+  return (id >= 14 && id <= 22) || (id >= 27 && id <= 36) || (id >= 45 && id <= 47) || (id >= 50 && id <= 58) || (id >= 71 && id <= 81)
 }
 
-/** Every sheet of an .xls workbook, in workbook order (the counterpart of `readXlsx`). */
-export function readXls(bytes: Uint8Array): Sheet[] {
-  if (!isXls(bytes)) throw new Error('not an .xls file (OLE2 compound file expected)')
-  const stream = readStream(bytes, ['Workbook', 'Book'])
+/** A custom format string shows a date when, outside quotes, brackets and escapes, it has date or time codes. */
+function isDateFormatString(format: string): boolean {
+  const code = format.replace(/"[^"]*"|\[[^\]]*\]|\\.|_.|\*./g, '')
+  return /[dmyhs]/i.test(code) && !/^general$/i.test(code.trim())
+}
 
-  // Workbook globals: date mode, number formats, XF → format, shared strings, sheet list.
-  let date1904 = false
+/** Every sheet of a workbook, in workbook order. */
+export function readXls(bytes: Uint8Array): Sheet[] {
+  const book = readCompoundStream(bytes)
+  const view = new DataView(book.buffer, book.byteOffset, book.byteLength)
+  const u16 = (at: number) => view.getUint16(at, true)
+  const u32 = (at: number) => view.getUint32(at, true)
+
+  // Records: 2-byte id, 2-byte length, payload.
+  const records: Rec[] = []
+  for (let at = 0; at + 4 <= book.length; ) {
+    const length = u16(at + 2)
+    records.push({ id: u16(at), start: at + 4, end: Math.min(at + 4 + length, book.length) })
+    at += 4 + length
+  }
+
+  /** A BIFF8 unicode string at `at` (length of `lengthBytes` first); returns the text and where it ends. */
+  const readString = (at: number, lengthBytes: 1 | 2): { text: string; next: number } => {
+    const cch = lengthBytes === 1 ? book[at]! : u16(at)
+    let p = at + lengthBytes
+    const flags = book[p++]!
+    const rich = (flags & 0x08) !== 0 ? u16(p) : 0
+    if (flags & 0x08) p += 2
+    const ext = (flags & 0x04) !== 0 ? u32(p) : 0
+    if (flags & 0x04) p += 4
+    const wide = (flags & 0x01) !== 0
+    const text = wide ? new TextDecoder('utf-16le').decode(book.subarray(p, p + cch * 2)) : latin1(book.subarray(p, p + cch))
+    return { text, next: p + (wide ? cch * 2 : cch) + rich * 4 + ext }
+  }
+
+  let dateMode1904 = false
   const formats = new Map<number, string>()
   const xfFormat: number[] = []
+  const sheetsMeta: { name: string; position: number; kind: number }[] = []
   let sst: string[] = []
-  const boundSheets: { name: string; offset: number }[] = []
-  let depth = 0
-  const sstSegments: Uint8Array[] = []
-  let inSst = false
-  for (const r of records(stream)) {
-    if (inSst && r.type === 0x003c) {
-      sstSegments.push(r.data)
-      continue
-    }
-    if (inSst) {
-      sst = sharedStrings(sstSegments)
-      inSst = false
-    }
-    const dv = new DataView(r.data.buffer, r.data.byteOffset, r.data.byteLength)
-    if (r.type === 0x0809) depth++
-    else if (r.type === 0x000a) {
-      depth--
-      if (depth <= 0) break
-    } else if (r.type === 0x0022) date1904 = dv.getUint16(0, true) === 1
-    else if (r.type === 0x041e) formats.set(dv.getUint16(0, true), unicodeString(r.data, 2, true).text)
-    else if (r.type === 0x00e0) xfFormat.push(dv.getUint16(2, true))
-    else if (r.type === 0x00fc) {
-      sstSegments.length = 0
-      sstSegments.push(r.data)
-      inSst = true
-    } else if (r.type === 0x0085) boundSheets.push({ offset: dv.getUint32(0, true), name: unicodeString(r.data, 6, false).text })
-  }
-  if (inSst) sst = sharedStrings(sstSegments)
 
-  const isDateFormat = (xf: number): boolean => {
-    const id = xfFormat[xf]
-    if (id === undefined) return false
-    if (BUILTIN_DATE_FORMATS.has(id)) return true
-    const code = formats.get(id)
-    return code !== undefined && /[ymd]/i.test(code.replace(/"[^"]*"|\[[^\]]*\]|\\./g, ''))
-  }
-  const number = (xf: number, v: number): Cell => (isDateFormat(xf) ? excelSerialToIso(date1904 ? v + 1462 : v) : v)
-
-  return boundSheets.map(({ name, offset }) => {
-    const rows: Cell[][] = []
-    const put = (r: number, c: number, v: Cell): void => {
-      const row = (rows[r] ??= [])
-      for (let i = row.length; i < c; i++) row[i] = null
-      row[c] = v
+  // Workbook globals: everything before the first worksheet's BOF.
+  let i = 0
+  for (; i < records.length; i++) {
+    const r = records[i]!
+    if (r.id === REC.BOF && i > 0) break
+    if (r.id === REC.BOF) {
+      const version = u16(r.start)
+      if (version !== 0x0600) throw new Error(`unsupported .xls version 0x${version.toString(16)}: only Excel 97-2003 (BIFF8) workbooks can be read`)
+    } else if (r.id === REC.DATEMODE) dateMode1904 = u16(r.start) === 1
+    else if (r.id === REC.FORMAT) formats.set(u16(r.start), readString(r.start + 2, 2).text)
+    else if (r.id === REC.XF) xfFormat.push(u16(r.start + 2))
+    else if (r.id === REC.BOUNDSHEET) sheetsMeta.push({ position: u32(r.start), kind: book[r.start + 5]!, name: readString(r.start + 6, 1).text })
+    else if (r.id === REC.SST) {
+      // The table continues in CONTINUE records, which can split a string anywhere.
+      const chunks: Rec[] = [r]
+      while (records[i + 1]?.id === REC.CONTINUE) chunks.push(records[++i]!)
+      sst = readSharedStrings(book, chunks)
     }
-    let level = 0
-    let pendingFormula: [number, number] | undefined
-    for (const rec of records(stream, offset)) {
-      const d = rec.data
-      const dv = new DataView(d.buffer, d.byteOffset, d.byteLength)
-      if (rec.type === 0x0809) {
-        level++
-        continue
+  }
+  const isDateXf = (xf: number): boolean => {
+    const format = xfFormat[xf]
+    if (format === undefined) return false
+    const custom = formats.get(format)
+    return custom !== undefined ? isDateFormatString(custom) : isBuiltinDateFormat(format)
+  }
+  const toDate = (serial: number): string => excelSerialToIso(dateMode1904 ? serial + 1462 : serial)
+
+  const decodeRk = (rk: number): number => {
+    let value: number
+    if (rk & 2) value = rk >> 2
+    else {
+      const buf = new DataView(new ArrayBuffer(8))
+      buf.setUint32(4, (rk & 0xfffffffc) >>> 0, true)
+      value = buf.getFloat64(0, true)
+    }
+    return rk & 1 ? value / 100 : value
+  }
+
+  const byPosition = new Map(records.map((r, idx) => [r.start - 4, idx]))
+  return sheetsMeta
+    .filter((m) => m.kind === 0)
+    .map((meta) => {
+      const rows: Cell[][] = []
+      const put = (row: number, col: number, value: Cell) => {
+        const line = (rows[row] ??= [])
+        line[col] = value
       }
-      if (rec.type === 0x000a) {
-        if (--level <= 0) break
-        continue
-      }
-      if (level !== 1) continue
-      switch (rec.type) {
-        case 0x00fd:
-          put(dv.getUint16(0, true), dv.getUint16(2, true), sst[dv.getUint32(6, true)] ?? null)
-          break
-        case 0x0204:
-          put(dv.getUint16(0, true), dv.getUint16(2, true), unicodeString(d, 6, true).text)
-          break
-        case 0x0203:
-          put(dv.getUint16(0, true), dv.getUint16(2, true), number(dv.getUint16(4, true), dv.getFloat64(6, true)))
-          break
-        case 0x027e:
-          put(dv.getUint16(0, true), dv.getUint16(2, true), number(dv.getUint16(4, true), rkValue(dv.getUint32(6, true))))
-          break
-        case 0x00bd: {
-          const row = dv.getUint16(0, true)
-          const first = dv.getUint16(2, true)
-          const count = (d.length - 6) / 6
-          for (let i = 0; i < count; i++) put(row, first + i, number(dv.getUint16(4 + i * 6, true), rkValue(dv.getUint32(6 + i * 6, true))))
-          break
+      let pendingFormula: { row: number; col: number } | undefined
+      for (let k = byPosition.get(meta.position) ?? records.length; k < records.length; k++) {
+        const r = records[k]!
+        if (r.id === REC.EOF) break
+        if (r.id === REC.STRING) {
+          // The text of the formula cell just before it.
+          if (pendingFormula) put(pendingFormula.row, pendingFormula.col, readString(r.start, 2).text)
+          pendingFormula = undefined
+          continue
         }
-        case 0x0205:
-          put(dv.getUint16(0, true), dv.getUint16(2, true), d[7] ? (ERRORS[d[6]!] ?? '#VALUE!') : d[6] !== 0)
-          break
-        case 0x0006: {
-          const row = dv.getUint16(0, true)
-          const col = dv.getUint16(2, true)
-          if (dv.getUint16(12, true) === 0xffff) {
-            if (d[6] === 0) pendingFormula = [row, col]
-            else if (d[6] === 1) put(row, col, d[8] !== 0)
-            else if (d[6] === 2) put(row, col, ERRORS[d[8]!] ?? '#VALUE!')
-          } else put(row, col, number(dv.getUint16(4, true), dv.getFloat64(6, true)))
-          break
-        }
-        case 0x0207:
-          if (pendingFormula) {
-            put(pendingFormula[0], pendingFormula[1], unicodeString(d, 0, true).text)
-            pendingFormula = undefined
+        if (!CELL_RECORDS.has(r.id) || r.end - r.start < 6) continue
+        const row = u16(r.start)
+        const col = u16(r.start + 2)
+        const xf = u16(r.start + 4)
+        switch (r.id) {
+          case REC.LABELSST:
+            put(row, col, sst[u32(r.start + 6)] ?? null)
+            break
+          case REC.LABEL:
+          case REC.RSTRING:
+            put(row, col, readString(r.start + 6, 2).text)
+            break
+          case REC.NUMBER: {
+            const n = view.getFloat64(r.start + 6, true)
+            put(row, col, isDateXf(xf) ? toDate(n) : n)
+            break
           }
-          break
-        default:
+          case REC.RK: {
+            const n = decodeRk(u32(r.start + 6))
+            put(row, col, isDateXf(xf) ? toDate(n) : n)
+            break
+          }
+          case REC.MULRK: {
+            // row, first column, (xf, rk) pairs, last column.
+            const last = u16(r.end - 2)
+            for (let c = col, p = r.start + 4; c <= last && p + 6 <= r.end - 2; c++, p += 6) {
+              const n = decodeRk(u32(p + 2))
+              put(row, c, isDateXf(u16(p)) ? toDate(n) : n)
+            }
+            break
+          }
+          case REC.BOOLERR:
+            put(row, col, book[r.start + 7] === 0 ? book[r.start + 6] === 1 : null)
+            break
+          case REC.FORMULA: {
+            // The cached result: a double, or a flag byte plus 0xFFFF when it is a string, boolean, error or empty.
+            if (u16(r.start + 12) === 0xffff) {
+              const type = book[r.start + 6]!
+              if (type === 0) pendingFormula = { row, col }
+              else if (type === 1) put(row, col, book[r.start + 8] === 1)
+              else put(row, col, null)
+            } else {
+              const n = view.getFloat64(r.start + 6, true)
+              put(row, col, isDateXf(xf) ? toDate(n) : n)
+            }
+            break
+          }
+        }
       }
+      return { name: meta.name, rows: Array.from(rows, (line) => (line ? Array.from(line, (c) => c ?? null) : [])) }
+    })
+}
+
+function latin1(bytes: Uint8Array): string {
+  let s = ''
+  for (const b of bytes) s += String.fromCharCode(b)
+  return s
+}
+
+/** The shared string table across its SST and CONTINUE records (xlrd's unpack_SST_table). */
+function readSharedStrings(book: Uint8Array, chunks: Rec[]): string[] {
+  const view = new DataView(book.buffer, book.byteOffset, book.byteLength)
+  let ci = 0
+  let p = chunks[0]!.start + 8 // after the total and unique counts
+  const unique = view.getUint32(chunks[0]!.start + 4, true)
+  const out: string[] = []
+  const next = (): boolean => {
+    if (++ci >= chunks.length) return false
+    p = chunks[ci]!.start
+    return true
+  }
+  /** Bytes still available in the current chunk. */
+  const left = () => chunks[ci]!.end - p
+  while (out.length < unique && ci < chunks.length) {
+    if (left() < 3 && !next()) break
+    const cch = view.getUint16(p, true)
+    const flags = book[p + 2]!
+    p += 3
+    const rich = flags & 0x08 ? view.getUint16(p, true) : 0
+    if (flags & 0x08) p += 2
+    const ext = flags & 0x04 ? view.getUint32(p, true) : 0
+    if (flags & 0x04) p += 4
+    let wide = (flags & 0x01) !== 0
+    let text = ''
+    let remaining = cch
+    while (remaining > 0) {
+      if (left() <= 0) {
+        // The characters go on in the next chunk, which starts with its own width flag.
+        if (!next()) break
+        wide = (book[p]! & 0x01) !== 0
+        p += 1
+      }
+      const take = Math.min(remaining, Math.floor(left() / (wide ? 2 : 1)))
+      if (take <= 0) {
+        if (!next()) break
+        wide = (book[p]! & 0x01) !== 0
+        p += 1
+        continue
+      }
+      const part = book.subarray(p, p + take * (wide ? 2 : 1))
+      text += wide ? new TextDecoder('utf-16le').decode(part) : latin1(part)
+      p += part.length
+      remaining -= take
     }
-    return { name, rows: Array.from(rows, (r) => (r ? Array.from(r, (c) => (c === undefined ? null : c)) : [])) }
-  })
+    // Formatting runs (4 bytes each) and the phonetic block follow the characters; either may reach into the next chunk.
+    let skip = rich * 4 + ext
+    while (skip > 0) {
+      const n = Math.min(skip, left())
+      p += n
+      skip -= n
+      if (skip > 0 && !next()) break
+    }
+    out.push(text)
+  }
+  return out
 }

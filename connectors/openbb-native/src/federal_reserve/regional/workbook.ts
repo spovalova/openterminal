@@ -2,7 +2,7 @@
 // openbb_federal_reserve/utils/workbook.py (OpenBB Platform 5.0.0, Apache-2.0); modified: plain arrays instead of
 // pandas frames. `readGrid` and the date/number coercions reproduce what `pandas.read_excel(header=None)`,
 // `to_datetime(format="mixed", errors="coerce")` and `to_numeric(errors="coerce")` give the Python code.
-import { isXls, readXls } from '../../lib/xls.js'
+import { readXls } from '../../lib/xls.js'
 import { readXlsx, type Cell, type Sheet } from '../../lib/xlsx.js'
 import type { Row } from '../../types.js'
 
@@ -16,7 +16,8 @@ function readSheets(bytes: Uint8Array): Sheet[] {
   // Parsing a big workbook takes seconds: a download is cached as one byte array, and so is what is parsed from it.
   let sheets = parsedWorkbooks.get(bytes)
   if (!sheets) {
-    sheets = isXls(bytes) ? readXls(bytes) : readXlsx(bytes)
+    // An OLE2 compound file (D0 CF 11 E0) is a legacy .xls, a zip an .xlsx.
+    sheets = bytes[0] === 0xd0 && bytes[1] === 0xcf ? readXls(bytes) : readXlsx(bytes)
     parsedWorkbooks.set(bytes, sheets)
   }
   return sheets
