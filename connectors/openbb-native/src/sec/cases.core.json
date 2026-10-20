@@ -1,0 +1,12 @@
+[
+  {
+    "name": "company-filings-aapl-10k",
+    "route": "sec/company_filings",
+    "params": { "symbol": "AAPL", "form_type": "10-K", "start_date": "2022-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "filings-cik-8k-window",
+    "route": "equity/fundamental/filings",
+    "params": { "cik": "320193", "form_type": "8-K", "start_date": "2024-01-01", "end_date": "2024-03-31", "limit": 5 }
+  }
+]
