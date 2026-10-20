@@ -18,7 +18,7 @@ import taxonomy from './taxonomy/index.js'
 export default defineProvider({
   name: 'sec',
   credentials: [],
-  status: 'todo',
+  status: 'ported',
   routes: { ...core.routes, ...markdown.routes, ...filing.routes, ...taxonomy.routes, ...facts.routes },
   skipped: { ...core.skipped, ...markdown.skipped, ...filing.skipped, ...taxonomy.skipped, ...facts.skipped },
 })
