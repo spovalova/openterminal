@@ -1,0 +1,32 @@
+// UBPR report sections. Ported from openbb_federal_reserve/utils/custom_peer_group.py (OpenBB Platform 5.0.0, Apache-2.0); modified: generated as a TypeScript constant.
+
+export const UBPR_SECTIONS: string[] = [
+  'Summary Ratios',
+  'Income Statement $',
+  'QTR Income Statement $',
+  'Noninterest Income and Expenses',
+  'Asset Yields and Funding Costs',
+  'Balance Sheet $',
+  'Off Balance Sheet Items',
+  'Derivative Instruments',
+  'Derivative Analysis',
+  'Balance Sheet %',
+  'Allowance & Loan Mix-a',
+  'Allowance & Loan Mix-b',
+  'Concentrations of Credit',
+  'PD, Nonacc & Rest Loans-a',
+  'PD, Nonacc & Rest Loans-b',
+  'Interest Rate Risk-a',
+  'Interest Rate Risk-b',
+  'Liquidity & Funding',
+  'Liquidity & Inv Portfolio',
+  'Capital Analysis-a',
+  'Capital Analysis-b',
+  'Capital Analysis-c',
+  'Income Statement 1-Qtr-Ann',
+  'Securitization & Asset Sale-a',
+  'Securitization & Asset Sale-b',
+  'Securitization & Asset Sale-c',
+  'Fiduciary Services-a',
+  'Fiduciary Services-b'
+]
