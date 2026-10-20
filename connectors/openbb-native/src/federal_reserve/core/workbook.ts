@@ -1,6 +1,7 @@
 // Shared parsing for Federal Reserve statistical workbooks. Ported from openbb_federal_reserve/utils/workbook.py
 // (OpenBB Platform 5.0.0, Apache-2.0); modified: the shared xlsx reader instead of pandas and openpyxl.
-import { readXlsx, type Cell } from '../../lib/xlsx.js'
+import { readXls } from '../../lib/xls.js'
+import { readXlsx, type Cell, type Sheet } from '../../lib/xlsx.js'
 import type { Row } from '../../types.js'
 import { toDate } from './frame.js'
 import { cmp } from './helpers.js'
@@ -37,11 +38,35 @@ function text(v: Cell | undefined): string {
   return String(v).split(/\s+/).filter(Boolean).join(' ')
 }
 
+/** Every sheet of an .xlsx or legacy .xls workbook (pandas picks the reader the same way). */
+export function readWorkbook(content: Uint8Array): Sheet[] {
+  const isLegacy = content[0] === 0xd0 && content[1] === 0xcf && content[2] === 0x11 && content[3] === 0xe0
+  return isLegacy ? readXls(content) : readXlsx(content)
+}
+
 /** The sheet's cells as `read_excel(header=None)` gives them. */
 export function sheetCells(content: Uint8Array, name: string): Cell[][] {
-  const sheet = readXlsx(content).find((s) => s.name === name)
+  const sheet = readWorkbook(content).find((s) => s.name === name)
   if (!sheet) throw new Error(`Worksheet named '${name}' not found`)
   return sheet.rows
+}
+
+/** The first sheet's cells (`read_excel` without `sheet_name`). */
+export function firstSheetCells(content: Uint8Array): Cell[][] {
+  const sheet = readWorkbook(content)[0]
+  if (!sheet) throw new Error('Workbook has no sheets')
+  return sheet.rows
+}
+
+/** `DataFrame` shape of a header-less sheet: every row as wide as the widest, gaps missing. */
+export function rectangular(rows: Cell[][]): Cell[][] {
+  const width = Math.max(...rows.map((r) => r.length), 0)
+  return rows.map((r) => Array.from({ length: width }, (_, i) => r[i] ?? null))
+}
+
+/** An Excel date cell, which the shared reader gives as an ISO date or datetime. */
+export function isIsoDateCell(v: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?$/.test(v)
 }
 
 /** `to_datetime(value, errors="coerce", format="mixed")` of a sheet cell. */

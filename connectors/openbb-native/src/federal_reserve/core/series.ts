@@ -3,9 +3,9 @@
 // openbb_federal_reserve/models/regional/*.py models (OpenBB Platform 5.0.0, Apache-2.0); modified: one function
 // driven by a spec instead of one pydantic model each.
 import type { NativeCtx, NativeHandler, NativeParams, Row } from '../../types.js'
-import { readXlsx } from '../../lib/xlsx.js'
 import { readCsv, readSheet, renameColumns, rowOut, toDate, type Frame, type Value } from './frame.js'
 import { DAY_MS, EmptyDataError, request, str } from './helpers.js'
+import { readWorkbook } from './workbook.js'
 
 export type SeriesSpec = {
   url: string
@@ -24,6 +24,8 @@ export type SeriesSpec = {
   drop?: string[]
   /** `frame[["date", *columns]]` with `to_numeric(errors="coerce")` on each. */
   numeric?: string[]
+  /** `frame[["date", *columns]]`: only these columns (renamed names) besides the date. */
+  select?: string[]
   /** Rows to skip at the top of the CSV. */
   skipRows?: number
 }
@@ -38,7 +40,7 @@ export function coerceNumber(v: Value | undefined): number | null {
 export async function loadFrame(ctx: NativeCtx, spec: Pick<SeriesSpec, 'url' | 'sheet' | 'header' | 'skipRows'>): Promise<Frame> {
   if (spec.sheet !== undefined) {
     const bytes = await ctx.cache(`fed:file:${spec.url}`, DAY_MS, () => ctx.http.bytes(spec.url, request({ timeoutMs: 60_000 })))
-    const sheet = readXlsx(bytes).find((s) => s.name === spec.sheet)
+    const sheet = readWorkbook(bytes).find((s) => s.name === spec.sheet)
     if (!sheet) throw new Error(`Worksheet named '${spec.sheet}' not found`)
     return readSheet(sheet.rows, spec.header ?? 0)
   }
@@ -66,6 +68,7 @@ export function seriesRows(frame: Frame, spec: SeriesSpec, start: string | undef
     for (const c of f.columns) {
       if (c === dateColumn || spec.drop?.includes(c)) continue
       if (spec.numeric && !spec.numeric.includes(c)) continue
+      if (spec.select && !spec.select.includes(c)) continue
       row[c] = spec.numeric ? coerceNumber(r[c]) : r[c]
     }
     out.push({ date, row: rowOut(row) })
