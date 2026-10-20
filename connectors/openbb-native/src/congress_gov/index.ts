@@ -8,7 +8,7 @@ import { memberRoutes } from './members.js'
 export default defineProvider({
   name: 'congress_gov',
   credentials: ['congress_gov_api_key'],
-  status: 'todo',
+  status: 'ported',
   routes: {
     ...amendmentRoutes,
     ...billRoutes,

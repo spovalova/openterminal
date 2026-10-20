@@ -69,14 +69,14 @@ export type SocrataRow = Record<string, unknown>
 
 /**
  * One Socrata query: the URL as Python builds it (spaces and quotes unescaped; fetch escapes them), the app token
- * appended when there is one. The portal answers an outage with a non-JSON page, which OpenBB reports as such.
+ * sent as the X-App-Token header when there is one (Python appends `$$app_token` to the URL; Socrata takes both, and
+ * a header keeps the token out of the URL a recording or a replay matches on). The portal answers an outage with a non-JSON page, which OpenBB reports as such.
  */
 export async function socrataJson(ctx: NativeCtx, url: string): Promise<unknown> {
   const token = ctx.credential('cftc_app_token')
   // aiohttp (yarl) re-quotes a `%` that does not start an escape (`like UPPER('%silver%')`); fetch would leave it as is.
-  const full = token ? `${url}&$$app_token=${token}` : url
-  const requestUrl = full.replace(/%(?![0-9A-Fa-f]{2})/g, '%25')
-  const res = await ctx.http.response(requestUrl, { timeoutMs: 120_000 })
+  const requestUrl = url.replace(/%(?![0-9A-Fa-f]{2})/g, '%25')
+  const res = await ctx.http.response(requestUrl, { timeoutMs: 120_000, ...(token ? { headers: { 'X-App-Token': token } } : {}) })
   const type = res.headers.get('content-type') ?? ''
   if (res.status !== 200 || !type.includes('json')) {
     throw new Error(`The CFTC public reporting API returned HTTP ${res.status} (${type || 'no content type'}). The portal is likely undergoing maintenance or is temporarily unavailable - try again shortly.`)
