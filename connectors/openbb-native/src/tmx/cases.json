@@ -232,6 +232,20 @@
     "reason": "live chain: quotes, sizes and the greeks computed from them move between OpenBB's call and the native one; the contracts themselves are compared exactly"
   },
   {
+    "name": "options-chains-eod-ry",
+    "route": "derivatives/options/chains",
+    "params": { "symbol": "RY", "date": "2026-10-16" },
+    "oracle": "none",
+    "reason": "OpenBB's end-of-day path fails on the Montreal Exchange's current CSV (28 columns where it maps 21 by position: 'Length mismatch'); the port reads the columns by name, so its rows are pinned as they are"
+  },
+  {
+    "name": "options-chains-eod-weekend-agf",
+    "route": "derivatives/options/chains",
+    "params": { "symbol": "AGF.B", "date": "2026-10-17" },
+    "oracle": "none",
+    "reason": "OpenBB's end-of-day path fails on the Montreal Exchange's current CSV (28 columns where it maps 21 by position: 'Length mismatch'); the port reads the columns by name. A Saturday moves to the next trading day and AGF.B resolves to its option symbol AGF"
+  },
+  {
     "name": "covered-calls-ry",
     "route": "tmx/derivatives/options/covered_calls",
     "params": { "symbol": "RY" },
@@ -241,23 +255,85 @@
   {
     "name": "futures-instruments-default",
     "route": "derivatives/futures/instruments",
-    "params": {},
-    "compare": { "ignore": ["expiry_cycle", "has_long_term_options"] },
-    "reason": "expiry_cycle and has_long_term_options come from a PDF (cycles_opt_en.pdf, read with pdfplumber in Python) the port does not read; only one futures row (SMO) has them"
+    "params": {}
   },
   {
     "name": "futures-instruments-index-derivatives",
     "route": "derivatives/futures/instruments",
-    "params": { "asset_class": "index_derivative" },
-    "compare": { "ignore": ["expiry_cycle", "has_long_term_options"] },
-    "reason": "expiry_cycle and has_long_term_options come from a PDF (cycles_opt_en.pdf, read with pdfplumber in Python) the port does not read"
+    "params": { "asset_class": "index_derivative" }
+  },
+  {
+    "name": "futures-instruments-equity-options",
+    "route": "derivatives/futures/instruments",
+    "params": { "asset_class": "equity_option", "instrument_type": "option" }
   },
   {
     "name": "futures-instruments-etf-options",
     "route": "derivatives/futures/instruments",
-    "params": { "asset_class": "etf_option", "instrument_type": "option" },
-    "compare": { "ignore": ["expiry_cycle", "has_long_term_options"] },
-    "reason": "expiry_cycle and has_long_term_options come from a PDF (cycles_opt_en.pdf, read with pdfplumber in Python) the port does not read"
+    "params": { "asset_class": "etf_option", "instrument_type": "option" }
+  },
+  {
+    "name": "search-query",
+    "route": "equity/search",
+    "params": { "query": "royal", "limit": 10 },
+    "compare": { "volatile": ["market_cap"] },
+    "reason": "the directory carries live market capitalisations"
+  },
+  {
+    "name": "search-symbol-only",
+    "route": "equity/search",
+    "params": { "query": "TD", "symbol_only": true, "limit": 5 },
+    "compare": { "volatile": ["market_cap"] },
+    "reason": "the directory carries live market capitalisations"
+  },
+  {
+    "name": "search-phrase",
+    "route": "equity/search",
+    "params": { "query": "royal bank", "limit": 5 },
+    "compare": { "volatile": ["market_cap"] },
+    "reason": "the directory carries live market capitalisations"
+  },
+  {
+    "name": "search-browse",
+    "route": "equity/search",
+    "params": { "limit": 10 },
+    "compare": { "rows": "overlap", "minOverlap": 0.8, "keys": ["symbol"], "volatile": ["market_cap"] },
+    "reason": "the largest listings by live market capitalisation: the order of close neighbours can change between OpenBB's directory sweep (kept a day) and the native one"
+  },
+  {
+    "name": "screener-default",
+    "route": "equity/screener",
+    "params": { "limit": 5 },
+    "compare": { "rows": "overlap", "minOverlap": 0.6, "keys": ["symbol"], "volatile": ["price", "intraday_price", "intraday_market_cap", "market_cap", "volume", "price_change", "performance_7d", "performance_30d", "performance_90d", "performance_ytd", "change_52w", "pe_ratio", "ps_ratio", "pb_ratio", "pcf_ratio", "dividend_yield", "above_52w_high", "below_52w_low", "volume_previous_day", "volume_avg_10d", "volume_avg_30d", "volume_avg_50d", "volume_avg_90d", "trade_value_avg_90d"] },
+    "reason": "live screen: market capitalisations, prices and the ratios built on them move, and OpenBB keeps its directory sweep for a day"
+  },
+  {
+    "name": "screener-energy-filters",
+    "route": "equity/screener",
+    "params": { "sector": "energy", "optionable": true, "pe_ratio_max": 20, "dividend_yield_min": 2, "sort_by": "dividend_yield", "limit": 8 },
+    "compare": { "rows": "overlap", "minOverlap": 0.5, "keys": ["symbol"], "volatile": ["price", "intraday_price", "intraday_market_cap", "market_cap", "volume", "price_change", "performance_7d", "performance_30d", "performance_90d", "performance_ytd", "change_52w", "pe_ratio", "ps_ratio", "pb_ratio", "pcf_ratio", "dividend_yield", "above_52w_high", "below_52w_low", "volume_previous_day", "volume_avg_10d", "volume_avg_30d", "volume_avg_50d", "volume_avg_90d", "trade_value_avg_90d"] },
+    "reason": "live screen: which companies clear the filters and their prices move between OpenBB's call and the native one"
+  },
+  {
+    "name": "screener-etf-directory",
+    "route": "equity/screener",
+    "params": { "symbol_type": "ETF", "exchange": "TSX", "limit": 5, "sort_by": "symbol", "sort_order": "ASC" },
+    "compare": { "volatile": ["market_cap"] },
+    "reason": "the directory carries live market capitalisations"
+  },
+  {
+    "name": "screener-futures",
+    "route": "equity/screener",
+    "params": { "symbol_type": "Future", "limit": 6 },
+    "compare": { "rows": "overlap", "minOverlap": 0.5, "keys": ["symbol"], "volatile": ["price", "open", "high", "low", "net_change", "volume", "open_interest", "transactions", "settlement_price"] },
+    "reason": "live session summary: the most active contracts and their prices move between OpenBB's call and the native one"
+  },
+  {
+    "name": "screener-index-quotes",
+    "route": "equity/screener",
+    "params": { "symbol_type": "Index", "limit": 5 },
+    "compare": { "rows": "overlap", "minOverlap": 0.4, "keys": ["symbol"], "volatile": ["price", "open", "high", "low", "prev_close", "price_change", "net_change", "volume", "high_52w", "low_52w", "market_cap"] },
+    "reason": "live quotes: the most active indices and their prices move between OpenBB's call and the native one"
   },
   {
     "name": "etf-info",

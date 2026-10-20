@@ -1,12 +1,16 @@
 // derivatives/options/chains, tmx/derivatives/options/covered_calls and derivatives/futures/instruments, provider tmx.
 // Ported from openbb_tmx/models/{options_chains,covered_call_screener,futures_instruments}.py and utils/{mx,
 // quotemedia,helpers}.py (OpenBB Platform 5.0.0, Apache-2.0); modified: plain rows instead of DataFrames and pydantic
-// models, HTML tables read with node-html-parser, and the expiry-cycle PDF (pdfplumber in Python) is not read, so
-// `expiry_cycle` and `has_long_term_options` are left out.
+// models, HTML tables read with node-html-parser, and the expiry-cycle PDF (pdfplumber in Python) is read from the
+// positions of its text runs (src/lib/pdf-text.ts, cycles.ts).
 import { cellNumber, htmlTables, tableRecords } from '../lib/html-tables.js'
-import { NativeUnsupported, type NativeCtx, type NativeParams, type Row } from '../types.js'
+import { BROWSER_UA } from '../http.js'
+import { parseCsvRecords } from '../lib/csv.js'
+import type { NativeCtx, NativeParams, Row } from '../types.js'
 import { QUOTE_FOR_SYMBOLS } from './gql.js'
-import { boolParam, cached, compact, DAY_MS, getText, gql, normalizeSymbol, numParam, qmDatatool, strParam, TmxError, truthy, urlencode, zonedDay } from './helpers.js'
+import { addDays, boolParam, cached, compact, DAY_MS, getText, gql, normalizeSymbol, numParam, qmDatatool, strParam, TmxError, truthy, urlencode, zonedDay } from './helpers.js'
+import { isTsxSession, nextWeekday } from './calendar.js'
+import { parseCycles, type CycleListing } from './cycles.js'
 import { equityQuote } from './quote.js'
 
 const NY = 'America/New_York'
@@ -14,6 +18,7 @@ const MX = 'https://www.m-x.ca/'
 const QUOTES_URL = 'https://www.m-x.ca/en/trading/data/quotes'
 const OPTIONS_LIST_URL = 'https://www.m-x.ca/en/trading/data/options-list'
 const COVERED_CALL_URL = 'https://www.m-x.ca/en/resources/education/covered-call-screener'
+const CYCLES_URL = 'https://www.m-x.ca/f_publications_en/cycles_opt_en.pdf'
 
 const LISTING_TABS = ['equity_option', 'cdr_option', 'cef_option', 'etf_option', 'currency_option', 'index_option', 'weekly_option']
 
@@ -46,6 +51,18 @@ async function optionsListings(ctx: NativeCtx, useCache: boolean): Promise<Map<s
     for (const symbol of weeklies) if (!listings.has(symbol)) listings.set(symbol, { name: null, underlying_symbol: null })
     for (const [symbol, listing] of listings) listing.has_weeklies = weeklies.has(symbol)
     return listings
+  })
+}
+
+/** `get_expiry_cycles`: the expiry cycle and the long-term and weekly listings per option class; empty when the PDF cannot be read. */
+async function expiryCycles(ctx: NativeCtx, useCache: boolean): Promise<Map<string, CycleListing>> {
+  return cached(ctx, useCache, 'tmx:mx-expiry-cycles', DAY_MS, async () => {
+    try {
+      const bytes = await ctx.http.bytes(CYCLES_URL, { headers: { Accept: '*/*', 'Accept-Language': 'en-CA,en-US;q=0.7,en;q=0.3', Origin: 'https://www.m-x.ca', Referer: MX, 'User-Agent': BROWSER_UA } })
+      return parseCycles(bytes)
+    } catch {
+      return new Map<string, CycleListing>()
+    }
   })
 }
 
@@ -137,9 +154,85 @@ function serializeChain(rows: Row[]): Row[] {
   })
 }
 
-/** derivatives/options/chains: the live chain from QuoteMedia. */
+/** The option symbol a ticker trades options under (`AGF.B` is `AGF`), or an error when it has none. */
+async function optionSymbol(ctx: NativeCtx, raw: string, useCache: boolean): Promise<string> {
+  const listings = await optionsListings(ctx, useCache)
+  let symbol = raw.toUpperCase().replaceAll('-', '.').replaceAll('.TO', '').replaceAll('.TSX', '')
+  if (!listings.has(symbol)) {
+    const underlying = [...listings].filter(([, l]) => l.underlying_symbol === symbol)
+    if (underlying.length === 1) symbol = underlying[0]![0]
+  }
+  if (listings.size > 0 && !listings.has(symbol)) throw new TmxError(`The symbol, ${symbol}, is not a valid listing or does not trade options.`)
+  return symbol
+}
+
+const num = (v: string | undefined): number | undefined => {
+  if (v === undefined || v.trim() === '') return undefined
+  const n = Number(v)
+  return Number.isNaN(n) ? undefined : n
+}
+
+/**
+ * `download_eod_chains`: the chain as the Montreal Exchange closed on a day, from its historical-quotes download. The
+ * Python maps the CSV's columns by position and fails now that the file carries three more (OpenBB 5.0.0), so the
+ * columns are read by name here.
+ */
+async function eodChain(ctx: NativeCtx, raw: string, requested: string, useCache: boolean): Promise<Row[]> {
+  const symbol = await optionSymbol(ctx, raw, useCache)
+  // Weekends and holidays move to the next trading day, as the Python does (twice).
+  let date = nextWeekday(requested)
+  if (!isTsxSession(date)) date = addDays(date, 1)
+  date = nextWeekday(date)
+  if (!isTsxSession(date)) date = addDays(date, 1)
+
+  const csv = await cached(ctx, useCache, `tmx:mx-eod:${symbol}:${date}`, 6 * 3600 * 1000, () => getText(ctx, `https://www.m-x.ca/en/trading/data/historical?symbol=${symbol}&from=${date}&to=${date}&dnld=1`, MX))
+  const records = parseCsvRecords(csv)
+  if (records.length === 0) throw new TmxError(`No data found for, ${symbol}, on, ${date}. The symbol may not have been listed, or traded options, before that date.`)
+
+  // The underlying's own row (strike 0, no expiry) carries the last price of the stock.
+  const underlying = records.find((r) => num(r['Strike Price']) === 0 && !r['Expiry Date'])
+  const underlyingPrice = num(underlying?.['Last Price'])
+  const rows = records
+    .filter((r) => num(r['Strike Price']) !== 0)
+    .map((r): Row => {
+      const eod = r.Date ?? ''
+      const expiration = r['Expiry Date'] ?? ''
+      const iv = num(r['Implied Volatility'])
+      return {
+        underlying_symbol: `${symbol}:CA`,
+        contract_symbol: r.Symbol,
+        eod_date: eod,
+        expiration,
+        dte: expiration && eod ? Math.round((Date.parse(`${expiration}T00:00:00Z`) - Date.parse(`${eod}T00:00:00Z`)) / DAY_MS) : undefined,
+        strike: num(r['Strike Price']),
+        option_type: num(r['Call/Put']) === 1 ? 'put' : 'call',
+        close_bid: num(r['Bid Price']),
+        close_ask: num(r['Ask Price']),
+        close_bid_size: num(r['Bid Size']),
+        close_ask_size: num(r['Ask Size']),
+        last_trade_price: num(r['Last Price']),
+        volume: num(r.Volume),
+        prev_close: num(r['Last Close Price']),
+        change: num(r['Net Change']),
+        open: num(r['Open Price']),
+        high: num(r['High Price']),
+        low: num(r['Low Price']),
+        total_value: num(r['Total Value']),
+        transactions: num(r['Nb. Trades']),
+        settlement_price: num(r['Settlement Price']),
+        open_interest: num(r['Open Interest']),
+        implied_volatility: iv === undefined ? undefined : 0.01 * iv,
+        underlying_price: underlyingPrice,
+      }
+    })
+    .sort((a, b) => cmpStr(String(a.expiration), String(b.expiration)) || Number(a.strike) - Number(b.strike) || cmpStr(String(a.option_type), String(b.option_type)))
+  return serializeChain(rows)
+}
+
+/** derivatives/options/chains: the live chain from QuoteMedia, or a day's close from the Montreal Exchange. */
 export async function optionsChains(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
-  if (strParam(params, 'date') !== undefined) throw new NativeUnsupported('end-of-day option chains (date) are not ported')
+  const date = strParam(params, 'date')
+  if (date !== undefined) return eodChain(ctx, String(params.symbol), date, boolParam(params, 'use_cache', true))
   const symbol = normalizeSymbol(String(params.symbol).toUpperCase())
   const results = await optionChain(ctx, symbol)
   const today = zonedDay(ctx.now().getTime(), NY)
@@ -321,11 +414,15 @@ async function instrumentUniverse(ctx: NativeCtx, useCache: boolean): Promise<Ro
     const results = parseSelectors(html || '')
     if (results.length === 0) throw new TmxError('The Montreal Exchange instrument list came back empty.')
     const listings = await optionsListings(ctx, useCache)
+    const cycles = await expiryCycles(ctx, useCache)
     for (const instrument of results) {
       const listing = listings.get(instrument.symbol as string)
+      const cycle = cycles.get(instrument.symbol as string)
       instrument.underlying_symbol = listing?.underlying_symbol ?? null
+      instrument.expiry_cycle = cycle?.expiry_cycle ?? null
+      instrument.has_long_term_options = cycle ? cycle.has_long_term : null
       instrument.has_weekly_options = listing?.has_weeklies ?? null
-      if (!instrument.name) instrument.name = listing?.name ?? null
+      if (!instrument.name) instrument.name = listing?.name || cycle?.name || null
     }
     return results
   })
