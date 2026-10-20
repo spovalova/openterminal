@@ -1,0 +1,404 @@
+[
+  {
+    "name": "schema-list-all",
+    "route": "sec/schema_files",
+    "params": {},
+    "compare": {
+      "keys": [
+        "name"
+      ]
+    },
+    "reason": "the rows are identified by taxonomy key, which the default key guesser does not know"
+  },
+  {
+    "name": "schema-list-category",
+    "route": "sec/schema_files",
+    "params": {
+      "category": "common_reference"
+    },
+    "compare": {
+      "keys": [
+        "name"
+      ]
+    },
+    "reason": "the rows are identified by taxonomy key, which the default key guesser does not know"
+  },
+  {
+    "name": "schema-dei-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "dei"
+    }
+  },
+  {
+    "name": "schema-srt-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "srt"
+    }
+  },
+  {
+    "name": "schema-ecd-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "ecd"
+    },
+    "compare": {
+      "keys": [
+        "name",
+        "parent_id",
+        "level",
+        "order",
+        "preferred_label"
+      ]
+    },
+    "reason": "the top-level sections come out of a Python set difference, whose order depends on the interpreter hash seed, so OpenBB orders them differently from one process to the next; rows are matched by identity (name, parent, level, order, preferred label) instead of by position"
+  },
+  {
+    "name": "schema-cyd-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "cyd"
+    },
+    "compare": {
+      "keys": [
+        "name",
+        "parent_id",
+        "level",
+        "order",
+        "preferred_label"
+      ]
+    },
+    "reason": "the top-level sections come out of a Python set difference, whose order depends on the interpreter hash seed, so OpenBB orders them differently from one process to the next; rows are matched by identity (name, parent, level, order, preferred label) instead of by position"
+  },
+  {
+    "name": "schema-ffd-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "ffd"
+    },
+    "compare": {
+      "keys": [
+        "name",
+        "parent_id",
+        "level",
+        "order",
+        "preferred_label"
+      ]
+    },
+    "reason": "the top-level sections come out of a Python set difference, whose order depends on the interpreter hash seed, so OpenBB orders them differently from one process to the next; rows are matched by identity (name, parent, level, order, preferred label) instead of by position"
+  },
+  {
+    "name": "schema-rxp-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "rxp"
+    },
+    "compare": {
+      "keys": [
+        "name",
+        "parent_id",
+        "level",
+        "order",
+        "preferred_label"
+      ]
+    },
+    "reason": "the top-level sections come out of a Python set difference, whose order depends on the interpreter hash seed, so OpenBB orders them differently from one process to the next; rows are matched by identity (name, parent, level, order, preferred label) instead of by position"
+  },
+  {
+    "name": "schema-spac-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "spac"
+    },
+    "compare": {
+      "keys": [
+        "name",
+        "parent_id",
+        "level",
+        "order",
+        "preferred_label"
+      ]
+    },
+    "reason": "the top-level sections come out of a Python set difference, whose order depends on the interpreter hash seed, so OpenBB orders them differently from one process to the next; rows are matched by identity (name, parent, level, order, preferred label) instead of by position"
+  },
+  {
+    "name": "schema-cef-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "cef"
+    }
+  },
+  {
+    "name": "schema-oef-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "oef"
+    },
+    "compare": {
+      "keys": [
+        "name"
+      ]
+    },
+    "reason": "component listings are identified by component name, which the default key guesser does not know"
+  },
+  {
+    "name": "schema-vip-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "vip"
+    },
+    "compare": {
+      "keys": [
+        "name"
+      ]
+    },
+    "reason": "component listings are identified by component name, which the default key guesser does not know; the recording would take a large share of the provider budget (8 MB); the smaller taxonomies of the same kind record the same code path (the component listing downloads the large vip schemas; oef, fnd and sbs record the same path)",
+    "fixture": false
+  },
+  {
+    "name": "schema-fnd-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "fnd"
+    },
+    "compare": {
+      "keys": [
+        "name"
+      ]
+    },
+    "reason": "component listings are identified by component name, which the default key guesser does not know"
+  },
+  {
+    "name": "schema-sro-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "sro"
+    },
+    "compare": {
+      "keys": [
+        "name",
+        "parent_id",
+        "level",
+        "order",
+        "preferred_label"
+      ]
+    },
+    "reason": "the top-level sections come out of a Python set difference, whose order depends on the interpreter hash seed, so OpenBB orders them differently from one process to the next; rows are matched by identity (name, parent, level, order, preferred label) instead of by position"
+  },
+  {
+    "name": "schema-sbs-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "sbs"
+    },
+    "compare": {
+      "keys": [
+        "name"
+      ]
+    },
+    "reason": "component listings are identified by component name, which the default key guesser does not know"
+  },
+  {
+    "name": "schema-rocr-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "rocr"
+    }
+  },
+  {
+    "name": "schema-country-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "country"
+    }
+  },
+  {
+    "name": "schema-currency-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "currency"
+    }
+  },
+  {
+    "name": "schema-exch-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "exch"
+    },
+    "fixture": false,
+    "reason": "the recording would take a large share of the provider budget (8 MB); the smaller taxonomies of the same kind record the same code path (2363 rows)"
+  },
+  {
+    "name": "schema-naics-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "naics"
+    },
+    "fixture": false,
+    "reason": "the recording would take a large share of the provider budget (8 MB); the smaller taxonomies of the same kind record the same code path (1033 rows)"
+  },
+  {
+    "name": "schema-sic-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "sic"
+    },
+    "fixture": false,
+    "reason": "the recording would take a large share of the provider budget (8 MB); the smaller taxonomies of the same kind record the same code path (460 rows)"
+  },
+  {
+    "name": "schema-stpr-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "stpr"
+    }
+  },
+  {
+    "name": "schema-snj-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "snj"
+    },
+    "fixture": false,
+    "reason": "the recording would take a large share of the provider budget (8 MB); the smaller taxonomies of the same kind record the same code path (5036 rows)"
+  },
+  {
+    "name": "schema-us-gaap-components",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "us-gaap"
+    },
+    "compare": {
+      "keys": [
+        "name"
+      ]
+    },
+    "reason": "component listings are identified by component name, which the default key guesser does not know"
+  },
+  {
+    "name": "schema-us-gaap-soc-2024",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "us-gaap",
+      "year": 2024,
+      "component": "soc"
+    },
+    "fixture": false,
+    "reason": "the us-gaap label file (us-gaap-lab-2024.xml) is 908 KB compressed, over the 768 KB recording limit"
+  },
+  {
+    "name": "schema-ifrs-components",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "ifrs"
+    },
+    "compare": {
+      "keys": [
+        "name"
+      ]
+    },
+    "reason": "component listings are identified by component name, which the default key guesser does not know"
+  },
+  {
+    "name": "schema-ifrs-ias-1",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "ifrs",
+      "component": "ias_1"
+    },
+    "fixture": false,
+    "reason": "the IFRS label files take about 750 KB compressed; with the rows the recording would use a tenth of the provider budget, and schema-ifrs-components records the IFRS discovery path"
+  },
+  {
+    "name": "schema-frc-core-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "frc-core"
+    },
+    "fixture": false,
+    "reason": "the FRC suite archive is a 7 MB zip, over the 768 KB recording limit"
+  },
+  {
+    "name": "schema-frc-dpl-latest",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "frc-dpl"
+    },
+    "fixture": false,
+    "reason": "the FRC suite archive is a 7 MB zip, over the 768 KB recording limit"
+  },
+  {
+    "name": "schema-cyd-2024",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "cyd",
+      "year": 2024
+    },
+    "compare": {
+      "keys": [
+        "name",
+        "parent_id",
+        "level",
+        "order",
+        "preferred_label"
+      ]
+    },
+    "reason": "the top-level sections come out of a Python set difference, whose order depends on the interpreter hash seed, so OpenBB orders them differently from one process to the next; rows are matched by identity (name, parent, level, order, preferred label) instead of by position"
+  },
+  {
+    "name": "schema-oef-rr",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "oef",
+      "component": "rr"
+    },
+    "compare": {
+      "keys": [
+        "name",
+        "parent_id",
+        "level",
+        "order",
+        "preferred_label"
+      ]
+    },
+    "reason": "the top-level sections come out of a Python set difference, whose order depends on the interpreter hash seed, so OpenBB orders them differently from one process to the next; rows are matched by identity (name, parent, level, order, preferred label) instead of by position; the component has 31,987 rows, far too many to record",
+    "fixture": false
+  },
+  {
+    "name": "schema-sbs-sbsef",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "sbs",
+      "component": "sbsef"
+    },
+    "compare": {
+      "keys": [
+        "name",
+        "parent_id",
+        "level",
+        "order",
+        "preferred_label"
+      ]
+    },
+    "reason": "the top-level sections come out of a Python set difference, whose order depends on the interpreter hash seed, so OpenBB orders them differently from one process to the next; rows are matched by identity (name, parent, level, order, preferred label) instead of by position"
+  },
+  {
+    "name": "schema-fnd-cef",
+    "route": "sec/schema_files",
+    "params": {
+      "taxonomy": "fnd",
+      "component": "cef"
+    },
+    "compare": {
+      "keys": [
+        "name",
+        "parent_id",
+        "level",
+        "order",
+        "preferred_label"
+      ]
+    },
+    "reason": "the top-level sections come out of a Python set difference, whose order depends on the interpreter hash seed, so OpenBB orders them differently from one process to the next; rows are matched by identity (name, parent, level, order, preferred label) instead of by position"
+  }
+]

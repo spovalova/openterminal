@@ -7,7 +7,6 @@ import type { NativeCtx, NativeParams, Row } from '../../types.js'
 import { HEADERS, cachedRequest, containsIgnoreCase, getMfAndEtfMap, symbolMap } from '../helpers.js'
 import { xmlToDict } from './xmltodict.js'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- xmltodict output: dicts, lists, strings and None, as Python reads them
 type Any = any
 type Dict = Record<string, Any>
 
@@ -180,8 +179,8 @@ function parseNmfp(response: Dict): { holdings: Dict[]; metadata: Dict } {
   }
   // `sort(key=(weight is not None, weight or 0), reverse=True)`: stable, so equal keys keep their order.
   const sorted = holdings.map((h, i) => ({ h, i })).sort((a, b) => {
-    const [ka, kb] = [[a.h.weight !== null, a.h.weight || 0], [b.h.weight !== null, b.h.weight || 0]] as [boolean, number][]
-    return Number(kb[0]) - Number(ka[0]) || kb[1] - ka[1] || a.i - b.i
+    const [aHas, bHas] = [a.h.weight !== null, b.h.weight !== null]
+    return Number(bHas) - Number(aHas) || (b.h.weight || 0) - (a.h.weight || 0) || a.i - b.i
   })
   let yields = series.sevenDayGrossYield || []
   if (isDict(yields) || typeof yields === 'string') yields = [yields]
