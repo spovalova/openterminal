@@ -1,8 +1,3 @@
-# This file belongs at .github/workflows/release.yml. It lives in deploy/ only because the token that pushed it has
-# no `workflow` scope, and GitHub refuses pushes under .github/workflows/ without it. To turn it on, from a checkout
-# whose token has that scope (or in the GitHub web editor):
-#   git mv deploy/release.yml .github/workflows/release.yml
-#
 # Release the Open Terminal desktop app (PLAN.md section 18). On a tag v<version> matching packages/cli/package.json:
 # build the release bundle and the Electron app on each platform (macOS arm64 + x64 on one runner, Windows x64, Linux
 # x64 and arm64), smoke-test every build (the packaged app started with --no-window: /api/health, the web app, one

@@ -122,7 +122,7 @@ HTTP, under `/api`: `GET /api/health` (connectors, recipes, llm); workspaces CRU
 | Where runtime files are (recipes, annotations, web app, Pyodide, wheels, the transform worker), from source or the release bundle | `packages/core/src/resources.ts` (`resources()`) |
 | The release bundle, the npm package, the smoke test | `scripts/release/` |
 | Only this machine's pages may call the server (Host and Origin checks) | `packages/server/src/guard.ts` |
-| The desktop app (main process, its pure parts, electron-builder config, smoke test) and the release workflow | `packages/desktop`, `deploy/release.yml` (belongs in `.github/workflows/`) |
+| The desktop app (main process, its pure parts, electron-builder config, smoke test) and the release workflow | `packages/desktop`, `.github/workflows/release.yml` |
 | Connectors | `connectors/<name>/src` |
 | Config, store, catalog cache, user recipes and annotations on disk | `~/.openterminal/config.yml`, `terminal.db`, `catalog/`, `recipes.yml`, `annotations.yml` (override the directory with `OPENTERMINAL_HOME`) |
 

@@ -37,4 +37,4 @@ Notes:
 
 ## The release workflow
 
-`deploy/release.yml` is the GitHub Actions workflow that builds and drafts a release of the desktop app (PLAN.md section 18): on a tag `v<version>`, electron-builder on macOS, Windows and Linux (x64 and arm64), a smoke test of every build, the checks the install scripts rely on, SHA256SUMS, and a draft release; by hand (workflow_dispatch) it is a dry run that uploads everything as a workflow artifact. It belongs at `.github/workflows/release.yml`; it waits here because the token that pushed it has no `workflow` scope. Move it with a token that has that scope, or in the GitHub web editor.
+`.github/workflows/release.yml` is the GitHub Actions workflow that builds and drafts a release of the desktop app (PLAN.md section 18): on a tag `v<version>`, electron-builder on macOS, Windows and Linux (x64 and arm64), a smoke test of every build, the checks the install scripts rely on, SHA256SUMS, and a draft release; by hand (workflow_dispatch) it is a dry run that uploads everything as a workflow artifact.
