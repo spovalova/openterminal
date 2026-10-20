@@ -1,5 +1,6 @@
 import { defineProvider } from '../types.js'
 import { chartRoutes } from './charts.js'
+import { documentRoutes } from './documents.js'
 
 export default defineProvider({
   name: 'bls',
@@ -7,5 +8,6 @@ export default defineProvider({
   status: 'todo',
   routes: {
     ...chartRoutes,
+    ...documentRoutes,
   },
 })

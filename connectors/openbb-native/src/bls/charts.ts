@@ -6,26 +6,26 @@
 import type { HTMLElement } from 'node-html-parser'
 import type { NativeCtx, NativeHandler, NativeParams, Row } from '../types.js'
 import { CHART_PACKS, type ChartPack, type ChartSpec } from './chart-specs.js'
-import { applyDateWindow, fetchPage, parseHtml, parseMonth, parseQuarter, parseYear, squish, str, textOf, toNum } from './helpers.js'
+import { applyDateWindow, fetchPage, findAll, parseHtml, parseMonth, parseQuarter, parseYear, squish, str, textOf, toNum } from './helpers.js'
 
 const STUB_PARSERS = { month: parseMonth, quarter: parseQuarter, year: parseYear } as const
 
 /** One chart page's data table as wide rows (`parse_chart_table`). */
 export function parseChartTable(html: string, pack: ChartPack, spec: ChartSpec): Row[] {
-  const table = parseHtml(html).querySelectorAll('table').find((t) => t.classList.contains('regular'))
+  const table = findAll(parseHtml(html), ['table']).find((t) => t.classList.contains('regular'))
   if (!table) throw new Error(`BLS ${spec.slug} chart '${spec.key}' page has no data table.`)
-  const caption = table.querySelector('caption')
+  const caption = findAll(table, ['caption'])[0]
   const chartTitle = caption ? squish(textOf(caption)) : spec.label
   const tableId = table.getAttribute('id') || `${pack.prefix}-${spec.key}`
-  const body = table.querySelector('tbody')
-  const rows: HTMLElement[] = body ? body.querySelectorAll('tr') : []
+  const body = findAll(table, ['tbody'])[0]
+  const rows: HTMLElement[] = body ? findAll(body, ['tr']) : []
   const isTs = spec.kind === 'ts'
   const parsePeriod = STUB_PARSERS[pack.period]
 
   const out: Row[] = []
   const seen = new Set<string>()
   for (const tr of rows) {
-    const cells = tr.querySelectorAll('th, td')
+    const cells = findAll(tr, ['th', 'td'])
     if (cells.length === 0) continue
     const stub = textOf(cells[0]!)
     const record: Row = { chart: spec.key, chart_title: chartTitle, table_id: tableId }

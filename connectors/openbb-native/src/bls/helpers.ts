@@ -27,6 +27,15 @@ export function fetchPage(ctx: NativeCtx, url: string, headers: Record<string, s
   })
 }
 
+/** Like fetchPage, but null on any non-200 answer (the catalog scrapers return an empty list then). */
+export function fetchPageOrNull(ctx: NativeCtx, url: string, headers: Record<string, string> = HTML_HEADERS): Promise<string | null> {
+  return ctx.cache(`bls:page-or-null:${url}`, HOUR_MS, async () => {
+    const res = await ctx.http.response(url, { headers })
+    if (res.status !== 200) return null
+    return decodeHtml(new Uint8Array(await res.arrayBuffer()))
+  })
+}
+
 /** A bls.gov file (xlsx, zip, pdf) as bytes. */
 export function fetchFile(ctx: NativeCtx, url: string, headers: Record<string, string> = { 'User-Agent': BLS_USER_AGENT, Accept: '*/*' }): Promise<Uint8Array> {
   return ctx.cache(`bls:file:${url}`, HOUR_MS, async () => {
@@ -57,6 +66,45 @@ export function textOf(node: Node): string {
   }
   walk(node)
   return parts.join(' ')
+}
+
+/** Every element below `node` whose tag is in `tags`, in document order (`find_all([...])`). */
+export function findAll(node: Node, tags: readonly string[]): HTMLElement[] {
+  const want = new Set(tags.map((t) => t.toUpperCase()))
+  const out: HTMLElement[] = []
+  const walk = (n: Node): void => {
+    for (const c of n.childNodes) {
+      if (c.nodeType !== NodeType.ELEMENT_NODE) continue
+      const el = c as HTMLElement
+      if (want.has(el.tagName)) out.push(el)
+      walk(el)
+    }
+  }
+  walk(node)
+  return out
+}
+
+/** The anchors that have an href, with it trimmed (`find_all("a", href=True)`). */
+export function anchors(node: Node): { el: HTMLElement; href: string }[] {
+  return findAll(node, ['a']).flatMap((el) => {
+    const href = el.getAttribute('href')
+    return href === undefined ? [] : [{ el, href: href.trim() }]
+  })
+}
+
+/** The nearest ancestor with this tag (`find_parent`). */
+export function parentWithTag(node: Node, tag: string): HTMLElement | undefined {
+  for (let p = node.parentNode as HTMLElement | null; p; p = p.parentNode as HTMLElement | null) if (p.tagName === tag.toUpperCase()) return p
+  return undefined
+}
+
+/** `s.strip(chars)`. */
+export function stripChars(s: string, chars: string): string {
+  let a = 0
+  let b = s.length
+  while (a < b && chars.includes(s[a]!)) a++
+  while (b > a && chars.includes(s[b - 1]!)) b--
+  return s.slice(a, b)
 }
 
 /** `" ".join(s.split())`. */
