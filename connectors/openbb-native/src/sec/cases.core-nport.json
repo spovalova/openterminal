@@ -1,0 +1,37 @@
+[
+  {
+    "name": "nport-xle-2024q4",
+    "route": "etf/nport_disclosure",
+    "params": { "symbol": "XLE", "year": 2024, "quarter": 4 }
+  },
+  {
+    "name": "nport-tlt-2025q1",
+    "route": "etf/nport_disclosure",
+    "params": { "symbol": "TLT", "year": 2025, "quarter": 1 }
+  },
+  {
+    "name": "nport-arkk-date",
+    "route": "etf/nport_disclosure",
+    "params": { "symbol": "ARKK", "date": "2025-07-31" }
+  },
+  {
+    "name": "nport-money-market-2025q1",
+    "route": "etf/nport_disclosure",
+    "params": { "symbol": "SPAXX", "year": 2025, "quarter": 1 }
+  },
+  {
+    "name": "fund-metrics-xle-2024q4",
+    "route": "sec/nport_fund_metrics",
+    "params": { "symbol": "XLE", "year": 2024, "quarter": 4 }
+  },
+  {
+    "name": "fund-metrics-tlt-2025q1",
+    "route": "sec/nport_fund_metrics",
+    "params": { "symbol": "TLT", "year": 2025, "quarter": 1 }
+  },
+  {
+    "name": "fund-metrics-money-market-2025q1",
+    "route": "sec/nport_fund_metrics",
+    "params": { "symbol": "SPAXX", "year": 2025, "quarter": 1 }
+  }
+]
