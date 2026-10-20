@@ -221,12 +221,12 @@ The plan, the decisions behind it, and the handoff for whoever works on it next 
 
 | | Open Terminal | Bloomberg | ChatGPT / Perplexity | OpenBB | Instinct |
 |---|---|---|---|---|---|
-| Ask a question, get live views | yes | no | prose only | partly, in the paid workspace | yes |
+| Ask a question, get live views | yes | no | no | partly | yes |
 | Every number traceable to data | yes | yes | no | yes | unclear |
-| Open source | MIT, the whole thing | no | no | data layer only | no |
+| Open source | yes (MIT) | no | no | partly | no |
 | Runs locally, your keys | yes | no | no | partly | no |
-| Add a data source yourself | one file | no | no | yes | no |
-| Price | free | ~$25k/yr | $20/mo | free + paid workspace | waitlist |
+| Add a data source yourself | yes | no | no | yes | no |
+| Price | free | ~$25k/yr | $20/mo | free + paid | waitlist |
 
 ## Roadmap
 
