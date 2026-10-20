@@ -71,10 +71,7 @@ async function quoteBatch(ctx: NativeCtx, symbols: string[]): Promise<Row[]> {
 
 export async function equityQuote(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
   const symbols = listParam(params).map((s) => s.toUpperCase())
-  const results: Row[] = []
-  const unquoted: string[] = []
-
-  await Promise.all(
+  const singles = await Promise.all(
     symbols.map(async (raw) => {
       const symbol = normalizeSymbol(raw)
       let response: Row | null | undefined
@@ -84,11 +81,11 @@ export async function equityQuote(params: NativeParams, ctx: NativeCtx): Promise
         if (!(err instanceof TmxError)) throw err
         response = undefined
       }
-      const quote = response?.getQuoteBySymbol as Row | undefined
-      if (quote) results.push(quote)
-      else unquoted.push(symbol)
+      return { symbol, quote: response?.getQuoteBySymbol as Row | undefined }
     }),
   )
+  const results: Row[] = singles.flatMap((s) => (s.quote ? [s.quote] : []))
+  const unquoted = singles.filter((s) => !s.quote).map((s) => s.symbol)
   if (unquoted.length > 0) results.push(...(await quoteBatch(ctx, unquoted)))
 
   const dropped = new Set(['shortDescription', 'longDescription', 'website', 'phoneNumber', 'fullAddress', 'email', 'issueType', 'exchangeName', 'employees', 'exShortName'])
@@ -135,15 +132,15 @@ const PROFILE_KEEP = new Set(['shortDescription', 'longDescription', 'website', 
 
 export async function equityProfile(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
   const symbols = listParam(params).map((s) => s.toUpperCase())
-  const results: Row[] = []
-  await Promise.all(
-    symbols.map(async (raw) => {
-      const symbol = normalizeSymbol(raw)
-      const response = await gql<Row>(ctx, 'getQuoteBySymbol', QUOTE_BY_SYMBOL, { symbol, locale: 'en' }, symbol)
-      const quote = response?.getQuoteBySymbol as Row | undefined
-      if (quote) results.push(quote)
-    }),
-  )
+  const results = (
+    await Promise.all(
+      symbols.map(async (raw) => {
+        const symbol = normalizeSymbol(raw)
+        const response = await gql<Row>(ctx, 'getQuoteBySymbol', QUOTE_BY_SYMBOL, { symbol, locale: 'en' }, symbol)
+        return response?.getQuoteBySymbol as Row | undefined
+      }),
+    )
+  ).flatMap((quote) => (quote ? [quote] : []))
   const order = new Map(symbols.map((s, i) => [s, i]))
   return results
     .map((d) => Object.fromEntries(Object.entries(d).filter(([k]) => PROFILE_KEEP.has(k))))

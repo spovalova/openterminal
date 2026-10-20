@@ -4,7 +4,7 @@
 // rows instead of DataFrames and pydantic models.
 import type { NativeCtx, NativeParams, Row } from '../types.js'
 import { COMPANY_PRICE_HISTORY, TIME_SERIES } from './gql.js'
-import { applyAliases, cleanSymbol, compact, dateChunks, gql, isoDay, listParam, mapLimit, normalizeSymbol, oneOf, optFloat, percent, strParam, TmxError, toZonedIso, truthy, withoutRouteDefaults, zonedEpoch } from './helpers.js'
+import { applyAliases, cleanSymbol, compact, dateChunks, gql, inOrder, isoDay, listParam, mapLimit, normalizeSymbol, oneOf, optFloat, percent, strParam, TmxError, toZonedIso, truthy, withoutRouteDefaults, zonedEpoch } from './helpers.js'
 
 const EARLIEST_SESSION = '1970-01-01'
 const INTRADAY_EPOCH = '2022-04-12'
@@ -165,15 +165,12 @@ export async function indexHistorical(params: NativeParams, ctx: NativeCtx): Pro
 /** currency/price/historical. */
 export async function currencyHistorical(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
   const interval = strParam(params, 'interval') ?? 'day'
-  const results: Row[] = []
-  await Promise.all(
-    listParam(params).map(async (raw) => {
-      let symbol = raw.replaceAll('-', '').trim().toUpperCase()
-      symbol = symbol.startsWith('$') ? symbol : `$${symbol}`
-      const bars = await timeseriesHistory(ctx, symbol, strParam(params, 'start_date'), strParam(params, 'end_date'), interval)
-      for (const bar of bars) results.push({ symbol: symbol.replace(/^\$+/, ''), ...bar })
-    }),
-  )
+  const results = await inOrder(listParam(params), async (raw) => {
+    let symbol = raw.replaceAll('-', '').trim().toUpperCase()
+    symbol = symbol.startsWith('$') ? symbol : `$${symbol}`
+    const bars = await timeseriesHistory(ctx, symbol, strParam(params, 'start_date'), strParam(params, 'end_date'), interval)
+    return bars.map((bar) => ({ symbol: symbol.replace(/^\$+/, ''), ...bar }))
+  })
   if (results.length === 0) return []
   return results
     .sort((a, b) => cmp(String(a.dateTime ?? ''), String(b.dateTime ?? '')))
@@ -194,15 +191,12 @@ export async function currencyHistorical(params: NativeParams, ctx: NativeCtx): 
 export async function futuresHistorical(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
   // The route's default interval is 1d (another provider's); OpenBB drops it, so TMX's own `day` applies.
   const interval = oneOf(withoutRouteDefaults(params, { interval: '1d' }), 'interval', ['day', 'week', 'month'] as const, 'day')
-  const results: Row[] = []
-  await Promise.all(
-    listParam(params).map(async (raw) => {
-      let symbol = raw.trim().toUpperCase()
-      symbol = ['/', '^', '$'].includes(symbol.slice(0, 1)) ? symbol : `/${symbol}`
-      const bars = await timeseriesHistory(ctx, symbol, strParam(params, 'start_date'), strParam(params, 'end_date'), interval)
-      for (const bar of bars) results.push({ symbol: symbol.replace(/^\/+/, ''), ...bar })
-    }),
-  )
+  const results = await inOrder(listParam(params), async (raw) => {
+    let symbol = raw.trim().toUpperCase()
+    symbol = ['/', '^', '$'].includes(symbol.slice(0, 1)) ? symbol : `/${symbol}`
+    const bars = await timeseriesHistory(ctx, symbol, strParam(params, 'start_date'), strParam(params, 'end_date'), interval)
+    return bars.map((bar) => ({ symbol: symbol.replace(/^\/+/, ''), ...bar }))
+  })
   if (results.length === 0) return []
   return results
     .sort((a, b) => cmp(String(a.dateTime ?? ''), String(b.dateTime ?? '')))

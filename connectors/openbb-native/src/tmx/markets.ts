@@ -4,7 +4,7 @@
 // modified: plain rows instead of pydantic models.
 import type { NativeCtx, NativeParams, Row } from '../types.js'
 import { MARKET_MOVERS, MOST_RECENT_TRADES, SHORT_INTEREST, STOCK_LIST, TSX30, VENTURE50 } from './gql.js'
-import { applyAliases, compact, gql, listParam, normalizeSymbol, normalizeUrl, numParam, oneOf, optFloat, qmDatatool, toFloat, truthy, withoutRouteDefaults } from './helpers.js'
+import { applyAliases, compact, gql, inOrder, normalizeSymbol, normalizeUrl, numParam, oneOf, optFloat, qmDatatool, requiredSymbols, toFloat, truthy, withoutRouteDefaults } from './helpers.js'
 
 const STOCK_LISTS_DICT: Record<string, string> = {
   dividend: 'TOP_DIVIDEND',
@@ -98,14 +98,11 @@ export async function marketMovers(params: NativeParams, ctx: NativeCtx): Promis
 /** tmx/markets/trades: the most recent trades with the brokers on each side, newest first. */
 export async function marketTrades(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
   const limit = numParam(params, 'limit') ?? 50
-  const results: Row[] = []
-  await Promise.all(
-    listParam(params).map(async (raw) => {
-      const symbol = normalizeSymbol(raw.toUpperCase())
-      const response = await gql<Row>(ctx, 'getCompanyMostRecentTrades', MOST_RECENT_TRADES, { symbol, limit }, symbol)
-      for (const trade of (response?.getCompanyMostRecentTrades as Row[] | undefined) ?? []) results.push({ symbol, ...trade })
-    }),
-  )
+  const results = await inOrder(requiredSymbols(params), async (raw) => {
+    const symbol = normalizeSymbol(raw.toUpperCase())
+    const response = await gql<Row>(ctx, 'getCompanyMostRecentTrades', MOST_RECENT_TRADES, { symbol, limit }, symbol)
+    return ((response?.getCompanyMostRecentTrades as Row[] | undefined) ?? []).map((trade) => ({ symbol, ...trade }))
+  })
   if (results.length === 0) return []
   const when = (d: Row): string => String(d.datetime ?? '')
   // sorted(..., reverse=True) keeps equal elements in their original order.
@@ -127,15 +124,12 @@ export async function marketTrades(params: NativeParams, ctx: NativeCtx): Promis
 
 /** tmx/markets/short_interest. */
 export async function shortInterest(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
-  const results: Row[] = []
-  await Promise.all(
-    listParam(params).map(async (raw) => {
-      const symbol = normalizeSymbol(raw.toUpperCase())
-      const response = await gql<Row>(ctx, 'GetCompanyShortInterest', SHORT_INTEREST, { symbol }, symbol)
-      const record = response?.getCompanyShortInterest as Row | undefined
-      if (record) results.push({ requested_symbol: symbol, ...record })
-    }),
-  )
+  const results = await inOrder(requiredSymbols(params), async (raw) => {
+    const symbol = normalizeSymbol(raw.toUpperCase())
+    const response = await gql<Row>(ctx, 'GetCompanyShortInterest', SHORT_INTEREST, { symbol }, symbol)
+    const record = response?.getCompanyShortInterest as Row | undefined
+    return record ? [{ requested_symbol: symbol, ...record }] : []
+  })
   return results.map((d) =>
     compact({
       symbol: d.requested_symbol,
@@ -196,7 +190,7 @@ export async function rankings(params: NativeParams, ctx: NativeCtx): Promise<Ro
 
 /** tmx/equity/symbol_reference: whether the feed resolves each symbol, and to what. */
 export async function symbolReference(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
-  const symbols = listParam(params).map((s) => s.trim()).filter(Boolean)
+  const symbols = requiredSymbols(params).map((s) => s.trim()).filter(Boolean)
   const results = await qmDatatool(ctx, 'getValidSymbols.json', 'InteractiveChart', { symbols: symbols.join(',') })
   const entries = results.validatesymbol
   const list = (Array.isArray(entries) ? entries : entries ? [entries] : []) as Row[]

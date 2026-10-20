@@ -103,6 +103,11 @@ export function statementSnakeCase(name: string): string {
   return name.replace(/(?<=[a-z0-9])(?=[A-Z])/g, '_').replace(/(?<=[A-Z])(?=[A-Z][a-z])/g, '_').toLowerCase()
 }
 
+/** Run `fn` over `items` at once and join the rows each returns in the order of the items (not of completion). */
+export async function inOrder<T>(items: readonly T[], fn: (item: T) => Promise<Row[]>): Promise<Row[]> {
+  return (await Promise.all(items.map(fn))).flat()
+}
+
 /** Run `fn` over `items`, at most `limit` at a time, results in input order. */
 export async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
   const out = new Array<R>(items.length)
@@ -125,6 +130,13 @@ export function listParam(params: NativeParams, key = 'symbol'): string[] {
   const v = params[key]
   const list = Array.isArray(v) ? v : String(v ?? '').split(',')
   return list.map((s) => String(s)).filter((s) => s !== '')
+}
+
+/** The symbols of a param the model requires: pydantic's "Field required" when there are none. */
+export function requiredSymbols(params: NativeParams, key = 'symbol'): string[] {
+  const symbols = listParam(params, key)
+  if (symbols.length === 0) throw new TmxError(`${key}: Field required`)
+  return symbols
 }
 
 export function strParam(params: NativeParams, key: string): string | undefined {

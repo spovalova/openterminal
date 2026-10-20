@@ -5,7 +5,7 @@
 // instead of pydantic models.
 import type { NativeCtx, NativeParams, Row } from '../types.js'
 import { COMPANY_ANALYSTS, COMPANY_FILINGS, COMPANY_INSIDERS, DIVIDENDS_FOR_SYMBOL, EARNINGS_FOR_DATE, INSIDER_TRANSACTIONS, NEWS_AND_EVENTS, SPLITS_FOR_SYMBOL } from './gql.js'
-import { addDays, applyAliases, compact, dateChunks, gql, isoDay, listParam, mapLimit, normalizeSymbol, numParam, oneOf, optFloat, percent, pyRound, strParam, TmxError, toSnakeCase, toFloat, toZonedIso, truthy, weekday } from './helpers.js'
+import { addDays, applyAliases, compact, dateChunks, gql, inOrder, isoDay, listParam, mapLimit, normalizeSymbol, numParam, oneOf, optFloat, percent, pyRound, requiredSymbols, strParam, TmxError, toSnakeCase, toFloat, toZonedIso, truthy, weekday } from './helpers.js'
 
 const NY = 'America/New_York'
 const cmp = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
@@ -85,16 +85,15 @@ const CONSENSUS_ALIASES: Record<string, string> = { target_consensus: 'price_tar
 export async function priceTargetConsensus(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
   const symbols = listParam(params).map((s) => s.toUpperCase())
   if (symbols.length === 0) throw new TmxError('Symbol is a required field for TMX.')
-  const results: Row[] = []
-  await Promise.all(
-    symbols.map(async (raw) => {
-      const symbol = normalizeSymbol(raw)
-      const response = await gql<Row>(ctx, 'getCompanyAnalysts', COMPANY_ANALYSTS, { symbol, datatype: 'equity' }, symbol)
-      const data = response?.getCompanyAnalysts as Row | undefined
-      if (!data) return
-      const consensus = data.consensusAnalysts as Row
-      const target = data.priceTarget as Row
-      results.push({
+  const results = await inOrder(symbols, async (raw) => {
+    const symbol = normalizeSymbol(raw)
+    const response = await gql<Row>(ctx, 'getCompanyAnalysts', COMPANY_ANALYSTS, { symbol, datatype: 'equity' }, symbol)
+    const data = response?.getCompanyAnalysts as Row | undefined
+    if (!data) return []
+    const consensus = data.consensusAnalysts as Row
+    const target = data.priceTarget as Row
+    return [
+      {
         symbol,
         total_analysts: data.totalAnalysts,
         consensus_action: consensus.consensus,
@@ -105,9 +104,9 @@ export async function priceTargetConsensus(params: NativeParams, ctx: NativeCtx)
         price_target_high: target.highPriceTarget,
         price_target_low: target.lowPriceTarget,
         price_target_upside: target.priceTargetUpside,
-      })
-    }),
-  )
+      },
+    ]
+  })
   return results.map((d) => {
     const row = applyAliases(d, CONSENSUS_ALIASES)
     row.target_upside = percent(row.target_upside) ?? null
@@ -181,7 +180,7 @@ const INSIDER_TX_ALIASES: Record<string, string> = {
 
 /** tmx/equity/ownership/insider_transactions: individual SEDI filings, newest first. */
 export async function insiderTransactions(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
-  const symbol = String(params.symbol).toUpperCase()
+  const symbol = requiredSymbols(params)[0]!.toUpperCase()
   const period = oneOf(params, 'period', Object.keys(INSIDER_DURATIONS), '12m')
   const response = await gql<Row>(ctx, 'getInsiderTransactions', INSIDER_TRANSACTIONS, { symbol, monthDuration: INSIDER_DURATIONS[period] }, symbol)
   const filings = response?.getInsiderTransactions
@@ -241,17 +240,14 @@ export async function companyNews(params: NativeParams, ctx: NativeCtx): Promise
   if (symbols.length === 0) throw new TmxError('Symbol is a required field for TMX.')
   const page = numParam(params, 'page') || 1
   const limit = numParam(params, 'limit') || 100
-  const results: Row[] = []
-  await Promise.all(
-    symbols.map(async (raw) => {
-      const symbol = normalizeSymbol(raw)
-      const data = (await gql<Row>(ctx, 'getNewsAndEvents', NEWS_AND_EVENTS, { symbol, page, limit, locale: 'en' }, symbol)) ?? {}
-      for (const item of (data.news as Row[] | undefined) ?? []) {
-        const { newsid, summary: _summary, ...rest } = item
-        results.push({ ...rest, url: `https://money.tmx.com/quote/${symbol.toUpperCase()}/news/${String(newsid)}`, symbols: symbol })
-      }
-    }),
-  )
+  const results = await inOrder(symbols, async (raw) => {
+    const symbol = normalizeSymbol(raw)
+    const data = (await gql<Row>(ctx, 'getNewsAndEvents', NEWS_AND_EVENTS, { symbol, page, limit, locale: 'en' }, symbol)) ?? {}
+    return ((data.news as Row[] | undefined) ?? []).map((item) => {
+      const { newsid, summary: _summary, ...rest } = item
+      return { ...rest, url: `https://money.tmx.com/quote/${symbol.toUpperCase()}/news/${String(newsid)}`, symbols: symbol }
+    })
+  })
   return sortedDesc(results, (d) => String(d.datetime)).map((d) => {
     const row = applyAliases(d, NEWS_ALIASES)
     // date_validate: the New York wall time of an ISO timestamp.

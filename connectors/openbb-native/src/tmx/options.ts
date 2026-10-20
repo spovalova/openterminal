@@ -24,12 +24,12 @@ const LISTING_TABS = ['equity_option', 'cdr_option', 'cef_option', 'etf_option',
 
 type Listing = { name: string | null; underlying_symbol: string | null; asset_class?: string; has_weeklies?: boolean }
 
-/** `get_options_listings`: the listed option classes by option symbol; empty when the page cannot be read. */
+/** `get_options_listings`: the listed option classes by option symbol; empty when the page cannot be read (and not kept). */
 async function optionsListings(ctx: NativeCtx, useCache: boolean): Promise<Map<string, Listing>> {
-  return cached(ctx, useCache, 'tmx:mx-options-listings', DAY_MS, async () => {
-    const listings = new Map<string, Listing>()
-    const weeklies = new Set<string>()
-    try {
+  try {
+    return await cached(ctx, useCache, 'tmx:mx-options-listings', DAY_MS, async () => {
+      const listings = new Map<string, Listing>()
+      const weeklies = new Set<string>()
       const tables = htmlTables(await getText(ctx, OPTIONS_LIST_URL, MX))
       LISTING_TABS.forEach((tab, i) => {
         const table = tables[i]
@@ -45,25 +45,28 @@ async function optionsListings(ctx: NativeCtx, useCache: boolean): Promise<Map<s
           listings.set(symbol, { name: (row['Name of Underlying Instrument'] ?? '').trim() || null, underlying_symbol: underlying || null, asset_class: tab })
         }
       })
-    } catch {
-      return new Map<string, Listing>()
-    }
-    for (const symbol of weeklies) if (!listings.has(symbol)) listings.set(symbol, { name: null, underlying_symbol: null })
-    for (const [symbol, listing] of listings) listing.has_weeklies = weeklies.has(symbol)
-    return listings
-  })
+      if (listings.size === 0) throw new TmxError('The Montreal Exchange options list came back empty.')
+      for (const symbol of weeklies) if (!listings.has(symbol)) listings.set(symbol, { name: null, underlying_symbol: null })
+      for (const [symbol, listing] of listings) listing.has_weeklies = weeklies.has(symbol)
+      return listings
+    })
+  } catch {
+    return new Map<string, Listing>()
+  }
 }
 
-/** `get_expiry_cycles`: the expiry cycle and the long-term and weekly listings per option class; empty when the PDF cannot be read. */
+/** `get_expiry_cycles`: the expiry cycle and the long-term and weekly listings per option class; empty when the PDF cannot be read (and not kept). */
 async function expiryCycles(ctx: NativeCtx, useCache: boolean): Promise<Map<string, CycleListing>> {
-  return cached(ctx, useCache, 'tmx:mx-expiry-cycles', DAY_MS, async () => {
-    try {
+  try {
+    return await cached(ctx, useCache, 'tmx:mx-expiry-cycles', DAY_MS, async () => {
       const bytes = await ctx.http.bytes(CYCLES_URL, { headers: { Accept: '*/*', 'Accept-Language': 'en-CA,en-US;q=0.7,en;q=0.3', Origin: 'https://www.m-x.ca', Referer: MX, 'User-Agent': BROWSER_UA } })
-      return parseCycles(bytes)
-    } catch {
-      return new Map<string, CycleListing>()
-    }
-  })
+      const cycles = parseCycles(bytes)
+      if (cycles.size === 0) throw new TmxError('The Montreal Exchange expiry cycles could not be read.')
+      return cycles
+    })
+  } catch {
+    return new Map<string, CycleListing>()
+  }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

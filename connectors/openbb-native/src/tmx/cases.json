@@ -85,7 +85,7 @@
   {
     "name": "dividends-ry",
     "route": "equity/fundamental/dividends",
-    "params": { "symbol": "RY" }
+    "params": { "symbol": "RY", "start_date": "2026-01-01", "end_date": "2026-06-30" }
   },
   {
     "name": "filings-ry-sep",
@@ -378,5 +378,47 @@
     "compare": { "volatile": ["unit_price", "close", "prev_close", "volume_avg_daily", "avg_volume", "avg_volume_30d"] },
     "fixture": false,
     "reason": "every ETF route reads the 8 MB ETF universe file, about 970 KB compressed, over the 768 KB per-body recording budget; the file refreshes through the day, so prices may move"
+  },
+  {
+    "name": "etf-search-div-freq-esg",
+    "route": "etf/search",
+    "params": { "div_freq": "monthly", "esg": true, "currency": "CAD", "sort_by": "return_1y" },
+    "compare": { "volatile": ["unit_price", "close", "prev_close", "volume_avg_daily", "avg_volume", "avg_volume_30d"] },
+    "fixture": false,
+    "reason": "every ETF route reads the 8 MB ETF universe file, about 970 KB compressed, over the 768 KB per-body recording budget; the file refreshes through the day, so prices may move"
+  },
+  {
+    "name": "quote-index-multi",
+    "route": "equity/price/quote",
+    "params": { "symbol": "^TSX,RY,ZZZZ" },
+    "compare": { "volatile": ["last_price", "open", "high", "low", "volume", "prev_close", "change", "change_percent", "vwap", "ma_21", "ma_50", "ma_200", "volume_avg_10d", "volume_avg_30d", "volume_avg_50d", "market_cap_all_classes", "MarketCap", "averageVolume20D", "year_high", "year_low", "pe", "price_to_book", "price_to_cf", "return_on_equity", "return_on_assets", "debt_to_equity", "eps", "beta", "alpha", "div_yield"] },
+    "reason": "live quote: OpenBB and the native side fetch seconds apart, so prices, volumes and the ratios built on the price may move"
+  },
+  {
+    "name": "quote-futures-batch",
+    "route": "equity/price/quote",
+    "params": { "symbol": "/CGB" }
+  },
+  {
+    "name": "earnings-default-window",
+    "route": "equity/calendar/earnings",
+    "params": {}
+  },
+  {
+    "name": "filings-default-window",
+    "route": "equity/fundamental/filings",
+    "params": { "symbol": "LUC" }
+  },
+  {
+    "name": "news-multi",
+    "route": "news/company",
+    "params": { "symbol": "RY,TD", "limit": 3 }
+  },
+  {
+    "name": "search-us-query",
+    "route": "equity/search",
+    "params": { "query": "apple", "country": "US", "limit": 5 },
+    "compare": { "volatile": ["market_cap"] },
+    "reason": "the directory carries live market capitalisations"
   }
 ]
