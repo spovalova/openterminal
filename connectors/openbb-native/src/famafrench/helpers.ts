@@ -38,10 +38,19 @@ export type FrameMeta = { description: string; frequency: string; formations: st
 // ---------------------------------------------------------------------------------------------------------------
 // Text
 
+const LINE_BREAKS = new Set(['\n', '\r', '\v', '\f', '\x1c', '\x1d', '\x1e', '\x85', '\u2028', '\u2029'])
+
 /** Python's `str.splitlines()`. */
 export function splitLines(text: string): string[] {
-  const lines = text.split(/\r\n|[\n\r\v\f\x1c-\x1e\x85\u2028\u2029]/)
-  if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop()
+  const lines: string[] = []
+  let from = 0
+  for (let i = 0; i < text.length; i++) {
+    if (!LINE_BREAKS.has(text[i]!)) continue
+    lines.push(text.slice(from, i))
+    if (text[i] === '\r' && text[i + 1] === '\n') i++
+    from = i + 1
+  }
+  if (from < text.length) lines.push(text.slice(from))
   return lines
 }
 
