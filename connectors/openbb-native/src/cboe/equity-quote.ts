@@ -1,7 +1,7 @@
 // equity/price/quote, provider cboe. Ported from openbb_cboe/models/equity_quote.py (OpenBB Platform 5.0.0,
 // Apache-2.0); modified: plain rows instead of a DataFrame and pydantic models.
 import type { NativeCtx, NativeParams, Row } from '../types.js'
-import { cboeSymbol, getCompanyDirectory, getIndexDirectory } from './helpers.js'
+import { cboeSymbol, getCompanyDirectory, getUsIndexDirectory, symbolsOf, useCacheOf } from './helpers.js'
 
 const PERCENT_COLUMNS = ['price_change_percent', 'iv30', 'iv30_change', 'iv30_change_percent', 'iv30_annual_high', 'iv30_annual_low', 'iv60_annual_high', 'iv60_annual_low', 'iv90_annual_high', 'iv90_annual_low', 'hv30_annual_high', 'hv30_annual_low', 'hv60_annual_high', 'hv60_annual_low', 'hv90_annual_high', 'hv90_annual_low']
 
@@ -22,15 +22,9 @@ const QUOTES = 'https://cdn.cboe.com/api/global/delayed_quotes/quotes/'
 const HISTORY = 'https://cdn.cboe.com/api/global/delayed_quotes/historical_data/'
 const EU_QUOTES = 'https://cdn.cboe.com/api/global/european_indices/index_quotes/'
 
-function symbolsOf(params: NativeParams): string[] {
-  const v = params.symbol
-  const list = Array.isArray(v) ? v : String(v ?? '').split(',')
-  return list.map((s) => s.trim().toUpperCase()).filter(Boolean)
-}
-
 export async function equityQuote(params: NativeParams, ctx: NativeCtx): Promise<Row[]> {
   const symbols = symbolsOf(params)
-  const [companies, indexes] = await Promise.all([getCompanyDirectory(ctx), getIndexDirectory(ctx)])
+  const [companies, indexes] = await Promise.all([getCompanyDirectory(ctx, useCacheOf(params)), getUsIndexDirectory(ctx, useCacheOf(params))])
   const isEu = (s: string) => indexes.get(s)?.source === 'eu_proprietary_index'
 
   // Quotes and the implied-volatility history, symbol by symbol; a symbol Cboe does not know is left out.

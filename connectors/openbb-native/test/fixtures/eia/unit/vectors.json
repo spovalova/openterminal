@@ -1,0 +1,1588 @@
+[
+ {
+  "name": "coal-aggregate-production-filters",
+  "route": "eia/coal/aggregate_production",
+  "params": {
+   "state_region": "wyoming,wv",
+   "coal_rank": "Bituminous,subbituminous",
+   "data_type": "production,labor_hours",
+   "start_date": "2019-06-30",
+   "end_date": "2021-02-01"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=production&data%5B1%5D=labor-hours&facets%5BcoalRankId%5D%5B%5D=BIT&facets%5BcoalRankId%5D%5B%5D=SUB&facets%5BstateRegionId%5D%5B%5D=WY&facets%5BstateRegionId%5D%5B%5D=WV&start=2019&end=2021&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"12\",\"dateFormat\":\"YYYY\",\"frequency\":\"annual\",\"data\":[{\"period\":\"2019\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2019\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2019\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2019\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2020\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"204.000\",\"production-units\":\"short tons\",\"labor-hours\":\"w\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2020\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"204.000\",\"production-units\":\"short tons\",\"labor-hours\":\"3020\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2020\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"204.000\",\"production-units\":\"short tons\",\"labor-hours\":\"3020\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2020\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"204.000\",\"production-units\":\"short tons\",\"labor-hours\":\"3020\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2021\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"204.100\",\"production-units\":\"short tons\",\"labor-hours\":\"3021\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2021\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"204.100\",\"production-units\":\"short tons\",\"labor-hours\":\"3021\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2021\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"204.100\",\"production-units\":\"short tons\",\"labor-hours\":\"3021\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2021\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"204.100\",\"production-units\":\"short tons\",\"labor-hours\":\"3021\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{\"coalRankId\":[\"BIT\",\"SUB\"],\"stateRegionId\":[\"WY\",\"WV\"]}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2019-01-01",
+    "coal_rank": "SUB",
+    "coal_rank_name": "Subbituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WY",
+    "state_region_name": "Wyoming",
+    "labor_hours": 3019.0,
+    "production": 203.9,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2019-01-01",
+    "coal_rank": "BIT",
+    "coal_rank_name": "Bituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WY",
+    "state_region_name": "Wyoming",
+    "labor_hours": 3019.0,
+    "production": 203.9,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2019-01-01",
+    "coal_rank": "SUB",
+    "coal_rank_name": "Subbituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WV",
+    "state_region_name": "West Virginia",
+    "labor_hours": 3019.0,
+    "production": 203.9,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2019-01-01",
+    "coal_rank": "BIT",
+    "coal_rank_name": "Bituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WV",
+    "state_region_name": "West Virginia",
+    "labor_hours": 3019.0,
+    "production": 203.9,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2020-01-01",
+    "coal_rank": "SUB",
+    "coal_rank_name": "Subbituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WY",
+    "state_region_name": "Wyoming",
+    "production": 204.0,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2020-01-01",
+    "coal_rank": "BIT",
+    "coal_rank_name": "Bituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WY",
+    "state_region_name": "Wyoming",
+    "labor_hours": 3020.0,
+    "production": 204.0,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2020-01-01",
+    "coal_rank": "SUB",
+    "coal_rank_name": "Subbituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WV",
+    "state_region_name": "West Virginia",
+    "labor_hours": 3020.0,
+    "production": 204.0,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2020-01-01",
+    "coal_rank": "BIT",
+    "coal_rank_name": "Bituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WV",
+    "state_region_name": "West Virginia",
+    "labor_hours": 3020.0,
+    "production": 204.0,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2021-01-01",
+    "coal_rank": "SUB",
+    "coal_rank_name": "Subbituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WY",
+    "state_region_name": "Wyoming",
+    "labor_hours": 3021.0,
+    "production": 204.1,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2021-01-01",
+    "coal_rank": "BIT",
+    "coal_rank_name": "Bituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WY",
+    "state_region_name": "Wyoming",
+    "labor_hours": 3021.0,
+    "production": 204.1,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2021-01-01",
+    "coal_rank": "SUB",
+    "coal_rank_name": "Subbituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WV",
+    "state_region_name": "West Virginia",
+    "labor_hours": 3021.0,
+    "production": 204.1,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2021-01-01",
+    "coal_rank": "BIT",
+    "coal_rank_name": "Bituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WV",
+    "state_region_name": "West Virginia",
+    "labor_hours": 3021.0,
+    "production": 204.1,
+    "some_new_field": "extra"
+   }
+  ]
+ },
+ {
+  "name": "coal-aggregate-production-desc-limit-pages",
+  "route": "eia/coal/aggregate_production",
+  "params": {
+   "sort": "desc",
+   "limit": 5
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=average-employees&data%5B1%5D=labor-hours&data%5B2%5D=number-of-mines&data%5B3%5D=production&data%5B4%5D=productivity&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=desc&offset=0&length=2",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"12\",\"dateFormat\":\"YYYY\",\"frequency\":\"annual\",\"data\":[{\"period\":\"2019\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2019\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{}}},\"apiVersion\":\"2.1.8\"}"
+   },
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=average-employees&data%5B1%5D=labor-hours&data%5B2%5D=number-of-mines&data%5B3%5D=production&data%5B4%5D=productivity&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=desc&offset=2&length=2",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"12\",\"dateFormat\":\"YYYY\",\"frequency\":\"annual\",\"data\":[{\"period\":\"2019\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2019\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{}}},\"apiVersion\":\"2.1.8\"}"
+   },
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=average-employees&data%5B1%5D=labor-hours&data%5B2%5D=number-of-mines&data%5B3%5D=production&data%5B4%5D=productivity&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=desc&offset=4&length=1",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"12\",\"dateFormat\":\"YYYY\",\"frequency\":\"annual\",\"data\":[{\"period\":\"2020\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"204.000\",\"production-units\":\"short tons\",\"labor-hours\":\"w\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2020-01-01",
+    "coal_rank": "SUB",
+    "coal_rank_name": "Subbituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WY",
+    "state_region_name": "Wyoming",
+    "production": 204.0,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2019-01-01",
+    "coal_rank": "SUB",
+    "coal_rank_name": "Subbituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WY",
+    "state_region_name": "Wyoming",
+    "labor_hours": 3019.0,
+    "production": 203.9,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2019-01-01",
+    "coal_rank": "BIT",
+    "coal_rank_name": "Bituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WY",
+    "state_region_name": "Wyoming",
+    "labor_hours": 3019.0,
+    "production": 203.9,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2019-01-01",
+    "coal_rank": "SUB",
+    "coal_rank_name": "Subbituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WV",
+    "state_region_name": "West Virginia",
+    "labor_hours": 3019.0,
+    "production": 203.9,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2019-01-01",
+    "coal_rank": "BIT",
+    "coal_rank_name": "Bituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WV",
+    "state_region_name": "West Virginia",
+    "labor_hours": 3019.0,
+    "production": 203.9,
+    "some_new_field": "extra"
+   }
+  ],
+  "pageSize": 2
+ },
+ {
+  "name": "coal-aggregate-production-all-pages",
+  "route": "eia/coal/aggregate_production",
+  "params": {},
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=average-employees&data%5B1%5D=labor-hours&data%5B2%5D=number-of-mines&data%5B3%5D=production&data%5B4%5D=productivity&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"12\",\"dateFormat\":\"YYYY\",\"frequency\":\"annual\",\"data\":[{\"period\":\"2019\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2019\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2019\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2019\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2020\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"204.000\",\"production-units\":\"short tons\",\"labor-hours\":\"w\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{}}},\"apiVersion\":\"2.1.8\"}"
+   },
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=average-employees&data%5B1%5D=labor-hours&data%5B2%5D=number-of-mines&data%5B3%5D=production&data%5B4%5D=productivity&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=5&length=5",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"12\",\"dateFormat\":\"YYYY\",\"frequency\":\"annual\",\"data\":[{\"period\":\"2020\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"204.000\",\"production-units\":\"short tons\",\"labor-hours\":\"3020\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2020\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"204.000\",\"production-units\":\"short tons\",\"labor-hours\":\"3020\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2020\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"204.000\",\"production-units\":\"short tons\",\"labor-hours\":\"3020\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2021\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"204.100\",\"production-units\":\"short tons\",\"labor-hours\":\"3021\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2021\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"204.100\",\"production-units\":\"short tons\",\"labor-hours\":\"3021\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{}}},\"apiVersion\":\"2.1.8\"}"
+   },
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=average-employees&data%5B1%5D=labor-hours&data%5B2%5D=number-of-mines&data%5B3%5D=production&data%5B4%5D=productivity&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=10&length=2",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"12\",\"dateFormat\":\"YYYY\",\"frequency\":\"annual\",\"data\":[{\"period\":\"2021\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"204.100\",\"production-units\":\"short tons\",\"labor-hours\":\"3021\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2021\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"204.100\",\"production-units\":\"short tons\",\"labor-hours\":\"3021\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2019-01-01",
+    "coal_rank": "SUB",
+    "coal_rank_name": "Subbituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WY",
+    "state_region_name": "Wyoming",
+    "labor_hours": 3019.0,
+    "production": 203.9,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2019-01-01",
+    "coal_rank": "BIT",
+    "coal_rank_name": "Bituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WY",
+    "state_region_name": "Wyoming",
+    "labor_hours": 3019.0,
+    "production": 203.9,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2019-01-01",
+    "coal_rank": "SUB",
+    "coal_rank_name": "Subbituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WV",
+    "state_region_name": "West Virginia",
+    "labor_hours": 3019.0,
+    "production": 203.9,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2019-01-01",
+    "coal_rank": "BIT",
+    "coal_rank_name": "Bituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WV",
+    "state_region_name": "West Virginia",
+    "labor_hours": 3019.0,
+    "production": 203.9,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2020-01-01",
+    "coal_rank": "SUB",
+    "coal_rank_name": "Subbituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WY",
+    "state_region_name": "Wyoming",
+    "production": 204.0,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2020-01-01",
+    "coal_rank": "BIT",
+    "coal_rank_name": "Bituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WY",
+    "state_region_name": "Wyoming",
+    "labor_hours": 3020.0,
+    "production": 204.0,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2020-01-01",
+    "coal_rank": "SUB",
+    "coal_rank_name": "Subbituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WV",
+    "state_region_name": "West Virginia",
+    "labor_hours": 3020.0,
+    "production": 204.0,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2020-01-01",
+    "coal_rank": "BIT",
+    "coal_rank_name": "Bituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WV",
+    "state_region_name": "West Virginia",
+    "labor_hours": 3020.0,
+    "production": 204.0,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2021-01-01",
+    "coal_rank": "SUB",
+    "coal_rank_name": "Subbituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WY",
+    "state_region_name": "Wyoming",
+    "labor_hours": 3021.0,
+    "production": 204.1,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2021-01-01",
+    "coal_rank": "BIT",
+    "coal_rank_name": "Bituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WY",
+    "state_region_name": "Wyoming",
+    "labor_hours": 3021.0,
+    "production": 204.1,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2021-01-01",
+    "coal_rank": "SUB",
+    "coal_rank_name": "Subbituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WV",
+    "state_region_name": "West Virginia",
+    "labor_hours": 3021.0,
+    "production": 204.1,
+    "some_new_field": "extra"
+   },
+   {
+    "date": "2021-01-01",
+    "coal_rank": "BIT",
+    "coal_rank_name": "Bituminous",
+    "mine_type": "ALL",
+    "mine_type_name": "All",
+    "state_region": "WV",
+    "state_region_name": "West Virginia",
+    "labor_hours": 3021.0,
+    "production": 204.1,
+    "some_new_field": "extra"
+   }
+  ],
+  "pageSize": 5
+ },
+ {
+  "name": "coal-aggregate-production-ceiling",
+  "route": "eia/coal/aggregate_production",
+  "params": {},
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=average-employees&data%5B1%5D=labor-hours&data%5B2%5D=number-of-mines&data%5B3%5D=production&data%5B4%5D=productivity&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"12\",\"dateFormat\":\"YYYY\",\"frequency\":\"annual\",\"data\":[{\"period\":\"2019\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2019\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2019\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2019\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"203.900\",\"production-units\":\"short tons\",\"labor-hours\":\"3019\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2020\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"204.000\",\"production-units\":\"short tons\",\"labor-hours\":\"w\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2020\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"204.000\",\"production-units\":\"short tons\",\"labor-hours\":\"3020\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2020\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"204.000\",\"production-units\":\"short tons\",\"labor-hours\":\"3020\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2020\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"204.000\",\"production-units\":\"short tons\",\"labor-hours\":\"3020\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2021\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"204.100\",\"production-units\":\"short tons\",\"labor-hours\":\"3021\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2021\",\"stateRegionId\":\"WY\",\"stateRegionDescription\":\"Wyoming\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"204.100\",\"production-units\":\"short tons\",\"labor-hours\":\"3021\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2021\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"SUB\",\"coalRankDescription\":\"Subbituminous\",\"production\":\"204.100\",\"production-units\":\"short tons\",\"labor-hours\":\"3021\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"},{\"period\":\"2021\",\"stateRegionId\":\"WV\",\"stateRegionDescription\":\"West Virginia\",\"mineTypeId\":\"ALL\",\"mineTypeDescription\":\"All\",\"coalRankId\":\"BIT\",\"coalRankDescription\":\"Bituminous\",\"production\":\"204.100\",\"production-units\":\"short tons\",\"labor-hours\":\"3021\",\"labor-hours-units\":\"hours\",\"someNewField\":\"extra\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "error": "The unfiltered request matches 12 rows, above the automatic pagination ceiling of 5. Narrow the request with facet filters or dates, or set an explicit limit.",
+  "maxAutoRows": 5
+ },
+ {
+  "name": "coal-aggregate-production-bad-facet-value",
+  "route": "eia/coal/aggregate_production",
+  "params": {
+   "coal_rank": "peat,bituminous"
+  },
+  "exchanges": [],
+  "error": "Invalid coal_rank value(s): peat. Valid choices: all, anthracite, bituminous, lignite, subbituminous"
+ },
+ {
+  "name": "coal-aggregate-production-bad-data-type",
+  "route": "eia/coal/aggregate_production",
+  "params": {
+   "data_type": "production,tonnage"
+  },
+  "exchanges": [],
+  "error": "Invalid data_type value(s) tonnage for 'coal/aggregate-production'. Choices: average_employees, labor_hours, number_of_mines, production, productivity"
+ },
+ {
+  "name": "coal-aggregate-production-empty-valid-filters",
+  "route": "eia/coal/aggregate_production",
+  "params": {
+   "state_region": "wyoming",
+   "start_date": "2030-01-01",
+   "end_date": "2031-01-01"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=average-employees&data%5B1%5D=labor-hours&data%5B2%5D=number-of-mines&data%5B3%5D=production&data%5B4%5D=productivity&facets%5BstateRegionId%5D%5B%5D=WY&start=2030&end=2031&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":0,\"dateFormat\":\"YYYY\",\"frequency\":\"annual\",\"data\":[],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{\"stateRegionId\":[\"WY\"]}}},\"apiVersion\":\"2.1.8\"}"
+   },
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/facet/stateRegionId?api_key=TESTKEY",
+    "status": 200,
+    "body": "{\"response\":{\"facets\":[{\"id\":\"WY\",\"name\":\"Wyoming\"},{\"id\":\"WV\",\"name\":\"West Virginia\"}]}}"
+   }
+  ],
+  "error": "The request returned no data. Each filter value is valid for this dataset, but the combination does not match any series:\n  state_region: WY (Wyoming)\nRemove or change one of the filters.\nRequested period: 2030 to 2031. The dataset covers 2001 to 2024."
+ },
+ {
+  "name": "coal-aggregate-production-empty-invalid-code",
+  "route": "eia/coal/aggregate_production",
+  "params": {
+   "mine_type": "surface",
+   "coal_rank": "anthracite"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=average-employees&data%5B1%5D=labor-hours&data%5B2%5D=number-of-mines&data%5B3%5D=production&data%5B4%5D=productivity&facets%5BcoalRankId%5D%5B%5D=ANT&facets%5BmineTypeId%5D%5B%5D=SUR&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"0\",\"dateFormat\":\"YYYY\",\"frequency\":\"annual\",\"data\":[],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{\"coalRankId\":[\"ANT\"],\"mineTypeId\":[\"SUR\"]}}},\"apiVersion\":\"2.1.8\"}"
+   },
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/facet/coalRankId?api_key=TESTKEY",
+    "status": 200,
+    "body": "{\"response\":{\"facets\":[{\"id\":\"BIT\",\"name\":\"Bituminous\"}]}}"
+   },
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/facet/mineTypeId?api_key=TESTKEY",
+    "status": 200,
+    "body": "{\"response\":{\"facets\":[{\"id\":\"ALL\",\"name\":\"All\"}]}}"
+   }
+  ],
+  "error": "The request returned no data because of invalid filter value(s):\n  coal_rank: ANT is not valid for this dataset. Valid coal_rank choices:\n    BIT = Bituminous\n  mine_type: SUR is not valid for this dataset. Valid mine_type choices:\n    ALL = All"
+ },
+ {
+  "name": "coal-aggregate-production-empty-no-filters",
+  "route": "eia/coal/aggregate_production",
+  "params": {
+   "start_date": "2030-01-01"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=average-employees&data%5B1%5D=labor-hours&data%5B2%5D=number-of-mines&data%5B3%5D=production&data%5B4%5D=productivity&start=2030&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"0\",\"dateFormat\":\"YYYY\",\"frequency\":\"annual\",\"data\":[],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "error": "The request returned no data.\nRequested period: 2030 to .... The dataset covers 2001 to 2024."
+ },
+ {
+  "name": "api-key-rejected",
+  "route": "eia/coal/aggregate_production",
+  "params": {},
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=average-employees&data%5B1%5D=labor-hours&data%5B2%5D=number-of-mines&data%5B3%5D=production&data%5B4%5D=productivity&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 403,
+    "body": "{\"error\":{\"code\":\"API_KEY_INVALID\",\"message\":\"An invalid api_key was supplied.\"}}"
+   }
+  ],
+  "error": "API_KEY_INVALID -> An invalid api_key was supplied."
+ },
+ {
+  "name": "api-error-body",
+  "route": "eia/coal/aggregate_production",
+  "params": {},
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/coal/aggregate-production/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=average-employees&data%5B1%5D=labor-hours&data%5B2%5D=number-of-mines&data%5B3%5D=production&data%5B4%5D=productivity&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 400,
+    "body": "{\"error\":\"Invalid frequency\",\"code\":400}"
+   }
+  ],
+  "error": "EIA API error -> Invalid frequency"
+ },
+ {
+  "name": "coal-receipts-quarterly",
+  "route": "eia/coal/receipts",
+  "params": {
+   "frequency": "quarterly",
+   "start_date": "2020-02-15",
+   "end_date": "2020-11-30",
+   "data_type": "quantity,price,heat_content"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/coal/shipments/receipts/data/?api_key=TESTKEY&frequency=quarterly&data%5B0%5D=quantity&data%5B1%5D=price&data%5B2%5D=heat-content&start=2020-Q1&end=2020-Q4&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"3\",\"dateFormat\":\"YYYY-\\\"Q\\\"Q\",\"frequency\":\"quarterly\",\"data\":[{\"period\":\"2020-Q1\",\"plantId\":\"1\",\"plantName\":\"Plant A\",\"quantity\":\"1000\",\"price\":\"35.5\",\"heat-content\":\"NA\"},{\"period\":\"2020-Q2\",\"plantId\":\"1\",\"plantName\":\"Plant A\",\"quantity\":\"900\",\"price\":\"36\",\"heat-content\":\"17.2\"},{\"period\":\"2020-Q3\",\"plantId\":\"1\",\"plantName\":\"Plant A\",\"quantity\":\"800\",\"price\":\"\",\"heat-content\":\"17.3\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"quarterly\",\"facets\":{}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2020-01-01",
+    "plant": "1",
+    "plant_name": "Plant A",
+    "price": 35.5,
+    "quantity": 1000.0
+   },
+   {
+    "date": "2020-04-01",
+    "plant": "1",
+    "plant_name": "Plant A",
+    "heat_content": 17.2,
+    "price": 36.0,
+    "quantity": 900.0
+   },
+   {
+    "date": "2020-07-01",
+    "plant": "1",
+    "plant_name": "Plant A",
+    "heat_content": 17.3,
+    "quantity": 800.0
+   }
+  ]
+ },
+ {
+  "name": "petroleum-spot-prices-weekly-slug-two-codes",
+  "route": "eia/petroleum/prices/spot_prices",
+  "params": {
+   "region": "na",
+   "product": "conventional_regular_gasoline,carb_diesel",
+   "start_date": "2026-09-01",
+   "end_date": "2026-09-30",
+   "sort": "desc",
+   "limit": 4
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/petroleum/pri/spt/data/?api_key=TESTKEY&frequency=weekly&data%5B0%5D=value&facets%5Bproduct%5D%5B%5D=EPMRU&facets%5Bproduct%5D%5B%5D=EPD2DC&facets%5Bduoarea%5D%5B%5D=YCUOK&facets%5Bduoarea%5D%5B%5D=RGC&facets%5Bduoarea%5D%5B%5D=Y44MB&facets%5Bduoarea%5D%5B%5D=ZEU&facets%5Bprocess%5D%5B%5D=PF4&start=2026-09-01&end=2026-09-30&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=desc&offset=0&length=4",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"12\",\"dateFormat\":\"YYYY-MM-DD\",\"frequency\":\"weekly\",\"data\":[{\"period\":\"2026-09-04\",\"duoarea\":\"RGC\",\"area-name\":\"U.S. Gulf Coast\",\"product\":\"EPMRU\",\"product-name\":\"Conventional Regular Gasoline\",\"process\":\"PF4\",\"process-name\":\"Spot Price FOB\",\"series\":\"RWTC2\",\"series-description\":\"Spot Price FOB (Dollars per Barrel)\",\"value\":\"68.4\",\"units\":\"$/BBL\"},{\"period\":\"2026-09-11\",\"duoarea\":\"RGC\",\"area-name\":\"U.S. Gulf Coast\",\"product\":\"EPMRU\",\"product-name\":\"Conventional Regular Gasoline\",\"process\":\"PF4\",\"process-name\":\"Spot Price FOB\",\"series\":\"RWTC2\",\"series-description\":\"Spot Price FOB (Dollars per Barrel)\",\"value\":\"69.1\",\"units\":\"$/BBL\"},{\"period\":\"2026-09-18\",\"duoarea\":\"RGC\",\"area-name\":\"U.S. Gulf Coast\",\"product\":\"EPMRU\",\"product-name\":\"Conventional Regular Gasoline\",\"process\":\"PF4\",\"process-name\":\"Spot Price FOB\",\"series\":\"RWTC2\",\"series-description\":\"Spot Price FOB (Dollars per Barrel)\",\"value\":\"69.8\",\"units\":\"$/BBL\"},{\"period\":\"2026-09-04\",\"duoarea\":\"RGC\",\"area-name\":\"U.S. Gulf Coast\",\"product\":\"EPD2DC\",\"product-name\":\"CARB Diesel\",\"process\":\"PF4\",\"process-name\":\"Spot Price FOB\",\"series\":\"RWTC2\",\"series-description\":\"Spot Price FOB (Dollars per Barrel)\",\"value\":\"68.4\",\"units\":\"$/BBL\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"weekly\",\"facets\":{\"product\":[\"EPMRU\",\"EPD2DC\"],\"duoarea\":[\"YCUOK\",\"RGC\",\"Y44MB\",\"ZEU\"],\"process\":[\"PF4\"]}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2026-09-18",
+    "process": "PF4",
+    "process_name": "Spot Price FOB",
+    "product": "EPMRU",
+    "product_name": "Conventional Regular Gasoline",
+    "region": "RGC",
+    "region_name": "U.S. Gulf Coast",
+    "series": "RWTC2",
+    "series_name": "Spot Price FOB (Dollars per Barrel)",
+    "value": 69.8,
+    "units": "$/BBL"
+   },
+   {
+    "date": "2026-09-11",
+    "process": "PF4",
+    "process_name": "Spot Price FOB",
+    "product": "EPMRU",
+    "product_name": "Conventional Regular Gasoline",
+    "region": "RGC",
+    "region_name": "U.S. Gulf Coast",
+    "series": "RWTC2",
+    "series_name": "Spot Price FOB (Dollars per Barrel)",
+    "value": 69.1,
+    "units": "$/BBL"
+   },
+   {
+    "date": "2026-09-04",
+    "process": "PF4",
+    "process_name": "Spot Price FOB",
+    "product": "EPMRU",
+    "product_name": "Conventional Regular Gasoline",
+    "region": "RGC",
+    "region_name": "U.S. Gulf Coast",
+    "series": "RWTC2",
+    "series_name": "Spot Price FOB (Dollars per Barrel)",
+    "value": 68.4,
+    "units": "$/BBL"
+   },
+   {
+    "date": "2026-09-04",
+    "process": "PF4",
+    "process_name": "Spot Price FOB",
+    "product": "EPD2DC",
+    "product_name": "CARB Diesel",
+    "region": "RGC",
+    "region_name": "U.S. Gulf Coast",
+    "series": "RWTC2",
+    "series_name": "Spot Price FOB (Dollars per Barrel)",
+    "value": 68.4,
+    "units": "$/BBL"
+   }
+  ]
+ },
+ {
+  "name": "petroleum-spot-prices-daily-frequency",
+  "route": "eia/petroleum/prices/spot_prices",
+  "params": {
+   "frequency": "monthly",
+   "series": "RWTC"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/petroleum/pri/spt/data/?api_key=TESTKEY&frequency=monthly&data%5B0%5D=value&facets%5Bseries%5D%5B%5D=RWTC&facets%5Bprocess%5D%5B%5D=PF4&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"9\",\"dateFormat\":\"YYYY-MM-DD\",\"frequency\":\"annual\",\"data\":[{\"period\":\"2026-09-04\",\"duoarea\":\"YCUOK\",\"area-name\":\"Cushing, OK\",\"product\":\"EPMRU\",\"product-name\":\"Conventional Regular Gasoline\",\"process\":\"PF4\",\"process-name\":\"Spot Price FOB\",\"series\":\"RWTC\",\"series-description\":\"Spot Price FOB (Dollars per Barrel)\",\"value\":\"69.4\",\"units\":\"$/BBL\"},{\"period\":\"2026-09-11\",\"duoarea\":\"YCUOK\",\"area-name\":\"Cushing, OK\",\"product\":\"EPMRU\",\"product-name\":\"Conventional Regular Gasoline\",\"process\":\"PF4\",\"process-name\":\"Spot Price FOB\",\"series\":\"RWTC\",\"series-description\":\"Spot Price FOB (Dollars per Barrel)\",\"value\":\"70.1\",\"units\":\"$/BBL\"},{\"period\":\"2026-09-18\",\"duoarea\":\"YCUOK\",\"area-name\":\"Cushing, OK\",\"product\":\"EPMRU\",\"product-name\":\"Conventional Regular Gasoline\",\"process\":\"PF4\",\"process-name\":\"Spot Price FOB\",\"series\":\"RWTC\",\"series-description\":\"Spot Price FOB (Dollars per Barrel)\",\"value\":\"70.8\",\"units\":\"$/BBL\"},{\"period\":\"2026-09-04\",\"duoarea\":\"YCUOK\",\"area-name\":\"Cushing, OK\",\"product\":\"EPD2DC\",\"product-name\":\"CARB Diesel\",\"process\":\"PF4\",\"process-name\":\"Spot Price FOB\",\"series\":\"RWTC\",\"series-description\":\"Spot Price FOB (Dollars per Barrel)\",\"value\":\"69.4\",\"units\":\"$/BBL\"},{\"period\":\"2026-09-11\",\"duoarea\":\"YCUOK\",\"area-name\":\"Cushing, OK\",\"product\":\"EPD2DC\",\"product-name\":\"CARB Diesel\",\"process\":\"PF4\",\"process-name\":\"Spot Price FOB\",\"series\":\"RWTC\",\"series-description\":\"Spot Price FOB (Dollars per Barrel)\",\"value\":\"70.1\",\"units\":\"$/BBL\"},{\"period\":\"2026-09-18\",\"duoarea\":\"YCUOK\",\"area-name\":\"Cushing, OK\",\"product\":\"EPD2DC\",\"product-name\":\"CARB Diesel\",\"process\":\"PF4\",\"process-name\":\"Spot Price FOB\",\"series\":\"RWTC\",\"series-description\":\"Spot Price FOB (Dollars per Barrel)\",\"value\":\"70.8\",\"units\":\"$/BBL\"},{\"period\":\"2026-09-04\",\"duoarea\":\"YCUOK\",\"area-name\":\"Cushing, OK\",\"product\":\"EPCWTI\",\"product-name\":\"WTI Crude Oil\",\"process\":\"PF4\",\"process-name\":\"Spot Price FOB\",\"series\":\"RWTC\",\"series-description\":\"Spot Price FOB (Dollars per Barrel)\",\"value\":\"69.4\",\"units\":\"$/BBL\"},{\"period\":\"2026-09-11\",\"duoarea\":\"YCUOK\",\"area-name\":\"Cushing, OK\",\"product\":\"EPCWTI\",\"product-name\":\"WTI Crude Oil\",\"process\":\"PF4\",\"process-name\":\"Spot Price FOB\",\"series\":\"RWTC\",\"series-description\":\"Spot Price FOB (Dollars per Barrel)\",\"value\":\"70.1\",\"units\":\"$/BBL\"},{\"period\":\"2026-09-18\",\"duoarea\":\"YCUOK\",\"area-name\":\"Cushing, OK\",\"product\":\"EPCWTI\",\"product-name\":\"WTI Crude Oil\",\"process\":\"PF4\",\"process-name\":\"Spot Price FOB\",\"series\":\"RWTC\",\"series-description\":\"Spot Price FOB (Dollars per Barrel)\",\"value\":\"70.8\",\"units\":\"$/BBL\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{\"series\":[\"RWTC\"],\"process\":[\"PF4\"]}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2026-09-04",
+    "process": "PF4",
+    "process_name": "Spot Price FOB",
+    "product": "EPMRU",
+    "product_name": "Conventional Regular Gasoline",
+    "region": "YCUOK",
+    "region_name": "Cushing, OK",
+    "series": "RWTC",
+    "series_name": "Spot Price FOB (Dollars per Barrel)",
+    "value": 69.4,
+    "units": "$/BBL"
+   },
+   {
+    "date": "2026-09-04",
+    "process": "PF4",
+    "process_name": "Spot Price FOB",
+    "product": "EPD2DC",
+    "product_name": "CARB Diesel",
+    "region": "YCUOK",
+    "region_name": "Cushing, OK",
+    "series": "RWTC",
+    "series_name": "Spot Price FOB (Dollars per Barrel)",
+    "value": 69.4,
+    "units": "$/BBL"
+   },
+   {
+    "date": "2026-09-04",
+    "process": "PF4",
+    "process_name": "Spot Price FOB",
+    "product": "EPCWTI",
+    "product_name": "WTI Crude Oil",
+    "region": "YCUOK",
+    "region_name": "Cushing, OK",
+    "series": "RWTC",
+    "series_name": "Spot Price FOB (Dollars per Barrel)",
+    "value": 69.4,
+    "units": "$/BBL"
+   },
+   {
+    "date": "2026-09-11",
+    "process": "PF4",
+    "process_name": "Spot Price FOB",
+    "product": "EPMRU",
+    "product_name": "Conventional Regular Gasoline",
+    "region": "YCUOK",
+    "region_name": "Cushing, OK",
+    "series": "RWTC",
+    "series_name": "Spot Price FOB (Dollars per Barrel)",
+    "value": 70.1,
+    "units": "$/BBL"
+   },
+   {
+    "date": "2026-09-11",
+    "process": "PF4",
+    "process_name": "Spot Price FOB",
+    "product": "EPD2DC",
+    "product_name": "CARB Diesel",
+    "region": "YCUOK",
+    "region_name": "Cushing, OK",
+    "series": "RWTC",
+    "series_name": "Spot Price FOB (Dollars per Barrel)",
+    "value": 70.1,
+    "units": "$/BBL"
+   },
+   {
+    "date": "2026-09-11",
+    "process": "PF4",
+    "process_name": "Spot Price FOB",
+    "product": "EPCWTI",
+    "product_name": "WTI Crude Oil",
+    "region": "YCUOK",
+    "region_name": "Cushing, OK",
+    "series": "RWTC",
+    "series_name": "Spot Price FOB (Dollars per Barrel)",
+    "value": 70.1,
+    "units": "$/BBL"
+   },
+   {
+    "date": "2026-09-18",
+    "process": "PF4",
+    "process_name": "Spot Price FOB",
+    "product": "EPMRU",
+    "product_name": "Conventional Regular Gasoline",
+    "region": "YCUOK",
+    "region_name": "Cushing, OK",
+    "series": "RWTC",
+    "series_name": "Spot Price FOB (Dollars per Barrel)",
+    "value": 70.8,
+    "units": "$/BBL"
+   },
+   {
+    "date": "2026-09-18",
+    "process": "PF4",
+    "process_name": "Spot Price FOB",
+    "product": "EPD2DC",
+    "product_name": "CARB Diesel",
+    "region": "YCUOK",
+    "region_name": "Cushing, OK",
+    "series": "RWTC",
+    "series_name": "Spot Price FOB (Dollars per Barrel)",
+    "value": 70.8,
+    "units": "$/BBL"
+   },
+   {
+    "date": "2026-09-18",
+    "process": "PF4",
+    "process_name": "Spot Price FOB",
+    "product": "EPCWTI",
+    "product_name": "WTI Crude Oil",
+    "region": "YCUOK",
+    "region_name": "Cushing, OK",
+    "series": "RWTC",
+    "series_name": "Spot Price FOB (Dollars per Barrel)",
+    "value": 70.8,
+    "units": "$/BBL"
+   }
+  ]
+ },
+ {
+  "name": "grid-demand-hourly",
+  "route": "eia/electricity_grid/demand",
+  "params": {
+   "frequency": "hourly",
+   "respondent": "arizona_public_service_company",
+   "series_type": "demand",
+   "start_date": "2026-09-28",
+   "end_date": "2026-09-29"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/electricity/rto/region-data/data/?api_key=TESTKEY&frequency=hourly&data%5B0%5D=value&facets%5Brespondent%5D%5B%5D=AZPS&facets%5Btype%5D%5B%5D=D&start=2026-09-28T00&end=2026-09-29T00&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"2\",\"dateFormat\":\"YYYY-MM-DD\\\"T\\\"HH24\",\"frequency\":\"hourly\",\"data\":[{\"period\":\"2026-09-28T07\",\"respondent\":\"AZPS\",\"respondent-name\":\"Arizona Public Service Company\",\"type\":\"D\",\"type-name\":\"Demand\",\"value\":\"3150\",\"value-units\":\"megawatthours\"},{\"period\":\"2026-09-28T08\",\"respondent\":\"AZPS\",\"respondent-name\":\"Arizona Public Service Company\",\"type\":\"D\",\"type-name\":\"Demand\",\"value\":\"3275\",\"value-units\":\"megawatthours\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"hourly\",\"facets\":{\"respondent\":[\"AZPS\"],\"type\":[\"D\"]}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2026-09-28T07:00:00",
+    "respondent": "AZPS",
+    "respondent_name": "Arizona Public Service Company",
+    "series_type": "D",
+    "series_type_name": "Demand",
+    "value": 3150.0
+   },
+   {
+    "date": "2026-09-28T08:00:00",
+    "respondent": "AZPS",
+    "respondent_name": "Arizona Public Service Company",
+    "series_type": "D",
+    "series_type_name": "Demand",
+    "value": 3275.0
+   }
+  ]
+ },
+ {
+  "name": "grid-demand-local-hourly-offsets",
+  "route": "eia/electricity_grid/demand",
+  "params": {
+   "frequency": "local-hourly",
+   "sort": "desc"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/electricity/rto/region-data/data/?api_key=TESTKEY&frequency=local-hourly&data%5B0%5D=value&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=desc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"3\",\"dateFormat\":\"YYYY-MM-DD\\\"T\\\"HH24TZH\",\"frequency\":\"local-hourly\",\"data\":[{\"period\":\"2026-09-28T07-07\",\"respondent\":\"AZPS\",\"respondent-name\":\"Arizona Public Service Company\",\"type\":\"D\",\"type-name\":\"Demand\",\"value\":\"3150\",\"value-units\":\"megawatthours\"},{\"period\":\"2026-09-28T08+00\",\"respondent\":\"AZPS\",\"respondent-name\":\"Arizona Public Service Company\",\"type\":\"D\",\"type-name\":\"Demand\",\"value\":\"3275\",\"value-units\":\"megawatthours\"},{\"period\":\"2026-09-28T09+05:30\",\"respondent\":\"AZPS\",\"respondent-name\":\"Arizona Public Service Company\",\"type\":\"D\",\"type-name\":\"Demand\",\"value\":\"3150\",\"value-units\":\"megawatthours\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"local-hourly\",\"facets\":{}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2026-09-28T07:00:00-07:00",
+    "respondent": "AZPS",
+    "respondent_name": "Arizona Public Service Company",
+    "series_type": "D",
+    "series_type_name": "Demand",
+    "value": 3150.0
+   },
+   {
+    "date": "2026-09-28T08:00:00Z",
+    "respondent": "AZPS",
+    "respondent_name": "Arizona Public Service Company",
+    "series_type": "D",
+    "series_type_name": "Demand",
+    "value": 3275.0
+   },
+   {
+    "date": "2026-09-28T09:00:00+05:30",
+    "respondent": "AZPS",
+    "respondent_name": "Arizona Public Service Company",
+    "series_type": "D",
+    "series_type_name": "Demand",
+    "value": 3150.0
+   }
+  ]
+ },
+ {
+  "name": "grid-demand-timezone-needs-daily",
+  "route": "eia/electricity_grid/demand",
+  "params": {
+   "frequency": "hourly",
+   "timezone": "pacific"
+  },
+  "exchanges": [],
+  "error": "The 'timezone' filter only applies to frequency: daily"
+ },
+ {
+  "name": "grid-demand-daily-timezone",
+  "route": "eia/electricity_grid/demand",
+  "params": {
+   "frequency": "daily",
+   "timezone": "pacific"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/electricity/rto/daily-region-data/data/?api_key=TESTKEY&frequency=daily&data%5B0%5D=value&facets%5Btimezone%5D%5B%5D=Pacific&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"1\",\"dateFormat\":\"YYYY-MM-DD\",\"frequency\":\"daily\",\"data\":[{\"period\":\"2026-09-28\",\"respondent\":\"AZPS\",\"respondent-name\":\"Arizona Public Service Company\",\"type\":\"D\",\"type-name\":\"Demand\",\"value\":\"3150\",\"value-units\":\"megawatthours\",\"timezone\":\"Pacific\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"daily\",\"facets\":{\"timezone\":[\"Pacific\"]}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2026-09-28",
+    "respondent": "AZPS",
+    "respondent_name": "Arizona Public Service Company",
+    "series_type": "D",
+    "series_type_name": "Demand",
+    "timezone": "Pacific",
+    "value": 3150.0
+   }
+  ]
+ },
+ {
+  "name": "natural-gas-weekly-storage",
+  "route": "eia/natural_gas/storage/weekly_working_gas_in_underground_storage",
+  "params": {
+   "series": "weekly_lower_48_states_natural_gas_working_underground",
+   "start_date": "2026-09-01"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/natural-gas/stor/wkly/data/?api_key=TESTKEY&frequency=weekly&data%5B0%5D=value&facets%5Bseries%5D%5B%5D=NW2_EPG0_SWO_R48_BCF&facets%5Bproduct%5D%5B%5D=EPG0&start=2026-09-01&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"2\",\"dateFormat\":\"YYYY-MM-DD\",\"frequency\":\"weekly\",\"data\":[{\"period\":\"2026-09-11\",\"duoarea\":\"R48\",\"area-name\":\"Lower 48 States\",\"product\":\"EPG0\",\"process\":\"SWO\",\"series\":\"NW2_EPG0_SWO_R48_BCF\",\"value\":\"3400\",\"units\":\"BCF\"},{\"period\":\"2026-09-18\",\"duoarea\":\"R48\",\"area-name\":\"Lower 48 States\",\"product\":\"EPG0\",\"process\":\"SWO\",\"series\":\"NW2_EPG0_SWO_R48_BCF\",\"value\":\"3456\",\"units\":\"BCF\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"weekly\",\"facets\":{\"series\":[\"NW2_EPG0_SWO_R48_BCF\"],\"product\":[\"EPG0\"]}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2026-09-11",
+    "process": "SWO",
+    "product": "EPG0",
+    "region": "R48",
+    "region_name": "Lower 48 States",
+    "series": "NW2_EPG0_SWO_R48_BCF",
+    "value": 3400.0,
+    "units": "BCF"
+   },
+   {
+    "date": "2026-09-18",
+    "process": "SWO",
+    "product": "EPG0",
+    "region": "R48",
+    "region_name": "Lower 48 States",
+    "series": "NW2_EPG0_SWO_R48_BCF",
+    "value": 3456.0,
+    "units": "BCF"
+   }
+  ]
+ },
+ {
+  "name": "aeo-release-2025",
+  "route": "eia/aeo",
+  "params": {
+   "release": "2025",
+   "scenario": "ref2025",
+   "table": "1",
+   "limit": 10
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/aeo/2025/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=value&facets%5Bscenario%5D%5B%5D=ref2025&facets%5BtableId%5D%5B%5D=1&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=10",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"2\",\"dateFormat\":\"YYYY\",\"frequency\":\"annual\",\"data\":[{\"period\":\"2025\",\"regionId\":\"1-3\",\"regionName\":\"East North Central\",\"scenario\":\"ref2025\",\"scenarioDescription\":\"Reference case\",\"seriesId\":\"cns_NA_NA_NA_NA\",\"seriesName\":\"Consumption : Total\",\"tableId\":\"1\",\"tableName\":\"Total Energy Supply\",\"history\":\"HISTORY\",\"value\":\"93.2\",\"unit\":\"quads\"},{\"period\":\"2030\",\"regionId\":\"1-3\",\"regionName\":\"East North Central\",\"scenario\":\"ref2025\",\"scenarioDescription\":\"Reference case\",\"seriesId\":\"cns_NA_NA_NA_NA\",\"seriesName\":\"Consumption : Total\",\"tableId\":\"1\",\"tableName\":\"Total Energy Supply\",\"history\":\"PROJECTION\",\"value\":\"95.7\",\"unit\":\"quads\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{\"scenario\":[\"ref2025\"],\"tableId\":[\"1\"]}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2025-01-01",
+    "history": "HISTORY",
+    "region": "1-3",
+    "region_name": "East North Central",
+    "scenario": "ref2025",
+    "scenario_name": "Reference case",
+    "series": "cns_NA_NA_NA_NA",
+    "series_name": "Consumption : Total",
+    "table": "1",
+    "table_name": "Total Energy Supply",
+    "value": 93.2,
+    "unit": "quads"
+   },
+   {
+    "date": "2030-01-01",
+    "history": "PROJECTION",
+    "region": "1-3",
+    "region_name": "East North Central",
+    "scenario": "ref2025",
+    "scenario_name": "Reference case",
+    "series": "cns_NA_NA_NA_NA",
+    "series_name": "Consumption : Total",
+    "table": "1",
+    "table_name": "Total Energy Supply",
+    "value": 95.7,
+    "unit": "quads"
+   }
+  ]
+ },
+ {
+  "name": "aeo-default-release",
+  "route": "eia/aeo",
+  "params": {},
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/aeo/2026/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=value&facets%5Bhistory%5D%5B%5D=PROJECTION&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"1\",\"dateFormat\":\"YYYY\",\"frequency\":\"annual\",\"data\":[{\"period\":\"2030\",\"regionId\":\"1-3\",\"regionName\":\"East North Central\",\"scenario\":\"ref2025\",\"scenarioDescription\":\"Reference case\",\"seriesId\":\"cns_NA_NA_NA_NA\",\"seriesName\":\"Consumption : Total\",\"tableId\":\"1\",\"tableName\":\"Total Energy Supply\",\"history\":\"PROJECTION\",\"value\":\"95.7\",\"unit\":\"quads\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{\"history\":[\"PROJECTION\"]}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2030-01-01",
+    "history": "PROJECTION",
+    "region": "1-3",
+    "region_name": "East North Central",
+    "scenario": "ref2025",
+    "scenario_name": "Reference case",
+    "series": "cns_NA_NA_NA_NA",
+    "series_name": "Consumption : Total",
+    "table": "1",
+    "table_name": "Total Energy Supply",
+    "value": 95.7,
+    "unit": "quads"
+   }
+  ]
+ },
+ {
+  "name": "total-energy-monthly",
+  "route": "eia/total_energy",
+  "params": {
+   "msn": "eletpus"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/total-energy/data/?api_key=TESTKEY&frequency=monthly&data%5B0%5D=value&facets%5Bmsn%5D%5B%5D=ELETPUS&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"2\",\"dateFormat\":\"YYYY-MM\",\"frequency\":\"monthly\",\"data\":[{\"period\":\"2026-06\",\"msn\":\"ELETPUS\",\"msnDescription\":\"Electricity Net Generation\",\"value\":\"Not Available\",\"unit\":\"Million Kilowatthours\"},{\"period\":\"2026-05\",\"msn\":\"ELETPUS\",\"msnDescription\":\"Electricity Net Generation\",\"value\":\"310516.9\",\"unit\":\"Million Kilowatthours\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"monthly\",\"facets\":{\"msn\":[\"ELETPUS\"]}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2026-05-01",
+    "msn": "ELETPUS",
+    "msn_name": "Electricity Net Generation",
+    "value": 310516.9,
+    "unit": "Million Kilowatthours"
+   },
+   {
+    "date": "2026-06-01",
+    "msn": "ELETPUS",
+    "msn_name": "Electricity Net Generation",
+    "unit": "Million Kilowatthours"
+   }
+  ]
+ },
+ {
+  "name": "emissions-co2-names",
+  "route": "eia/state_electricity_profiles/emissions_by_state_by_fuel",
+  "params": {
+   "state": "TX"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/electricity/state-electricity-profiles/emissions-by-state-by-fuel/data/?api_key=TESTKEY&frequency=annual&data%5B0%5D=co2-rate-lbs-mwh&data%5B1%5D=co2-thousand-metric-tons&data%5B2%5D=nox-rate-lbs-mwh&data%5B3%5D=nox-short-tons&data%5B4%5D=so2-rate-lbs-mwh&data%5B5%5D=so2-short-tons&facets%5Bstateid%5D%5B%5D=TX&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"2\",\"dateFormat\":\"YYYY\",\"frequency\":\"annual\",\"data\":[{\"period\":\"2023\",\"fuelid\":\"COL\",\"fuelDescription\":\"Coal\",\"stateid\":\"TX\",\"stateDescription\":\"Texas\",\"co2-rate-lbs-mwh\":\"2100.5\",\"co2-thousand-metric-tons\":\"40000\",\"nox-rate-lbs-mwh\":\"1.2\",\"nox-short-tons\":\"55000\",\"so2-rate-lbs-mwh\":\"2.1\",\"so2-short-tons\":\"90000\",\"extra2\":\"kept\"},{\"period\":\"2024\",\"fuelid\":\"COL\",\"fuelDescription\":\"Coal\",\"stateid\":\"TX\",\"stateDescription\":\"Texas\",\"co2-rate-lbs-mwh\":\"2050\",\"co2-thousand-metric-tons\":\"38000\",\"nox-rate-lbs-mwh\":\"1.1\",\"nox-short-tons\":\"51000\",\"so2-rate-lbs-mwh\":\"2.0\",\"so2-short-tons\":\"85000\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"annual\",\"facets\":{\"stateid\":[\"TX\"]}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2023-01-01",
+    "fuel": "COL",
+    "fuel_name": "Coal",
+    "state": "TX",
+    "state_name": "Texas",
+    "co_2_rate_lbs_mwh": 2100.5,
+    "co_2_thousand_metric_tons": 40000.0,
+    "nox_rate_lbs_mwh": 1.2,
+    "nox_short_tons": 55000.0,
+    "so_2_rate_lbs_mwh": 2.1,
+    "so_2_short_tons": 90000.0,
+    "extra2": "kept"
+   },
+   {
+    "date": "2024-01-01",
+    "fuel": "COL",
+    "fuel_name": "Coal",
+    "state": "TX",
+    "state_name": "Texas",
+    "co_2_rate_lbs_mwh": 2050.0,
+    "co_2_thousand_metric_tons": 38000.0,
+    "nox_rate_lbs_mwh": 1.1,
+    "nox_short_tons": 51000.0,
+    "so_2_rate_lbs_mwh": 2.0,
+    "so_2_short_tons": 85000.0
+   }
+  ]
+ },
+ {
+  "name": "steo-table-01",
+  "route": "commodity/short_term_energy_outlook",
+  "params": {
+   "table": "01",
+   "start_date": "2026-09-15",
+   "end_date": "2026-10-20"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/steo/data/?api_key=TESTKEY&frequency=monthly&data[0]=value&facets[seriesId][]=COPRPUS&facets[seriesId][]=NGPRPUS&facets[seriesId][]=CLPRPUS_TON&facets[seriesId][]=PATCPUSX&facets[seriesId][]=NGTCPUS&facets[seriesId][]=CLTCPUS_TON&facets[seriesId][]=ESTXPUS&facets[seriesId][]=RETCBUS&facets[seriesId][]=TETCFUEL&facets[seriesId][]=WTIPUUS&start=2026-09&end=2026-10&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"6\",\"dateFormat\":\"YYYY-MM\",\"frequency\":\"monthly\",\"data\":[{\"period\":\"2026-09\",\"seriesId\":\"COPRPUS\",\"seriesDescription\":\"Crude oil production, United States\",\"value\":\"17.09\",\"unit\":\"million barrels per day\"},{\"period\":\"2026-10\",\"seriesId\":\"COPRPUS\",\"seriesDescription\":\"Crude oil production, United States\",\"value\":\"17.1\",\"unit\":\"million barrels per day\"},{\"period\":\"2026-09\",\"seriesId\":\"NGPRPUS\",\"seriesDescription\":\"Dry natural gas production, United States\",\"value\":\"17.09\",\"unit\":\"billion cubic feet per day\"},{\"period\":\"2026-10\",\"seriesId\":\"NGPRPUS\",\"seriesDescription\":\"Dry natural gas production, United States\",\"value\":\"17.1\",\"unit\":\"billion cubic feet per day\"},{\"period\":\"2026-09\",\"seriesId\":\"WTIPUUS\",\"seriesDescription\":\"WTI crude oil spot price\",\"value\":\"17.09\",\"unit\":\"dollars per barrel\"},{\"period\":\"2026-10\",\"seriesId\":\"WTIPUUS\",\"seriesDescription\":\"WTI crude oil spot price\",\"value\":\"17.1\",\"unit\":\"dollars per barrel\"}]},\"request\":{\"params\":{\"facets\":{\"seriesId\":[\"COPRPUS\",\"NGPRPUS\",\"CLPRPUS_TON\",\"PATCPUSX\",\"NGTCPUS\",\"CLTCPUS_TON\",\"ESTXPUS\",\"RETCBUS\",\"TETCFUEL\",\"WTIPUUS\"]}}}}"
+   },
+   {
+    "url": "https://api.eia.gov/v2/steo/data/?api_key=TESTKEY&frequency=monthly&data[0]=value&facets[seriesId][]=NGHHUUS&facets[seriesId][]=CLEUDUS&facets[seriesId][]=GDPQXUS&facets[seriesId][]=GDPQXUS_PCT&facets[seriesId][]=GDPDIUS&facets[seriesId][]=GDPDIUS_PCT&facets[seriesId][]=YD87OUS&facets[seriesId][]=YD87OUS_PCT&facets[seriesId][]=ZOMNIUS&facets[seriesId][]=ZOMNIUS_PCT&start=2026-09&end=2026-10&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"0\",\"dateFormat\":\"YYYY-MM\",\"frequency\":\"monthly\",\"data\":[]},\"request\":{\"params\":{\"facets\":{\"seriesId\":[\"NGHHUUS\",\"CLEUDUS\",\"GDPQXUS\",\"GDPQXUS_PCT\",\"GDPDIUS\",\"GDPDIUS_PCT\",\"YD87OUS\",\"YD87OUS_PCT\",\"ZOMNIUS\",\"ZOMNIUS_PCT\"]}}}}"
+   },
+   {
+    "url": "https://api.eia.gov/v2/steo/data/?api_key=TESTKEY&frequency=monthly&data[0]=value&facets[seriesId][]=ZWHDPUS&facets[seriesId][]=ZWCDPUS&start=2026-09&end=2026-10&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"0\",\"dateFormat\":\"YYYY-MM\",\"frequency\":\"monthly\",\"data\":[]},\"request\":{\"params\":{\"facets\":{\"seriesId\":[\"ZWHDPUS\",\"ZWCDPUS\"]}}}}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2026-09-01",
+    "table": "STEO - 1: US Energy Markets Summary",
+    "symbol": "COPRPUS",
+    "order": 1,
+    "title": "Crude oil production, United States",
+    "value": 17.09,
+    "unit": "million barrels per day"
+   },
+   {
+    "date": "2026-09-01",
+    "table": "STEO - 1: US Energy Markets Summary",
+    "symbol": "NGPRPUS",
+    "order": 2,
+    "title": "Dry natural gas production, United States",
+    "value": 17.09,
+    "unit": "billion cubic feet per day"
+   },
+   {
+    "date": "2026-09-01",
+    "table": "STEO - 1: US Energy Markets Summary",
+    "symbol": "WTIPUUS",
+    "order": 3,
+    "title": "WTI crude oil spot price",
+    "value": 17.09,
+    "unit": "dollars per barrel"
+   },
+   {
+    "date": "2026-10-01",
+    "table": "STEO - 1: US Energy Markets Summary",
+    "symbol": "COPRPUS",
+    "order": 1,
+    "title": "Crude oil production, United States",
+    "value": 17.1,
+    "unit": "million barrels per day"
+   },
+   {
+    "date": "2026-10-01",
+    "table": "STEO - 1: US Energy Markets Summary",
+    "symbol": "NGPRPUS",
+    "order": 2,
+    "title": "Dry natural gas production, United States",
+    "value": 17.1,
+    "unit": "billion cubic feet per day"
+   },
+   {
+    "date": "2026-10-01",
+    "table": "STEO - 1: US Energy Markets Summary",
+    "symbol": "WTIPUUS",
+    "order": 3,
+    "title": "WTI crude oil spot price",
+    "value": 17.1,
+    "unit": "dollars per barrel"
+   }
+  ]
+ },
+ {
+  "name": "steo-symbols",
+  "route": "commodity/short_term_energy_outlook",
+  "params": {
+   "symbol": "wtipuuS,COPRPUS,wtipuus",
+   "frequency": "month"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/steo/data/?api_key=TESTKEY&frequency=monthly&data[0]=value&facets[seriesId][]=WTIPUUS&facets[seriesId][]=COPRPUS&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"6\",\"dateFormat\":\"YYYY-MM\",\"frequency\":\"monthly\",\"data\":[{\"period\":\"2026-08\",\"seriesId\":\"COPRPUS\",\"seriesDescription\":\"Crude oil production, United States\",\"value\":\"17.08\",\"unit\":\"million barrels per day\"},{\"period\":\"2026-09\",\"seriesId\":\"COPRPUS\",\"seriesDescription\":\"Crude oil production, United States\",\"value\":\"17.09\",\"unit\":\"million barrels per day\"},{\"period\":\"2026-10\",\"seriesId\":\"COPRPUS\",\"seriesDescription\":\"Crude oil production, United States\",\"value\":\"17.1\",\"unit\":\"million barrels per day\"},{\"period\":\"2026-08\",\"seriesId\":\"WTIPUUS\",\"seriesDescription\":\"WTI crude oil spot price\",\"value\":\"17.08\",\"unit\":\"dollars per barrel\"},{\"period\":\"2026-09\",\"seriesId\":\"WTIPUUS\",\"seriesDescription\":\"WTI crude oil spot price\",\"value\":\"17.09\",\"unit\":\"dollars per barrel\"},{\"period\":\"2026-10\",\"seriesId\":\"WTIPUUS\",\"seriesDescription\":\"WTI crude oil spot price\",\"value\":\"17.1\",\"unit\":\"dollars per barrel\"}]},\"request\":{\"params\":{\"facets\":{\"seriesId\":[\"WTIPUUS\",\"COPRPUS\"]}}}}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2026-08-01",
+    "symbol": "WTIPUUS",
+    "title": "WTI crude oil spot price",
+    "value": 17.08,
+    "unit": "dollars per barrel"
+   },
+   {
+    "date": "2026-08-01",
+    "symbol": "COPRPUS",
+    "title": "Crude oil production, United States",
+    "value": 17.08,
+    "unit": "million barrels per day"
+   },
+   {
+    "date": "2026-09-01",
+    "symbol": "WTIPUUS",
+    "title": "WTI crude oil spot price",
+    "value": 17.09,
+    "unit": "dollars per barrel"
+   },
+   {
+    "date": "2026-09-01",
+    "symbol": "COPRPUS",
+    "title": "Crude oil production, United States",
+    "value": 17.09,
+    "unit": "million barrels per day"
+   },
+   {
+    "date": "2026-10-01",
+    "symbol": "WTIPUUS",
+    "title": "WTI crude oil spot price",
+    "value": 17.1,
+    "unit": "dollars per barrel"
+   },
+   {
+    "date": "2026-10-01",
+    "symbol": "COPRPUS",
+    "title": "Crude oil production, United States",
+    "value": 17.1,
+    "unit": "million barrels per day"
+   }
+  ]
+ },
+ {
+  "name": "steo-quarterly",
+  "route": "commodity/short_term_energy_outlook",
+  "params": {
+   "symbol": "COPRPUS,NGPRPUS",
+   "frequency": "quarter",
+   "start_date": "2026-05-01",
+   "end_date": "2026-11-01"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/steo/data/?api_key=TESTKEY&frequency=quarterly&data[0]=value&facets[seriesId][]=COPRPUS&facets[seriesId][]=NGPRPUS&start=2026-Q2&end=2026-Q4&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"4\",\"dateFormat\":\"YYYY-\\\"Q\\\"Q\",\"frequency\":\"quarterly\",\"data\":[{\"period\":\"2026-Q2\",\"seriesId\":\"COPRPUS\",\"seriesDescription\":\"Crude oil production, United States\",\"value\":\"17.09\",\"unit\":\"million barrels per day\"},{\"period\":\"2026-Q3\",\"seriesId\":\"COPRPUS\",\"seriesDescription\":\"Crude oil production, United States\",\"value\":\"17.1\",\"unit\":\"million barrels per day\"},{\"period\":\"2026-Q4\",\"seriesId\":\"NGPRPUS\",\"seriesDescription\":\"Dry natural gas production, United States\",\"value\":\"17.08\",\"unit\":\"billion cubic feet per day\"},{\"period\":\"2026-Q2\",\"seriesId\":\"NGPRPUS\",\"seriesDescription\":\"Dry natural gas production, United States\",\"value\":\"17.1\",\"unit\":\"billion cubic feet per day\"}]},\"request\":{\"params\":{\"facets\":{\"seriesId\":[\"COPRPUS\",\"NGPRPUS\"]}}}}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2026-04-01",
+    "symbol": "COPRPUS",
+    "title": "Crude oil production, United States",
+    "value": 17.09,
+    "unit": "million barrels per day"
+   },
+   {
+    "date": "2026-04-01",
+    "symbol": "NGPRPUS",
+    "title": "Dry natural gas production, United States",
+    "value": 17.1,
+    "unit": "billion cubic feet per day"
+   },
+   {
+    "date": "2026-07-01",
+    "symbol": "COPRPUS",
+    "title": "Crude oil production, United States",
+    "value": 17.1,
+    "unit": "million barrels per day"
+   },
+   {
+    "date": "2026-10-01",
+    "symbol": "NGPRPUS",
+    "title": "Dry natural gas production, United States",
+    "value": 17.08,
+    "unit": "billion cubic feet per day"
+   }
+  ]
+ },
+ {
+  "name": "steo-annual",
+  "route": "commodity/short_term_energy_outlook",
+  "params": {
+   "table": "02",
+   "frequency": "annual",
+   "start_date": "2024-01-01"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/steo/data/?api_key=TESTKEY&frequency=annual&data[0]=value&facets[seriesId][]=WTIPUUS&facets[seriesId][]=BREPUUS&facets[seriesId][]=RAIMUUS&facets[seriesId][]=RACPUUS&facets[seriesId][]=MGWHUUS_$&facets[seriesId][]=DSWHUUS_$&facets[seriesId][]=D2WHUUS_$&facets[seriesId][]=JKTCUUS_$&facets[seriesId][]=RFTCUUS_$&facets[seriesId][]=PRMBUUS_$&start=2024&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"0\",\"data\":[]},\"request\":{\"params\":{\"facets\":{\"seriesId\":[\"WTIPUUS\",\"BREPUUS\",\"RAIMUUS\",\"RACPUUS\",\"MGWHUUS_$\",\"DSWHUUS_$\",\"D2WHUUS_$\",\"JKTCUUS_$\",\"RFTCUUS_$\",\"PRMBUUS_$\"]}}}}"
+   },
+   {
+    "url": "https://api.eia.gov/v2/steo/data/?api_key=TESTKEY&frequency=annual&data[0]=value&facets[seriesId][]=MGRARUS_$&facets[seriesId][]=MGEIAUS_$&facets[seriesId][]=DSRTUUS_$&facets[seriesId][]=D2RCAUS_$&facets[seriesId][]=PRRCAUS&facets[seriesId][]=NGHHMCF&facets[seriesId][]=NGHHUUS&facets[seriesId][]=NGICUUS&facets[seriesId][]=NGCCUUS&facets[seriesId][]=NGRCUUS&start=2024&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"0\",\"data\":[]},\"request\":{\"params\":{\"facets\":{\"seriesId\":[\"MGRARUS_$\",\"MGEIAUS_$\",\"DSRTUUS_$\",\"D2RCAUS_$\",\"PRRCAUS\",\"NGHHMCF\",\"NGHHUUS\",\"NGICUUS\",\"NGCCUUS\",\"NGRCUUS\"]}}}}"
+   },
+   {
+    "url": "https://api.eia.gov/v2/steo/data/?api_key=TESTKEY&frequency=annual&data[0]=value&facets[seriesId][]=CLEUDUS&facets[seriesId][]=NGEUDUS&facets[seriesId][]=RFEUDUS&facets[seriesId][]=DKEUDUS&facets[seriesId][]=ESICUUS&facets[seriesId][]=ESCMUUS&facets[seriesId][]=ESRCUUS&start=2024&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"0\",\"data\":[]},\"request\":{\"params\":{\"facets\":{\"seriesId\":[\"CLEUDUS\",\"NGEUDUS\",\"RFEUDUS\",\"DKEUDUS\",\"ESICUUS\",\"ESCMUUS\",\"ESRCUUS\"]}}}}"
+   }
+  ],
+  "error": "No data returned for ['WTIPUUS', 'BREPUUS', 'RAIMUUS', 'RACPUUS', 'MGWHUUS_$', 'DSWHUUS_$', 'D2WHUUS_$', 'JKTCUUS_$', 'RFTCUUS_$', 'PRMBUUS_$']\nNo data returned for ['MGRARUS_$', 'MGEIAUS_$', 'DSRTUUS_$', 'D2RCAUS_$', 'PRRCAUS', 'NGHHMCF', 'NGHHUUS', 'NGICUUS', 'NGCCUUS', 'NGRCUUS']\nNo data returned for ['CLEUDUS', 'NGEUDUS', 'RFEUDUS', 'DKEUDUS', 'ESICUUS', 'ESCMUUS', 'ESRCUUS']"
+ },
+ {
+  "name": "steo-some-chunks-empty",
+  "route": "commodity/short_term_energy_outlook",
+  "params": {
+   "table": "01"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/steo/data/?api_key=TESTKEY&frequency=monthly&data[0]=value&facets[seriesId][]=COPRPUS&facets[seriesId][]=NGPRPUS&facets[seriesId][]=CLPRPUS_TON&facets[seriesId][]=PATCPUSX&facets[seriesId][]=NGTCPUS&facets[seriesId][]=CLTCPUS_TON&facets[seriesId][]=ESTXPUS&facets[seriesId][]=RETCBUS&facets[seriesId][]=TETCFUEL&facets[seriesId][]=WTIPUUS&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"6\",\"dateFormat\":\"YYYY-MM\",\"frequency\":\"monthly\",\"data\":[{\"period\":\"2026-08\",\"seriesId\":\"COPRPUS\",\"seriesDescription\":\"Crude oil production, United States\",\"value\":\"17.08\",\"unit\":\"million barrels per day\"},{\"period\":\"2026-09\",\"seriesId\":\"COPRPUS\",\"seriesDescription\":\"Crude oil production, United States\",\"value\":\"17.09\",\"unit\":\"million barrels per day\"},{\"period\":\"2026-10\",\"seriesId\":\"COPRPUS\",\"seriesDescription\":\"Crude oil production, United States\",\"value\":\"17.1\",\"unit\":\"million barrels per day\"},{\"period\":\"2026-08\",\"seriesId\":\"NGPRPUS\",\"seriesDescription\":\"Dry natural gas production, United States\",\"value\":\"17.08\",\"unit\":\"billion cubic feet per day\"},{\"period\":\"2026-09\",\"seriesId\":\"NGPRPUS\",\"seriesDescription\":\"Dry natural gas production, United States\",\"value\":\"17.09\",\"unit\":\"billion cubic feet per day\"},{\"period\":\"2026-10\",\"seriesId\":\"NGPRPUS\",\"seriesDescription\":\"Dry natural gas production, United States\",\"value\":\"17.1\",\"unit\":\"billion cubic feet per day\"}]},\"request\":{\"params\":{\"facets\":{\"seriesId\":[\"COPRPUS\",\"NGPRPUS\",\"CLPRPUS_TON\",\"PATCPUSX\",\"NGTCPUS\",\"CLTCPUS_TON\",\"ESTXPUS\",\"RETCBUS\",\"TETCFUEL\",\"WTIPUUS\"]}}}}"
+   },
+   {
+    "url": "https://api.eia.gov/v2/steo/data/?api_key=TESTKEY&frequency=monthly&data[0]=value&facets[seriesId][]=NGHHUUS&facets[seriesId][]=CLEUDUS&facets[seriesId][]=GDPQXUS&facets[seriesId][]=GDPQXUS_PCT&facets[seriesId][]=GDPDIUS&facets[seriesId][]=GDPDIUS_PCT&facets[seriesId][]=YD87OUS&facets[seriesId][]=YD87OUS_PCT&facets[seriesId][]=ZOMNIUS&facets[seriesId][]=ZOMNIUS_PCT&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"0\",\"dateFormat\":\"YYYY-MM\",\"frequency\":\"monthly\",\"data\":[]},\"request\":{\"params\":{\"facets\":{\"seriesId\":[\"NGHHUUS\",\"CLEUDUS\",\"GDPQXUS\",\"GDPQXUS_PCT\",\"GDPDIUS\",\"GDPDIUS_PCT\",\"YD87OUS\",\"YD87OUS_PCT\",\"ZOMNIUS\",\"ZOMNIUS_PCT\"]}}}}"
+   },
+   {
+    "url": "https://api.eia.gov/v2/steo/data/?api_key=TESTKEY&frequency=monthly&data[0]=value&facets[seriesId][]=ZWHDPUS&facets[seriesId][]=ZWCDPUS&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"0\",\"dateFormat\":\"YYYY-MM\",\"frequency\":\"monthly\",\"data\":[]},\"request\":{\"params\":{\"facets\":{\"seriesId\":[\"ZWHDPUS\",\"ZWCDPUS\"]}}}}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2026-08-01",
+    "table": "STEO - 1: US Energy Markets Summary",
+    "symbol": "COPRPUS",
+    "order": 1,
+    "title": "Crude oil production, United States",
+    "value": 17.08,
+    "unit": "million barrels per day"
+   },
+   {
+    "date": "2026-08-01",
+    "table": "STEO - 1: US Energy Markets Summary",
+    "symbol": "NGPRPUS",
+    "order": 2,
+    "title": "Dry natural gas production, United States",
+    "value": 17.08,
+    "unit": "billion cubic feet per day"
+   },
+   {
+    "date": "2026-09-01",
+    "table": "STEO - 1: US Energy Markets Summary",
+    "symbol": "COPRPUS",
+    "order": 1,
+    "title": "Crude oil production, United States",
+    "value": 17.09,
+    "unit": "million barrels per day"
+   },
+   {
+    "date": "2026-09-01",
+    "table": "STEO - 1: US Energy Markets Summary",
+    "symbol": "NGPRPUS",
+    "order": 2,
+    "title": "Dry natural gas production, United States",
+    "value": 17.09,
+    "unit": "billion cubic feet per day"
+   },
+   {
+    "date": "2026-10-01",
+    "table": "STEO - 1: US Energy Markets Summary",
+    "symbol": "COPRPUS",
+    "order": 1,
+    "title": "Crude oil production, United States",
+    "value": 17.1,
+    "unit": "million barrels per day"
+   },
+   {
+    "date": "2026-10-01",
+    "table": "STEO - 1: US Energy Markets Summary",
+    "symbol": "NGPRPUS",
+    "order": 2,
+    "title": "Dry natural gas production, United States",
+    "value": 17.1,
+    "unit": "billion cubic feet per day"
+   }
+  ]
+ },
+ {
+  "name": "data-browser-weekly",
+  "route": "eia/data_browser",
+  "params": {
+   "route": "/petroleum/pri/spt/data/",
+   "facets": "duoarea:RGC; product:EPCWTI,EPCBRENT",
+   "start_date": "2026-09-01",
+   "sort": "desc"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/petroleum/pri/spt?api_key=TESTKEY",
+    "status": 200,
+    "body": "{\"response\":{\"id\":\"pri\",\"name\":\"Spot Prices\",\"frequency\":[{\"id\":\"weekly\",\"description\":\"Weekly\",\"query\":\"W\",\"format\":\"YYYY-MM-DD\"},{\"id\":\"monthly\",\"description\":\"Monthly\",\"query\":\"M\",\"format\":\"YYYY-MM\"}],\"facets\":[{\"id\":\"duoarea\",\"description\":\"Region\"},{\"id\":\"product\",\"description\":\"Product\"},{\"id\":\"series\",\"description\":\"Series\"}],\"data\":{\"value\":{\"alias\":\"Value\",\"units\":\"$/BBL\"}},\"startPeriod\":\"1986-01-03\",\"endPeriod\":\"2026-09-18\",\"defaultFrequency\":\"weekly\",\"defaultDateFormat\":\"YYYY-MM-DD\"}}"
+   },
+   {
+    "url": "https://api.eia.gov/v2/petroleum/pri/spt/data/?api_key=TESTKEY&frequency=weekly&data%5B0%5D=value&facets%5Bduoarea%5D%5B%5D=RGC&facets%5Bproduct%5D%5B%5D=EPCWTI&facets%5Bproduct%5D%5B%5D=EPCBRENT&start=2026-09-01&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=desc&offset=0&length=5000",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"3\",\"dateFormat\":\"YYYY-MM-DD\",\"frequency\":\"weekly\",\"data\":[{\"period\":\"2026-09-11\",\"duoarea\":\"RGC\",\"area-name\":\"U.S. Gulf Coast\",\"product\":\"EPCWTI\",\"value\":\"70.1\",\"units\":\"$/BBL\"},{\"period\":\"2026-09-18\",\"duoarea\":\"RGC\",\"area-name\":\"U.S. Gulf Coast\",\"product\":\"EPCWTI\",\"value\":\"NA\",\"units\":\"$/BBL\"},{\"period\":\"2026-09-04\",\"duoarea\":\"RGC\",\"area-name\":\"U.S. Gulf Coast\",\"product\":\"EPCWTI\",\"value\":\"69.5\",\"units\":\"$/BBL\",\"extra-field\":\"x\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"weekly\",\"facets\":{\"duoarea\":[\"RGC\"],\"product\":[\"EPCWTI\",\"EPCBRENT\"]}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2026-09-18",
+    "duoarea": "RGC",
+    "area_name": "U.S. Gulf Coast",
+    "product": "EPCWTI",
+    "value": "NA",
+    "units": "$/BBL"
+   },
+   {
+    "date": "2026-09-11",
+    "duoarea": "RGC",
+    "area_name": "U.S. Gulf Coast",
+    "product": "EPCWTI",
+    "value": 70.1,
+    "units": "$/BBL"
+   },
+   {
+    "date": "2026-09-04",
+    "duoarea": "RGC",
+    "area_name": "U.S. Gulf Coast",
+    "product": "EPCWTI",
+    "value": 69.5,
+    "units": "$/BBL",
+    "extra_field": "x"
+   }
+  ]
+ },
+ {
+  "name": "data-browser-monthly-data-type",
+  "route": "eia/data_browser",
+  "params": {
+   "route": "petroleum/pri/spt",
+   "frequency": "monthly",
+   "data_type": "value",
+   "limit": 2
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/petroleum/pri/spt?api_key=TESTKEY",
+    "status": 200,
+    "body": "{\"response\":{\"id\":\"pri\",\"name\":\"Spot Prices\",\"frequency\":[{\"id\":\"weekly\",\"description\":\"Weekly\",\"query\":\"W\",\"format\":\"YYYY-MM-DD\"},{\"id\":\"monthly\",\"description\":\"Monthly\",\"query\":\"M\",\"format\":\"YYYY-MM\"}],\"facets\":[{\"id\":\"duoarea\",\"description\":\"Region\"},{\"id\":\"product\",\"description\":\"Product\"},{\"id\":\"series\",\"description\":\"Series\"}],\"data\":{\"value\":{\"alias\":\"Value\",\"units\":\"$/BBL\"}},\"startPeriod\":\"1986-01-03\",\"endPeriod\":\"2026-09-18\",\"defaultFrequency\":\"weekly\",\"defaultDateFormat\":\"YYYY-MM-DD\"}}"
+   },
+   {
+    "url": "https://api.eia.gov/v2/petroleum/pri/spt/data/?api_key=TESTKEY&frequency=monthly&data%5B0%5D=value&sort%5B0%5D%5Bcolumn%5D=period&sort%5B0%5D%5Bdirection%5D=asc&offset=0&length=2",
+    "status": 200,
+    "body": "{\"response\":{\"total\":\"3\",\"dateFormat\":\"YYYY-MM-DD\",\"frequency\":\"weekly\",\"data\":[{\"period\":\"2026-09-11\",\"duoarea\":\"RGC\",\"area-name\":\"U.S. Gulf Coast\",\"product\":\"EPCWTI\",\"value\":\"70.1\",\"units\":\"$/BBL\"},{\"period\":\"2026-09-18\",\"duoarea\":\"RGC\",\"area-name\":\"U.S. Gulf Coast\",\"product\":\"EPCWTI\",\"value\":\"NA\",\"units\":\"$/BBL\"}],\"description\":\"hand-written\"},\"request\":{\"command\":\"/v2/x/data/\",\"params\":{\"frequency\":\"weekly\",\"facets\":{}}},\"apiVersion\":\"2.1.8\"}"
+   }
+  ],
+  "rows": [
+   {
+    "date": "2026-09-11",
+    "duoarea": "RGC",
+    "area_name": "U.S. Gulf Coast",
+    "product": "EPCWTI",
+    "value": 70.1,
+    "units": "$/BBL"
+   },
+   {
+    "date": "2026-09-18",
+    "duoarea": "RGC",
+    "area_name": "U.S. Gulf Coast",
+    "product": "EPCWTI",
+    "value": "NA",
+    "units": "$/BBL"
+   }
+  ]
+ },
+ {
+  "name": "data-browser-child-routes",
+  "route": "eia/data_browser",
+  "params": {
+   "route": "petroleum"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/petroleum?api_key=TESTKEY",
+    "status": 200,
+    "body": "{\"response\":{\"id\":\"petroleum\",\"routes\":[{\"id\":\"pri\",\"name\":\"Prices\"},{\"id\":\"stoc\",\"name\":\"Stocks\"}]}}"
+   }
+  ],
+  "error": "'petroleum' is not a data route. Child routes: pri, stoc"
+ },
+ {
+  "name": "data-browser-not-a-route",
+  "route": "eia/data_browser",
+  "params": {
+   "route": "nope"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/nope?api_key=TESTKEY",
+    "status": 200,
+    "body": "{\"response\":{\"id\":\"nope\"}}"
+   }
+  ],
+  "error": "'nope' is not a valid EIA data route."
+ },
+ {
+  "name": "data-browser-bad-frequency",
+  "route": "eia/data_browser",
+  "params": {
+   "route": "petroleum/pri/spt",
+   "frequency": "daily"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/petroleum/pri/spt?api_key=TESTKEY",
+    "status": 200,
+    "body": "{\"response\":{\"id\":\"pri\",\"name\":\"Spot Prices\",\"frequency\":[{\"id\":\"weekly\",\"description\":\"Weekly\",\"query\":\"W\",\"format\":\"YYYY-MM-DD\"},{\"id\":\"monthly\",\"description\":\"Monthly\",\"query\":\"M\",\"format\":\"YYYY-MM\"}],\"facets\":[{\"id\":\"duoarea\",\"description\":\"Region\"},{\"id\":\"product\",\"description\":\"Product\"},{\"id\":\"series\",\"description\":\"Series\"}],\"data\":{\"value\":{\"alias\":\"Value\",\"units\":\"$/BBL\"}},\"startPeriod\":\"1986-01-03\",\"endPeriod\":\"2026-09-18\",\"defaultFrequency\":\"weekly\",\"defaultDateFormat\":\"YYYY-MM-DD\"}}"
+   }
+  ],
+  "error": "Frequency 'daily' is not available for 'petroleum/pri/spt'. Choices: weekly, monthly"
+ },
+ {
+  "name": "data-browser-bad-data-type",
+  "route": "eia/data_browser",
+  "params": {
+   "route": "petroleum/pri/spt",
+   "data_type": "value,quantity"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/petroleum/pri/spt?api_key=TESTKEY",
+    "status": 200,
+    "body": "{\"response\":{\"id\":\"pri\",\"name\":\"Spot Prices\",\"frequency\":[{\"id\":\"weekly\",\"description\":\"Weekly\",\"query\":\"W\",\"format\":\"YYYY-MM-DD\"},{\"id\":\"monthly\",\"description\":\"Monthly\",\"query\":\"M\",\"format\":\"YYYY-MM\"}],\"facets\":[{\"id\":\"duoarea\",\"description\":\"Region\"},{\"id\":\"product\",\"description\":\"Product\"},{\"id\":\"series\",\"description\":\"Series\"}],\"data\":{\"value\":{\"alias\":\"Value\",\"units\":\"$/BBL\"}},\"startPeriod\":\"1986-01-03\",\"endPeriod\":\"2026-09-18\",\"defaultFrequency\":\"weekly\",\"defaultDateFormat\":\"YYYY-MM-DD\"}}"
+   }
+  ],
+  "error": "Invalid data_type value(s) quantity for 'petroleum/pri/spt'. Choices: value"
+ },
+ {
+  "name": "data-browser-bad-facet-id",
+  "route": "eia/data_browser",
+  "params": {
+   "route": "petroleum/pri/spt",
+   "facets": "bogus:1;duoarea:RGC"
+  },
+  "exchanges": [
+   {
+    "url": "https://api.eia.gov/v2/petroleum/pri/spt?api_key=TESTKEY",
+    "status": 200,
+    "body": "{\"response\":{\"id\":\"pri\",\"name\":\"Spot Prices\",\"frequency\":[{\"id\":\"weekly\",\"description\":\"Weekly\",\"query\":\"W\",\"format\":\"YYYY-MM-DD\"},{\"id\":\"monthly\",\"description\":\"Monthly\",\"query\":\"M\",\"format\":\"YYYY-MM\"}],\"facets\":[{\"id\":\"duoarea\",\"description\":\"Region\"},{\"id\":\"product\",\"description\":\"Product\"},{\"id\":\"series\",\"description\":\"Series\"}],\"data\":{\"value\":{\"alias\":\"Value\",\"units\":\"$/BBL\"}},\"startPeriod\":\"1986-01-03\",\"endPeriod\":\"2026-09-18\",\"defaultFrequency\":\"weekly\",\"defaultDateFormat\":\"YYYY-MM-DD\"}}"
+   }
+  ],
+  "error": "Invalid facet id(s) bogus for 'petroleum/pri/spt'. Choices: duoarea, product, series"
+ },
+ {
+  "name": "data-browser-malformed-facets",
+  "route": "eia/data_browser",
+  "params": {
+   "route": "petroleum/pri/spt",
+   "facets": "duoarea"
+  },
+  "exchanges": [],
+  "error": "Invalid facet filter 'duoarea'. Use 'facetId:value1,value2' pairs separated by semicolons."
+ },
+ {
+  "name": "wpsr-all-not-supported-for-weekly-estimates",
+  "route": "commodity/petroleum_status_report",
+  "params": {
+   "category": "weekly_estimates",
+   "table": "all"
+  },
+  "exchanges": [],
+  "error": "'all' is not a supported choice for weekly_estimates. Please choose from: ['crude_production', 'inputs_and_utilization', 'refiner_blender_net_production', 'net_production_by_product', 'ethanol_plant_production', 'stocks', 'imports', 'exports', 'net_imports_incl_spr', 'product_supplied', 'ulta_low_sulfur_distillate_reclassification', 'crude_production_avg', 'inputs_utilization_avg', 'refiner_blender_net_production_avg', 'net_production_by_production_avg', 'ethanol_plant_production_avg', 'imports_avg', 'exports_avg', 'net_imports_inc_spr_avg', 'product_supplied_avg', 'ulta_low_sulfur_distillate_reclassification_avg']"
+ },
+ {
+  "name": "wpsr-invalid-table",
+  "route": "commodity/petroleum_status_report",
+  "params": {
+   "category": "balance_sheet",
+   "table": "stocks,bogus"
+  },
+  "exchanges": [],
+  "error": "Invalid table choice: bogus. Valid choices for balance_sheet: ['stocks', 'supply', 'supply_avg']"
+ },
+ {
+  "name": "wpsr-table-of-another-category",
+  "route": "commodity/petroleum_status_report",
+  "params": {
+   "category": "retail_prices",
+   "table": "stocks"
+  },
+  "exchanges": [],
+  "error": "Invalid table choice: stocks. Valid choices for retail_prices: ['weekly', 'monthly']"
+ }
+]
