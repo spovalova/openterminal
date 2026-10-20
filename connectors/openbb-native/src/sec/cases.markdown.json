@@ -1,0 +1,118 @@
+[
+  {
+    "name": "rss-litigation-2",
+    "route": "sec/rss_litigation",
+    "params": {
+      "limit": 2
+    }
+  },
+  {
+    "name": "rss-litigation-8",
+    "route": "sec/rss_litigation",
+    "params": {
+      "limit": 8
+    }
+  },
+  {
+    "name": "md-aapl-annual-2022",
+    "route": "equity/fundamental/management_discussion_analysis",
+    "params": {
+      "symbol": "AAPL",
+      "calendar_year": 2022
+    }
+  },
+  {
+    "name": "md-aapl-q2-2023",
+    "route": "equity/fundamental/management_discussion_analysis",
+    "params": {
+      "symbol": "AAPL",
+      "calendar_year": 2023,
+      "calendar_period": "Q2",
+      "include_tables": false
+    }
+  },
+  {
+    "name": "md-ckx-q2-2008-raw",
+    "route": "equity/fundamental/management_discussion_analysis",
+    "params": {
+      "symbol": "CKX",
+      "calendar_year": 2008,
+      "calendar_period": "Q2",
+      "raw_html": true
+    }
+  },
+  {
+    "name": "md-cik-2022",
+    "route": "equity/fundamental/management_discussion_analysis",
+    "params": {
+      "symbol": "320193",
+      "calendar_year": 2022
+    }
+  },
+  {
+    "name": "md-ckx-2008",
+    "route": "equity/fundamental/management_discussion_analysis",
+    "params": {
+      "symbol": "CKX",
+      "calendar_year": 2008
+    }
+  },
+  {
+    "name": "md-ckx-2002-text",
+    "route": "equity/fundamental/management_discussion_analysis",
+    "params": {
+      "symbol": "CKX",
+      "calendar_year": 2002
+    }
+  },
+  {
+    "name": "md-msft-2010",
+    "route": "equity/fundamental/management_discussion_analysis",
+    "params": {
+      "symbol": "MSFT",
+      "calendar_year": 2010
+    },
+    "fixture": false,
+    "reason": "the 2010 10-K and its exhibits record 252 KB, half of this route's share of the provider's recording budget; md-ckx-2008 records the pre-XBRL HTML path"
+  },
+  {
+    "name": "md-ibm-2009-full-text",
+    "route": "equity/fundamental/management_discussion_analysis",
+    "params": {
+      "symbol": "IBM",
+      "calendar_year": 2009
+    },
+    "fixture": false,
+    "reason": "the full-text fallback (FinancialStatements.get_item) downloads the filing's ten documents, about 600 KB compressed; too much of the provider's recording budget"
+  },
+  {
+    "name": "md-ibm-2024-exhibit-13",
+    "route": "equity/fundamental/management_discussion_analysis",
+    "params": {
+      "symbol": "IBM",
+      "calendar_year": 2024
+    },
+    "fixture": false,
+    "reason": "the annual report exhibit is 4.7 MB of HTML: the recording is 1 MB and its replay (HTML to markdown twice) takes over the 5 s test limit"
+  },
+  {
+    "name": "md-nvo-2023-20f",
+    "route": "equity/fundamental/management_discussion_analysis",
+    "params": {
+      "symbol": "NVO",
+      "calendar_year": 2023
+    },
+    "fixture": false,
+    "reason": "the full-text fallback downloads the filing's XBRL zip (41 MB, over the 768 KB recording limit)"
+  },
+  {
+    "name": "md-td-2023-40f",
+    "route": "equity/fundamental/management_discussion_analysis",
+    "params": {
+      "symbol": "TD",
+      "calendar_year": 2023
+    },
+    "fixture": false,
+    "reason": "the full-text fallback downloads the filing's XBRL zip (2 MB compressed, over the 768 KB recording limit)"
+  }
+]

@@ -1,1 +1,1038 @@
-[]
+[
+ {
+  "name": "delivery-prices-btc",
+  "route": "deribit/index/delivery_prices",
+  "params": {
+   "index_name": "btc_usd",
+   "limit": 5
+  }
+ },
+ {
+  "name": "delivery-prices-two-indexes",
+  "route": "deribit/index/delivery_prices",
+  "params": {
+   "index_name": "btc_usd,eth_usd",
+   "limit": 3,
+   "offset": 2
+  }
+ },
+ {
+  "name": "index-historical-btc-1h",
+  "route": "deribit/index/historical",
+  "params": {
+   "index_name": "btc_usd",
+   "span": "1h"
+  },
+  "compare": {
+   "rows": "overlap",
+   "minOverlap": 0.9,
+   "minCellMatch": 0.99,
+   "keys": [
+    "index_name",
+    "date"
+   ]
+  },
+  "reason": "a rolling window of live data: its newest rows move between the two fetches"
+ },
+ {
+  "name": "index-historical-two-indexes-1d",
+  "route": "deribit/index/historical",
+  "params": {
+   "index_name": "eth_usd,eth_usdc",
+   "span": "1d"
+  },
+  "compare": {
+   "rows": "overlap",
+   "minOverlap": 0.9,
+   "minCellMatch": 0.99,
+   "keys": [
+    "index_name",
+    "date"
+   ]
+  },
+  "reason": "a rolling window of live data: its newest rows move between the two fetches"
+ },
+ {
+  "name": "index-price",
+  "route": "deribit/index/price",
+  "params": {
+   "index_name": "btc_usd,eth_usd"
+  },
+  "compare": {
+   "volatile": [
+    "index_price",
+    "estimated_delivery_price"
+   ],
+   "liveTol": 0.01
+  },
+  "reason": "live market data: OpenBB and the native side fetch seconds apart"
+ },
+ {
+  "name": "block-rfq-trades-any",
+  "route": "deribit/market/block_rfq_trades",
+  "params": {
+   "limit": 10
+  },
+  "compare": {
+   "rows": "overlap",
+   "minOverlap": 0.7,
+   "keys": [
+    "rfq_id",
+    "leg"
+   ]
+  },
+  "reason": "the latest block trades: a new one can arrive between the two fetches"
+ },
+ {
+  "name": "block-rfq-trades-btc",
+  "route": "deribit/market/block_rfq_trades",
+  "params": {
+   "currency": "BTC",
+   "limit": 10
+  },
+  "compare": {
+   "rows": "overlap",
+   "minOverlap": 0.7,
+   "keys": [
+    "rfq_id",
+    "leg"
+   ]
+  },
+  "reason": "the latest block trades: a new one can arrive between the two fetches"
+ },
+ {
+  "name": "book-summary-perpetual",
+  "route": "deribit/market/book_summary",
+  "params": {
+   "symbol": "BTC-PERPETUAL"
+  },
+  "compare": {
+   "volatile": [
+    "timestamp",
+    "last_price",
+    "bid",
+    "ask",
+    "mid",
+    "mark_price",
+    "high",
+    "low",
+    "change_percent",
+    "volume",
+    "volume_notional",
+    "volume_usd",
+    "open_interest",
+    "current_funding",
+    "funding_8h",
+    "estimated_delivery_price",
+    "interest_rate",
+    "implied_volatility",
+    "underlying_price"
+   ]
+  },
+  "reason": "live market data: OpenBB and the native side fetch seconds apart"
+ },
+ {
+  "name": "book-summary-btc-futures",
+  "route": "deribit/market/book_summary",
+  "params": {
+   "currency": "BTC",
+   "kind": "future"
+  },
+  "compare": {
+   "volatile": [
+    "timestamp",
+    "last_price",
+    "bid",
+    "ask",
+    "mid",
+    "mark_price",
+    "high",
+    "low",
+    "change_percent",
+    "volume",
+    "volume_notional",
+    "volume_usd",
+    "open_interest",
+    "current_funding",
+    "funding_8h",
+    "estimated_delivery_price",
+    "interest_rate",
+    "implied_volatility",
+    "underlying_price"
+   ]
+  },
+  "reason": "live market data: OpenBB and the native side fetch seconds apart"
+ },
+ {
+  "name": "book-summary-option",
+  "route": "deribit/market/book_summary",
+  "params": {
+   "symbol": "BTC-25DEC26-100000-C"
+  },
+  "compare": {
+   "volatile": [
+    "timestamp",
+    "last_price",
+    "bid",
+    "ask",
+    "mid",
+    "mark_price",
+    "high",
+    "low",
+    "change_percent",
+    "volume",
+    "volume_notional",
+    "volume_usd",
+    "open_interest",
+    "current_funding",
+    "funding_8h",
+    "estimated_delivery_price",
+    "interest_rate",
+    "implied_volatility",
+    "underlying_price"
+   ]
+  },
+  "reason": "live market data: OpenBB and the native side fetch seconds apart"
+ },
+ {
+  "name": "order-book-perpetual",
+  "route": "deribit/market/order_book",
+  "params": {
+   "symbol": "BTC-PERPETUAL",
+   "depth": 5
+  },
+  "compare": {
+   "keys": [
+    "symbol",
+    "side",
+    "level"
+   ],
+   "volatile": [
+    "timestamp",
+    "price",
+    "size",
+    "mark_price",
+    "index_price",
+    "change_id"
+   ]
+  },
+  "reason": "live market data: OpenBB and the native side fetch seconds apart"
+ },
+ {
+  "name": "order-book-by-id",
+  "route": "deribit/market/order_book",
+  "params": {
+   "instrument_id": 210838,
+   "depth": 1
+  },
+  "compare": {
+   "keys": [
+    "symbol",
+    "side",
+    "level"
+   ],
+   "volatile": [
+    "timestamp",
+    "price",
+    "size",
+    "mark_price",
+    "index_price",
+    "change_id"
+   ]
+  },
+  "reason": "live market data: OpenBB and the native side fetch seconds apart"
+ },
+ {
+  "name": "order-book-short-root",
+  "route": "deribit/market/order_book",
+  "params": {
+   "symbol": "BTCUSDC,ETH-PERPETUAL",
+   "depth": 10
+  },
+  "compare": {
+   "keys": [
+    "symbol",
+    "side",
+    "level"
+   ],
+   "volatile": [
+    "timestamp",
+    "price",
+    "size",
+    "mark_price",
+    "index_price",
+    "change_id"
+   ]
+  },
+  "reason": "live market data: OpenBB and the native side fetch seconds apart"
+ },
+ {
+  "name": "settlements-btc-delivery",
+  "route": "deribit/market/settlements",
+  "params": {
+   "currency": "BTC",
+   "settlement_type": "delivery",
+   "start_date": "2025-06-30",
+   "limit": 5
+  }
+ },
+ {
+  "name": "settlements-eth",
+  "route": "deribit/market/settlements",
+  "params": {
+   "currency": "ETH",
+   "start_date": "2025-09-01",
+   "limit": 10
+  }
+ },
+ {
+  "name": "settlements-instrument",
+  "route": "deribit/market/settlements",
+  "params": {
+   "symbol": "BTC-PERPETUAL",
+   "start_date": "2026-01-01",
+   "limit": 5
+  }
+ },
+ {
+  "name": "ticker-perpetuals",
+  "route": "deribit/market/ticker",
+  "params": {
+   "symbol": "BTC-PERPETUAL,ETH-PERPETUAL"
+  },
+  "compare": {
+   "volatile": [
+    "timestamp",
+    "last_price",
+    "bid",
+    "ask",
+    "bid_size",
+    "ask_size",
+    "implied_bid",
+    "implied_ask",
+    "mark_price",
+    "index_price",
+    "settlement_price",
+    "estimated_delivery_price",
+    "min_price",
+    "max_price",
+    "high",
+    "low",
+    "change_percent",
+    "volume",
+    "volume_notional",
+    "volume_usd",
+    "open_interest",
+    "current_funding",
+    "funding_8h",
+    "interest_value",
+    "interest_rate",
+    "underlying_price",
+    "implied_volatility",
+    "bid_iv",
+    "ask_iv",
+    "delta",
+    "gamma",
+    "vega",
+    "theta",
+    "rho"
+   ]
+  },
+  "reason": "live market data: OpenBB and the native side fetch seconds apart"
+ },
+ {
+  "name": "ticker-option",
+  "route": "deribit/market/ticker",
+  "params": {
+   "symbol": "BTC-25DEC26-100000-C"
+  },
+  "compare": {
+   "volatile": [
+    "timestamp",
+    "last_price",
+    "bid",
+    "ask",
+    "bid_size",
+    "ask_size",
+    "implied_bid",
+    "implied_ask",
+    "mark_price",
+    "index_price",
+    "settlement_price",
+    "estimated_delivery_price",
+    "min_price",
+    "max_price",
+    "high",
+    "low",
+    "change_percent",
+    "volume",
+    "volume_notional",
+    "volume_usd",
+    "open_interest",
+    "current_funding",
+    "funding_8h",
+    "interest_value",
+    "interest_rate",
+    "underlying_price",
+    "implied_volatility",
+    "bid_iv",
+    "ask_iv",
+    "delta",
+    "gamma",
+    "vega",
+    "theta",
+    "rho"
+   ]
+  },
+  "reason": "live market data: OpenBB and the native side fetch seconds apart"
+ },
+ {
+  "name": "trade-volumes-extended",
+  "route": "deribit/market/trade_volumes",
+  "params": {},
+  "compare": {
+   "keys": [
+    "currency"
+   ],
+   "volatile": [
+    "futures_volume",
+    "calls_volume",
+    "puts_volume",
+    "spot_volume",
+    "futures_volume_7d",
+    "calls_volume_7d",
+    "puts_volume_7d",
+    "spot_volume_7d",
+    "futures_volume_30d",
+    "calls_volume_30d",
+    "puts_volume_30d",
+    "spot_volume_30d"
+   ]
+  },
+  "reason": "volumes of the last 24 hours, 7 days and 30 days move while the fetches run"
+ },
+ {
+  "name": "trade-volumes-day",
+  "route": "deribit/market/trade_volumes",
+  "params": {
+   "extended": false
+  },
+  "compare": {
+   "keys": [
+    "currency"
+   ],
+   "volatile": [
+    "futures_volume",
+    "calls_volume",
+    "puts_volume",
+    "spot_volume",
+    "futures_volume_7d",
+    "calls_volume_7d",
+    "puts_volume_7d",
+    "spot_volume_7d",
+    "futures_volume_30d",
+    "calls_volume_30d",
+    "puts_volume_30d",
+    "spot_volume_30d"
+   ]
+  },
+  "reason": "volumes of the last 24 hours move while the fetches run"
+ },
+ {
+  "name": "trades-instrument-window",
+  "route": "deribit/market/trades",
+  "params": {
+   "symbol": "BTC-PERPETUAL",
+   "start_date": "2026-10-20 08:00:00",
+   "end_date": "2026-10-20 08:10:00",
+   "limit": 20,
+   "sorting": "asc"
+  }
+ },
+ {
+  "name": "trades-two-instruments-window",
+  "route": "deribit/market/trades",
+  "params": {
+   "symbol": "BTC-PERPETUAL,ETH-PERPETUAL",
+   "start_date": "2026-10-20 08:00:00",
+   "end_date": "2026-10-20 08:10:00",
+   "limit": 10,
+   "sorting": "desc"
+  }
+ },
+ {
+  "name": "trades-currency-window",
+  "route": "deribit/market/trades",
+  "params": {
+   "currency": "BTC",
+   "kind": "option",
+   "start_date": "2026-10-20 08:00:00",
+   "end_date": "2026-10-20 08:10:00",
+   "limit": 15,
+   "sorting": "asc"
+  }
+ },
+ {
+  "name": "apr-history-usde",
+  "route": "deribit/rates/apr_history",
+  "params": {
+   "currency": "usde",
+   "limit": 10
+  },
+  "compare": {
+   "rows": "overlap",
+   "minOverlap": 0.9,
+   "keys": [
+    "date"
+   ]
+  },
+  "reason": "a rolling window of live data: its newest rows move between the two fetches"
+ },
+ {
+  "name": "apr-history-steth",
+  "route": "deribit/rates/apr_history",
+  "params": {
+   "currency": "steth",
+   "limit": 5
+  },
+  "compare": {
+   "rows": "overlap",
+   "minOverlap": 0.8,
+   "keys": [
+    "date"
+   ]
+  },
+  "reason": "a rolling window of live data: its newest rows move between the two fetches"
+ },
+ {
+  "name": "funding-chart-8h",
+  "route": "deribit/rates/funding_chart",
+  "params": {
+   "symbol": "BTC-PERPETUAL"
+  },
+  "compare": {
+   "rows": "overlap",
+   "minOverlap": 0.9,
+   "minCellMatch": 0.99,
+   "keys": [
+    "symbol",
+    "date"
+   ],
+   "volatile": [
+    "current_interest"
+   ]
+  },
+  "reason": "a rolling window of live data: its newest rows move between the two fetches"
+ },
+ {
+  "name": "funding-chart-24h-two",
+  "route": "deribit/rates/funding_chart",
+  "params": {
+   "symbol": "BTC-PERPETUAL,ETHUSDC",
+   "length": "24h"
+  },
+  "compare": {
+   "rows": "overlap",
+   "minOverlap": 0.9,
+   "minCellMatch": 0.99,
+   "keys": [
+    "symbol",
+    "date"
+   ],
+   "volatile": [
+    "current_interest"
+   ]
+  },
+  "reason": "a rolling window of live data: its newest rows move between the two fetches"
+ },
+ {
+  "name": "funding-history-window",
+  "route": "deribit/rates/funding_history",
+  "params": {
+   "symbol": "BTC-PERPETUAL",
+   "start_date": "2025-06-01",
+   "end_date": "2025-06-03"
+  }
+ },
+ {
+  "name": "funding-history-default-week",
+  "route": "deribit/rates/funding_history",
+  "params": {},
+  "compare": {
+   "rows": "overlap",
+   "minOverlap": 0.95,
+   "minCellMatch": 0.99,
+   "keys": [
+    "symbol",
+    "date"
+   ]
+  },
+  "reason": "a rolling window of live data: its newest rows move between the two fetches; with no dates both sides read the last seven days from now"
+ },
+ {
+  "name": "funding-history-two",
+  "route": "deribit/rates/funding_history",
+  "params": {
+   "symbol": "ETH-PERPETUAL,BTCUSDC",
+   "start_date": "2026-09-01",
+   "end_date": "2026-09-02"
+  }
+ },
+ {
+  "name": "announcements-since",
+  "route": "deribit/reference/announcements",
+  "params": {
+   "start_date": "2025-01-01",
+   "limit": 5
+  }
+ },
+ {
+  "name": "announcements-latest",
+  "route": "deribit/reference/announcements",
+  "params": {
+   "limit": 3
+  },
+  "compare": {
+   "rows": "overlap",
+   "minOverlap": 0.6,
+   "keys": [
+    "id"
+   ]
+  },
+  "reason": "the latest announcements: a new one can appear between the two fetches"
+ },
+ {
+  "name": "combos-btc",
+  "route": "deribit/reference/combos",
+  "params": {
+   "currency": "BTC"
+  },
+  "compare": {
+   "rows": "overlap",
+   "minOverlap": 0.95,
+   "keys": [
+    "combo_id",
+    "leg"
+   ]
+  },
+  "reason": "combos are created and retired through the day"
+ },
+ {
+  "name": "combos-by-id",
+  "route": "deribit/reference/combos",
+  "params": {
+   "combo_id": "BTC-BOX-25DEC26-60000_100000,BTC-BOX-25DEC26-30000_130000"
+  }
+ },
+ {
+  "name": "currencies",
+  "route": "deribit/reference/currencies",
+  "params": {},
+  "compare": {
+   "volatile": [
+    "apr",
+    "withdrawal_fee",
+    "min_withdrawal_fee",
+    "network_fee"
+   ]
+  },
+  "reason": "apr is a live yield and the withdrawal and network fees follow the networks' congestion"
+ },
+ {
+  "name": "expirations-btc-future",
+  "route": "deribit/reference/expirations",
+  "params": {
+   "currency": "BTC",
+   "kind": "future"
+  }
+ },
+ {
+  "name": "expirations-grouped",
+  "route": "deribit/reference/expirations",
+  "params": {}
+ },
+ {
+  "name": "instruments-perpetuals",
+  "route": "deribit/reference/instruments",
+  "params": {
+   "symbol": "BTC-PERPETUAL,ETH-PERPETUAL"
+  }
+ },
+ {
+  "name": "instruments-btc-futures",
+  "route": "deribit/reference/instruments",
+  "params": {
+   "currency": "BTC",
+   "kind": "future"
+  }
+ },
+ {
+  "name": "instruments-spot",
+  "route": "deribit/reference/instruments",
+  "params": {
+   "kind": "spot"
+  }
+ },
+ {
+  "name": "instruments-option-symbols",
+  "route": "deribit/reference/instruments",
+  "params": {
+   "symbol": "BTC-25DEC26-100000-C,BTC-25DEC26-100000-P"
+  }
+ },
+ {
+  "name": "volatility-index-btc-1d",
+  "route": "deribit/volatility/index",
+  "params": {
+   "currency": "BTC",
+   "start_date": "2025-06-01",
+   "end_date": "2025-06-10",
+   "interval": "1d"
+  }
+ },
+ {
+  "name": "volatility-index-two-1h",
+  "route": "deribit/volatility/index",
+  "params": {
+   "currency": "BTC,ETH",
+   "start_date": "2025-06-01",
+   "end_date": "2025-06-02",
+   "interval": "1h"
+  }
+ },
+ {
+  "name": "volatility-index-default-month",
+  "route": "deribit/volatility/index",
+  "params": {
+   "currency": "ETH"
+  },
+  "compare": {
+   "rows": "overlap",
+   "minOverlap": 0.95,
+   "minCellMatch": 0.98,
+   "keys": [
+    "currency",
+    "date"
+   ]
+  },
+  "reason": "a rolling window of live data: its newest rows move between the two fetches; with no dates both sides read the last thirty days from now"
+ },
+ {
+  "name": "volatility-realized-btc",
+  "route": "deribit/volatility/realized",
+  "params": {
+   "currency": "BTC"
+  },
+  "compare": {
+   "rows": "overlap",
+   "minOverlap": 0.99,
+   "keys": [
+    "currency",
+    "date"
+   ]
+  },
+  "reason": "a rolling window of live data: its newest rows move between the two fetches"
+ },
+ {
+  "name": "volatility-realized-three",
+  "route": "deribit/volatility/realized",
+  "params": {
+   "currency": "BTC,ETH,EURR"
+  },
+  "compare": {
+   "rows": "overlap",
+   "minOverlap": 0.99,
+   "keys": [
+    "currency",
+    "date"
+   ]
+  },
+  "reason": "a rolling window of live data: its newest rows move between the two fetches"
+ },
+ {
+  "name": "futures-curve-btc",
+  "route": "derivatives/futures/curve",
+  "params": {
+   "symbol": "BTC"
+  },
+  "compare": {
+   "keys": [
+    "symbol"
+   ],
+   "volatile": [
+    "price",
+    "last_price"
+   ],
+   "liveTol": 0.02
+  },
+  "reason": "live market data: OpenBB and the native side fetch seconds apart"
+ },
+ {
+  "name": "futures-curve-hours-ago",
+  "route": "derivatives/futures/curve",
+  "params": {
+   "symbol": "ETH",
+   "hours_ago": [
+    "24"
+   ]
+  },
+  "compare": {
+   "keys": [
+    "symbol",
+    "hours_ago"
+   ],
+   "volatile": [
+    "price",
+    "last_price"
+   ],
+   "liveTol": 0.02
+  },
+  "reason": "live market data: OpenBB and the native side fetch seconds apart"
+ },
+ {
+  "name": "futures-historical-perpetual",
+  "route": "derivatives/futures/historical",
+  "params": {
+   "symbol": "BTC-PERPETUAL",
+   "start_date": "2025-06-01",
+   "end_date": "2025-06-10"
+  }
+ },
+ {
+  "name": "futures-historical-default-year",
+  "route": "derivatives/futures/historical",
+  "params": {
+   "symbol": "ETH-PERPETUAL"
+  },
+  "compare": {
+   "rows": "overlap",
+   "minOverlap": 0.99,
+   "minCellMatch": 0.99,
+   "keys": [
+    "date"
+   ]
+  },
+  "reason": "a rolling window of live data: its newest rows move between the two fetches; with no dates both sides read the last 364 days from now"
+ },
+ {
+  "name": "futures-historical-hourly",
+  "route": "derivatives/futures/historical",
+  "params": {
+   "symbol": "BTC-PERPETUAL",
+   "start_date": "2026-10-18",
+   "end_date": "2026-10-19",
+   "interval": "1h"
+  }
+ },
+ {
+  "name": "futures-historical-two-symbols",
+  "route": "derivatives/futures/historical",
+  "params": {
+   "symbol": "BTC-PERPETUAL,ETHUSDC",
+   "start_date": "2025-06-01",
+   "end_date": "2025-06-05"
+  }
+ },
+ {
+  "name": "futures-historical-dated",
+  "route": "derivatives/futures/historical",
+  "params": {
+   "symbol": "BTC-25DEC26",
+   "start_date": "2026-09-01",
+   "end_date": "2026-09-10"
+  }
+ },
+ {
+  "name": "futures-historical-minutes",
+  "route": "derivatives/futures/historical",
+  "params": {
+   "symbol": "ETH-PERPETUAL",
+   "start_date": "2026-10-19",
+   "end_date": "2026-10-20",
+   "interval": "5m"
+  }
+ },
+ {
+  "name": "futures-info-perpetual",
+  "route": "derivatives/futures/info",
+  "params": {
+   "symbol": "BTC-PERPETUAL"
+  },
+  "compare": {
+   "volatile": [
+    "timestamp",
+    "last_price",
+    "bid",
+    "ask",
+    "bid_size",
+    "ask_size",
+    "implied_bid",
+    "implied_ask",
+    "mark_price",
+    "index_price",
+    "settlement_price",
+    "estimated_delivery_price",
+    "min_price",
+    "max_price",
+    "high",
+    "low",
+    "change_percent",
+    "volume",
+    "volume_notional",
+    "volume_usd",
+    "open_interest",
+    "current_funding",
+    "funding_8h",
+    "interest_value",
+    "interest_rate",
+    "underlying_price",
+    "implied_volatility",
+    "bid_iv",
+    "ask_iv",
+    "delta",
+    "gamma",
+    "vega",
+    "theta",
+    "rho"
+   ]
+  },
+  "reason": "live market data: OpenBB and the native side fetch seconds apart"
+ },
+ {
+  "name": "futures-info-two",
+  "route": "derivatives/futures/info",
+  "params": {
+   "symbol": "ETH-PERPETUAL,BTC-25DEC26"
+  },
+  "compare": {
+   "volatile": [
+    "timestamp",
+    "last_price",
+    "bid",
+    "ask",
+    "bid_size",
+    "ask_size",
+    "implied_bid",
+    "implied_ask",
+    "mark_price",
+    "index_price",
+    "settlement_price",
+    "estimated_delivery_price",
+    "min_price",
+    "max_price",
+    "high",
+    "low",
+    "change_percent",
+    "volume",
+    "volume_notional",
+    "volume_usd",
+    "open_interest",
+    "current_funding",
+    "funding_8h",
+    "interest_value",
+    "interest_rate",
+    "underlying_price",
+    "implied_volatility",
+    "bid_iv",
+    "ask_iv",
+    "delta",
+    "gamma",
+    "vega",
+    "theta",
+    "rho"
+   ]
+  },
+  "reason": "live market data: OpenBB and the native side fetch seconds apart"
+ },
+ {
+  "name": "futures-instruments",
+  "route": "derivatives/futures/instruments",
+  "params": {}
+ },
+ {
+  "name": "options-chains-trx",
+  "route": "derivatives/options/chains",
+  "params": {
+   "symbol": "TRX_USDC"
+  },
+  "compare": {
+   "keys": [
+    "contract_symbol"
+   ],
+   "volatile": [
+    "underlying_price",
+    "open_interest",
+    "volume",
+    "last_trade_price",
+    "bid",
+    "bid_size",
+    "ask",
+    "ask_size",
+    "mark",
+    "high",
+    "low",
+    "change_percent",
+    "implied_volatility",
+    "delta",
+    "gamma",
+    "theta",
+    "vega",
+    "rho",
+    "bid_iv",
+    "ask_iv",
+    "interest_rate",
+    "settlement_price",
+    "min_price",
+    "max_price",
+    "underlying_spot_price",
+    "volume_notional",
+    "timestamp"
+   ]
+  },
+  "reason": "live market data: OpenBB and the native side fetch seconds apart"
+ },
+ {
+  "name": "options-chains-btc",
+  "route": "derivatives/options/chains",
+  "params": {
+   "symbol": "BTC"
+  },
+  "compare": {
+   "keys": [
+    "contract_symbol"
+   ],
+   "volatile": [
+    "underlying_price",
+    "open_interest",
+    "volume",
+    "last_trade_price",
+    "bid",
+    "bid_size",
+    "ask",
+    "ask_size",
+    "mark",
+    "high",
+    "low",
+    "change_percent",
+    "implied_volatility",
+    "delta",
+    "gamma",
+    "theta",
+    "vega",
+    "rho",
+    "bid_iv",
+    "ask_iv",
+    "interest_rate",
+    "settlement_price",
+    "min_price",
+    "max_price",
+    "underlying_spot_price",
+    "volume_notional",
+    "timestamp"
+   ],
+   "liveTol": 0.6,
+   "minCellMatch": 0.9
+  },
+  "reason": "live market data: OpenBB and the native side fetch seconds apart; BTC contracts are quoted in the underlying, so prices are carried to USD at the index level"
+ }
+]
