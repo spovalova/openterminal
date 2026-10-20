@@ -1,1 +1,53 @@
-[]
+[
+  { "name": "chokepoint-info", "route": "economy/shipping/chokepoint_info", "params": {} },
+  { "name": "chokepoint-volume-suez", "route": "economy/shipping/chokepoint_volume", "params": { "chokepoint": ["suez_canal"], "start_date": "2026-10-01", "end_date": "2026-10-03" } },
+  {
+    "name": "chokepoint-volume-two",
+    "route": "economy/shipping/chokepoint_volume",
+    "params": { "chokepoint": ["suez_canal", "chokepoint2"], "start_date": "2026-10-01", "end_date": "2026-10-02" },
+    "compare": { "keys": ["chokepoint", "date"] },
+    "reason": "OpenBB appends each chokepoint's rows as its concurrent requests finish, so the order of the chokepoints varies from call to call; rows are matched by chokepoint and date"
+  },
+  {
+    "name": "chokepoint-volume-all",
+    "route": "economy/shipping/chokepoint_volume",
+    "params": { "start_date": "2026-10-01", "end_date": "2026-10-02" },
+    "compare": { "keys": ["chokepoint", "date"] },
+    "reason": "OpenBB appends each chokepoint's rows as its 24 concurrent requests finish, so the order of the chokepoints varies from call to call; rows are matched by chokepoint and date"
+  },
+  { "name": "port-info-country", "route": "economy/shipping/port_info", "params": { "country": "NLD", "limit": 2 } },
+  { "name": "port-info-continent", "route": "economy/shipping/port_info", "params": { "continent": "south_america", "limit": 3 } },
+  { "name": "port-volume-default", "route": "economy/shipping/port_volume", "params": { "start_date": "2026-10-01", "end_date": "2026-10-03" } },
+  { "name": "port-volume-by-name", "route": "economy/shipping/port_volume", "params": { "port_code": ["Rotterdam", "port45"], "start_date": "2026-10-01", "end_date": "2026-10-02" } },
+  { "name": "port-volume-country", "route": "economy/shipping/port_volume", "params": { "country": "NLD", "start_date": "2026-10-01", "end_date": "2026-10-01" } },
+  { "name": "container-metrics-top10", "route": "imf/portwatch/container_metrics", "params": { "metric": "portcalls", "start_date": "2026-01-01", "end_date": "2026-03-31" } },
+  { "name": "container-metrics-ports", "route": "imf/portwatch/container_metrics", "params": { "metric": "import_container", "port_ids": ["port1114", "port1065"], "start_date": "2026-01-01", "end_date": "2026-02-28" } },
+  { "name": "country-activity-usa", "route": "imf/portwatch/country_activity", "params": { "country_code": "USA", "start_date": "2026-10-01", "end_date": "2026-10-05" } },
+  { "name": "disruption-events-red", "route": "imf/portwatch/disruption_events", "params": { "alertlevel": "RED", "start_date": "2026-01-01", "end_date": "2026-10-20" } },
+  { "name": "disruption-events-earthquakes", "route": "imf/portwatch/disruption_events", "params": { "eventtype": "EQ", "start_date": "2026-06-01", "end_date": "2026-10-20" } },
+  { "name": "disruption-sankey-event", "route": "imf/portwatch/disruption_sankey", "params": { "event_id": "1558059" } },
+  {
+    "name": "disruption-sankey-latest",
+    "route": "imf/portwatch/disruption_sankey",
+    "params": {},
+    "fixture": false,
+    "reason": "resolving LATEST downloads every disruption event with its polygon (3.3 MB compressed), over the 768 KB recording limit; the event_id case covers the edge query and the model"
+  },
+  { "name": "disruptions-map-orange", "route": "imf/portwatch/disruptions_map", "params": { "alertlevel": "ORANGE" } },
+  { "name": "monthly-trade-usa", "route": "imf/portwatch/monthly_trade", "params": { "code": "USA", "start_date": "2026-01-01", "end_date": "2026-06-30" } },
+  {"name": "available-indicators-il", "route": "economy/available_indicators", "params": {"dataflows": ["IL"]}},
+  {"name": "available-indicators-weo-query", "route": "economy/available_indicators", "params": {"dataflows": ["WEO"], "query": ["gross domestic product | inflation"], "keywords": ["not domestic currency"]}},
+  {"name": "available-indicators-search", "route": "economy/available_indicators", "params": {"query": ["platinum"]}},
+  {"name": "balance-of-payments-usa-quarterly", "route": "economy/balance_of_payments", "params": {"country": ["USA"], "frequency": "quarterly", "start_date": "2024-01-01", "end_date": "2025-06-30"}},
+  {"name": "balance-of-payments-two-annual", "route": "economy/balance_of_payments", "params": {"country": ["germany", "france"], "frequency": "annual", "start_date": "2019-01-01", "end_date": "2023-12-31"}},
+  {"name": "cpi-usa-yoy", "route": "economy/cpi", "params": {"country": ["united_states"], "transform": "yoy", "frequency": "monthly", "start_date": "2025-01-01", "end_date": "2025-06-30"}},
+  {"name": "cpi-two-countries-index", "route": "economy/cpi", "params": {"country": ["united_states", "DEU"], "transform": "index", "frequency": "quarter", "expenditure": ["total", "health"], "start_date": "2024-01-01", "end_date": "2025-06-30"}},
+  {"name": "cpi-harmonized-annual", "route": "economy/cpi", "params": {"country": ["germany"], "harmonized": true, "transform": "period", "frequency": "annual", "start_date": "2019-01-01", "end_date": "2023-12-31"}},
+  {"name": "cpi-limit", "route": "economy/cpi", "params": {"country": ["japan"], "transform": "index", "frequency": "monthly", "expenditure": ["all"], "limit": 2}},
+  {"name": "direction-of-trade-balance", "route": "economy/direction_of_trade", "params": {"country": ["united_states"], "counterpart": ["china"], "frequency": "annual", "start_date": "2019-01-01", "end_date": "2023-12-31"}},
+  {"name": "direction-of-trade-all-directions", "route": "economy/direction_of_trade", "params": {"country": ["germany"], "counterpart": ["france"], "direction": "all", "frequency": "month", "limit": 4}},
+  {"name": "indicators-weo-gdp-growth", "route": "economy/indicators", "params": {"symbol": ["WEO::NGDP_RPCH"], "country": ["USA"], "frequency": "annual", "start_date": "2019-01-01", "end_date": "2023-12-31"}},
+  {"name": "indicators-il-reserves-two", "route": "economy/indicators", "params": {"symbol": ["IL::RGV_REVS", "IL::GOLD35P_REVS"], "country": ["USA", "JPN"], "frequency": "quarter", "start_date": "2024-01-01", "end_date": "2025-06-30"}},
+  {"name": "indicators-pcps-gold", "route": "economy/indicators", "params": {"symbol": ["PCPS::PGOLD"], "country": ["G001"], "frequency": "month", "start_date": "2025-01-01", "end_date": "2025-04-30"}},
+  {"name": "indicators-cpi-compound", "route": "economy/indicators", "params": {"symbol": ["CPI::CP01"], "country": ["USA"], "frequency": "month", "transform": "yoy", "limit": 3}}
+]

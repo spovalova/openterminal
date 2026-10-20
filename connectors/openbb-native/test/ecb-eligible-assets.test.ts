@@ -4,6 +4,7 @@ import { gzipSync } from 'fflate'
 import { describe, expect, it } from 'vitest'
 import { createNativeCtx } from '../src/ctx.js'
 import ecb from '../src/ecb/index.js'
+import type { NativeCtx, NativeParams, Row } from '../src/types.js'
 
 const header = ['ISIN_CODE', 'HAIRCUT_CATEGORY', 'TYPE', 'REFERENCE_MARKET', 'DENOMINATION', 'ISSUANCE_DATE', 'MATURITY_DATE', 'COUPON_RATE (%)', 'COUPON_DEFINITION', 'ISSUER_NAME', 'ISSUER_RESIDENCE', 'ISSUER_GROUP', 'GUARANTOR_NAME', 'GUARANTOR_RESIDENCE', 'HAIRCUT', 'HAIRCUT_OWN_USE', 'POTENTIALLY_OWN_USABLE_COVERED_BOND', 'CLIMATE_FACTOR']
 const rows = [
@@ -24,7 +25,8 @@ function utf16(text: string): Uint8Array {
   return out
 }
 
-const handler = ecb.routes['ecb/eligible_assets']!
+const route = ecb.routes['ecb/eligible_assets']!
+const handler = async (params: NativeParams, ctx: NativeCtx): Promise<Row[]> => (await route(params, ctx)) as Row[]
 
 /** The snapshot of 2026-10-19 exists; 2026-10-20 does not, so the reader has to look back a day. */
 function ctx() {

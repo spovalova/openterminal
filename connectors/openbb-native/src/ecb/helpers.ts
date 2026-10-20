@@ -4,7 +4,7 @@
 // metadata cache (only the dimension order of each dataflow is used).
 import { parseSdmxCsv, parseSdmxJson, parseSdmxSeriesKeys, type SdmxJsonMessage, type SdmxRecord } from '../lib/sdmx.js'
 import { NativeHttpError } from '../http.js'
-import type { NativeCtx, NativeParams } from '../types.js'
+import type { NativeCtx } from '../types.js'
 import dataflows from './dataflows.json' with { type: 'json' }
 
 export const BASE_URL = 'https://data-api.ecb.europa.eu/service'
@@ -177,32 +177,7 @@ export function matchesQuery(haystack: string, parsed: string[][]): boolean {
   return parsed.some((group) => group.every((term) => hay.includes(term)))
 }
 
-// --- params
-
-/** A text param; list params arrive as arrays and OpenBB's API joins them with commas. */
-export function text(params: NativeParams, name: string): string | undefined {
-  const v = params[name]
-  if (v === undefined || v === null) return undefined
-  const s = Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean).join(',') : String(v)
-  return s === '' ? undefined : s
-}
-
-export function flag(params: NativeParams, name: string, fallback: boolean): boolean {
-  const v = params[name]
-  return typeof v === 'boolean' ? v : v === undefined ? fallback : String(v).toLowerCase() === 'true'
-}
-
-export function whole(params: NativeParams, name: string): number | undefined {
-  const v = params[name]
-  if (v === undefined || v === null || v === '') return undefined
-  const n = Number(v)
-  return Number.isFinite(n) ? Math.trunc(n) : undefined
-}
-
-/** Python's `date.today()` / `datetime.now().date()`: the local calendar date of `ctx.now()`, as YYYY-MM-DD. */
-export function localDate(now: Date): string {
-  return `${String(now.getFullYear()).padStart(4, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-}
+export { flag, localDate, text, whole } from '../lib/params.js'
 
 /** A failed request carries its status; the fetchers that probe several URLs read it. */
 export const isHttpError = (err: unknown): err is NativeHttpError => err instanceof NativeHttpError
