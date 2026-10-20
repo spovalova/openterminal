@@ -1,0 +1,7 @@
+[
+  { "name": "wheat-data-us-supply-2020", "route": "usda/wheat_data", "params": { "table": "us_supply_and_disappearance", "start_year": 2020, "end_year": 2023 } },
+  { "name": "wheat-data-world-supply", "route": "usda/wheat_data", "params": { "table": "world_supply_and_disappearance", "start_year": 2015, "end_year": 2022 } },
+  { "name": "wheat-data-prices-varying-dims", "route": "usda/wheat_data", "params": { "table": "domestic_and_international_prices", "start_year": 2021, "end_year": 2023 } },
+  { "name": "wheat-data-destination-exports", "route": "usda/wheat_data", "params": { "table": "all_wheat_destination_exports", "start_year": 2022, "end_year": 2023 } },
+  { "name": "wheat-data-by-class-quarterly", "route": "usda/wheat_data", "params": { "table": "by_class_quarterly", "start_year": 2022, "end_year": 2023 } }
+]
