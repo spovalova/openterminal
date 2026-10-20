@@ -36,6 +36,26 @@ describe('record and replay', () => {
     await expect(replay.json('https://x.test/series', { query: { api_key: '{{fred_api_key}}', id: 'DGS10' } })).resolves.toBeTruthy()
   })
 
+  it('keeps binary bodies byte for byte even when the content type looks textual (xlsx is …openxmlformats…sheet)', async () => {
+    const zip = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0xff, 0xfe, 0x80])
+    const xlsx: typeof fetch = async () => new Response(zip, { headers: { 'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' } })
+    const rec = recordingFetch(xlsx)
+    await createNativeHttp(rec.fetch).bytes('https://x.test/book.xlsx')
+    expect(rec.exchanges[0]?.encoding).toBe('base64')
+    expect(await createNativeHttp(replayFetch(rec.exchanges)).bytes('https://x.test/book.xlsx')).toEqual(zip)
+  })
+
+  it('sends one Content-Type: the caller’s when it names one', async () => {
+    const seen: (string | null)[] = []
+    const echo: typeof fetch = async (_input, init) => {
+      seen.push(new Headers(init?.headers).get('content-type'))
+      return new Response('{}', { headers: { 'content-type': 'application/json' } })
+    }
+    await createNativeHttp(echo).json('https://x.test/a', { body: { a: 1 }, headers: { 'Content-Type': 'application/json;charset=UTF-8' } })
+    await createNativeHttp(echo).json('https://x.test/a', { body: { a: 1 } })
+    expect(seen).toEqual(['application/json;charset=UTF-8', 'application/json'])
+  })
+
   it('redacts URL-encoded secrets too', () => {
     expect(redact('a=kk%2Byy&b=kk+yy', { key: 'kk+yy' })).toBe('a={{key}}&b={{key}}')
   })
