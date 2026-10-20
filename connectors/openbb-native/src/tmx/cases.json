@@ -4,7 +4,7 @@
     "route": "equity/price/quote",
     "params": { "symbol": "RY" },
     "compare": { "volatile": ["last_price", "open", "high", "low", "volume", "prev_close", "change", "change_percent", "vwap", "ma_21", "ma_50", "ma_200", "volume_avg_10d", "volume_avg_30d", "volume_avg_50d", "market_cap_all_classes", "MarketCap", "averageVolume20D", "year_high", "year_low", "pe", "price_to_book", "price_to_cf", "return_on_equity", "return_on_assets", "debt_to_equity", "eps", "beta", "alpha", "div_yield"] },
-    "reason": "live quote: OpenBB and the native side fetch seconds apart, so prices, volumes and the ratios built on the price may move"
+    "reason": "live quote: OpenBB keeps TMX quotes in its response cache for a minute and shares trade after the close, so prices, volumes and the ratios built on the price differ"
   },
   {
     "name": "historical-ry-sep",
@@ -144,14 +144,14 @@
     "route": "index/snapshots",
     "params": { "region": "ca" },
     "compare": { "volatile": ["price", "volume", "change", "change_percent", "openPrice", "dayHigh", "dayLow", "year_high", "year_low", "bid", "ask"] },
-    "reason": "live quotes: OpenBB and the native side fetch seconds apart"
+    "reason": "live quotes: OpenBB keeps TMX quotes in its response cache for a minute and the market trades after the close"
   },
   {
     "name": "index-snapshots-us",
     "route": "index/snapshots",
     "params": { "region": "us" },
     "compare": { "volatile": ["price", "volume", "change", "change_percent", "openPrice", "dayHigh", "dayLow", "year_high", "year_low", "bid", "ask"] },
-    "reason": "live quotes: OpenBB and the native side fetch seconds apart"
+    "reason": "live quotes: OpenBB keeps TMX quotes in its response cache for a minute and the market trades after the close"
   },
   {
     "name": "movers-gainers-tsx",
@@ -399,7 +399,7 @@
     "route": "equity/price/quote",
     "params": { "symbol": "^TSX,RY,ZZZZ" },
     "compare": { "volatile": ["last_price", "open", "high", "low", "volume", "prev_close", "change", "change_percent", "vwap", "ma_21", "ma_50", "ma_200", "volume_avg_10d", "volume_avg_30d", "volume_avg_50d", "market_cap_all_classes", "MarketCap", "averageVolume20D", "year_high", "year_low", "pe", "price_to_book", "price_to_cf", "return_on_equity", "return_on_assets", "debt_to_equity", "eps", "beta", "alpha", "div_yield"] },
-    "reason": "live quote: OpenBB and the native side fetch seconds apart, so prices, volumes and the ratios built on the price may move"
+    "reason": "live quote: OpenBB keeps TMX quotes in its response cache for a minute and shares trade after the close, so prices, volumes and the ratios built on the price differ"
   },
   {
     "name": "quote-futures-batch",

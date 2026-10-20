@@ -334,7 +334,7 @@ async function quoted(ctx: NativeCtx, rows: Row[]): Promise<Row[]> {
   const symbols = rows.filter((r) => truthy(r.symbol)).map((r) => String(r.symbol))
   const batches: string[][] = []
   for (let i = 0; i < symbols.length; i += QUOTE_BATCH) batches.push(symbols.slice(i, i + QUOTE_BATCH))
-  const pages = await Promise.all(batches.map(async (symbolsBatch) => ((await gql<Row>(ctx, 'getQuoteForSymbols', QUOTE_FOR_SYMBOLS, { symbols: symbolsBatch }))?.getQuoteForSymbols as Row[] | undefined) ?? []))
+  const pages = await mapLimit(batches, 8, async (symbolsBatch) => ((await gql<Row>(ctx, 'getQuoteForSymbols', QUOTE_FOR_SYMBOLS, { symbols: symbolsBatch }))?.getQuoteForSymbols as Row[] | undefined) ?? [])
   const quotes = new Map<string, Row>()
   for (const q of pages.flat()) if (truthy(q.symbol)) quotes.set(String(q.symbol), q)
   return rows.map((row) => {

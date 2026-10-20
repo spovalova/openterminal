@@ -89,8 +89,13 @@ export async function directoryRows(ctx: NativeCtx, country: string | undefined,
 
 /** `sort_values`: missing values last, ties in their original order. */
 export function sortRows(rows: Row[], column: string, ascending: boolean): Row[] {
-  const present = rows.filter((r) => r[column] !== null && r[column] !== undefined && !(typeof r[column] === 'number' && Number.isNaN(r[column])))
-  const missing = rows.filter((r) => !present.includes(r))
+  const present: Row[] = []
+  const missing: Row[] = []
+  for (const r of rows) {
+    const v = r[column]
+    if (v === null || v === undefined || (typeof v === 'number' && Number.isNaN(v))) missing.push(r)
+    else present.push(r)
+  }
   const cmp = (a: unknown, b: unknown): number => (a! < b! ? -1 : a! > b! ? 1 : 0)
   const sorted = present.map((r, i) => ({ r, i })).sort((a, b) => (ascending ? cmp(a.r[column], b.r[column]) : cmp(b.r[column], a.r[column])) || a.i - b.i).map((x) => x.r)
   return [...sorted, ...missing]
