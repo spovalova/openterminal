@@ -5,7 +5,8 @@
  * is 0 and the third is anything (HSL saturation 100%, lightness 50%); alpha is free, so a lighter or darker variant
  * is the same hue over the background. Neutrals (R = G = B) carry no hue and are allowed.
  *
- * This test reads every source file of packages/ui and packages/web (src, test, index.html) and fails on a colour
+ * This test reads every source file of packages/ui and packages/web (src, test, index.html) and of the landing page
+ * (site/: its HTML, CSS, script, favicon and data) and fails on a colour
  * literal that breaks the rule: hex (#rgb, #rgba, #rrggbb, #rrggbbaa, and %23-encoded in data URLs), rgb()/rgba(),
  * hsl()/hsla(), hwb(), oklch() and oklab() (converted to sRGB first), a CSS named colour, a color-mix() with anything
  * but `transparent`, and a darkening or desaturating filter. Colours built at runtime are checked through the
@@ -26,18 +27,20 @@ const SELF = fileURLToPath(import.meta.url)
 /** Every source file the rule covers. */
 function sources(): string[] {
   const out: string[] = []
-  const walk = (dir: string) => {
+  const walk = (dir: string, ext = /\.(ts|tsx|css|html)$/) => {
     for (const name of readdirSync(dir)) {
       const p = join(dir, name)
       if (name === 'node_modules' || name === 'dist' || name === 'fonts') continue
-      if (statSync(p).isDirectory()) walk(p)
-      else if (/\.(ts|tsx|css|html)$/.test(name) && p !== SELF) out.push(p)
+      if (statSync(p).isDirectory()) walk(p, ext)
+      else if (ext.test(name) && p !== SELF) out.push(p)
     }
   }
   for (const pkg of ['ui', 'web']) {
     for (const dir of ['src', 'test']) walk(join(repo, 'packages', pkg, dir))
     out.push(join(repo, 'packages', pkg, 'index.html'))
   }
+  // The landing page is static files: the page, its stylesheet and script, the favicon, the prompt data.
+  walk(join(repo, 'site'), /\.(css|html|js|svg|json)$/)
   return out
 }
 
@@ -184,9 +187,10 @@ describe('parseColor reads every notation into sRGB', () => {
 })
 
 describe('the colour rule (PLAN.md section 6)', () => {
-  it('no source file in packages/ui or packages/web has a colour that is neither a pure hue nor a neutral', () => {
+  it('no source file in packages/ui, packages/web or site/ has a colour that is neither a pure hue nor a neutral', () => {
     const files = sources()
     expect(files.length).toBeGreaterThan(50)
+    expect(files.some((f) => f.endsWith(join('site', 'styles.css')))).toBe(true)
     const findings = files.flatMap((f) => scan(readFileSync(f, 'utf8'), relative(repo, f)))
     expect(findings.map((f) => `${f.file}:${f.line} ${f.literal}: ${f.why}`)).toEqual([])
   })
