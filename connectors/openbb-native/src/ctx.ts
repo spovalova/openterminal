@@ -13,6 +13,8 @@ export type NativeCtxOptions = {
   timeoutMs?: number
   /** Where `ctx.cache` keeps entries; the process-wide one when omitted. */
   cache?: Map<string, CacheEntry>
+  /** How `ctx.sleep` waits; a real timer when omitted, nothing in a replay. */
+  sleep?: (ms: number) => Promise<void>
 }
 
 export type CacheEntry = { expires: number; value: Promise<unknown> }
@@ -26,6 +28,7 @@ export function createNativeCtx(opts: NativeCtxOptions = {}): NativeCtx {
     http: createNativeHttp(opts.fetch ?? fetch, { ...(opts.signal ? { signal: opts.signal } : {}), ...(opts.timeoutMs ? { timeoutMs: opts.timeoutMs } : {}) }),
     credential: (name) => opts.credentials?.[name] || opts.env?.[name.toUpperCase()] || undefined,
     now,
+    sleep: opts.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))),
     cache<T>(key: string, ttlMs: number, load: () => Promise<T>): Promise<T> {
       const t = now().getTime()
       const hit = store.get(key)
