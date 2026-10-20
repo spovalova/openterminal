@@ -11,7 +11,7 @@ const parts = [a, b, c, g]
 export default defineProvider({
   name: 'usda',
   credentials: [],
-  status: 'todo',
+  status: 'ported',
   routes: Object.assign({}, ...parts.map((p) => p.routes)),
   skipped: Object.assign({}, ...parts.map((p) => p.skipped ?? {})),
 })
