@@ -1,6 +1,8 @@
 import { defineProvider } from '../types.js'
 import { cesRoutes } from './ces.js'
 import { chartRoutes } from './charts.js'
+import { cpiNewsReleaseRoutes } from './cpi-news-release.js'
+import { cpiTableRoutes } from './cpi-tables.js'
 import { documentRoutes } from './documents.js'
 
 export default defineProvider({
@@ -10,6 +12,8 @@ export default defineProvider({
   routes: {
     ...chartRoutes,
     ...cesRoutes,
+    ...cpiNewsReleaseRoutes,
+    ...cpiTableRoutes,
     ...documentRoutes,
   },
 })

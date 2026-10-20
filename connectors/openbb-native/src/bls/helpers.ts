@@ -2,6 +2,7 @@
 // Platform 5.0.0, Apache-2.0); modified: node-html-parser instead of BeautifulSoup, downloads memoised through
 // ctx.cache instead of lru_cache, plain rows instead of pydantic models.
 import { NodeType, parse, type HTMLElement, type Node, type TextNode } from 'node-html-parser'
+import { readXlsx, type Cell } from '../lib/xlsx.js'
 import type { NativeCtx, Row } from '../types.js'
 
 /** bls.gov answers 403 to unidentified clients; OpenBB sends this (its BLS_USER_AGENT environment variable can override it). */
@@ -166,3 +167,17 @@ export function applyDateWindow<T extends Row>(rows: T[], start?: string, end?: 
 }
 
 export const str = (v: unknown): string | undefined => (typeof v === 'string' && v !== '' ? v : undefined)
+
+export type Sheet = { name: string; rows: Cell[][] }
+
+/**
+ * A workbook's sheets the way openpyxl's read-only mode gives them: text cells with numeric character references
+ * decoded, and every row padded with nulls to the sheet's widest row.
+ */
+export function loadSheets(bytes: Uint8Array): Sheet[] {
+  return readXlsx(bytes).map((s) => {
+    const rows = s.rows.map((r) => r.map((c) => (typeof c === 'string' ? decodeCharRefs(c) : c)))
+    const width = rows.reduce((w, r) => Math.max(w, r.length), 0)
+    return { name: decodeCharRefs(s.name), rows: rows.map((r) => (r.length < width ? [...r, ...Array.from<Cell>({ length: width - r.length }).fill(null)] : r)) }
+  })
+}
