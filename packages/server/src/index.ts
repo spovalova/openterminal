@@ -5,6 +5,8 @@ export {
   loadConfig,
   normalizeConfig,
   saveConnectorConfig,
+  saveLlmConfig,
+  CONFIG_FILE_MODE,
   resolvedLlm,
   openterminalHome,
   configPath,

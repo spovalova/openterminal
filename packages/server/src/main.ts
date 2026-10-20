@@ -1,10 +1,10 @@
 // Wires config → store → registry → agent → HTTP + WebSocket, and serves. Entry point for `pnpm start`.
 import { existsSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { serve, type ServerType } from '@hono/node-server'
 import { ConnectorRegistry, type AgentRunner, type Registry } from '@openterminal/core'
-import { builtinAnnotations, builtinRecipes, loadAnnotationsFile } from '@openterminal/core/node'
+import { builtinAnnotations, builtinRecipes, isBundled, loadAnnotationsFile, resources } from '@openterminal/core/node'
 import { createAgentRunner } from './agent/index.js'
 import { createApp, type App } from './app.js'
 import { SqliteCache } from './cache-sqlite.js'
@@ -33,7 +33,7 @@ export type StartOptions = {
   registry?: Registry
   /** Injected for tests; otherwise the real runner when an LLM is configured, else the stub. */
   agent?: AgentRunner
-  /** Built web app directory. Defaults to packages/web/dist; false disables static serving. */
+  /** Built web app directory. Defaults to packages/web/dist (lib/web in the release bundle); false disables static serving. */
   webDist?: string | false
   /** Injected for tests; otherwise SQLite at `<home>/terminal.db` with the JSON migration on first run. */
   store?: Store
@@ -58,8 +58,8 @@ export type RunningServer = {
   close(): Promise<void>
 }
 
-const here = dirname(fileURLToPath(import.meta.url))
-export const DEFAULT_WEB_DIST = resolve(here, '../../web/dist')
+/** packages/web/dist from source, lib/web in the release bundle (`resources()`). */
+export const DEFAULT_WEB_DIST = resources().webDist
 
 /** (c)'s `RunLog` over (e)'s store: rows go to the `runs` table, extra fields kept whole. */
 export function storeRunLog(store: Store): RunLog {
@@ -147,8 +147,17 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
     ...(probe ? { probe } : {}),
   })
 
-  const server = await new Promise<ServerType>((resolveServer) => {
-    const s = serve({ fetch: app.fetch, port, hostname }, () => resolveServer(s))
+  // A listen error (the port is taken) rejects instead of crashing the process, so the CLI can say what happened.
+  const server = await new Promise<ServerType>((resolveServer, rejectServer) => {
+    const onListenError = (err: Error) => {
+      if (!opts.store) store.close()
+      rejectServer(err)
+    }
+    const s = serve({ fetch: app.fetch, port, hostname }, () => {
+      s.off('error', onListenError)
+      resolveServer(s)
+    })
+    s.once('error', onListenError)
   })
   injectWebSocket(server)
   // The transform engine (phase 1 (b)): one Pyodide worker, warmed after listen so the first prompt does not pay the
@@ -197,7 +206,9 @@ export async function startServer(opts: StartOptions = {}): Promise<RunningServe
   }
 }
 
-const isEntry = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href
+// `pnpm start` runs this file directly. In the release bundle every module shares the bundle's URL, so the check is
+// skipped there and the CLI starts the server instead.
+const isEntry = !isBundled() && process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href
 if (isEntry) {
   const running = await startServer()
   console.error(`[server] listening on ${running.url}`)

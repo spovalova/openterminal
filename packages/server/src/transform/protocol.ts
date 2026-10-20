@@ -3,6 +3,10 @@
 export type WorkerData = {
   /** Directory holding the vendored wheels; `loadPackage` reads from it and never reaches the network. */
   packagesDir: string
+  /** Pyodide's own files (pyodide.asm.wasm, python_stdlib.zip, pyodide-lock.json): its `indexURL`. */
+  pyodideDir: string
+  /** Directory holding `runtime.py` and `ot.py`. */
+  scriptsDir: string
   /** Packages to load at boot (pandas, scipy, tzdata). */
   packages: string[]
   allowedImports: string[]

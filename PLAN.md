@@ -12,9 +12,11 @@ Repository: https://github.com/spovalova/openterminal (moved from williammtan/te
 
 Phase 3 ran on headless Chromium (Playwright with `channel: 'chromium'`, since the machine has no display; the browser lives in `~/.cache/ms-playwright`, the driver scripts in the session scratchpad, nothing in the repo). The theme pass took screenshots of the shell, the grid after use case A, the palette, the widget editor, the expand dialog, the connectors page, a 1024px viewport, and the ui preview, and found three defects, all fixed in the Phase 3 commit: `WidgetFrame` had no height, so a widget rendered at its chart's 160px minimum and the lg hero sat in a short strip with empty rows below it (`h-full` on the section); the chart did not refit after a resize, so an expanded chart drew its bars in the left third of the dialog (`fitContent` in the ResizeObserver); `Dialog` was fixed at 520px, so the expand dialog could not be wide (`size="wide"`, 1200px). Both HTML shells also gained an inline SVG favicon. The recordings are in `docs/recordings/{a,b,c}.gif` (1280x800, 8 fps, about 2 MB each) and embedded in the README; each is one real prompt against the live connectors and `claude-sonnet-5-5`.
 
+**Release bundle and `npx openterminal` (2026-10-20).** Section 18 is the design. The whole app builds into one directory that runs on Node alone (`pnpm release:bundle` → `dist/release/lib`, 41 MB: esbuild bundles the CLI, server and connectors into one ESM file and the Pyodide worker into another; the web app, Pyodide's runtime, the wheels, recipes and annotations sit beside them). Every file read at runtime goes through one resolver, `resources()` in `@openterminal/core/node`, so source and bundle differ only in where the files are. `pnpm release:npm` packs that bundle as the `openterminal` npm package (30 MB, no dependencies, Node ≥ 22.13), smoke-tested on Node 22.13 and 26; not published (**Ask**). The CLI gained `--version`, a first-run key prompt in a terminal (hidden, saved to config.yml at mode 600), a startup banner, and a daily update check from the bundle. Next, by the user's direction the same day: the desktop app (Electron, unsigned, installed by one line from the landing page), section 18.
+
 **Landing page (2026-10-20).** The public page lives in `site/`: one static `index.html`, `styles.css` and a small `app.js` (prompt tabs, copy buttons), fonts and screenshots beside them, no build step, nothing loaded from another origin, no analytics. Its main call to action, Download, links to the GitHub repo; install is shown as clone, `pnpm install`, `pnpm dev` until `npx openterminal` is on npm. Deploy: a Vercel project with Root Directory `site`, preset Other, no build command (`site/README.md`). The six example prompts on it were run end to end on a scratch server on 2026-10-19 and are recorded with their results in `site/prompts.json`; `packages/ui/test/site.test.ts` keeps the page and that file in step and checks every local reference, and `pure-hue.test.ts` scans `site/` too.
 
-- Fresh-clone `npx terminal`: the equivalent (clone, frozen install, build, CLI boot, prompt) passes; the literal `npx terminal` needs the package published under its final name (an unrelated `terminal` package already exists on npm, so do not publish under the placeholder).
+- Fresh-clone `npx terminal`: the equivalent (clone, frozen install, build, CLI boot, prompt) passes; the literal `npx terminal` needs the package published under its final name (an unrelated `terminal` package already exists on npm, so do not publish under the placeholder). Since 2026-10-20 the package is `openterminal`, packed from the release bundle and smoke-tested (section 18); publishing it is the remaining **Ask**.
 - Theme follow-ups seen in the screenshots, none blocking: ~~a 1x1 table widget clips its rightmost columns~~ (fixed by the layout pass, product rules 3 and 7); the candle chart's last-value label overlaps the price axis ticks; the sidebar overlays the grid below 1100px by design, which hides the widget action buttons at 1024px.
 
 Observations from the verifiers worth a follow-up, none blocking: the agent never cites the candle widget with a chip; a news widget titled "24h" has no time window, only `limit`; the yahoo earnings `session` is always null, so replies cannot say "before the open" (Finnhub, second in routing order, does carry it, so swapping priority for `earnings` is a one-line config change); quote fields fetched for a widget can differ by cents from the preview the agent saw when extended hours are moving.
@@ -162,12 +164,14 @@ packages/
   server/     connector loader, HTTP + WebSocket API, JSON file store, agent loop (src/agent)
   ui/         design system: tokens, components, chart theme, preview page
   web/        React app: shell, state, WebSocket client, palette, connectors page, views (src/views)
-  cli/        `npx openterminal` → starts server on localhost, opens browser
+  cli/        `npx openterminal` → starts server on localhost, opens browser; first-run key prompt, banner, update check
 connectors/
   yahoo/      no key; search, quote, ohlcv, earnings
   finnhub/    free key; quote, news, earnings
 docs/
   vocabulary.md, writing-a-connector.md
+scripts/release/
+  the release bundle, the npm package, the smoke test (section 18)
 ```
 
 ### Connectors are plain modules behind one helper
@@ -361,8 +365,8 @@ Each of these is a real feature someone will ask for. Cutting them is what keeps
 - Crypto connectors (ideal first community connector), non-US tickers
 - Economic calendar, options flow, filings, fundamentals kinds
 - Auto-generated settings forms (connectors page with a key field per connector instead)
-- Desktop packaging (Tauri later), auth, hosting, multi-user
-- One-command install like opencode or Claude Code (user, 2026-10-20): `curl -fsSL <site>/install | sh` fetches a bundled package (a single executable or a tarball with its own Node runtime, the server, the built web app and the vendored Pyodide) and links `openterminal` onto PATH, with no clone or pnpm step. The install script can be served from the landing page (`site/`). Until then `npx openterminal` is the one-command start, and the landing page shows the clone flow.
+- Auth, hosting, multi-user
+- ~~Desktop packaging (Tauri later); one-command install like opencode or Claude Code (user, 2026-10-20)~~. Back in on 2026-10-20: the user chose an Electron desktop app, unsigned, installed by `curl -fsSL https://terminal.spova.ai/install | sh` or `irm https://terminal.spova.ai/install.ps1 | iex` from the landing page, with `npx openterminal` for people who have Node. Section 18.
 
 ## 10. Milestones
 
@@ -406,7 +410,7 @@ Replace stubs, run `pnpm dev`, run use cases A, B, C with real keys, and fix sea
 
 ### Phase 3: launch
 
-Theme pass, recordings of the three use cases for the README, fresh-clone `npx terminal` test. The public landing page came later, in `site/` (section 0, "Landing page").
+Theme pass, recordings of the three use cases for the README, fresh-clone `npx terminal` test. The public landing page came later, in `site/` (section 0, "Landing page"). `npx openterminal` itself is the packed release bundle since 2026-10-20 (section 18): `pnpm release:npm` packs it, `pnpm release:smoke` installs and runs it; it is live once the package is published (**Ask**).
 
 ## 12. Verification
 
@@ -797,3 +801,49 @@ Deferred with a reason: Arrow for frames over the socket and into Pyodide (until
 ### Out of scope
 
 Write routes (orders), authentication flows beyond API keys and basic auth, embeddings for search, streaming routes, user-installed Python packages, plotting or network from transforms.
+
+## 18. Release: the bundle, `npx openterminal`, the desktop app
+
+**Status (2026-10-20).** Done: the resource resolver, the release bundle, the npm package, the CLI's first run, banner and update check. Next PR: the desktop app (below). Not done: publishing to npm (**Ask**), the first tagged release.
+
+The design before this one (2026-10-20 morning, superseded the same day by the user): per-platform tarballs, each with its own Node runtime, unpacked into `~/.local/share/openterminal/<version>` by an install script, with `openterminal update` and `uninstall`. Dropped for the desktop app; the bundle, the resolver and the CLI's first run and update check carried over.
+
+### The release bundle
+
+One directory, `dist/release/lib/`, that runs anywhere Node 22.13 or later runs (`node lib/openterminal.mjs`). Every wrapper ships it unchanged: the npm package now, the desktop app next. `scripts/release/bundle.mjs` (`pnpm release:bundle`) builds the web app, checks the vendored wheels, bundles with esbuild (already in the tree under tsx and vite, pinned as a root dev dependency), copies the resources, and writes `THIRD-PARTY-NOTICES.txt` from the packages that are actually in the bundles and the web app (157).
+
+| `lib/` | What | Read by |
+|---|---|---|
+| `openterminal.mjs` | the entry: Node version check, a filter for node:sqlite's ExperimentalWarning (Node 22 prints one, Node 24 does not), then `import('./cli.mjs')` | every wrapper |
+| `cli.mjs` | the CLI, server and connectors as one ESM file (2.7 MB; whitespace and syntax minified, names kept) | the entry |
+| `transform-worker.mjs` | the Pyodide worker thread, Pyodide's JS loader bundled in | `new Worker(resources().transformWorker)` |
+| `transform/` | `runtime.py`, `ot.py` | the worker, from `workerData.scriptsDir` |
+| `data/` | `recipes.yml`, `annotations.yml` | `builtinRecipes()`, `builtinAnnotations()` |
+| `web/` | the built web app (1.9 MB) | the server's static files |
+| `pyodide/` | `pyodide.asm.mjs`, `pyodide.asm.wasm`, `python_stdlib.zip`, `pyodide-lock.json` (13.5 MB) | Pyodide, as its explicit `indexURL` |
+| `wheels/` | pandas, numpy, scipy and their closure (22.3 MB) | Pyodide's `packageCacheDir` |
+| `xdg-open`, `LICENSE`, `THIRD-PARTY-NOTICES.txt` | the `open` package's Linux fallback; licenses | |
+
+`resources()` (`packages/core/src/resources.ts`) is one table with two layouts: `source`, paths in the monorepo found from the file's own location (`pnpm dev`, the tests, the production unit), and `bundle`, everything in `lib/` beside the bundle, chosen by the `__OPENTERMINAL_BUNDLE__` constant esbuild defines. Nothing else resolves files from `import.meta.url`: the connectors import their `descriptors.json` (the bundler inlines it), and the server's run-as-entry check is off in the bundle. What must stay a real file on disk: Pyodide's wasm, stdlib zip, lock file and the wheels (read with `fs` by Pyodide), the worker (`worker_threads` starts from a path), the Python helpers and the web app. Only the code (`cli.mjs`, `transform-worker.mjs`) could live inside a single-file executable; the 38 MB of Pyodide and wheels would have to be extracted to disk on first run. Inside Electron they go outside the asar archive.
+
+### `npx openterminal`
+
+`scripts/release/npm.mjs` (`pnpm release:npm`) stages `dist/release/npm/` with a generated `package.json` (name `openterminal`, the version from `packages/cli/package.json`, `bin` → `bin/openterminal.mjs`, which imports `lib/openterminal.mjs`, no dependencies, `engines.node` `>=22.13.0`, the first Node 22 with `node:sqlite` unflagged) and runs `npm pack` into `dist/release/npm-pack/`: 30 MB packed, 40 MB installed. `packages/cli` stays private, since its dependencies are workspace links; the published package is generated. `scripts/release/smoke.mjs` (`pnpm release:smoke <lib | .tgz>`) installs the `.tgz` into a temporary prefix (or runs `lib/` directly), checks `--version`, starts it with `--no-open` on a spare port and a scratch `OPENTERMINAL_HOME`, waits for `/api/health`, loads the web app, and runs one pandas transform through `POST /api/query` over a live yahoo route (three routes, three tries, so one flaky endpoint does not fail a release); `checkServer` is exported for the desktop app's smoke test. Measured 2026-10-20 on linux-arm64 with Node 22.13.0 and 26.12: healthy 0.6 to 1.2 s after start, the first transform 15 to 18 s after start (Pyodide's cold start, in the background). Publishing is an **Ask**.
+
+### The CLI
+
+- **Version.** One source, `packages/cli/package.json` (0.1.0), imported by `src/version.ts`; `openterminal --version` prints it.
+- **First run.** When stdin and stdout are a TTY and no LLM key is found (environment or config.yml), the CLI asks `Anthropic API key for the agent (Enter to skip):` with echo off (raw mode is set before the question shows, so a fast paste is not echoed) and saves it with `saveLlmConfig` (`packages/server/src/config.ts`, the same comment-keeping YAML writer as connector keys): atomic, mode 600, never printed. config.yml is created at mode 600 too. A skip is remembered in `~/.openterminal/cli-state.json`, so it asks once.
+- **Banner.** Name, version and URL; the connectors (configured ones after a 1.5 s health probe, so `openbb (not running)`; built-ins that are not configured as `off`); the agent's model, or how to add a key; the data directory. In a terminal the server's log goes to `~/.openterminal/openterminal.log` (the last run's, mode 600) so the banner is what you read; `--verbose`, or no TTY (the production unit), keeps it on stderr as before. A port in use is one line, not a stack trace.
+- **Update check.** From the bundle only (a checkout updates by pulling): on start, at most once per 24 hours, `GET https://api.github.com/repos/spovalova/openterminal/releases/latest` with no token and a bare `openterminal` User-Agent, a 2.5 s timeout, never awaited before the server starts. The answer is remembered in `cli-state.json` (a failed request counts as the day's check), and a newer version prints one line after the banner. `OPENTERMINAL_NO_UPDATE_CHECK=1` turns it off.
+
+### The desktop app (next PR)
+
+The user's direction (2026-10-20): ship Open Terminal as an Electron app, unsigned (no Apple Developer account, no Microsoft Store, no Windows certificate), released on GitHub Releases and installed by one line from the landing page. In `packages/desktop`:
+
+- The main process starts the bundle's server in an Electron `utilityProcess` on 127.0.0.1 (4242 when free, else the next free port), waits for `/api/health`, and opens a window on it. One instance; closing the window keeps it in the tray or menu bar (Open Terminal · Open · Open in browser · Check for updates · Quit); quitting stops the server. `lib/`'s files sit outside the asar archive and `resources()` points at them. Data stays in `~/.openterminal`, shared with the CLI. An Electron whose Node is 22.13 or later, for `node:sqlite`.
+- First run in the app: with no LLM key the web app shows a short onboarding screen; the server saves the key to config.yml (mode 600) and never sends it back. State-changing endpoints reject requests whose Origin or Host is not the app's own localhost origin.
+- electron-builder: appId `ai.spova.openterminal`, productName `Open Terminal`. macOS: dmg and zip for arm64 and x64, ad-hoc signed, hardened runtime off. Windows: NSIS x64, per-user, one click. Linux: AppImage and deb for x64 and arm64.
+- Updates: Windows and the AppImage through electron-updater from GitHub Releases (signature checks off, since nothing is signed); macOS checks the latest release and, when it is newer, runs the install script (which replaces the app without the quarantine flag) and relaunches; the deb shows a notice.
+- Release assets, with stable names so `https://github.com/spovalova/openterminal/releases/latest/download/<asset>` always works (the install scripts use exactly these): `OpenTerminal-mac-arm64.dmg`, `OpenTerminal-mac-x64.dmg`, `OpenTerminal-mac-arm64.zip`, `OpenTerminal-mac-x64.zip` (`Open Terminal.app` at the root), `OpenTerminal-win-x64-setup.exe`, `OpenTerminal-linux-x86_64.AppImage`, `OpenTerminal-linux-arm64.AppImage`, `OpenTerminal-linux-amd64.deb`, `OpenTerminal-linux-arm64.deb`, `SHA256SUMS` (`sha256sum` format), and electron-builder's `latest*.yml`. Install scripts: `curl -fsSL https://terminal.spova.ai/install | sh` and `irm https://terminal.spova.ai/install.ps1 | iex`.
+- Release workflow: on a tag `v*` (by hand for a dry run), electron-builder on macos-14 (both mac architectures), windows-latest, ubuntu-latest and ubuntu-24.04-arm, a smoke test of each build, then a draft release with SHA256SUMS. The token that pushes from this machine has no `workflow` scope, so the workflow waits in `deploy/release.yml` until it is moved to `.github/workflows/`.

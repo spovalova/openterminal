@@ -1,6 +1,6 @@
 {
   "name": "openterminal",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "bin": { "openterminal": "./bin/openterminal.js" },
@@ -9,6 +9,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@openterminal/core": "workspace:*",
     "@openterminal/server": "workspace:*",
     "open": "^11.0.4",
     "tsx": "^4.23.15"

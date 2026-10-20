@@ -1,15 +1,19 @@
-// Node-only helpers: reading the built-in YAML data files, and where the config directory is. Kept out of index.ts so
-// the web bundle never imports node:fs.
+// Node-only helpers: reading the built-in YAML data files, where the config directory is, and where the runtime
+// resources are (resources.ts). Kept out of index.ts so the web bundle never imports node:fs.
 import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
 import { parseAnnotations, type AnnotationRule } from './annotations.js'
 import { parseRecipes, type Recipe } from './recipes.js'
+import { resources } from './resources.js'
 
-export const BUILTIN_RECIPES_PATH = fileURLToPath(new URL('../recipes.yml', import.meta.url))
-export const BUILTIN_ANNOTATIONS_PATH = fileURLToPath(new URL('../annotations.yml', import.meta.url))
+export { BUNDLE_FILES, isBundled, resourcePaths, resources, type ResourceLayout, type Resources } from './resources.js'
+
+/** packages/core/recipes.yml from source, lib/data/recipes.yml in the release bundle. */
+export const BUILTIN_RECIPES_PATH = resources().recipes
+/** packages/core/annotations.yml from source, lib/data/annotations.yml in the release bundle. */
+export const BUILTIN_ANNOTATIONS_PATH = resources().annotations
 
 export function loadYamlFile(path: string): unknown {
   return parseYaml(readFileSync(path, 'utf8'))

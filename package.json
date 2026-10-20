@@ -19,7 +19,10 @@
     "query": "tsx scripts/query.ts",
     "probe": "tsx scripts/probe-catalog.ts",
     "readme:recipes": "tsx scripts/readme-recipes.ts",
-    "bench": "node scripts/prompt-bench.mjs"
+    "bench": "node scripts/prompt-bench.mjs",
+    "release:bundle": "node scripts/release/bundle.mjs",
+    "release:npm": "node scripts/release/npm.mjs",
+    "release:smoke": "node scripts/release/smoke.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -28,6 +31,7 @@
     "@openterminal/connector-yahoo": "workspace:*",
     "@openterminal/core": "workspace:*",
     "@types/node": "^22.0.0",
+    "esbuild": "0.28.2",
     "eslint": "^10.13.0",
     "tsx": "^4.23.15",
     "typescript": "~5.9.0",

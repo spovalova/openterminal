@@ -1,16 +1,17 @@
 // Finnhub `descriptors()` and `call(route, params, ctx)` (PLAN.md section 17): the three REST paths the recipes
 // name, answered through core's `inferFrame`. Finnhub stamps seconds; the frame convention is epoch ms, so the
 // two time fields are scaled here and nothing else is touched. The kind handlers in index.ts are untouched.
-import { readFileSync } from 'node:fs'
 import { inferFrame, parseDescriptors, type CallHandler, type Descriptor, type Frame, type ValidatedParams } from '@openterminal/core'
+// Imported, not read from disk, so the release bundle carries it inline.
+import descriptorsJson from './descriptors.json' with { type: 'json' }
 import { get, type Config, type FinnhubEarningsCalendar, type FinnhubNewsItem, type FinnhubQuote } from './finnhub-api.js'
 
 type Row = Record<string, unknown>
 
 let memo: Descriptor[] | undefined
-/** The three Finnhub paths as descriptors, read once from descriptors.json and validated. */
+/** The three Finnhub paths as descriptors, from descriptors.json, validated once. */
 export function finnhubDescriptors(): Descriptor[] {
-  return (memo ??= parseDescriptors(JSON.parse(readFileSync(new URL('./descriptors.json', import.meta.url), 'utf8'))))
+  return (memo ??= parseDescriptors(descriptorsJson))
 }
 
 export const FINNHUB_ROUTES = ['quote', 'company-news', 'calendar/earnings'] as const

@@ -1,8 +1,9 @@
 // Yahoo `descriptors()` and `call(route, params, ctx)` (PLAN.md section 17): the five yahoo-finance2 endpoints
 // as routes, answered through core's `inferFrame`. No unit conversion here: frames carry Yahoo's values
 // (fractions where Yahoo sends fractions) and the annotations say what they are.
-import { readFileSync } from 'node:fs'
 import { inferFrame, parseDescriptors, type CallHandler, type Descriptor, type Frame, type ValidatedParams } from '@openterminal/core'
+// Imported, not read from disk, so the release bundle carries it inline.
+import descriptorsJson from './descriptors.json' with { type: 'json' }
 import type { ChartOptions, ChartResultArray, OptionsResult, QuoteSummaryModules, QuoteSummaryResult, YahooClient } from './client.js'
 import { fanOut, normalizeSymbols } from './fanout.js'
 import { nyDate, utcDate } from './time.js'
@@ -27,9 +28,9 @@ export function pickExpiration(listed: Date[], today: string, requested?: string
 }
 
 let memo: Descriptor[] | undefined
-/** The five yahoo-finance2 endpoints as descriptors, read once from descriptors.json and validated. */
+/** The five yahoo-finance2 endpoints as descriptors, from descriptors.json, validated once. */
 export function yahooDescriptors(): Descriptor[] {
-  return (memo ??= parseDescriptors(JSON.parse(readFileSync(new URL('./descriptors.json', import.meta.url), 'utf8'))))
+  return (memo ??= parseDescriptors(descriptorsJson))
 }
 
 export const YAHOO_ROUTES = ['search', 'quote', 'chart', 'options', 'quoteSummary'] as const
