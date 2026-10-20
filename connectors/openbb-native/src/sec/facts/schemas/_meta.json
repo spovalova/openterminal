@@ -1,0 +1,106 @@
+{
+  "version": "2.0",
+  "generated": "2026-03-17",
+  "taxonomy_sources": {
+    "us_gaap": {
+      "years": [
+        2011,
+        2026
+      ],
+      "tags_indexed": 3753
+    },
+    "ifrs": {
+      "years": [
+        2020,
+        2025
+      ],
+      "tags_indexed": 3979
+    }
+  },
+  "detection": {
+    "insurance_is_signals": [
+      "PremiumsEarnedNet",
+      "PolicyholderBenefitsAndClaimsIncurredNet",
+      "PolicyholderBenefitsAndClaimsIncurredHealthCare",
+      "BenefitsLossesAndExpenses",
+      "InsuranceRevenue",
+      "InsuranceServiceResult",
+      "InsuranceServiceExpensesFromInsuranceContractsIssued",
+      "NetEarnedPremium"
+    ],
+    "insurance_bs_signals": [
+      "LiabilityForFuturePolicyBenefits",
+      "DeferredPolicyAcquisitionCosts",
+      "InsuranceContractsThatAreLiabilities",
+      "LiabilitiesArisingFromInsuranceContracts",
+      "UnearnedPremiums"
+    ],
+    "financial_signals": [
+      "InterestIncomeExpenseNet",
+      "NoninterestIncome",
+      "ProvisionForLoanAndLeaseLosses",
+      "NetInterestIncome",
+      "InterestAndDividendIncomeOperating",
+      "FederalFundsSoldAndSecuritiesPurchasedUnderAgreementsToResell",
+      "FinancingReceivableExcludingAccruedInterestBeforeAllowanceForCreditLoss",
+      "InterestRevenueCalculatedUsingEffectiveInterestMethod",
+      "FinancialAssetsAtAmortisedCost",
+      "DepositsFromBanks",
+      "ReverseRepurchaseAgreementsAndCashCollateralOnSecuritiesBorrowed",
+      "SubordinatedLiabilities",
+      "InterestIncomeOnLoansAndReceivables",
+      "CreditrelatedFeeAndCommissionIncome",
+      "TradingIncomeExpense",
+      "BankAcceptanceAssets"
+    ],
+    "diversified_signals": [
+      "CostsAndExpenses",
+      "OperatingIncomeLoss",
+      "OperatingExpense",
+      "ProfitLossFromOperatingActivities",
+      "OtherOperatingIncomeExpense"
+    ],
+    "industrial_signals": [
+      "CostOfGoodsAndServicesSold",
+      "CostOfRevenue",
+      "CostOfGoodsSold",
+      "GrossProfit",
+      "CostOfSales"
+    ],
+    "min_financial_signals": 2,
+    "measures": {
+      "revenue": [
+        "Revenues",
+        "RevenueFromContractWithCustomerExcludingAssessedTax",
+        "SalesRevenueNet",
+        "RevenuesNetOfInterestExpense",
+        "Revenue"
+      ],
+      "insurance": [
+        "PremiumsEarnedNet",
+        "InsuranceRevenue",
+        "NetEarnedPremium",
+        "PolicyholderBenefitsAndClaimsIncurredNet",
+        "PolicyholderBenefitsAndClaimsIncurredHealthCare",
+        "BenefitsLossesAndExpenses",
+        "InsuranceServiceExpensesFromInsuranceContractsIssued",
+        "SupplementaryInsuranceInformationPremiumRevenue"
+      ],
+      "financial": [
+        "InterestAndDividendIncomeOperating",
+        "InterestIncomeOperating",
+        "InterestRevenueCalculatedUsingEffectiveInterestMethod",
+        "RevenueFromInterest",
+        "InterestIncomeExpenseNet",
+        "NoninterestIncome",
+        "InterestAndFeeIncomeLoansAndLeases",
+        "InterestAndFeeIncomeLoansCommercial",
+        "InvestmentIncomeInterest",
+        "FeeAndCommissionIncome"
+      ]
+    },
+    "min_insurance_share": 0.1,
+    "min_financial_share": 0.1,
+    "description": "Priority: insurance (>=1 IS + total>=2, insurance measures >= min_insurance_share of revenue) > financial (>=2 fin, financial measures >= min_financial_share of revenue; no revenue measure and no recent COGS/GP also qualifies) > industrial (has COGS/GP) > diversified (CostsAndExpenses). Shares use the latest annual filing reporting a revenue measure. Includes both us-gaap and ifrs-full tag names."
+  }
+}

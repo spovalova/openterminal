@@ -1,0 +1,9 @@
+[
+  { "name": "compare-frame-fy-2022", "route": "equity/compare/company_facts", "params": { "fact": "PaymentsForRent", "year": 2022, "calendar_period": "fy" } },
+  { "name": "compare-frame-instant-q4", "route": "equity/compare/company_facts", "params": { "fact": "AccruedInsuranceCurrent", "year": 2022, "calendar_period": "q4", "instantaneous": true } },
+  { "name": "compare-frame-q4-derived", "route": "equity/compare/company_facts", "params": { "fact": "PaymentsOfDividendsMinorityInterest", "year": 2022, "calendar_period": "q4" } },
+  { "name": "compare-concept-ug-fy", "route": "equity/compare/company_facts", "params": { "symbol": "UG", "fact": "NetIncomeLoss", "year": 2022, "calendar_period": "fy" } },
+  { "name": "compare-concept-ug-q4", "route": "equity/compare/company_facts", "params": { "symbol": "UG", "fact": "NetIncomeLoss", "year": 2022, "calendar_period": "q4" } },
+  { "name": "compare-concept-ug-all", "route": "equity/compare/company_facts", "params": { "symbol": "UG", "fact": "NetIncomeLoss" } },
+  { "name": "compare-concept-multi", "route": "equity/compare/company_facts", "params": { "symbol": "UG,CPSH", "fact": "NetIncomeLoss", "year": 2022 } }
+]

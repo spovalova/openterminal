@@ -1,0 +1,23 @@
+[
+  {"name": "balance-ug-annual", "route": "equity/fundamental/balance", "params": {"symbol": "UG", "period": "annual", "limit": 6}},
+  {"name": "balance-pkbk-quarterly", "route": "equity/fundamental/balance", "params": {"symbol": "PKBK", "period": "quarterly", "limit": 8}},
+  {"name": "balance-uve-ttm", "route": "equity/fundamental/balance", "params": {"symbol": "UVE", "period": "ttm", "limit": 6}},
+  {"name": "balance-ug-annual-pit", "route": "equity/fundamental/balance", "params": {"symbol": "UG", "period": "annual", "limit": 6, "pit_mode": true}},
+  {"name": "cash-ug-quarterly", "route": "equity/fundamental/cash", "params": {"symbol": "UG", "period": "quarterly", "limit": 8}},
+  {"name": "cash-pkbk-annual", "route": "equity/fundamental/cash", "params": {"symbol": "PKBK", "period": "annual", "limit": 6}},
+  {"name": "cash-uve-ttm", "route": "equity/fundamental/cash", "params": {"symbol": "UVE", "period": "ttm", "limit": 6}},
+  {"name": "cash-ug-annual-prelim", "route": "equity/fundamental/cash", "params": {"symbol": "UG", "period": "annual", "limit": 6, "include_preliminary": true}},
+  {"name": "income-ug-annual", "route": "equity/fundamental/income", "params": {"symbol": "UG", "period": "annual", "limit": 6}},
+  {"name": "income-ug-ttm", "route": "equity/fundamental/income", "params": {"symbol": "UG", "period": "ttm", "limit": 6}},
+  {"name": "income-pkbk-quarterly", "route": "equity/fundamental/income", "params": {"symbol": "PKBK", "period": "quarterly", "limit": 8}},
+  {"name": "income-uve-annual", "route": "equity/fundamental/income", "params": {"symbol": "UVE", "period": "annual", "limit": 6}},
+  {"name": "income-xom-annual", "route": "equity/fundamental/income", "params": {"symbol": "XOM", "period": "annual", "limit": 6}},
+  {"name": "income-ug-quarterly-pit", "route": "equity/fundamental/income", "params": {"symbol": "UG", "period": "quarterly", "limit": 8, "pit_mode": true}},
+  {"name": "balance-growth-ug-annual", "route": "equity/fundamental/balance_growth", "params": {"symbol": "UG", "period": "annual", "limit": 6}},
+  {"name": "balance-growth-pkbk-quarterly-yoy", "route": "equity/fundamental/balance_growth", "params": {"symbol": "PKBK", "period": "quarterly_yoy", "limit": 8}},
+  {"name": "cash-growth-ug-quarterly-yoy", "route": "equity/fundamental/cash_growth", "params": {"symbol": "UG", "period": "quarterly_yoy", "limit": 8}},
+  {"name": "cash-growth-pkbk-ttm", "route": "equity/fundamental/cash_growth", "params": {"symbol": "PKBK", "period": "ttm", "limit": 8}},
+  {"name": "income-growth-ug-ttm", "route": "equity/fundamental/income_growth", "params": {"symbol": "UG", "period": "ttm", "limit": 6}},
+  {"name": "income-growth-uve-quarterly", "route": "equity/fundamental/income_growth", "params": {"symbol": "UVE", "period": "quarterly", "limit": 8}},
+  {"name": "income-growth-pkbk-annual", "route": "equity/fundamental/income_growth", "params": {"symbol": "PKBK", "period": "annual", "limit": 6}}
+]
