@@ -86,9 +86,8 @@ export function nativeDescriptorFor(route: string): Descriptor | undefined {
  * Live descriptors from a running OpenBB API plus the native ones: a route both have gains the native providers the
  * live one lacks (an extension not installed on the Python side); a route only the snapshot has is added narrowed.
  */
-export function mergeNativeDescriptors(live: readonly Descriptor[]): Descriptor[] {
-  const native = nativeDescriptors()
-  if (live.length === 0) return native
+export function mergeNativeDescriptors(live: readonly Descriptor[], native: readonly Descriptor[] = nativeDescriptors()): Descriptor[] {
+  if (live.length === 0) return [...native]
   const byRoute = new Map(live.map((d) => [d.route, d]))
   const out = [...live]
   for (const n of native) {
