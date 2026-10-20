@@ -57,6 +57,9 @@ export async function equityGainers(params: NativeParams, ctx: NativeCtx): Promi
       values[k] = value
     }
     const row = applyAliases(values, GAINERS_ALIASES)
+    // A missing name was turned into 0 above, which OpenBB's string field then rejects (it fails the whole list, as
+    // for the CDR list); the port leaves the name out instead.
+    if (typeof row.name !== 'string') delete row.name
     for (const k of ['thirty_day_price_change', 'ninety_day_price_change', 'avg_volume_10d']) if (k in row) row[k] = optFloat(row[k]) ?? null
     row.percent_change = truthy(row.percent_change) ? toFloat(row.percent_change) / 100 : 0
     return compact(row)

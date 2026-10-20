@@ -76,6 +76,13 @@
     "reason": "live ranking: the list, the prices and the yield built on them move between OpenBB's call and the native one"
   },
   {
+    "name": "gainers-cdr",
+    "route": "equity/discovery/gainers",
+    "params": { "category": "cdr" },
+    "oracle": "none",
+    "reason": "OpenBB fails on this list: TMX leaves some CDR names empty, its check_metric validator turns them into 0 and the name field rejects it. The port leaves such names out, so its rows are pinned as they are"
+  },
+  {
     "name": "consensus-ry-td",
     "route": "equity/estimates/consensus",
     "params": { "symbol": "RY,TD" },
