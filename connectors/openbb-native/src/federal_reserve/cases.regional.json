@@ -1,1 +1,881 @@
-[]
+[
+  {
+    "name": "regional-atlanta-publication-series",
+    "route": "federal_reserve/atlanta/publication_series",
+    "params": {  },
+    "compare": { "volatile": ["count"] },
+    "reason": "document counts per series grow as Fed in Print indexes new items; both sides read the same page moments apart"
+  },
+  {
+    "name": "regional-atlanta-publications-economic-review",
+    "route": "federal_reserve/atlanta/publications",
+    "params": { "series": "economic_review", "limit": 3 },
+    "fixture": false,
+    "reason": "a Fed in Print publications page costs about 110 KB of recordings (three search pages and the item pages); the handler is shared by all banks and the Cleveland and San Francisco cases record it, so this case runs live only"
+  },
+  {
+    "name": "regional-atlanta-business-uncertainty-index",
+    "route": "federal_reserve/atlanta/business_uncertainty",
+    "params": { "start_date": "2023-01-01", "end_date": "2023-12-31" }
+  },
+  {
+    "name": "regional-atlanta-business-uncertainty-cost-price",
+    "route": "federal_reserve/atlanta/business_uncertainty",
+    "params": { "table": "cost_price_smoothed", "start_date": "2025-01-01", "end_date": "2025-06-30" }
+  },
+  {
+    "name": "regional-atlanta-business-uncertainty-unsmoothed",
+    "route": "federal_reserve/atlanta/business_uncertainty",
+    "params": { "table": "index_unsmoothed", "start_date": "2025-01-01", "end_date": "2025-12-31" }
+  },
+  {
+    "name": "regional-atlanta-business-uncertainty-realized-sales",
+    "route": "federal_reserve/atlanta/business_uncertainty",
+    "params": { "table": "realized_sales_distribution", "start_date": "2025-01-01", "end_date": "2025-12-31" }
+  },
+  {
+    "name": "regional-atlanta-business-uncertainty-discontinued",
+    "route": "federal_reserve/atlanta/business_uncertainty",
+    "params": { "table": "discontinued", "start_date": "2017-01-01", "end_date": "2017-12-31" }
+  },
+  {
+    "name": "regional-atlanta-sticky-cpi-annualized",
+    "route": "federal_reserve/atlanta/sticky_cpi",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "the sticky-price workbook is 294 KB compressed, 4% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-atlanta-sticky-cpi-12-month",
+    "route": "federal_reserve/atlanta/sticky_cpi",
+    "params": { "transform": "12-month", "start_date": "2024-01-01", "end_date": "2024-06-30" },
+    "fixture": false,
+    "reason": "the sticky-price workbook is 294 KB compressed, 4% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-atlanta-taylor-rule",
+    "route": "federal_reserve/atlanta/taylor_rule",
+    "params": { "start_date": "2022-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "the Taylor-rule workbook is 287 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-atlanta-taylor-rule-measures-natural-rate",
+    "route": "federal_reserve/atlanta/taylor_rule_measures",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "the Taylor-rule workbook is 287 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-atlanta-taylor-rule-measures-gap",
+    "route": "federal_reserve/atlanta/taylor_rule_measures",
+    "params": { "measure": "gap", "start_date": "2023-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "the Taylor-rule workbook is 287 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-atlanta-taylor-rule-measures-fed-funds",
+    "route": "federal_reserve/atlanta/taylor_rule_measures",
+    "params": { "measure": "fed_funds", "start_date": "2023-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "the Taylor-rule workbook is 287 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-atlanta-taylor-rule-heatmap-latest",
+    "route": "federal_reserve/atlanta/taylor_rule_heatmap",
+    "params": {  },
+    "fixture": false,
+    "reason": "the Taylor-rule workbook is 287 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-atlanta-taylor-rule-heatmap-previous",
+    "route": "federal_reserve/atlanta/taylor_rule_heatmap",
+    "params": { "quarter": "previous" },
+    "fixture": false,
+    "reason": "the Taylor-rule workbook is 287 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-atlanta-wage-growth-overall",
+    "route": "federal_reserve/atlanta/wage_growth",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "the wage-growth workbook is 317 KB compressed, 4% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-atlanta-wage-growth-race",
+    "route": "federal_reserve/atlanta/wage_growth",
+    "params": { "cut": "race", "start_date": "2024-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "the wage-growth workbook is 317 KB compressed, 4% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-atlanta-wage-growth-non-smoothed",
+    "route": "federal_reserve/atlanta/wage_growth",
+    "params": { "cut": "non_smoothed", "start_date": "2024-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "the wage-growth workbook is 317 KB compressed, 4% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-atlanta-wage-growth-weighted",
+    "route": "federal_reserve/atlanta/wage_growth",
+    "params": { "cut": "weighted", "start_date": "2024-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "the wage-growth workbook is 317 KB compressed, 4% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-atlanta-wage-growth-alternative",
+    "route": "federal_reserve/atlanta/wage_growth",
+    "params": { "cut": "alternative", "start_date": "2024-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "the wage-growth workbook is 317 KB compressed, 4% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-cleveland-publication-series",
+    "route": "federal_reserve/cleveland/publication_series",
+    "params": {  },
+    "compare": { "volatile": ["count"] },
+    "fixture": false,
+    "reason": "document counts per series grow as Fed in Print indexes new items; both sides read the same page moments apart. Not recorded: a Fed in Print search page is 33 KB compressed; the handler is shared by all banks and the Atlanta and San Francisco cases record it, so this case runs live only"
+  },
+  {
+    "name": "regional-cleveland-publications-economic-commentary",
+    "route": "federal_reserve/cleveland/publications",
+    "params": { "series": "economic_commentary", "limit": 3 }
+  },
+  {
+    "name": "regional-cleveland-inflation-expectations",
+    "route": "federal_reserve/cleveland/inflation_expectations",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-06-30" }
+  },
+  {
+    "name": "regional-cleveland-inflation-expectations-real-rate",
+    "route": "federal_reserve/cleveland/inflation_expectations",
+    "params": { "table": "real_interest_rate", "start_date": "2024-01-01", "end_date": "2024-06-30" }
+  },
+  {
+    "name": "regional-cleveland-inflation-expectations-ten-year",
+    "route": "federal_reserve/cleveland/inflation_expectations",
+    "params": { "table": "ten_year_decomposition", "start_date": "2024-01-01", "end_date": "2024-06-30" }
+  },
+  {
+    "name": "regional-cleveland-inflation-nowcast-month",
+    "route": "federal_reserve/cleveland/inflation_nowcast",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-06-30" },
+    "fixture": false,
+    "reason": "the nowcast JSON is 240 to 330 KB compressed per frequency; recording all three would take 11% of the 8 MB fixture budget the provider shares with its core part, so the cases run live only"
+  },
+  {
+    "name": "regional-cleveland-inflation-nowcast-quarter",
+    "route": "federal_reserve/cleveland/inflation_nowcast",
+    "params": { "frequency": "quarter", "start_date": "2023-01-01", "end_date": "2024-06-30" },
+    "fixture": false,
+    "reason": "the nowcast JSON is 240 to 330 KB compressed per frequency; recording all three would take 11% of the 8 MB fixture budget the provider shares with its core part, so the cases run live only"
+  },
+  {
+    "name": "regional-cleveland-inflation-nowcast-year",
+    "route": "federal_reserve/cleveland/inflation_nowcast",
+    "params": { "frequency": "year", "start_date": "2020-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "the nowcast JSON is 240 to 330 KB compressed per frequency; recording all three would take 11% of the 8 MB fixture budget the provider shares with its core part, so the cases run live only"
+  },
+  {
+    "name": "regional-cleveland-median-cpi-summary",
+    "route": "federal_reserve/cleveland/median_cpi",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-06-30" }
+  },
+  {
+    "name": "regional-cleveland-median-cpi-revised",
+    "route": "federal_reserve/cleveland/median_cpi",
+    "params": { "table": "median_cpi", "start_date": "2024-01-01", "end_date": "2024-06-30" }
+  },
+  {
+    "name": "regional-cleveland-median-cpi-trimmed-mean",
+    "route": "federal_reserve/cleveland/median_cpi",
+    "params": { "table": "trimmed_mean", "start_date": "2024-01-01", "end_date": "2024-06-30" }
+  },
+  {
+    "name": "regional-cleveland-median-cpi-cpi",
+    "route": "federal_reserve/cleveland/median_cpi",
+    "params": { "table": "cpi", "start_date": "2024-01-01", "end_date": "2024-06-30" }
+  },
+  {
+    "name": "regional-cleveland-median-cpi-core",
+    "route": "federal_reserve/cleveland/median_cpi",
+    "params": { "table": "core_cpi", "start_date": "2024-01-01", "end_date": "2024-06-30" }
+  },
+  {
+    "name": "regional-cleveland-median-cpi-components",
+    "route": "federal_reserve/cleveland/median_cpi_components",
+    "params": {  }
+  },
+  {
+    "name": "regional-cleveland-systemic-risk",
+    "route": "federal_reserve/cleveland/systemic_risk",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-03-31" }
+  },
+  {
+    "name": "regional-sf-publication-series",
+    "route": "federal_reserve/sf/publication_series",
+    "params": {  },
+    "compare": { "volatile": ["count"] },
+    "reason": "document counts per series grow as Fed in Print indexes new items; both sides read the same page moments apart"
+  },
+  {
+    "name": "regional-sf-publications-economic-letter",
+    "route": "federal_reserve/sf/publications",
+    "params": { "series": "frbsf_economic_letter", "limit": 3 }
+  },
+  {
+    "name": "regional-sf-cyclical-pce",
+    "route": "federal_reserve/sf/cyclical_pce",
+    "params": { "start_date": "2023-01-01", "end_date": "2023-12-31" }
+  },
+  {
+    "name": "regional-sf-news-sentiment",
+    "route": "federal_reserve/sf/news_sentiment",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-01-31" },
+    "fixture": false,
+    "reason": "the daily news-sentiment workbook is 404 KB compressed, 5% of the 8 MB fixture budget the provider shares with its core part; the case runs live only"
+  },
+  {
+    "name": "regional-sf-proxy-funds-rate-monthly",
+    "route": "federal_reserve/sf/proxy_funds_rate",
+    "params": { "start_date": "2023-01-01", "end_date": "2023-12-31" }
+  },
+  {
+    "name": "regional-sf-proxy-funds-rate-weekly",
+    "route": "federal_reserve/sf/proxy_funds_rate",
+    "params": { "frequency": "weekly", "start_date": "2023-01-01", "end_date": "2023-03-31" }
+  },
+  {
+    "name": "regional-sf-short-rate-path",
+    "route": "federal_reserve/sf/short_rate_path",
+    "params": {  },
+    "fixture": false,
+    "reason": "the term-structure workbook is 445 KB compressed, 5% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-sf-supply-demand-pce",
+    "route": "federal_reserve/sf/supply_demand_pce",
+    "params": { "start_date": "2023-01-01", "end_date": "2023-12-31" }
+  },
+  {
+    "name": "regional-sf-term-premium-10",
+    "route": "federal_reserve/sf/term_premium",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-01-31" },
+    "fixture": false,
+    "reason": "the term-structure workbook is 445 KB compressed, 5% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-sf-term-premium-2",
+    "route": "federal_reserve/sf/term_premium",
+    "params": { "maturity": 2, "start_date": "2024-01-01", "end_date": "2024-01-31" },
+    "fixture": false,
+    "reason": "the term-structure workbook is 445 KB compressed, 5% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-sf-tfp-quarterly",
+    "route": "federal_reserve/sf/total_factor_productivity",
+    "params": { "start_date": "2022-01-01", "end_date": "2023-12-31" },
+    "fixture": false,
+    "reason": "the productivity workbook is 251 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-sf-tfp-annual",
+    "route": "federal_reserve/sf/total_factor_productivity",
+    "params": { "table": "annual", "start_date": "2018-01-01", "end_date": "2023-12-31" },
+    "fixture": false,
+    "reason": "the productivity workbook is 251 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-sf-tfp-capital-input",
+    "route": "federal_reserve/sf/total_factor_productivity",
+    "params": { "table": "capital_input_details", "start_date": "2022-01-01", "end_date": "2023-12-31" },
+    "fixture": false,
+    "reason": "the productivity workbook is 251 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-richmond-publication-series",
+    "route": "federal_reserve/richmond/publication_series",
+    "params": {  },
+    "compare": { "volatile": ["count"] },
+    "fixture": false,
+    "reason": "document counts per series grow as Fed in Print indexes new items; both sides read the same page moments apart. Not recorded: a Fed in Print search page is 33 KB compressed; the handler is shared by all banks and the Atlanta and San Francisco cases record it, so this case runs live only"
+  },
+  {
+    "name": "regional-richmond-publications-econ-focus",
+    "route": "federal_reserve/richmond/publications",
+    "params": { "series": "econ_focus", "limit": 3 },
+    "fixture": false,
+    "reason": "a Fed in Print publications page costs about 110 KB of recordings (three search pages and the item pages); the handler is shared by all banks and the Cleveland and San Francisco cases record it, so this case runs live only"
+  },
+  {
+    "name": "regional-richmond-manufacturing-survey",
+    "route": "federal_reserve/richmond/manufacturing_survey",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-03-31" }
+  },
+  {
+    "name": "regional-richmond-service-sector-survey",
+    "route": "federal_reserve/richmond/service_sector_survey",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-03-31" }
+  },
+  {
+    "name": "regional-richmond-state-survey-virginia",
+    "route": "federal_reserve/richmond/state_survey",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-03-31" }
+  },
+  {
+    "name": "regional-richmond-state-survey-carolinas",
+    "route": "federal_reserve/richmond/state_survey",
+    "params": { "state": "carolinas", "start_date": "2024-01-01", "end_date": "2024-03-31" }
+  },
+  {
+    "name": "regional-richmond-state-survey-maryland",
+    "route": "federal_reserve/richmond/state_survey",
+    "params": { "state": "maryland", "start_date": "2024-01-01", "end_date": "2024-03-31" }
+  },
+  {
+    "name": "regional-richmond-non-employment-index",
+    "route": "federal_reserve/richmond/non_employment_index",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "the non-employment workbook is 241 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the case runs live only"
+  },
+  {
+    "name": "regional-richmond-recession-indicator",
+    "route": "federal_reserve/richmond/recession_indicator",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-03-31" }
+  },
+  {
+    "name": "regional-richmond-cfo-optimism",
+    "route": "federal_reserve/richmond/cfo_survey",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-richmond-cfo-optimism-by-size",
+    "route": "federal_reserve/richmond/cfo_survey",
+    "params": { "table": "optimism_by_size", "start_date": "2024-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-richmond-cfo-expectations",
+    "route": "federal_reserve/richmond/cfo_survey",
+    "params": { "table": "expectations", "start_date": "2024-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-richmond-cfo-credit-received",
+    "route": "federal_reserve/richmond/cfo_survey",
+    "params": { "table": "credit_received" }
+  },
+  {
+    "name": "regional-richmond-cfo-sp500",
+    "route": "federal_reserve/richmond/cfo_survey",
+    "params": { "table": "sp500", "start_date": "2024-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-minneapolis-publication-series",
+    "route": "federal_reserve/minneapolis/publication_series",
+    "params": {  },
+    "compare": { "volatile": ["count"] },
+    "fixture": false,
+    "reason": "document counts per series grow as Fed in Print indexes new items; both sides read the same page moments apart. Not recorded: a Fed in Print search page is 33 KB compressed; the handler is shared by all banks and the Atlanta and San Francisco cases record it, so this case runs live only"
+  },
+  {
+    "name": "regional-minneapolis-publications-staff-report",
+    "route": "federal_reserve/minneapolis/publications",
+    "params": { "series": "staff_report", "limit": 3 },
+    "fixture": false,
+    "reason": "a Fed in Print publications page costs about 110 KB of recordings (three search pages and the item pages); the handler is shared by all banks and the Cleveland and San Francisco cases record it, so this case runs live only"
+  },
+  {
+    "name": "regional-minneapolis-business-conditions",
+    "route": "federal_reserve/minneapolis/business_conditions",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-12-31" },
+    "oracle": "none",
+    "reason": "OpenBB reads a `Date` column of business_conditions_prices.csv that the file no longer has (it is `month` now, as in the performance file), so OpenBB fails with KeyError 'Date'; the port accepts either. Rows were checked against OpenBB's own Python transform fed the file with its header renamed back to `Date`"
+  },
+  {
+    "name": "regional-minneapolis-job-openings-hiring",
+    "route": "federal_reserve/minneapolis/job_openings_hiring",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-06-30" }
+  },
+  {
+    "name": "regional-minneapolis-labor-force-participation",
+    "route": "federal_reserve/minneapolis/labor_force_participation",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-minneapolis-quits-rate",
+    "route": "federal_reserve/minneapolis/quits_rate",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-minneapolis-regional-cpi",
+    "route": "federal_reserve/minneapolis/regional_cpi",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-minneapolis-regional-employment",
+    "route": "federal_reserve/minneapolis/regional_employment",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-minneapolis-regional-gdp",
+    "route": "federal_reserve/minneapolis/regional_gdp",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-minneapolis-regional-unemployment",
+    "route": "federal_reserve/minneapolis/regional_unemployment",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-minneapolis-unemployment-claims",
+    "route": "federal_reserve/minneapolis/unemployment_claims",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-03-31" }
+  },
+  {
+    "name": "regional-philadelphia-publication-series",
+    "route": "federal_reserve/philadelphia/publication_series",
+    "params": {  },
+    "compare": { "volatile": ["count"] },
+    "fixture": false,
+    "reason": "document counts per series grow as Fed in Print indexes new items; both sides read the same page moments apart. Not recorded: a Fed in Print search page is 33 KB compressed; the handler is shared by all banks and the Atlanta and San Francisco cases record it, so this case runs live only"
+  },
+  {
+    "name": "regional-philadelphia-publications-working-papers",
+    "route": "federal_reserve/philadelphia/publications",
+    "params": { "series": "working_papers", "limit": 3 },
+    "fixture": false,
+    "reason": "a Fed in Print publications page costs about 110 KB of recordings (three search pages and the item pages); the handler is shared by all banks and the Cleveland and San Francisco cases record it, so this case runs live only"
+  },
+  {
+    "name": "regional-philadelphia-anxious-index",
+    "route": "federal_reserve/philadelphia/anxious_index",
+    "params": { "start_date": "2020-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-philadelphia-business-conditions",
+    "route": "federal_reserve/philadelphia/business_conditions",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-01-31" },
+    "fixture": false,
+    "reason": "the ADS workbook is 784 KB (already zipped), over the 768 KB recording limit, so this case only runs live"
+  },
+  {
+    "name": "regional-philadelphia-gdpplus",
+    "route": "federal_reserve/philadelphia/gdpplus",
+    "params": { "start_date": "2022-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-philadelphia-livingston-mean",
+    "route": "federal_reserve/philadelphia/livingston_survey",
+    "params": { "start_date": "2022-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-philadelphia-livingston-median-cpi",
+    "route": "federal_reserve/philadelphia/livingston_survey",
+    "params": { "variable": "CPI", "statistic": "median", "start_date": "2022-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "medians.xlsx is a 162 KB workbook that only differs from the recorded means.xlsx in its file name; recording both would spend 4% of the provider's fixture budget on one code path, so this case only runs live"
+  },
+  {
+    "name": "regional-philadelphia-manufacturing-outlook",
+    "route": "federal_reserve/philadelphia/manufacturing_outlook",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-philadelphia-nonmanufacturing-outlook",
+    "route": "federal_reserve/philadelphia/nonmanufacturing_outlook",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-06-30" }
+  },
+  {
+    "name": "regional-philadelphia-nonmanufacturing-outlook-nsa",
+    "route": "federal_reserve/philadelphia/nonmanufacturing_outlook",
+    "params": { "adjustment": "nsa", "start_date": "2024-01-01", "end_date": "2024-06-30" }
+  },
+  {
+    "name": "regional-philadelphia-partisan-conflict",
+    "route": "federal_reserve/philadelphia/partisan_conflict",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-philadelphia-state-coincident-index",
+    "route": "federal_reserve/philadelphia/state_coincident_index",
+    "params": { "state": "PA", "start_date": "2023-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "the legacy .xls workbook is 686 KB compressed, 8% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-philadelphia-state-coincident-diffusion",
+    "route": "federal_reserve/philadelphia/state_coincident_index",
+    "params": { "dataset": "diffusion", "start_date": "2024-01-01", "end_date": "2024-06-30" },
+    "fixture": false,
+    "reason": "the legacy .xls workbook is 686 KB compressed, 8% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-philadelphia-spf-median-level",
+    "route": "federal_reserve/philadelphia/survey_professional_forecasters",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-philadelphia-spf-mean-growth",
+    "route": "federal_reserve/philadelphia/survey_professional_forecasters",
+    "params": { "variable": "RGDP", "statistic": "mean", "transform": "growth", "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-philadelphia-spf-long-run",
+    "route": "federal_reserve/philadelphia/survey_professional_forecasters",
+    "params": { "variable": "CPI10", "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-philadelphia-term-structure-inflation",
+    "route": "federal_reserve/philadelphia/term_structure_inflation",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-03-31" },
+    "fixture": false,
+    "reason": "the ATSIX workbook is 1.1 MB (already zipped), over the 768 KB recording limit, so these cases only run live"
+  },
+  {
+    "name": "regional-philadelphia-term-structure-real",
+    "route": "federal_reserve/philadelphia/term_structure_inflation",
+    "params": { "dataset": "real", "start_date": "2024-01-01", "end_date": "2024-03-31" },
+    "fixture": false,
+    "reason": "the ATSIX workbook is 1.1 MB (already zipped), over the 768 KB recording limit, so these cases only run live"
+  },
+  {
+    "name": "regional-philadelphia-term-structure-factors",
+    "route": "federal_reserve/philadelphia/term_structure_inflation",
+    "params": { "dataset": "factors", "start_date": "2024-01-01", "end_date": "2024-03-31" },
+    "fixture": false,
+    "reason": "the ATSIX workbook is 1.1 MB (already zipped), over the 768 KB recording limit, so these cases only run live"
+  },
+  {
+    "name": "regional-kc-publication-series",
+    "route": "federal_reserve/kc/publication_series",
+    "params": {  },
+    "compare": { "volatile": ["count"] },
+    "fixture": false,
+    "reason": "document counts per series grow as Fed in Print indexes new items; both sides read the same page moments apart. Not recorded: a Fed in Print search page is 33 KB compressed; the handler is shared by all banks and the Atlanta and San Francisco cases record it, so this case runs live only"
+  },
+  {
+    "name": "regional-kc-publications-economic-review",
+    "route": "federal_reserve/kc/publications",
+    "params": { "series": "economic_review", "limit": 3 },
+    "fixture": false,
+    "reason": "a Fed in Print publications page costs about 110 KB of recordings (three search pages and the item pages); the handler is shared by all banks and the Cleveland and San Francisco cases record it, so this case runs live only"
+  },
+  {
+    "name": "regional-kc-ag-credit-survey-land-values",
+    "route": "federal_reserve/kc/ag_credit_survey",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" },
+    "oracle": "none",
+    "reason": "OpenBB downloads the workbook from a hard-coded Ag%20Credit/documents/… URL that now answers 404 (the files are quarter-versioned: documents/7623/Q226-landvalues.xlsx); the port resolves the file by document id on the agricultural data index, as OpenBB does for its other ag routes. Rows were checked against OpenBB's own Python fetcher with the resolved URL patched in"
+  },
+  {
+    "name": "regional-kc-ag-credit-survey-credit-conditions",
+    "route": "federal_reserve/kc/ag_credit_survey",
+    "params": { "table": "credit_conditions", "start_date": "2023-01-01", "end_date": "2024-12-31" },
+    "oracle": "none",
+    "reason": "OpenBB's hard-coded Ag%20Credit/documents/… URL answers 404; see regional-kc-ag-credit-survey-land-values"
+  },
+  {
+    "name": "regional-kc-ag-databook-archived",
+    "route": "federal_reserve/kc/ag_databook_archived",
+    "params": { "start_date": "2015-01-01", "end_date": "2019-12-31" },
+    "fixture": false,
+    "reason": "the archived databook workbook is 1.6 MB (already zipped), over the 768 KB recording limit, so these cases only run live"
+  },
+  {
+    "name": "regional-kc-ag-databook-archived-b1",
+    "route": "federal_reserve/kc/ag_databook_archived",
+    "params": { "table": "afdr_b1", "start_date": "2015-01-01", "end_date": "2019-12-31" },
+    "fixture": false,
+    "reason": "the archived databook workbook is 1.6 MB (already zipped), over the 768 KB recording limit, so these cases only run live"
+  },
+  {
+    "name": "regional-kc-ag-databook-archived-c1",
+    "route": "federal_reserve/kc/ag_databook_archived",
+    "params": { "table": "afdr_c1", "start_date": "2015-01-01", "end_date": "2019-12-31" },
+    "fixture": false,
+    "reason": "the archived databook workbook is 1.6 MB (already zipped), over the 768 KB recording limit, so these cases only run live"
+  },
+  {
+    "name": "regional-kc-ag-district-surveys",
+    "route": "federal_reserve/kc/ag_district_surveys",
+    "params": { "district": "Kansas City", "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-kc-ag-finance-databook-historical",
+    "route": "federal_reserve/kc/ag_finance_databook",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" },
+    "oracle": "none",
+    "reason": "OpenBB's hard-coded Ag%20Finance%20Book/documents/… URLs answer 404 (the files are quarter-versioned: documents/7228/CommercialBankCallReportDataHistoricalDataQ22026.xlsx); the port resolves them by document id on the agricultural data index. Rows were checked against OpenBB's own Python fetcher with the resolved URL patched in"
+  },
+  {
+    "name": "regional-kc-ag-finance-databook-farm-debt",
+    "route": "federal_reserve/kc/ag_finance_databook",
+    "params": { "table": "farm_debt_all_banks", "start_date": "2023-01-01", "end_date": "2024-12-31" },
+    "oracle": "none",
+    "reason": "OpenBB's hard-coded Ag%20Finance%20Book/documents/… URLs answer 404; see regional-kc-ag-finance-databook-historical"
+  },
+  {
+    "name": "regional-kc-ag-finance-databook-performance",
+    "route": "federal_reserve/kc/ag_finance_databook",
+    "params": { "table": "ag_bank_performance", "start_date": "2023-01-01", "end_date": "2024-12-31" },
+    "oracle": "none",
+    "reason": "OpenBB's hard-coded Ag%20Finance%20Book/documents/… URLs answer 404; see regional-kc-ag-finance-databook-historical"
+  },
+  {
+    "name": "regional-kc-ag-interest-rates-variable",
+    "route": "federal_reserve/kc/ag_interest_rates",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" },
+    "oracle": "none",
+    "reason": "OpenBB's hard-coded Ag%20Credit/documents/… URLs answer 404 (documents/7622/Q226-variableinterestrates.xlsx now); the port resolves the file by document id. Rows were checked against OpenBB's own Python fetcher with the resolved URL patched in"
+  },
+  {
+    "name": "regional-kc-ag-interest-rates-fixed-real-estate",
+    "route": "federal_reserve/kc/ag_interest_rates",
+    "params": { "rate_type": "fixed", "loan_type": "real_estate", "start_date": "2023-01-01", "end_date": "2024-12-31" },
+    "oracle": "none",
+    "reason": "OpenBB's hard-coded Ag%20Credit/documents/… URLs answer 404; see regional-kc-ag-interest-rates-variable"
+  },
+  {
+    "name": "regional-kc-ag-terms-of-lending",
+    "route": "federal_reserve/kc/ag_terms_of_lending",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-kc-divisional-lmci-level",
+    "route": "federal_reserve/kc/divisional_lmci",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-06-30" }
+  },
+  {
+    "name": "regional-kc-divisional-lmci-momentum",
+    "route": "federal_reserve/kc/divisional_lmci",
+    "params": { "indicator": "momentum", "start_date": "2024-01-01", "end_date": "2024-06-30" }
+  },
+  {
+    "name": "regional-kc-financial-stress-index",
+    "route": "federal_reserve/kc/financial_stress_index",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-06-30" }
+  },
+  {
+    "name": "regional-kc-natural-rate",
+    "route": "federal_reserve/kc/natural_rate",
+    "params": { "start_date": "2022-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-kc-policy-rate-uncertainty",
+    "route": "federal_reserve/kc/policy_rate_uncertainty",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-01-31" }
+  },
+  {
+    "name": "regional-kc-risk-index-daily",
+    "route": "federal_reserve/kc/risk_index",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-01-31" },
+    "fixture": false,
+    "reason": "the daily file is 166 KB compressed, 2% of the 8 MB fixture budget the provider shares with its core part; the weekly case records the same parser"
+  },
+  {
+    "name": "regional-kc-risk-index-weekly",
+    "route": "federal_reserve/kc/risk_index",
+    "params": { "frequency": "weekly", "start_date": "2024-01-01", "end_date": "2024-03-31" }
+  },
+  {
+    "name": "regional-dallas-publication-series",
+    "route": "federal_reserve/dallas/publication_series",
+    "params": {  },
+    "compare": { "volatile": ["count"] },
+    "fixture": false,
+    "reason": "document counts per series grow as Fed in Print indexes new items; both sides read the same page moments apart. Not recorded: a Fed in Print search page is 33 KB compressed; the handler is shared by all banks and the Atlanta and San Francisco cases record it, so this case runs live only"
+  },
+  {
+    "name": "regional-dallas-publications-working-papers",
+    "route": "federal_reserve/dallas/publications",
+    "params": { "series": "working_papers", "limit": 3 },
+    "fixture": false,
+    "reason": "a Fed in Print publications page costs about 110 KB of recordings (three search pages and the item pages); the handler is shared by all banks and the Cleveland and San Francisco cases record it, so this case runs live only"
+  },
+  {
+    "name": "regional-dallas-agricultural-survey-credit",
+    "route": "federal_reserve/dallas/agricultural_survey",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-dallas-agricultural-survey-land-values",
+    "route": "federal_reserve/dallas/agricultural_survey",
+    "params": { "table": "land_values", "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-dallas-banking-conditions",
+    "route": "federal_reserve/dallas/banking_conditions",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" },
+    "oracle": "none",
+    "reason": "OpenBB reads a sheet named CSV_BCS_Index_Results that the workbook no longer has (it is BCS_Index_Results now), so OpenBB fails with \"Worksheet named 'CSV_BCS_Index_Results' not found\"; the port accepts either name. Rows were checked against OpenBB's own Python fetcher with the sheet name patched in"
+  },
+  {
+    "name": "regional-dallas-breakeven-prices-new",
+    "route": "federal_reserve/dallas/breakeven_prices",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-dallas-breakeven-prices-existing",
+    "route": "federal_reserve/dallas/breakeven_prices",
+    "params": { "well_type": "existing", "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-dallas-energy-survey-index",
+    "route": "federal_reserve/dallas/energy_survey",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-dallas-energy-survey-all-data-yoy-ep",
+    "route": "federal_reserve/dallas/energy_survey",
+    "params": { "table": "all_data", "transform": "year_over_year", "firm_group": "exploration_production", "start_date": "2024-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-dallas-energy-survey-price-expectations",
+    "route": "federal_reserve/dallas/energy_survey",
+    "params": { "table": "price_expectations" }
+  },
+  {
+    "name": "regional-dallas-energy-survey-price-forecasts",
+    "route": "federal_reserve/dallas/energy_survey",
+    "params": { "table": "price_forecasts", "start_date": "2024-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-dallas-gigafactory-map-battery-cells",
+    "route": "federal_reserve/dallas/gigafactory_map",
+    "params": {  },
+    "fixture": false,
+    "reason": "the battery-plant workbook is 409 KB compressed, 5% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-dallas-gigafactory-map-cathode",
+    "route": "federal_reserve/dallas/gigafactory_map",
+    "params": { "table": "cathode" },
+    "fixture": false,
+    "reason": "the battery-plant workbook is 409 KB compressed, 5% of the 8 MB fixture budget the provider shares with its core part; the cases run live only"
+  },
+  {
+    "name": "regional-dallas-global-economic-indicators-gdp",
+    "route": "federal_reserve/dallas/global_economic_indicators",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-dallas-global-economic-indicators-cpi-us-trade",
+    "route": "federal_reserve/dallas/global_economic_indicators",
+    "params": { "indicator": "cpi", "weighting": "us_trade", "start_date": "2024-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "the CPI workbook is 406 KB compressed, 5% of the 8 MB fixture budget the provider shares with its core part; the case runs live only (the GDP case records the same parser)"
+  },
+  {
+    "name": "regional-dallas-global-real-economic-activity",
+    "route": "federal_reserve/dallas/global_real_economic_activity",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" },
+    "oracle": "none",
+    "reason": "OpenBB reads a sheet named IGREA that the workbook no longer has (its one sheet is called Kilian Index), so OpenBB fails with \"Worksheet named 'IGREA' not found\"; the port falls back to the workbook's first sheet. Rows were checked against OpenBB's own Python fetcher with the sheet name patched in"
+  },
+  {
+    "name": "regional-dallas-government-debt",
+    "route": "federal_reserve/dallas/government_debt",
+    "params": { "start_date": "2020-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-dallas-leading-index",
+    "route": "federal_reserve/dallas/leading_index",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-dallas-lithium-map",
+    "route": "federal_reserve/dallas/lithium_map",
+    "params": {  },
+    "fixture": false,
+    "reason": "the lithium-project workbook is 191 KB compressed, 2% of the 8 MB fixture budget the provider shares with its core part; the case runs live only"
+  },
+  {
+    "name": "regional-dallas-manufacturing",
+    "route": "federal_reserve/dallas/manufacturing",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-dallas-retail",
+    "route": "federal_reserve/dallas/retail",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-12-31" },
+    "fixture": false,
+    "reason": "the retail-survey workbook is 225 KB compressed, 3% of the 8 MB fixture budget the provider shares with its core part; the case runs live only"
+  },
+  {
+    "name": "regional-dallas-service-sector",
+    "route": "federal_reserve/dallas/service_sector",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-dallas-trimmed-mean-pce",
+    "route": "federal_reserve/dallas/trimmed_mean_pce",
+    "params": { "start_date": "2023-01-01", "end_date": "2024-12-31" }
+  },
+  {
+    "name": "regional-dallas-weekly-economic-index",
+    "route": "federal_reserve/dallas/weekly_economic_index",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-03-31" }
+  },
+  {
+    "name": "regional-atlanta-bie-costs",
+    "route": "federal_reserve/atlanta/business_inflation_expectations",
+    "params": { "start_date": "2024-01-01", "end_date": "2024-12-31" },
+    "oracle": "none",
+    "reason": "OpenBB downloads bie.xlsx from a path the Atlanta Fed removed (it answers with a 404 page, so OpenBB fails with BadZipFile); the port reads the file's new location. Rows were checked against OpenBB's own Python fetcher with that URL patched in"
+  },
+  {
+    "name": "regional-atlanta-bie-sales",
+    "route": "federal_reserve/atlanta/business_inflation_expectations",
+    "params": { "question": "sales", "start_date": "2025-01-01", "end_date": "2025-12-31" },
+    "oracle": "none",
+    "reason": "OpenBB downloads bie.xlsx from a path the Atlanta Fed removed (404 page, BadZipFile); see regional-atlanta-bie-costs"
+  },
+  {
+    "name": "regional-atlanta-bie-long-term-inflation",
+    "route": "federal_reserve/atlanta/business_inflation_expectations",
+    "params": { "question": "long_term_inflation", "start_date": "2022-01-01" },
+    "oracle": "none",
+    "reason": "OpenBB downloads bie.xlsx from a path the Atlanta Fed removed (404 page, BadZipFile); see regional-atlanta-bie-costs"
+  },
+  {
+    "name": "regional-atlanta-bie-price-change",
+    "route": "federal_reserve/atlanta/business_inflation_expectations",
+    "params": { "question": "price_change", "start_date": "2022-01-01" },
+    "oracle": "none",
+    "reason": "OpenBB downloads bie.xlsx from a path the Atlanta Fed removed (404 page, BadZipFile); see regional-atlanta-bie-costs"
+  },
+  {
+    "name": "regional-atlanta-gdpnow-evolution",
+    "route": "federal_reserve/atlanta/gdpnow",
+    "params": {  },
+    "oracle": "none",
+    "fixture": false,
+    "reason": "OpenBB downloads the GDPNow workbook from a path the Atlanta Fed removed (404 page, BadZipFile); the port reads the new location, checked against OpenBB's own Python fetcher with that URL patched in. The workbook is 11 MB (already zipped), far over the 768 KB recording limit, so this case only runs live"
+  },
+  {
+    "name": "regional-atlanta-gdpnow-track-record",
+    "route": "federal_reserve/atlanta/gdpnow",
+    "params": { "table": "track_record", "start_date": "2024-01-01" },
+    "oracle": "none",
+    "fixture": false,
+    "reason": "OpenBB's GDPNow URL is gone (404 page, BadZipFile); see regional-atlanta-gdpnow-evolution. 11 MB workbook, live only"
+  },
+  {
+    "name": "regional-atlanta-gdpnow-contributions",
+    "route": "federal_reserve/atlanta/gdpnow",
+    "params": { "table": "contributions", "start_date": "2026-06-01" },
+    "oracle": "none",
+    "fixture": false,
+    "reason": "OpenBB's GDPNow URL is gone (404 page, BadZipFile); see regional-atlanta-gdpnow-evolution. 11 MB workbook, live only"
+  },
+  {
+    "name": "regional-atlanta-market-probability",
+    "route": "federal_reserve/atlanta/market_probability",
+    "params": { "end_date": "2025-06-30" },
+    "oracle": "none",
+    "fixture": false,
+    "reason": "OpenBB downloads mpt_histdata.xlsx from a path the Atlanta Fed removed (404 page, BadZipFile); the port reads the new location, checked against OpenBB's own Python fetcher with that URL patched in. The workbook is 7 MB (already zipped), over the 768 KB recording limit, so this case only runs live"
+  }
+]
