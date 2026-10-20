@@ -141,7 +141,7 @@ pip install "openbb[routers]" openbb-yfinance
 openbb-api
 ```
 
-Python 3.10 to 3.12. When the API answers at `http://127.0.0.1:6900`, its 800+ routes join the catalog, every recipe routes to it first, and Yahoo and Finnhub become fallbacks. When it is not running the miss costs nothing. yfinance, nasdaq, cboe, sec, finra, federal_reserve, bls and oecd need no key; FMP, Polygon, Intrinio, Tiingo, FRED, EIA and others take keys you keep on the OpenBB side. OpenBB is AGPL-3.0 and runs as its own process; this repo only sends it requests. Details and per-route provider overrides: [connectors/openbb/README.md](connectors/openbb/README.md).
+Python 3.10 to 3.12. When the API answers at `http://127.0.0.1:6900`, its 800+ routes join the catalog, every recipe routes to it first, and Yahoo and Finnhub become fallbacks. When it is not running the miss costs nothing. yfinance, nasdaq, cboe, sec, finra, federal_reserve, bls and oecd need no key; FMP, Polygon, Intrinio, Tiingo, FRED, EIA and others take keys you keep on the OpenBB side. Routes whose provider is ported to TypeScript ([connectors/openbb-native](connectors/openbb-native/README.md), Apache-2.0 like OpenBB since V5) answer with no install at all; the API adds whatever is not ported yet. Details and per-route provider overrides: [connectors/openbb/README.md](connectors/openbb/README.md).
 
 **Your data stays in `~/.openterminal`**: `config.yml`, the SQLite store (workspaces, your recipes, the frame cache) and the catalog cache. Set `OPENTERMINAL_HOME` to use another directory. A `~/.terminal` from before the rename is copied there on the first start and left in place.
 

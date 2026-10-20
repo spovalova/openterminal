@@ -47,9 +47,11 @@ export const DEFAULT_CONFIG_YML = `# Open Terminal config. Keys never leave this
 llm:
 
 # connectors: answered in this order (first wins, the rest are fallbacks).
-# openbb routes first when a local OpenBB Platform API is running
-#   (pip install "openbb[routers]" openbb-yfinance, then openbb-api); when it is
-#   not, the miss costs nothing and yahoo answers. Options: { baseUrl, providers: { ohlcv: yfinance, ... } }.
+# openbb answers OpenBB's routes: the providers ported to TypeScript need no
+#   install; a running OpenBB Platform API (pip install "openbb[routers]"
+#   openbb-yfinance, then openbb-api) adds the rest. When neither can answer, the
+#   miss costs nothing and yahoo answers. Options: { baseUrl, native: prefer|only|off,
+#   credentials: { fred_api_key: ... }, providers: { equity/price/quote: cboe, ... } }.
 # yahoo needs no key. finnhub takes { apiKey } (free key at finnhub.io).
 connectors:
   - name: openbb

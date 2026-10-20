@@ -2,7 +2,7 @@
 
 Every GET route of a locally running [OpenBB Platform](https://docs.openbb.co/platform) REST API, as routes in the catalog (PLAN.md section 17). OpenBB is the on-ramp to its providers: yfinance, nasdaq, cboe, sec, finra, federal_reserve, oecd, bls, cftc, deribit, famafrench, tmx, us_treasury and more with no key; FMP, Polygon, Intrinio, Tiingo, FRED, EIA, Benzinga and others with keys you set on the OpenBB side.
 
-OpenBB runs as its own process (Python, AGPL-3.0). This connector only sends it HTTP requests; nothing of OpenBB is bundled or imported here.
+Providers ported to TypeScript ([../openbb-native](../openbb-native/README.md), Apache-2.0) answer their routes in process with nothing installed; everything else goes to OpenBB running as its own process (Python), through HTTP. Options: `native: prefer | only | off` (default `prefer`) and `credentials` for keyed providers (`fred_api_key`, `eia_api_key`, …; also read from `FRED_API_KEY` etc.).
 
 ## Install and start OpenBB
 

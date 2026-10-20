@@ -1,0 +1,33 @@
+{
+  "name": "@openterminal/openbb-native",
+  "version": "0.0.0",
+  "private": true,
+  "description": "TypeScript ports of OpenBB Platform's data providers, answering OpenBB routes without Python.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "parity": "tsx scripts/parity.ts",
+    "snapshot": "tsx scripts/snapshot.ts",
+    "coverage": "tsx scripts/coverage.ts"
+  },
+  "dependencies": {
+    "@openterminal/core": "workspace:*",
+    "fast-xml-parser": "5.11.2",
+    "fflate": "0.8.3",
+    "node-html-parser": "9.0.4",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.0",
+    "vitest": "^5.0.5"
+  }
+}
