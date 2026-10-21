@@ -1,14 +1,16 @@
 // The porting rules every provider follows (README.md): routes the catalog lists, a parity case per route, a
-// recording per case, no hidden clocks or network, and completeness once a provider says it is ported.
+// recording per case, no hidden clocks or network, and completeness once a provider says it is ported. The command
+// set (the routes that take no provider) follows the same rules.
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { PROVIDERS, snapshotDescriptors } from '../src/index.js'
+import { COMMANDS, PROVIDERS, snapshotDescriptors } from '../src/index.js'
 import { loadCases, PACKAGE_DIR } from '../src/harness/cases.js'
 import { hasFixture, MAX_PROVIDER_FIXTURE_BYTES, orphanBodies, providerFixtureBytes } from '../src/harness/fixtures.js'
 
 const catalog = snapshotDescriptors()
 const catalogProviders = new Set(catalog.flatMap((d) => d.providers))
-const routesOf = (provider: string) => new Set(catalog.filter((d) => d.providers.includes(provider)).map((d) => d.route))
+const routesOf = (provider: string) =>
+  new Set(catalog.filter((d) => (provider === COMMANDS.name ? d.providers.length === 0 : d.providers.includes(provider))).map((d) => d.route))
 
 function sources(dir: URL): string[] {
   const out: string[] = []
@@ -25,7 +27,7 @@ describe('providers', () => {
     expect(PROVIDERS.map((p) => p.name).sort()).toEqual([...catalogProviders].sort())
   })
 
-  for (const p of PROVIDERS) {
+  for (const p of [...PROVIDERS, COMMANDS]) {
     describe(p.name, () => {
       const routes = routesOf(p.name)
       const cases = loadCases(p.name)

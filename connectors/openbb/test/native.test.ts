@@ -10,20 +10,26 @@ import { callRoute } from '../src/call.js'
 import { resetDescriptors } from '../src/descriptors.js'
 import { BASE, connectionRefused, fakeCtx, fixture, status } from './helpers.js'
 
-// These tests pin a world where only cboe's equity/price/quote is ported, so they test the connector's routing and
-// not whichever providers @openterminal/openbb-native has ported by now.
+// These tests pin a world where only cboe's equity/price/quote and one stub command (oecd/list_topics, a route that
+// takes no provider) are ported, so they test the connector's routing and not whichever providers and commands
+// @openterminal/openbb-native has ported by now.
 vi.mock('@openterminal/openbb-native', async (importOriginal) => {
   const real = await importOriginal<typeof import('@openterminal/openbb-native')>()
   const ported = new Set(['cboe:equity/price/quote'])
   const isNative = (route: string, provider: string): boolean => ported.has(`${provider}:${route}`)
+  const commands: Record<string, import('@openterminal/openbb-native').NativeHandler> = {
+    'oecd/list_topics': async (params) => [{ topic_id: 'ECO', topic: 'Economy', subtopic_id: 'OUT', subtopic: 'Outlook', dataflows: params.query === 'eco' ? 1 : 2 }],
+  }
   const nativeDescriptors = () =>
     real.snapshotDescriptors().flatMap((d) => {
+      if (d.providers.length === 0) return d.route in commands ? [d] : []
       const providers = d.providers.filter((p) => isNative(d.route, p))
       return providers.length ? [real.narrowDescriptor(d, providers)] : []
     })
   return {
     ...real,
     isNative,
+    nativeCommand: (route: string) => commands[route],
     nativeHandler: (route: string, provider: string) => (isNative(route, provider) ? real.nativeHandler(route, provider) : undefined),
     nativePairs: () => [...ported].map((k) => ({ provider: k.split(':')[0]!, route: k.slice(k.indexOf(':') + 1) })),
     nativeDescriptors,
@@ -107,9 +113,30 @@ describe('native path', () => {
     await expect(callRoute('equity/profile', { symbol: ['MU'] }, only.ctx, { fetch: failing, env: {} })).rejects.toThrow(/no native port/)
   })
 
+  it('answers a ported command (a route with no provider) with no OpenBB API, and lists it', async () => {
+    const { ctx, calls } = fakeCtx({ [OPENAPI_URL]: connectionRefused() }, { native: 'prefer' })
+    const frame = await callRoute('oecd/list_topics', { query: 'eco' }, ctx, { catalogPath: join(home, 'openbb.json'), env: {} })
+    expect(frameToObjects(frame)).toEqual([{ topic_id: 'ECO', topic: 'Economy', subtopic_id: 'OUT', subtopic: 'Outlook', dataflows: 1 }])
+    expect(calls.filter((c) => c.includes('/api/v1/'))).toEqual([])
+    process.env.OPENTERMINAL_HOME = home
+    const ds = await openbb.descriptors(ctx)
+    expect(ds.find((d) => d.route === 'oecd/list_topics')?.providers).toEqual([])
+    expect(ds.find((d) => d.route === 'oecd/list_tables')).toBeUndefined()
+  })
+
+  it('sends a command that is not ported, or any command when native is off, to the API', async () => {
+    const tables = { results: [{ table_id: 'DF_PRICES_ALL', name: 'Prices' }] }
+    const prefer = fakeCtx({ [OPENAPI_URL]: status(404, 'no docs'), [`${BASE}/oecd/list_tables?topic=ECO`]: tables }, { native: 'prefer' })
+    await callRoute('oecd/list_tables', { topic: 'ECO' }, prefer.ctx, { catalogPath: join(home, 'openbb.json'), env: {} })
+    expect(prefer.calls).toContain(`${BASE}/oecd/list_tables?topic=ECO`)
+    const off = fakeCtx({ [OPENAPI_URL]: status(404, 'no docs'), [`${BASE}/oecd/list_topics`]: { results: [{ topic_id: 'HEA' }] } }, { native: 'off' })
+    const frame = await callRoute('oecd/list_topics', {}, off.ctx, { catalogPath: join(home, 'openbb.json'), env: {} })
+    expect(frameToObjects(frame)).toEqual([{ topic_id: 'HEA' }])
+  })
+
   it('health is fine without the API when routes are native, and says the API is optional', async () => {
     const down = fakeCtx({ [`${BASE}/coverage/providers`]: connectionRefused() }, { native: 'prefer' })
-    expect(await openbb.health!(down.ctx)).toMatch(/^1 routes native · OpenBB API not running at http:\/\/127\.0\.0\.1:6900 \(optional/)
+    expect(await openbb.health!(down.ctx)).toMatch(/^2 routes native · OpenBB API not running at http:\/\/127\.0\.0\.1:6900 \(optional/)
     const up = fakeCtx({ [`${BASE}/coverage/providers`]: fixture('providers') }, { native: 'prefer' })
     expect(await openbb.health!(up.ctx)).toMatch(/^\d+ routes native · OpenBB API at http:\/\/127\.0\.0\.1:6900 · 3 providers/)
   })

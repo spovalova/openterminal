@@ -5,8 +5,8 @@ import { compareRows, jsonRows, type CompareResult } from '../compare.js'
 import { createNativeCtx } from '../ctx.js'
 import { applicableParams, nativeParams, toQuery, withProvider } from '../params.js'
 import { recordingFetch, replayFetch, type Exchange } from '../record.js'
-import { nativeHandler, nativeProvider, snapshotDescriptors } from '../index.js'
-import type { Row } from '../types.js'
+import { COMMANDS, nativeCommand, nativeHandler, nativeProvider, snapshotDescriptors } from '../index.js'
+import type { NativeHandler, ProviderDef, Row } from '../types.js'
 import type { Case } from './cases.js'
 import type { Fixture } from './fixtures.js'
 
@@ -18,10 +18,23 @@ export function descriptorOf(route: string): Descriptor | undefined {
   return snapshotDescriptors().find((d) => d.route === route)
 }
 
+/** A provider by name, or the command set (`commands`): the routes that take no provider. */
+export function sourceDef(name: string): ProviderDef | undefined {
+  return name === COMMANDS.name ? COMMANDS : nativeProvider(name)
+}
+
+function handlerFor(provider: string, route: string): NativeHandler | undefined {
+  return provider === COMMANDS.name ? nativeCommand(route) : nativeHandler(route, provider)
+}
+
 /** Validate and shape a case's params for its provider, as the registry and the openbb connector would. */
 export function shapeCase(provider: string, c: Pick<Case, 'route' | 'params'>): { descriptor: Descriptor; sent: ValidatedParams } {
   const descriptor = descriptorOf(c.route)
   if (!descriptor) throw new Error(`route ${c.route} is not in catalog/openbb.json`)
+  if (provider === COMMANDS.name) {
+    if (descriptor.providers.length) throw new Error(`route ${c.route} takes a provider (${descriptor.providers.join(', ')}); it is not a command`)
+    return { descriptor, sent: parseParams(descriptor, c.params) }
+  }
   if (!descriptor.providers.includes(provider)) throw new Error(`route ${c.route} does not list provider ${provider} (it has ${descriptor.providers.join(', ')})`)
   const validated = parseParams(descriptor, { ...c.params, provider })
   return { descriptor, sent: applicableParams(descriptor, withProvider(descriptor, validated)) }
@@ -54,7 +67,7 @@ export type NativeRunOptions = {
 
 /** Run the native handler for a provider and route on shaped params; rows as they would cross the API. */
 export async function runNative(provider: string, route: string, sent: ValidatedParams, opts: NativeRunOptions = {}): Promise<Row[]> {
-  const handler = nativeHandler(route, provider)
+  const handler = handlerFor(provider, route)
   if (!handler) throw new Error(`${provider} has no native handler for ${route}`)
   const now = opts.now
   // A fresh cache per run: a recording must hold every download its replay asks for.
@@ -78,7 +91,7 @@ export type CaseResult = {
 /** The credential values a provider reads, from the environment, for redaction in recordings. */
 export function secretsFor(provider: string, env: Record<string, string | undefined>): Record<string, string> {
   const out: Record<string, string> = {}
-  for (const name of nativeProvider(provider)?.credentials ?? []) {
+  for (const name of sourceDef(provider)?.credentials ?? []) {
     const v = env[name.toUpperCase()]
     if (v) out[name] = v
   }
@@ -124,6 +137,6 @@ export async function runCaseReplay(c: Case, f: Fixture): Promise<{ rows: Row[];
 /** Credentials as the recording redacted them, so replayed requests carry the same placeholders. */
 function replayEnv(provider: string): Record<string, string> {
   const env: Record<string, string> = {}
-  for (const name of nativeProvider(provider)?.credentials ?? []) env[name.toUpperCase()] = `{{${name}}}`
+  for (const name of sourceDef(provider)?.credentials ?? []) env[name.toUpperCase()] = `{{${name}}}`
   return env
 }
