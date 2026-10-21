@@ -57,10 +57,10 @@ function queryOf(params: NativeParams): Query {
 const sf = (r: SliceRecord, name: string): string => (r[name] ?? '').trim()
 
 /**
- * The named trade's raw record and the day it printed on. The Python reads its on-disk store of every file it has seen
- * and falls back to walking the last published rates files, then to today's search; this walks the files.
+ * The named trade's raw record. The Python reads its on-disk store of every file it has seen and falls back to walking
+ * the last published rates files, then to today's search; this walks the files.
  */
-async function findRecord(ctx: NativeCtx, q: Query, reportDate: D): Promise<{ record: SliceRecord; day: D }> {
+async function findRecord(ctx: NativeCtx, q: Query, reportDate: D): Promise<SliceRecord> {
   const target = (q.id ?? '').trim()
   let record: SliceRecord | null = null
   const carriesTrade = (records: SliceRecord[]): boolean => {
@@ -73,18 +73,18 @@ async function findRecord(ctx: NativeCtx, q: Query, reportDate: D): Promise<{ re
     return false
   }
   try {
-    const [, day] = await getLatestViableSlice(ctx, 'rates', (recs) => carriesTrade(recs), { endDate: reportDate })
-    return { record: record!, day }
+    await getLatestViableSlice(ctx, 'rates', (recs) => carriesTrade(recs), { endDate: reportDate })
+    return record!
   } catch {
     const today = todayOf(ctx.now())
     const searched = await searchTrades(ctx, 'rates', today, today, {})
     if (!carriesTrade(searched)) throw new EmptyDataError(`'${q.id}' was not found in the ${MAX_LOOKBACK_DAYS} days of published files to ${reportDate}.`)
-    return { record: record!, day: today }
+    return record!
   }
 }
 
 /** The trade, the curve slice and the fixings its realized carry needs (`CftcSwapValuationFetcher.aextract_data`). */
-async function extractValuation(ctx: NativeCtx, q: Query, located: { record: SliceRecord; day: D } | null = null): Promise<Valuation> {
+async function extractValuation(ctx: NativeCtx, q: Query): Promise<Valuation> {
   const reportDate = q.date ?? todayOf(ctx.now())
   let currency = q.currency
   let otherCurrency: string | null = null
@@ -92,9 +92,10 @@ async function extractValuation(ctx: NativeCtx, q: Query, located: { record: Sli
   let tradeDate: D | null = q.tradeDate
 
   if (q.id && q.tradeDate === null) {
-    const found = located ?? (await findRecord(ctx, q, reportDate))
-    rawRecord = found.record
-    tradeDate = found.day
+    rawRecord = await findRecord(ctx, q, reportDate)
+    // The day the record names, as the Python's store gives it: a slice record has no dissemination timestamp, so it is
+    // the day the trade was executed.
+    tradeDate = recordDisseminatedDay(rawRecord)
     const today = todayOf(ctx.now())
     const tradeType = classifyRatesSwap(rawRecord, today)
     const spread = tradeType === 'basis' || tradeType === 'cross_currency' ? parseSpread(rawRecord) : null

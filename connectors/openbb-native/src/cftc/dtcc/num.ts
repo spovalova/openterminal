@@ -22,20 +22,6 @@ export function pyMedian(xs: number[]): number {
   return n % 2 === 1 ? s[(n - 1) / 2]! : (s[n / 2 - 1]! + s[n / 2]!) / 2
 }
 
-/** `max(items, key=...)`-style first-wins argmax over numbers. */
-export function minBy<T>(items: readonly T[], key: (x: T) => number): T {
-  let best = items[0]!
-  let bestKey = key(best)
-  for (let i = 1; i < items.length; i++) {
-    const k = key(items[i]!)
-    if (k < bestKey) {
-      best = items[i]!
-      bestKey = k
-    }
-  }
-  return best
-}
-
 /** Python's thousands-separated fixed-point format, `f"{x:,.{digits}f}"`. */
 export function commaFixed(x: number, digits = 0): string {
   return x.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits })

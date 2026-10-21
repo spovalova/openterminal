@@ -11,8 +11,6 @@ export const fromDays = (n: number): D => new Date(n * MS).toISOString().slice(0
 export const addDays = (d: D, n: number): D => fromDays(toDays(d) + n)
 /** `a - b` in days. */
 export const diffDays = (a: D, b: D): number => toDays(a) - toDays(b)
-/** Python's `date.toordinal()`. */
-export const ordinal = (d: D): number => toDays(d) + 719163
 /** Monday is 0. */
 export const weekday = (d: D): number => (new Date(toDays(d) * MS).getUTCDay() + 6) % 7
 

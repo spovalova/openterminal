@@ -1,7 +1,7 @@
 // FX forward point construction from DTCC PPD records. Ported from openbb_cftc/utils/fx.py (OpenBB Platform 5.0.0,
 // Apache-2.0); modified: dates are ISO strings.
 import { fxPairs, fxTenorBuckets, type FxSpec } from './constants.js'
-import { EmptyDataError, parseDate, parseNotional, percentile, recordTradeDate, type Rec, type SliceRecord } from './curve.js'
+import { parseDate, parseNotional, percentile, recordTradeDate, type Rec, type SliceRecord } from './curve.js'
 import { diffDays, type D } from './dates.js'
 import { commaFixed, pyMedian, pySum } from './num.js'
 
@@ -188,13 +188,13 @@ export function buildForwardPoints(records: Iterable<SliceRecord>, pair: string,
   const spotMaxDays = o.spotMaxDays ?? 2
   const [key, spec] = resolvePair(pair)
   let observations = extractFxObservations(records, key, tradeDate, minNotional)
-  if (observations.length === 0) throw new EmptyDataError(`No ${key} forwards or FX swaps at or above a ${commaFixed(minNotional, 0)} ${spec.base} notional were reported for ${tradeDate}.`)
+  if (observations.length === 0) throw new Error(`No ${key} forwards or FX swaps at or above a ${commaFixed(minNotional, 0)} ${spec.base} notional were reported for ${tradeDate}.`)
   observations = trimFxObservations(observations)
   if (spec.ndf) observations = dropNdfSpotWindow(observations, spotMaxDays)
   const spot = establishSpot(observations, spec, spotMaxDays)
   if (spot === null) {
     const horizon = spec.ndf ? 'any tenor bucket' : `${spotMaxDays} days`
-    throw new EmptyDataError(`No ${key} trades inside ${horizon} were reported for ${tradeDate}, so spot cannot be established.`)
+    throw new Error(`No ${key} trades inside ${horizon} were reported for ${tradeDate}, so spot cannot be established.`)
   }
   const groups = new Map<string, FxObservation[]>()
   for (const obs of observations) {
@@ -213,7 +213,7 @@ export function buildForwardPoints(records: Iterable<SliceRecord>, pair: string,
     p.staleness_days = 0
     results.push(p)
   }
-  if (results.length === 0) throw new EmptyDataError(`No ${key} tenor buckets had at least ${minTrades} trades on ${tradeDate}.`)
+  if (results.length === 0) throw new Error(`No ${key} tenor buckets had at least ${minTrades} trades on ${tradeDate}.`)
   return results
 }
 
@@ -224,7 +224,7 @@ export function buildForwardPointsAsOf(records: Iterable<SliceRecord>, pair: str
   const spotMaxDays = o.spotMaxDays ?? 2
   const [key, spec] = resolvePair(pair)
   let observations = extractFxObservationsByDay(records, key, minNotional)
-  if (observations.length === 0) throw new EmptyDataError(`No ${key} forwards or FX swaps at or above a ${commaFixed(minNotional, 0)} ${spec.base} notional were disseminated in the search window.`)
+  if (observations.length === 0) throw new Error(`No ${key} forwards or FX swaps at or above a ${commaFixed(minNotional, 0)} ${spec.base} notional were disseminated in the search window.`)
   if (spec.ndf) observations = dropNdfSpotWindow(observations, spotMaxDays)
   const byDay = new Map<D, FxObservation[]>()
   for (const obs of observations) {
@@ -249,7 +249,7 @@ export function buildForwardPointsAsOf(records: Iterable<SliceRecord>, pair: str
   }
   if (spots.size === 0) {
     const horizon = spec.ndf ? 'any tenor bucket' : `${spotMaxDays} days`
-    throw new EmptyDataError(`No ${key} trades inside ${horizon} were disseminated in the search window, so spot cannot be established.`)
+    throw new Error(`No ${key} trades inside ${horizon} were disseminated in the search window, so spot cannot be established.`)
   }
   const results: Rec[] = []
   for (const [label, low] of fxTenorBuckets) {
@@ -263,7 +263,7 @@ export function buildForwardPointsAsOf(records: Iterable<SliceRecord>, pair: str
       break
     }
   }
-  if (results.length === 0) throw new EmptyDataError(`No ${key} tenor bucket had a single day with at least ${minTrades} trades in the search window.`)
+  if (results.length === 0) throw new Error(`No ${key} tenor bucket had a single day with at least ${minTrades} trades in the search window.`)
   const freshest = results.map((p) => p.as_of_date as D).sort().at(-1)!
   for (const p of results) {
     p.date = freshest

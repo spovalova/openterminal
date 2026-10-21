@@ -19,15 +19,8 @@ const MIN_FORWARD_NODES = 2
 const CURVE_MIN_NOTIONAL = 1_000.0
 const LIVE_ACTION = 'NEWT'
 const LIVE_EVENT = 'TRAD'
-const NOT_PROVIDED_BY_NOTATION: Record<string, string> = { '1': '99999.9999999999999', '3': '9.9999999999', '4': '99999' }
 
 const sf = (r: SliceRecord, name: string): string => (r[name] ?? '').trim()
-
-/** Whether a price or spread carries the all-nines default for its notation (`is_not_provided`). */
-export function isNotProvided(value: string | null | undefined, notation: string | null | undefined): boolean {
-  const text = (value ?? '').trim()
-  return Boolean(text) && text === NOT_PROVIDED_BY_NOTATION[(notation ?? '').trim()]
-}
 
 /** Whether a print is a component of a package, whose level is the package's own (`is_package_leg`). */
 export const isPackageLeg = (record: SliceRecord): boolean => sf(record, 'Package indicator').toUpperCase() === 'TRUE'

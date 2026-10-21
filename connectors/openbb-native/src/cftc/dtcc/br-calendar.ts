@@ -1,6 +1,6 @@
 // Brazilian business-day calendar for the BUS/252 day count. Ported from openbb_cftc/utils/br_calendar.py
 // (OpenBB Platform 5.0.0, Apache-2.0); modified: dates are ISO strings, the holiday table is generated from the source.
-import { toDays, weekday, type D } from './dates.js'
+import { toDays, type D } from './dates.js'
 
 const HOLIDAYS_COMPACT =
   '2001010120010226200102272001041320010421200105012001061420010907' +
@@ -166,9 +166,6 @@ const BRL_HOLIDAYS = new Set<number>()
 for (let i = 0; i < HOLIDAYS_COMPACT.length; i += 8) {
   BRL_HOLIDAYS.add(toDays(`${HOLIDAYS_COMPACT.slice(i, i + 4)}-${HOLIDAYS_COMPACT.slice(i + 4, i + 6)}-${HOLIDAYS_COMPACT.slice(i + 6, i + 8)}`))
 }
-
-/** Whether a date is a Brazilian business day (`is_brl_business_day`). */
-export const isBrlBusinessDay = (day: D): boolean => weekday(day) < 5 && !BRL_HOLIDAYS.has(toDays(day))
 
 /** Count Brazilian business days in [start, end) (`brl_business_days_between`). */
 export function brlBusinessDaysBetween(start: D, end: D): number {

@@ -104,7 +104,7 @@ async function postSearch(ctx: NativeCtx, payload: SearchPayload): Promise<Recor
   const url = `${PPD_API_URL}/search/webdisplay`
   let body: SearchBody
   try {
-    body = await ctx.http.json<SearchBody>(url, { method: 'POST', body: payload, headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'User-Agent': SEARCH_USER_AGENT } })
+    body = await ctx.http.json<SearchBody>(url, { method: 'POST', body: payload, headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'User-Agent': SEARCH_USER_AGENT }, timeoutMs: 300_000 })
   } catch (err) {
     throw new Error(`Failed to query the PPD search endpoint -> ${err instanceof Error ? err.message : String(err)}`, { cause: err })
   }

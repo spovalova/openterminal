@@ -62,7 +62,10 @@ export function manifestByDate(manifest: ManifestEntry[]): Map<string, ManifestE
 }
 
 /** The records of a slice's CSV text; each keeps only its non-empty fields (`csv.DictReader`). */
-export function parseSliceCsv(text: string): SliceRecord[] {
+export function parseSliceCsv(source: string): SliceRecord[] {
+  // The Python reads the member through a TextIOWrapper (utf-8-sig, universal newlines): a BOM is dropped and \r\n and \r
+  // become \n, quoted or not.
+  const text = (source.includes('\r') ? source.replace(/\r\n?/g, '\n') : source).replace(/^\uFEFF/, '')
   const records: SliceRecord[] = []
   let header: string[] | null = null
   const n = text.length
