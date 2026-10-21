@@ -3,6 +3,12 @@
 // result is the same double in all but the rare case where Math.exp rounds differently from the C library's exp.
 // Used by the optimizer's Black-Scholes values (`statistics.NormalDist().cdf`).
 //
+// fdlibm's notice, which its license requires to be kept with the code:
+//   Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+//   Developed at SunPro, a Sun Microsystems, Inc. business.
+//   Permission to use, copy, modify, and distribute this software is freely granted, provided that this notice is
+//   preserved.
+//
 // The C library on the OpenBB host evaluates the polynomials with fused multiply-adds (the compiler contracts every
 // `a + b * c`), which rounds once where plain JavaScript rounds twice; `fma` below reproduces that, so the result is the
 // same double rather than one a unit in the last place away.
