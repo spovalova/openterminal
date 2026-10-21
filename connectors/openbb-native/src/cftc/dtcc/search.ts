@@ -58,13 +58,20 @@ export function pyUnquote(text: string): string {
   })
 }
 
-/** A search record mapped onto the CSV headers the curve and FX paths read (`map_search_record`). */
-export function mapSearchRecord(record: Record<string, unknown>): SliceRecord {
+/**
+ * A search record mapped onto the CSV headers the curve and FX paths read (`map_search_record`). The header a field name
+ * maps to is looked up once per name in `headers`, which a search shares across its records.
+ */
+export function mapSearchRecord(record: Record<string, unknown>, headers: Map<string, string | null> = new Map()): SliceRecord {
   const mapped: SliceRecord = {}
   for (const [key, value] of Object.entries(record)) {
-    const normalized = normalizeKey(key)
-    const header = SEARCH_ALIASES[normalized] ?? HEADER_BY_KEY.get(normalized)
-    if (header === undefined) continue
+    let header = headers.get(key)
+    if (header === undefined) {
+      const normalized = normalizeKey(key)
+      header = SEARCH_ALIASES[normalized] ?? HEADER_BY_KEY.get(normalized) ?? null
+      headers.set(key, header)
+    }
+    if (header === null) continue
     mapped[header] = typeof value === 'string' ? pyUnquote(value) : (value as string | null | undefined)
   }
   return mapped
@@ -214,9 +221,10 @@ export async function searchTrades(
     const windows = contiguousRuns(days).flatMap(([lo, hi]) => chunkWindows(lo, hi, SEARCH_MAX_RANGE_DAYS))
     const results = await Promise.all(windows.map(([lo, hi]) => searchWindow(ctx, payload, lo, hi)))
     const seen = new Set<string>()
+    const headers = new Map<string, string | null>()
     for (const records of results) {
       for (const record of records) {
-        const row = mapSearchRecord(record)
+        const row = mapSearchRecord(record, headers)
         const day = String(row['Dissemination Timestamp'] ?? '').slice(0, 10)
         const bucket = fetched.get(day)
         if (bucket === undefined) continue

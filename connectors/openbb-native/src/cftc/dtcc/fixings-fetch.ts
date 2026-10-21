@@ -359,7 +359,7 @@ async function fetchBanxico(ctx: NativeCtx, series: string, start: string, end: 
 /** A Banco Central do Brasil SGS series, served as JSON. */
 async function fetchBcb(ctx: NativeCtx, series: string, start: string, end: string): Promise<Fixings> {
   const url = `${BCB_SGS_URL}.${series}/dados?formato=json&dataInicial=${formatBound(start, 'bcb')}&dataFinal=${formatBound(end, 'bcb')}`
-  const response = await ctx.http.json<unknown>(url)
+  const response = await ctx.http.json<unknown>(url, { timeoutMs: 120_000 })
   if (!Array.isArray(response)) throw unexpected(url)
   const out: Fixings = {}
   for (const item of response) {
