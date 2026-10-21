@@ -36,7 +36,17 @@ import {
   type Schedule,
 } from './swap.js'
 
-type Query = { currency: string; id: string | null; tradeDate: D | null; side: string; minNotional: number; date: D | null; minTrades: number }
+type Query = {
+  currency: string
+  id: string | null
+  /** The asset class a qualified trade key names (`FX:…`); it only decides which files are read first. */
+  assetHint: string | null
+  tradeDate: D | null
+  side: string
+  minNotional: number
+  date: D | null
+  minTrades: number
+}
 
 type Valuation = { trade: Rec; rates: SliceRecord[]; ratesDate: D; fixings: Rec; currency: string; tradeDate: D }
 
@@ -46,6 +56,7 @@ function queryOf(params: NativeParams): Query {
   return {
     currency: (pStr(params, 'currency') ?? 'USD').toUpperCase(),
     id: id === undefined ? null : id.slice(id.lastIndexOf(':') + 1).trim(),
+    assetHint: id !== undefined && id.includes(':') ? id.slice(0, id.indexOf(':')).trim().toUpperCase() : null,
     tradeDate: pDate(params, 'trade_date') ?? null,
     side: pStr(params, 'side') ?? 'pay',
     minNotional: pNum(params, 'min_notional') ?? 0.0,
@@ -58,9 +69,10 @@ const sf = (r: SliceRecord, name: string): string => (r[name] ?? '').trim()
 
 /**
  * The named trade's raw record. The Python reads its on-disk store of every file it has seen and falls back to walking
- * the last published rates files, then to today's search; this walks the files.
+ * the last published rates files, then to today's search; this walks the files. The summary also looks in the forex
+ * files, where the Python's store would find an FX print, starting with the files a qualified trade key points at.
  */
-async function findRecord(ctx: NativeCtx, q: Query, reportDate: D): Promise<SliceRecord> {
+async function findRecord(ctx: NativeCtx, q: Query, reportDate: D, alsoForex = false): Promise<{ record: SliceRecord; forex: boolean }> {
   const target = (q.id ?? '').trim()
   let record: SliceRecord | null = null
   const carriesTrade = (records: SliceRecord[]): boolean => {
@@ -72,19 +84,23 @@ async function findRecord(ctx: NativeCtx, q: Query, reportDate: D): Promise<Slic
     }
     return false
   }
-  try {
-    await getLatestViableSlice(ctx, 'rates', (recs) => carriesTrade(recs), { endDate: reportDate })
-    return record!
-  } catch {
-    const today = todayOf(ctx.now())
-    const searched = await searchTrades(ctx, 'rates', today, today, {})
-    if (!carriesTrade(searched)) throw new EmptyDataError(`'${q.id}' was not found in the ${MAX_LOOKBACK_DAYS} days of published files to ${reportDate}.`)
-    return record!
+  const classes = alsoForex ? (q.assetHint === 'FX' ? ['forex', 'rates'] : ['rates', 'forex']) : ['rates']
+  for (const assetClass of classes) {
+    try {
+      await getLatestViableSlice(ctx, assetClass, (recs) => carriesTrade(recs), { endDate: reportDate })
+      return { record: record!, forex: assetClass === 'forex' }
+    } catch {
+      // Not among the last published files of this class.
+    }
   }
+  const today = todayOf(ctx.now())
+  const searched = await searchTrades(ctx, 'rates', today, today, {})
+  if (!carriesTrade(searched)) throw new EmptyDataError(`'${q.id}' was not found in the ${MAX_LOOKBACK_DAYS} days of published files to ${reportDate}.`)
+  return { record: record!, forex: false }
 }
 
 /** The trade, the curve slice and the fixings its realized carry needs (`CftcSwapValuationFetcher.aextract_data`). */
-async function extractValuation(ctx: NativeCtx, q: Query): Promise<Valuation> {
+async function extractValuation(ctx: NativeCtx, q: Query, located: SliceRecord | null = null): Promise<Valuation> {
   const reportDate = q.date ?? todayOf(ctx.now())
   let currency = q.currency
   let otherCurrency: string | null = null
@@ -92,7 +108,7 @@ async function extractValuation(ctx: NativeCtx, q: Query): Promise<Valuation> {
   let tradeDate: D | null = q.tradeDate
 
   if (q.id && q.tradeDate === null) {
-    rawRecord = await findRecord(ctx, q, reportDate)
+    rawRecord = located ?? (await findRecord(ctx, q, reportDate)).record
     // The day the record names, as the Python's store gives it: a slice record has no dissemination timestamp, so it is
     // the day the trade was executed.
     tradeDate = recordDisseminatedDay(rawRecord)
@@ -490,8 +506,14 @@ async function findFxRecord(ctx: NativeCtx, q: Query): Promise<SliceRecord | nul
 
 export const swapSummary: NativeHandler = async (params, ctx) => {
   const q = queryOf(params)
-  const fxRecord = await findFxRecord(ctx, q)
+  let fxRecord = await findFxRecord(ctx, q)
+  let located: SliceRecord | null = null
+  if (fxRecord === null && q.id && q.tradeDate === null) {
+    const found = await findRecord(ctx, q, q.date ?? todayOf(ctx.now()), true)
+    if (found.forex && classifyFxTrade(found.record) !== null) fxRecord = found.record
+    else located = found.record
+  }
   if (fxRecord !== null) return fxSummaryRows(await fxMetadata(ctx, q, fxRecord), q.side).map((r) => validateRow(SWAP_SUMMARY_SCHEMA, r))
-  const { metadata } = transformValuation(q, await extractValuation(ctx, q))
+  const { metadata } = transformValuation(q, await extractValuation(ctx, q, located))
   return summaryRows(metadata, q.side).map((r) => validateRow(SWAP_SUMMARY_SCHEMA, r)) as Row[]
 }
