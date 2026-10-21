@@ -8,7 +8,7 @@ import type { NativeCtx, NativeParams, Row } from '../types.js'
 export const BASE_URL = 'https://api.nasdaq.com/api'
 export const SYMBOL_DIRECTORY_FILES = 'https://www.nasdaqtrader.com/dynamic/SymDir'
 
-const NA_VALUES = new Set(['', 'N/A', 'NA', '--', '-', 'null', 'None', 'NM'])
+export const NA_VALUES = new Set(['', 'N/A', 'NA', '--', '-', 'null', 'None', 'NM'])
 const HOUR_MS = 3600 * 1000
 const DAY_MS = 24 * HOUR_MS
 
@@ -58,6 +58,16 @@ export function textHeaders(): Record<string, string> {
   return {
     Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
     'Accept-Encoding': 'gzip',
+    'Accept-Language': 'en-CA,en-US;q=0.7,en;q=0.3',
+    'User-Agent': BROWSER_UA,
+    Connection: 'keep-alive',
+  }
+}
+
+/** The headers for a PDF download (`get_headers('pdf')`). */
+export function pdfHeaders(): Record<string, string> {
+  return {
+    Accept: 'application/pdf,*/*',
     'Accept-Language': 'en-CA,en-US;q=0.7,en;q=0.3',
     'User-Agent': BROWSER_UA,
     Connection: 'keep-alive',

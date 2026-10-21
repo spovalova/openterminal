@@ -15,19 +15,19 @@ export type PdfRun = {
   text: string
 }
 
-type PdfObject = { dict: string; stream: Uint8Array | undefined }
-type Matrix = [number, number, number, number, number, number]
+export type PdfObject = { dict: string; stream: Uint8Array | undefined }
+export type Matrix = [number, number, number, number, number, number]
 
 const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0]
 
 /** `a` applied first, then `b`. */
-function multiply(a: Matrix, b: Matrix): Matrix {
+export function multiply(a: Matrix, b: Matrix): Matrix {
   return [a[0] * b[0] + a[1] * b[2], a[0] * b[1] + a[1] * b[3], a[2] * b[0] + a[3] * b[2], a[2] * b[1] + a[3] * b[3], a[4] * b[0] + a[5] * b[2] + b[4], a[4] * b[1] + a[5] * b[3] + b[5]]
 }
 
-const latin1 = (bytes: Uint8Array): string => Buffer.from(bytes).toString('latin1')
+export const latin1 = (bytes: Uint8Array): string => Buffer.from(bytes).toString('latin1')
 
-function readObjects(bytes: Uint8Array): Map<number, PdfObject> {
+export function readObjects(bytes: Uint8Array): Map<number, PdfObject> {
   const text = latin1(bytes)
   const objects = new Map<number, PdfObject>()
   const header = /(\d+) (\d+) obj\b/g
@@ -73,7 +73,7 @@ const refOf = (text: string, key: string): number | undefined => {
 }
 
 /** The pages in reading order: the page tree from the catalog, or every /Page object in file order. */
-function pageObjects(objects: Map<number, PdfObject>): number[] {
+export function pageObjects(objects: Map<number, PdfObject>): number[] {
   const pages: number[] = []
   const walk = (n: number, seen: Set<number>): void => {
     const obj = objects.get(n)
@@ -111,7 +111,7 @@ type FontInfo = {
 }
 
 /** The /W array of a CID font: `c [w1 w2 …]` and `first last w` entries. */
-function parseCidWidths(text: string): Map<number, number> {
+export function parseCidWidths(text: string): Map<number, number> {
   const widths = new Map<number, number>()
   const tokens = [...text.matchAll(/\[|\]|-?\d+(?:\.\d+)?/g)].map((t) => t[0])
   let i = 0
@@ -138,7 +138,7 @@ function parseCidWidths(text: string): Map<number, number> {
 }
 
 /** The /Widths of a simple font. */
-function parseSimpleWidths(font: string): Map<number, number> {
+export function parseSimpleWidths(font: string): Map<number, number> {
   const widths = new Map<number, number>()
   const first = Number(/\/FirstChar\s+(\d+)/.exec(font)?.[1] ?? 0)
   const list = /\/Widths\s*\[(.*?)\]/s.exec(font)?.[1]
@@ -147,7 +147,7 @@ function parseSimpleWidths(font: string): Map<number, number> {
 }
 
 /** `beginbfchar` / `beginbfrange` sections of a ToUnicode CMap. */
-function parseCMap(text: string): Map<number, string> {
+export function parseCMap(text: string): Map<number, string> {
   const map = new Map<number, string>()
   const utf16 = (hex: string): string => {
     let s = ''
@@ -200,9 +200,9 @@ function fontsOf(objects: Map<number, PdfObject>, resources: string): Map<string
 
 // --- content streams -----------------------------------------------------------------------------------------------
 
-type Token = { kind: 'num'; value: number } | { kind: 'name'; value: string } | { kind: 'str'; value: Uint8Array } | { kind: 'array'; value: Token[] } | { kind: 'op'; value: string }
+export type Token = { kind: 'num'; value: number } | { kind: 'name'; value: string } | { kind: 'str'; value: Uint8Array } | { kind: 'array'; value: Token[] } | { kind: 'op'; value: string }
 
-function tokenize(content: string): Token[] {
+export function tokenize(content: string): Token[] {
   const tokens: Token[] = []
   const stack: Token[][] = [tokens]
   const push = (t: Token): void => {
