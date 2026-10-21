@@ -1454,6 +1454,15 @@ html:not(.js) .panel + .panel {
   color: var(--fg-2);
   font-size: 15.5px;
 }
+.install-steps .cmd-k {
+  margin-bottom: -4px;
+  color: var(--fg-3);
+  font-size: 12px;
+}
+.install-steps .install-extra {
+  color: var(--fg-3);
+  font-size: 14px;
+}
 .aside {
   display: grid;
   gap: 0;

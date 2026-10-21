@@ -54,9 +54,10 @@ describe('the installers and downloads', () => {
     expect(existsSync(installer)).toBe(true)
     expect(existsSync(join(site, 'install.ps1'))).toBe(true)
     // The text a copy button copies: the command element without its <wbr> line-break hints.
-    const commands = [...html.matchAll(/<code id="cmd-(?:hero|install)-(mac|windows|linux)">(.*?)<\/code>/g)].map((m) => [m[1], m[2]!.replace(/<wbr\s*\/?>/g, '')])
-    expect(commands.length).toBe(6) // the hero and the install section, three systems each
-    for (const [os, text] of commands) expect(text).toBe(os === 'windows' ? WINDOWS_COMMAND : UNIX_COMMAND)
+    const commands = [...html.matchAll(/<code id="cmd-(hero|install)-(mac|windows|linux|unix)">(.*?)<\/code>/g)].map((m) => [`${m[1]}-${m[2]}`, m[2], m[3]!.replace(/<wbr\s*\/?>/g, '')])
+    // The download card has a tab per system; the install section shows the two commands without tabs.
+    expect(commands.map(([id]) => id)).toEqual(['hero-mac', 'hero-windows', 'hero-linux', 'install-unix', 'install-windows'])
+    for (const [, os, text] of commands) expect(text).toBe(os === 'windows' ? WINDOWS_COMMAND : UNIX_COMMAND)
     const urls = new Set([...html.replace(/<wbr\s*\/?>/g, '').matchAll(/https:\/\/terminal\.spova\.ai\/[^\s"<|]*/g)].map((m) => m[0]))
     expect([...urls].sort()).toEqual(['https://terminal.spova.ai/install', 'https://terminal.spova.ai/install.ps1'])
     // Each installer points at the other for the wrong system.

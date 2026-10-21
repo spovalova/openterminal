@@ -29,7 +29,7 @@ Cursor made the code editor conversational without taking the editor away. Open 
 - **Ask, don't click.** "Is NVDA's drop today news or just the market?" becomes four live widgets and a two-sentence diagnosis. A follow-up rewrites the workspace. You never assemble the answer from eight tabs again.
 - **Every number is traceable.** The agent cannot type a price. It can only run queries, and the reply links each claim to the widget that shows it. Figures in the reply are checked against the frames it saw.
 - **Open and local.** MIT licensed. One process on localhost plus your browser. No accounts, no hosted backend, no telemetry. Keys never leave the machine.
-- **Any route, not a fixed catalog.** A connector publishes its routes as descriptors (OpenBB's 834 routes ship built in, answered in process by TypeScript ports of its providers); the agent searches them, runs them, and derives new frames from them with pandas. Twenty-four recipes cover the common questions; hand-written annotations keep the units honest.
+- **Any route, not a fixed catalog.** A connector publishes its routes as descriptors (826 of OpenBB's 834 routes are built in, answered in process by TypeScript ports of its providers); the agent searches them, runs them, and derives new frames from them with pandas. Twenty-four recipes cover the common questions; hand-written annotations keep the units honest.
 - **Model-agnostic.** Anthropic or OpenAI through the Vercel AI SDK. The default is Claude Opus 5.5; change one line of config to swap it.
 - **Works before you add a key.** OpenBB's keyless data providers are built in, ported to TypeScript: prices, option chains with Greeks and implied volatility, fundamentals, SEC filings, insider and institutional holdings, earnings and economic calendars, Treasury yields, Fed, BLS, OECD and IMF data, all with nothing to install. Yahoo is the fallback; a free Finnhub key adds another.
 
@@ -93,7 +93,7 @@ curl -fsSL https://terminal.spova.ai/install | sh          # macOS, Linux
 irm https://terminal.spova.ai/install.ps1 | iex             # Windows (PowerShell)
 ```
 
-Nothing else to install: the app carries its own runtime, the server, the web app and the Python runtime for transforms (Pyodide with pandas, numpy and scipy). Or download it from [Releases](https://github.com/spovalova/openterminal/releases/latest): `OpenTerminal-mac-arm64.dmg` (Apple silicon), `-mac-x64.dmg` (Intel), `-win-x64-setup.exe`, `-linux-x86_64.AppImage`, `-linux-amd64.deb` and the arm64 builds. The builds are not signed: the install script avoids the macOS and Windows warnings a browser download gets. The app works with no keys: quotes, charts, search, option chains and fundamentals come from Yahoo through the built-in `yahoo` connector. The first time, it asks for an Anthropic or OpenAI key so the agent can answer; skip it to start with a sample workspace. Closing the window keeps it in the tray or menu bar; it updates itself from GitHub Releases.
+Nothing else to install: the app carries its own runtime, the server, the web app, OpenBB's data providers (ported to TypeScript, below) and the Python runtime for transforms (Pyodide with pandas, numpy and scipy). Or download it from [Releases](https://github.com/spovalova/openterminal/releases/latest): `OpenTerminal-mac-arm64.dmg` (Apple silicon), `-mac-x64.dmg` (Intel), `-win-x64-setup.exe`, `-linux-x86_64.AppImage`, `-linux-amd64.deb` and the arm64 builds. The builds are not signed: the install script avoids the macOS and Windows warnings a browser download gets. The app works with no data keys: OpenBB's providers and Yahoo answer quotes, charts, search, option chains, fundamentals, filings, news and macro from inside it. The first time, it asks for an Anthropic or OpenAI key so the agent can answer; skip it to start with a sample workspace. Closing the window keeps it in the tray or menu bar; it updates itself from GitHub Releases.
 
 With Node 22.13 or later, the same app runs in your browser:
 
@@ -132,9 +132,9 @@ llm:
 
 Without one, the app explains how to add it and you can still build workspaces by hand in the widget editor (a recipe, a route from the catalog, or a transform).
 
-**Add news** with a free [Finnhub](https://finnhub.io) key on the Data page in the app. It is saved to the same file. Finnhub also answers quotes and the earnings calendar, so tables survive a Yahoo outage.
+**Add Finnhub** (optional) with a free [Finnhub](https://finnhub.io) key on the Data page in the app. It is saved to the same file and adds a second source for news, quotes and the earnings calendar.
 
-**OpenBB's data, built in.** The `openbb` connector answers OpenBB Platform's routes itself: its providers are ported to TypeScript in [connectors/openbb-native](connectors/openbb-native/README.md) (Apache-2.0, like OpenBB since V5), so nothing is installed and no Python runs. 883 of OpenBB 5.0.0's 912 route-provider pairs are native, checked against OpenBB's own answers by parity tests that are recorded and replayed offline in CI (the FRED and EIA routes that need a key are checked against OpenBB's Python on sample responses until one is available). yfinance, nasdaq, cboe, sec, finra, federal_reserve, bls, oecd, imf, ecb, tmx and the rest need no key. FRED, EIA and older Congress.gov data need yours, in `config.yml`:
+**OpenBB's data, built in.** The `openbb` connector answers OpenBB Platform's routes itself: its providers are ported to TypeScript in [connectors/openbb-native](connectors/openbb-native/README.md) (Apache-2.0, like OpenBB since V5), so nothing is installed and no Python runs. 900 of OpenBB 5.0.0's 912 route-provider pairs are native, and so are the 18 routes that take no provider (826 of its 834 routes), checked against OpenBB's own answers by parity tests that are recorded and replayed offline in CI (the FRED and EIA routes that need a key are checked against OpenBB's Python on sample responses until one is available). yfinance, nasdaq, cboe, sec, finra, federal_reserve, bls, oecd, imf, ecb, tmx and the rest need no key. FRED, EIA and older Congress.gov data need yours, in `config.yml`:
 
 ```yaml
 connectors:
@@ -153,7 +153,7 @@ Three connectors ship in the box. Each publishes the routes it answers as **desc
 
 | Connector | Key | Routes |
 |---|---|---|
-| `openbb` | none for the keyless providers | OpenBB Platform's 834 routes, answered in process by TypeScript ports of its 20 providers (883 of 912 route-provider pairs); a running OpenBB API adds the rest and any extension you install |
+| `openbb` | none for the keyless providers | OpenBB Platform's 834 routes: 826 answered in process by TypeScript ports of its 20 providers and their commands (900 of 912 route-provider pairs, 18 of 18 commands); a running OpenBB API adds the other 8 and any extension you install |
 | `yahoo` | none | the five yahoo-finance2 endpoints: `search`, `quote`, `chart`, `options`, `quoteSummary` (with its modules), and `news` (the search module's news list) |
 | `finnhub` | free | `quote`, `company-news`, `calendar/earnings` |
 

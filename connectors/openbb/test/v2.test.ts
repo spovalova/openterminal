@@ -83,6 +83,16 @@ describe('descriptors()', () => {
     vi.setSystemTime(NOW + BREAKER_MS + 1)
     const none = await loadDescriptors(fakeCtx({ [OPENAPI_URL]: connectionRefused() }).ctx, { catalogPath: join(home, 'elsewhere', 'openbb.json') })
     expect(none).toMatchObject({ source: 'none', descriptors: [] })
+
+    // When the API is optional (native routes answer without it), a broken API is still logged but a down one is not.
+    vi.setSystemTime(NOW + 2 * BREAKER_MS + 2)
+    const broken = fakeCtx({ [OPENAPI_URL]: status(500, 'boom', OPENAPI_URL) })
+    await loadDescriptors(broken.ctx, { catalogPath, optional: true })
+    expect(broken.logs.some((l) => /openapi\.json failed/.test(l))).toBe(true)
+    const quiet = fakeCtx({ [OPENAPI_URL]: connectionRefused() })
+    expect(await loadDescriptors(quiet.ctx, { catalogPath, optional: true })).toMatchObject({ source: 'cached' })
+    expect(await loadDescriptors(quiet.ctx, { catalogPath: join(home, 'elsewhere', 'openbb.json'), optional: true })).toMatchObject({ source: 'none' })
+    expect(quiet.logs).toEqual([])
   })
   it('ignores a corrupt or foreign cache file and a non-OpenAPI body', async () => {
     const { ctx } = fakeCtx({ [OPENAPI_URL]: openapi() })

@@ -144,7 +144,7 @@
             </div>
           </div>
           <div class="get-next">
-            <p>For developers: <code>npx openterminal</code> runs it headless, in your browser <span class="soon mono">on npm soon</span></p>
+            <p>Everything runs inside the app: OpenBB's data providers, Yahoo, and a Python sandbox for pandas. Nothing else to install, and no data keys.</p>
             <div class="get-links">
               <a class="btn" href="https://github.com/spovalova/openterminal/releases/latest">
                 <svg width="16" height="16" aria-hidden="true"><use href="#i-github" /></svg>
@@ -237,7 +237,7 @@
             <li style="--swatch: var(--aquamarine)">
               <span class="k mono">routes</span>
               <h3>Any route, not a fixed catalog.</h3>
-              <p>Connectors publish their routes as descriptors (OpenBB generates 800+ from its own OpenAPI document); the agent searches them, runs them, and derives new data from them with pandas. Twenty-four recipes cover the common questions.</p>
+              <p>Connectors publish their routes as descriptors (826 of OpenBB's 834 are built in); the agent searches them, runs them, and derives new data from them with pandas. Twenty-four recipes cover the common questions.</p>
             </li>
             <li style="--swatch: var(--gold)">
               <span class="k mono">models</span>
@@ -247,7 +247,7 @@
             <li style="--swatch: var(--rose)">
               <span class="k mono">keys</span>
               <h3>Works before you add a key.</h3>
-              <p>Prices, charts, search, options and fundamentals come from Yahoo on first run. Add a free Finnhub key for news, or point it at a local OpenBB Platform for dozens of providers.</p>
+              <p>OpenBB's 20 data providers (SEC, Nasdaq, Cboe, the Federal Reserve, Treasury, OECD, IMF and more) and Yahoo are built in, so prices, options, filings, fundamentals, news and macro work on first run.</p>
             </li>
           </ul>
         </div>
@@ -302,7 +302,7 @@
             <div>
               <h3>Connectors <span class="count">3 in the box</span></h3>
               <ul class="connectors">
-                <li><code>openbb</code><span class="key">no key for the keyless providers</span><span class="routes">Every GET route of your local OpenBB Platform API, generated from its OpenAPI document (834 on OpenBB 5.0.0).</span></li>
+                <li><code>openbb</code><span class="key">no key (FRED and EIA take a free one)</span><span class="routes">826 of OpenBB Platform's 834 routes, from 20 providers, ported to TypeScript and built in: no Python. A running OpenBB API adds the other 8.</span></li>
                 <li><code>yahoo</code><span class="key">no key</span><span class="routes">Search, quotes, charts, option chains and fundamentals.</span></li>
                 <li><code>finnhub</code><span class="key">free key</span><span class="routes">Quotes, company news and the earnings calendar.</span></li>
               </ul>
@@ -443,88 +443,32 @@
           <div class="section-head">
             <span class="label mono" style="--swatch: var(--up)"><b>06</b> Install</span>
             <h2 id="install-title">Run it on your machine.</h2>
-            <p>Open Terminal is a desktop app for macOS, Windows and Linux. It is open source and not code-signed yet (signing takes paid Apple and Microsoft certificates), so every release publishes its SHA-256 checksums, and the install commands check them for you.</p>
+            <p>One desktop app for macOS, Windows and Linux, with its data built in. It is open source and not code-signed yet (signing takes paid Apple and Microsoft certificates), so every release publishes its SHA-256 checksums, and the install commands check them for you.</p>
           </div>
           <div class="install">
             <ol class="install-steps">
               <li>
                 <h3>Install</h3>
-                <!-- install:install: one tab per system (macOS, Windows, Linux; the default follows the visitor's system). Without script every system shows, one after another. -->
-                <div class="get">
-                  <div class="get-head">
-                    <div class="os-tabs" role="tablist" aria-label="Download for">
-                      <button class="os-tab" type="button" role="tab" id="install-tab-mac" aria-controls="install-mac" aria-selected="true" data-os="mac">macOS</button>
-                      <button class="os-tab" type="button" role="tab" id="install-tab-windows" aria-controls="install-windows" aria-selected="false" tabindex="-1" data-os="windows">Windows</button>
-                      <button class="os-tab" type="button" role="tab" id="install-tab-linux" aria-controls="install-linux" aria-selected="false" tabindex="-1" data-os="linux">Linux</button>
-                    </div>
-                  </div>
-                  <div class="get-panel" id="install-mac" role="tabpanel" aria-labelledby="install-tab-mac" data-os="mac">
-                    <p class="get-os mono">macOS</p>
-                    <div class="cmd"><span class="prompt" aria-hidden="true">$</span><code id="cmd-install-mac">curl -fsSL https://terminal.spova.ai/<wbr />install | sh</code><button class="copy" type="button" data-copy-target="cmd-install-mac" aria-label="Copy the install command for macOS"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></div>
-                    <p class="get-note"><span class="tag-rec">Recommended</span> Paste it into Terminal. It puts Open Terminal in Applications and opens it, with no security prompt.</p>
-                    <div class="get-files">
-                      <span class="get-files-k">Or the .dmg</span>
-                      <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-mac-arm64.dmg">Apple silicon<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
-                      <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-mac-x64.dmg">Intel<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
-                    </div>
-                    <p class="get-fine">The app is not signed with an Apple Developer ID yet, so the first time you open it from the .dmg, macOS asks you to confirm: <b>System Settings → Privacy &amp; Security → Open Anyway</b>.</p>
-                  </div>
-                  <div class="get-panel" id="install-windows" role="tabpanel" aria-labelledby="install-tab-windows" data-os="windows">
-                    <p class="get-os mono">Windows</p>
-                    <div class="get-primary">
-                      <a class="btn btn-primary" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-win-x64-setup.exe"><svg width="16" height="16" aria-hidden="true"><use href="#i-down" /></svg>Download for Windows</a>
-                      <span class="get-meta mono">.exe · x64 · Windows 10 and 11</span>
-                    </div>
-                    <p class="get-fine">The setup is not signed with a code-signing certificate yet, so SmartScreen says “Windows protected your PC”: choose <b>More info → Run anyway</b>.</p>
-                    <p class="get-alt">Or install it from PowerShell, with no prompt:</p>
-                    <div class="cmd"><span class="prompt" aria-hidden="true">PS&gt;</span><code id="cmd-install-windows">irm https://terminal.spova.ai/<wbr />install.ps1 | iex</code><button class="copy" type="button" data-copy-target="cmd-install-windows" aria-label="Copy the install command for Windows PowerShell"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></div>
-                  </div>
-                  <div class="get-panel" id="install-linux" role="tabpanel" aria-labelledby="install-tab-linux" data-os="linux">
-                    <p class="get-os mono">Linux</p>
-                    <div class="cmd"><span class="prompt" aria-hidden="true">$</span><code id="cmd-install-linux">curl -fsSL https://terminal.spova.ai/<wbr />install | sh</code><button class="copy" type="button" data-copy-target="cmd-install-linux" aria-label="Copy the install command for Linux"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></div>
-                    <p class="get-note">Installs the AppImage, adds Open Terminal to your app menu, and an <code>openterminal</code> command.</p>
-                    <div class="get-files">
-                      <span class="get-files-k">Or download</span>
-                      <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-linux-x86_64.AppImage">AppImage x64<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
-                      <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-linux-arm64.AppImage">AppImage arm64<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
-                      <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-linux-amd64.deb">.deb amd64<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
-                      <a class="file" href="https://github.com/spovalova/openterminal/releases/latest/download/OpenTerminal-linux-arm64.deb">.deb arm64<svg width="12" height="12" aria-hidden="true"><use href="#i-down" /></svg></a>
-                    </div>
-                    <p class="get-fine">The AppImage mounts itself with FUSE (<code>fusermount</code>, from <code>fuse3</code>); the installer tells you if it is missing.</p>
-                  </div>
-                </div>
+                <!-- install:install: the two commands, no tabs. The files and each system's notes are in the download card at the top. -->
+                <div class="cmd-k mono">macOS and Linux</div>
+                <div class="cmd cmd-solo"><span class="prompt" aria-hidden="true">$</span><code id="cmd-install-unix">curl -fsSL https://terminal.spova.ai/<wbr />install | sh</code><button class="copy" type="button" data-copy-target="cmd-install-unix" aria-label="Copy the install command for macOS and Linux"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></div>
+                <div class="cmd-k mono">Windows · PowerShell</div>
+                <div class="cmd cmd-solo"><span class="prompt" aria-hidden="true">PS&gt;</span><code id="cmd-install-windows">irm https://terminal.spova.ai/<wbr />install.ps1 | iex</code><button class="copy" type="button" data-copy-target="cmd-install-windows" aria-label="Copy the install command for Windows PowerShell"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></div>
+                <p>Or get the .dmg, the .exe, the AppImage or the .deb from the <a href="#download">download card</a> at the top.</p>
+              </li>
+              <li>
+                <h3>Paste a model key</h3>
+                <p>Open it from Applications, the Start menu or your app menu (on Linux, <code>openterminal</code> works too). The first screen asks for an Anthropic or OpenAI key, which stays on this machine. Without one you can still build workspaces by hand in the widget editor.</p>
               </li>
               <li>
                 <h3>Ask it something</h3>
-                <p>Open it from Applications, the Start menu or your app menu (on Linux, <code>openterminal</code> works too), then type a ticker or a question. It works with no keys: quotes, charts, search, option chains and fundamentals come from Yahoo through the built-in <code>yahoo</code> connector.</p>
-              </li>
-              <li>
-                <h3>Add an LLM key</h3>
-                <p>Write it to <code>~/.openterminal/config.yml</code> (or set <code>ANTHROPIC_API_KEY</code> or <code>OPENAI_API_KEY</code> when you start it from a terminal). Without one you can still build workspaces by hand in the widget editor.</p>
-                <figure class="code">
-                  <figcaption class="code-head"><span>~/.openterminal/config.yml</span><button class="copy" type="button" data-copy-target="code-config" aria-label="Copy the config"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></figcaption>
-                  <pre><code id="code-config">llm:
-  provider: anthropic           <span class="c"># or openai</span>
-  model: claude-opus-5-5
-  apiKey: sk-ant-...</code></pre>
-                </figure>
-              </li>
-              <li>
-                <h3>Add news <span class="opt">optional</span></h3>
-                <p>Paste a free <a href="https://finnhub.io">Finnhub</a> key on the Data page in the app. Finnhub also answers quotes and the earnings calendar, so tables survive a Yahoo outage.</p>
-              </li>
-              <li>
-                <h3>Add everything else <span class="opt">optional</span></h3>
-                <p>Run <a href="https://docs.openbb.co/platform">OpenBB Platform</a> on your machine (Python 3.10 to 3.12). When its API answers at <code>127.0.0.1:6900</code>, its 800+ routes join the catalog and every recipe routes to it first.</p>
-                <figure class="code">
-                  <figcaption class="code-head"><span>shell</span><button class="copy" type="button" data-copy-target="code-openbb" aria-label="Copy the commands"><svg width="14" height="14" aria-hidden="true"><use href="#i-copy" /></svg><span class="copy-label">Copy</span></button></figcaption>
-                  <pre><code id="code-openbb">pip install "openbb[routers]" openbb-yfinance
-openbb-api</code></pre>
-                </figure>
+                <p>Type a ticker or a question. No data keys and nothing else to install: OpenBB's providers and Yahoo answer from inside the app.</p>
+                <p class="install-extra">Free keys add more: Finnhub on the Data page, FRED and EIA in <code>~/.openterminal/config.yml</code> (<a href="https://github.com/spovalova/openterminal#quick-start">how</a>).</p>
               </li>
             </ol>
             <ul class="aside">
               <li><span class="k">Runs on</span><span class="v">macOS 11+, Windows 10+ and Linux, x64 or arm64</span></li>
+              <li><span class="k">Needs</span><span class="v">Nothing else: no Python, Node or OpenBB install</span></li>
               <li><span class="k">Signed</span><span class="v">Not yet. Open source, with SHA-256 checksums on every release</span></li>
               <li><span class="k">Your data</span><span class="v"><code>~/.openterminal</code>: config, workspaces, recipes, the frame cache</span></li>
               <li><span class="k">Update</span><span class="v">Update in the app, or run the install command again</span></li>
@@ -571,7 +515,7 @@ pnpm dev</code></pre>
           <h2 id="closing-title">Your terminal. Your keys. Your machine.</h2>
           <p>Free and open source under the MIT license, for macOS, Windows and Linux. Install it, ask it a question, and open any widget to see the query behind it.</p>
           <div class="cta">
-            <a class="btn btn-primary" href="#top"><svg width="18" height="18" aria-hidden="true"><use href="#i-down" /></svg>Download Open Terminal</a>
+            <a class="btn btn-primary" href="#download"><svg width="18" height="18" aria-hidden="true"><use href="#i-down" /></svg>Download Open Terminal</a>
             <a class="btn" href="https://github.com/spovalova/openterminal/releases/latest">
               <svg width="18" height="18" aria-hidden="true"><use href="#i-github" /></svg>
               Download from GitHub

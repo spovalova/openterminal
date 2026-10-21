@@ -78,6 +78,8 @@ export type LoadOptions = {
   catalogPath?: string
   now?: () => number
   timeoutMs?: number
+  /** The API is optional (native routes answer without it), so a down API is the normal state and is not logged. */
+  optional?: boolean
 }
 
 export type LoadResult = {
@@ -104,15 +106,16 @@ export async function loadDescriptors(ctx: Ctx<Config> = defaultCtx(), opts: Loa
   const now = opts.now ?? Date.now
   const { baseUrl } = ctx.config
   const cached = readCatalogCache(path)
-  const fallback = (error: string): LoadResult => {
+  const fallback = (error: string, down = false): LoadResult => {
+    const log = down && opts.optional ? () => {} : ctx.log
     if (cached) {
-      ctx.log(`${error}; serving ${cached.descriptors.length} cached descriptors from ${path}`)
+      log(`${error}; serving ${cached.descriptors.length} cached descriptors from ${path}`)
       return { descriptors: cached.descriptors, source: 'cached', version: cached.version, fingerprint: cached.fingerprint, error }
     }
-    ctx.log(`${error}; no cached catalog at ${path}`)
+    log(`${error}; no cached catalog at ${path}`)
     return { descriptors: [], source: 'none', error }
   }
-  if (isDown(now())) return fallback(notRunning(baseUrl))
+  if (isDown(now())) return fallback(notRunning(baseUrl), true)
 
   let doc: unknown
   try {
@@ -122,7 +125,7 @@ export async function loadDescriptors(ctx: Ctx<Config> = defaultCtx(), opts: Loa
   } catch (err) {
     if (isConnectionFailure(err)) {
       markDown(now())
-      return fallback(notRunning(baseUrl))
+      return fallback(notRunning(baseUrl), true)
     }
     return fallback(`openapi.json failed: ${err instanceof Error ? err.message : String(err)}`)
   }
