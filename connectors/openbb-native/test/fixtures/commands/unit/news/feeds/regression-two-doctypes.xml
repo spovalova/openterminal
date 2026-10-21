@@ -1,0 +1,3 @@
+<?xml version="1.0"?><!DOCTYPE rss [<!ENTITY foo "bar &#169;"> ]><!DOCTYPE rss [<!ENTITY foo "bar &#169;"> ]><rss version="2.0"><channel><title>Doctypes</title>
+<item><title>Two &foo;</title><link>http://d.com/1</link><description>Entity &foo; in text</description></item>
+</channel></rss>

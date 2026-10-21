@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+    <channel>
+        <title><![CDATA[BBC News]]></title>
+        <description><![CDATA[BBC News - World]]></description>
+        <link>https://www.bbc.co.uk/news/world</link>
+        <image>
+            <url>https://news.bbcimg.co.uk/nol/shared/img/bbc_news_120x60.gif</url>
+            <title>BBC News</title>
+            <link>https://www.bbc.co.uk/news/world</link>
+        </image>
+        <generator>RSS for Node</generator>
+        <lastBuildDate>Wed, 21 Oct 2026 11:16:30 GMT</lastBuildDate>
+        <atom:link href="https://feeds.bbci.co.uk/news/world/rss.xml" rel="self" type="application/rss+xml"/>
+        <copyright><![CDATA[Copyright: (C) British Broadcasting Corporation, see https://www.bbc.co.uk/usingthebbc/terms-of-use/#15metadataandrssfeeds for terms and conditions of reuse.]]></copyright>
+        <language><![CDATA[en-gb]]></language>
+        <ttl>15</ttl>
+        <item>
+            <title><![CDATA[US citizen Stephen Hubbard freed by Russia and 'on his way home', Trump says]]></title>
+            <description><![CDATA[The former teacher has been released without any "swap" required, according to the president.]]></description>
+            <link>https://www.bbc.co.uk/news/articles/c6m24l9v3745o?at_medium=RSS&amp;at_campaign=rss</link>
+            <guid isPermaLink="false">https://www.bbc.co.uk/news/articles/c6m24l9v3745o#0</guid>
+            <pubDate>Wed, 21 Oct 2026 10:52:00 GMT</pubDate>
+            <media:thumbnail width="240" height="134" url="https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/a22e/live/83914ac0-8497-11ef-bf4c-1f355eb87d3c.jpg"/>
+        </item>
+<item>
+            <title><![CDATA[Trump and Zelensky appear at loggerheads despite new optimism]]></title>
+            <description><![CDATA[The Ukrainian leader's hug with Steve Witkoff in the Norwegian capital is unlikely to dispel misgivings about US policy towards his country, writes Paul Adams.]]></description>
+            <link>https://www.bbc.co.uk/news/articles/ckrey51jrgnro?at_medium=RSS&amp;at_campaign=rss</link>
+            <guid isPermaLink="false">https://www.bbc.co.uk/news/articles/ckrey51jrgnro#0</guid>
+            <pubDate>Tue, 20 Oct 2026 20:00:57 GMT</pubDate>
+            <media:thumbnail width="240" height="135" url="https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/ca83/live/3f595b00-ccba-11f1-a64c-550be9e3c66b.png"/>
+        </item>
+<item>
+            <title><![CDATA[Katya Adler: France divided over who to blame for riots and what to learn from them]]></title>
+            <description><![CDATA[In France and beyond there is widespread disagreement over what led to some of the worst unrest seen in French cities in modern history.]]></description>
+            <link>https://www.bbc.co.uk/news/articles/cq0me4g9p970o?at_medium=RSS&amp;at_campaign=rss</link>
+            <guid isPermaLink="false">https://www.bbc.co.uk/news/articles/cq0me4g9p970o#0</guid>
+            <pubDate>Wed, 21 Oct 2026 06:50:40 GMT</pubDate>
+            <media:thumbnail width="240" height="134" url="https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/f8fb/live/9d496cd0-cc9e-11f1-94e6-edd4c60b2e1d.jpg"/>
+        </item>
+<item>
+            <title><![CDATA[Australian MP loses both legs after alleged car attack, husband says]]></title>
+            <description><![CDATA[Her alleged attacker, 43-year-old Brendan Nugent, faces multiple charges and appeared in court for the first time on Wednesday.]]></description>
+            <link>https://www.bbc.co.uk/news/articles/ckwyqdqxw6d0o?at_medium=RSS&amp;at_campaign=rss</link>
+            <guid isPermaLink="false">https://www.bbc.co.uk/news/articles/ckwyqdqxw6d0o#0</guid>
+            <pubDate>Wed, 21 Oct 2026 07:56:30 GMT</pubDate>
+            <media:thumbnail width="240" height="135" url="https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/16b5/live/2cbe53a0-cd29-11f1-a64c-550be9e3c66b.jpg"/>
+        </item>
+    </channel>
+</rss>

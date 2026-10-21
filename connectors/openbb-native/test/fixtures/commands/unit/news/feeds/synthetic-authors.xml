@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:itunes="http://www.itunes.com/DTDs/Podcast-1.0.dtd"><channel><title>Authors</title>
+<item><title>a1</title><link>http://a.com/1</link><author>joe@example.com (Joe Bloggs)</author></item>
+<item><title>a2</title><link>http://a.com/2</link><author>Jane Roe &lt;jane@example.com&gt;</author></item>
+<item><title>a3</title><link>http://a.com/3</link><author>jim@example.com</author></item>
+<item><title>a4</title><link>http://a.com/4</link><dc:creator>Dee Creator</dc:creator><author>x@y.com (Ignored?)</author></item>
+<item><title>a5</title><link>http://a.com/5</link><itunes:author>Podcaster</itunes:author></item>
+<item><title>a6</title><link>http://a.com/6</link><dc:creator></dc:creator></item>
+</channel></rss>

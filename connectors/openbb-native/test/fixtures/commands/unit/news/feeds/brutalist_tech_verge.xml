@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?><feed
+	xmlns="http://www.w3.org/2005/Atom"
+	xmlns:thr="http://purl.org/syndication/thread/1.0"
+	xml:lang="en-US"
+	>
+	<title type="text">The Verge</title>
+	<subtitle type="text">The Verge is about technology and how it makes us feel. Founded in 2011, we offer our audience everything from breaking news to reviews to award-winning features and investigations, on our site, in video, and in podcasts.</subtitle>
+
+	<updated>2026-10-21T00:00:56+00:00</updated>
+
+	<link rel="alternate" type="text/html" href="https://www.theverge.com" />
+	<id>https://www.theverge.com/rss/index.xml</id>
+	<link rel="self" type="application/atom+xml" href="https://www.theverge.com/rss/index.xml" />
+
+	<icon>https://platform.theverge.com/wp-content/uploads/sites/2/2025/01/verge-rss-large_80b47e.png?w=150&amp;h=150&amp;crop=1</icon>
+		<entry>
+			
+			<author>
+				<name>Jay Peters</name>
+			</author>
+			
+			<title type="html"><![CDATA[YouTube might be testing hiding the dislike button]]></title>
+			<link rel="alternate" type="text/html" href="https://www.theverge.com/streaming/1015099/youtube-dislike-button-hide-menu" />
+			<id>https://www.theverge.com/?p=1015099</id>
+			<updated>2026-10-20T20:00:56-04:00</updated>
+			<published>2026-10-20T20:00:56-04:00</published>
+			<category scheme="https://www.theverge.com" term="News" /><category scheme="https://www.theverge.com" term="Streaming" /><category scheme="https://www.theverge.com" term="YouTube" />
+							<summary type="html"><![CDATA[YouTube appears to be testing hiding the dislike button on videos, as reported by 9to5Google. At least two users on X have recently shared screenshots of the dislike button now being placed in the three-dots submenu, and a user on Reddit also shared an image of the dislike button being absent for them. Right now, [&#8230;]]]></summary>
+			
+							<content type="html">
+											<![CDATA[
+
+						
+<figure>
+
+<img alt="An image showing the YouTube logo" data-caption="" data-portal-copyright="Illustration by Alex Castro / The Verge" data-has-syndication-rights="1" src="https://platform.theverge.com/wp-content/uploads/sites/2/2025/03/acastro_STK092_04.jpg?quality=90&#038;strip=all&#038;crop=0,0,100,100" />
+	<figcaption>
+		</figcaption>
+</figure>
+<p class="wp-block-paragraph">YouTube appears to be testing hiding the dislike button on videos, <a href="https://9to5google.com/2026/10/20/youtube-hidden-dislike-button-test/">as reported by <em>9to5Google</em></a>. At least <a href="https://x.com/TheBobPony/status/2112325481781494036">two</a> <a href="https://x.com/Samaytwt/status/2102041944314777842">users</a> on X have recently shared screenshots of the dislike button now being placed in the three-dots submenu, and a user on Reddit <a href="https://www.reddit.com/r/youtube/comments/1x0hu8z/they_removed_dislikes_completely/">also shared</a> an image of the dislike button being absent for them.</p>
+<p class="wp-block-paragraph">Right now, for me, the dislike button sits right next to the like button under a video. Moving it to a submenu would make it considerably more of an effort to access, meaning that fewer people would likely use it.</p>
+<figure class="wp-block-embed is-type-rich is-provider-x wp-block-embed-x"><div class="wp-block-embed__wrapper">
+<blockquote class="twitter-tweet" data-dnt="true"><p lang="en" dir="ltr">YouTube keeps on getting worse…<br>First the dislike counter got removed,<br>then the button got removed on YouTube Shorts,<br>now the disli …</p></blockquote></div></figure>
+<p><a href="https://www.theverge.com/streaming/1015099/youtube-dislike-button-hide-menu">Read the full story at The Verge.</a></p>
+						]]>
+									</content>
+			
+					</entry>
+<entry>
+			
+			<author>
+				<name>Richard Lawler</name>
+			</author>
+			
+			<title type="html"><![CDATA[Judge dismisses Sam Altman’s sister’s sexual abuse lawsuit]]></title>
+			<link rel="alternate" type="text/html" href="https://www.theverge.com/ai-artificial-intelligence/1014976/sam-altman-ann-altman-lawsuit-dismissed" />
+			<id>https://www.theverge.com/?p=1014976</id>
+			<updated>2026-10-20T19:37:55-04:00</updated>
+			<published>2026-10-20T19:04:19-04:00</published>
+			<category scheme="https://www.theverge.com" term="AI" /><category scheme="https://www.theverge.com" term="News" /><category scheme="https://www.theverge.com" term="OpenAI" /><category scheme="https://www.theverge.com" term="Policy" />
+							<summary type="html"><![CDATA[On Tuesday, US District Judge Zachary Bluestone dismissed the lawsuit Ann Altman filed last year alleging that her brother, OpenAI CEO Sam Altman, had sexually abused her throughout her childhood. As reported earlier by The Guardian, the judge wrote that over the past year, Ann had failed to appear for an independent medical examination or [&#8230;]]]></summary>
+			
+							<content type="html">
+											<![CDATA[
+
+						
+<figure>
+
+<img alt="An image of Sam Altman, OpenAI CEO." data-caption="" data-portal-copyright="Image: The Verge" data-has-syndication-rights="1" src="https://platform.theverge.com/wp-content/uploads/sites/2/2025/12/STK201_SAM_ALTMAN_CVIRGINIA_D.jpg?quality=90&#038;strip=all&#038;crop=0,0,100,100" />
+	<figcaption>
+		</figcaption>
+</figure>
+<p class="wp-block-paragraph">On Tuesday, US District Judge Zachary Bluestone dismissed the <a href="https://www.courtlistener.com/docket/69520118/altman-v-altman/?filed_after=&amp;filed_before=&amp;entry_gte=&amp;entry_lte=&amp;order_by=desc">lawsuit</a> Ann Altman <a href="https://www.theverge.com/2025/1/7/24338736/sam-altman-sexual-abuse-lawsuit-ann-sister">filed last year alleging that her brother, OpenAI CEO Sam Altman, had sexually abused her</a> throughout her childhood. As reported earlier by <em><a href="https://www.theguardian.com/technology/2026/oct/20/judge-dismisses-sam-altman-sister-lawsuit">The Guardian</a></em>, the judge wrote that over the past year, Ann had failed to appear for an independent medical examination or meet other deadlines despite warnings that it would result in the case being dismissed.</p>
+<p class="wp-block-paragraph">When the case was filed last year, a statement shared by Sam Altman, his mother, and his brothers said, "Annie has made deeply hurtful and entirely untrue claims about our family, and especially Sam… All of these claim …</p>
+<p><a href="https://www.theverge.com/ai-artificial-intelligence/1014976/sam-altman-ann-altman-lawsuit-dismissed">Read the full story at The Verge.</a></p>
+						]]>
+									</content>
+			
+					</entry>
+<entry>
+			
+			<author>
+				<name>Mia Sato</name>
+			</author>
+			
+			<title type="html"><![CDATA[Trump is giving Nick Shirley $10,000 and launching a $25 million fraud bounty program]]></title>
+			<link rel="alternate" type="text/html" href="https://www.theverge.com/news/1014989/trump-fraud-tips-program-nick-shirley-influencers" />
+			<id>https://www.theverge.com/?p=1014989</id>
+			<updated>2026-10-20T18:20:11-04:00</updated>
+			<published>2026-10-20T18:20:11-04:00</published>
+			<category scheme="https://www.theverge.com" term="Creators" /><category scheme="https://www.theverge.com" term="News" /><category scheme="https://www.theverge.com" term="Policy" /><category scheme="https://www.theverge.com" term="Politics" /><category scheme="https://www.theverge.com" term="Tech" />
+							<summary type="html"><![CDATA[Donald Trump and Vice President JD Vance said on Tuesday that the Trump administration was giving right-wing YouTuber Nick Shirley $10,000 and launching a $25 million bounty program for members of the public to report fraud. In December 2025, Shirley published a viral video alleging fraud at daycares in Minnesota that were operated by members [&#8230;]]]></summary>
+			
+							<content type="html">
+											<![CDATA[
+
+						
+<figure>
+
+<img alt="" data-caption="Influencer Nick Shirley listens as US President Donald Trump makes an announcement on fraud in the Oval Office of the White House in Washington, DC, on October 20, 2026. (Photo by Jim WATSON / AFP via Getty Images) | AFP via Getty Images" data-portal-copyright="AFP via Getty Images" data-has-syndication-rights="1" src="https://platform.theverge.com/wp-content/uploads/sites/2/2026/10/gettyimages-2300641963.jpg?quality=90&#038;strip=all&#038;crop=0,0,100,100" />
+	<figcaption>
+	Influencer Nick Shirley listens as US President Donald Trump makes an announcement on fraud in the Oval Office of the White House in Washington, DC, on October 20, 2026. (Photo by Jim WATSON / AFP via Getty Images) | AFP via Getty Images	</figcaption>
+</figure>
+<p class="wp-block-paragraph">Donald Trump and Vice President JD Vance said on Tuesday that the Trump administration was giving right-wing YouTuber Nick Shirley $10,000 and launching a $25 million bounty program for members of the public to report fraud.</p>
+<p class="wp-block-paragraph">In December 2025, Shirley published <a href="https://www.theverge.com/tech/856948/nick-shirley-minnesota-daycare-fraud-influencer-media-cycle">a viral video alleging fraud at daycares</a> in Minnesota that were operated by members of the local Somali community. Shirley lingered in parking lots and asked to enter childcare centers, taking refusals as evidence that the centers weren't actually caring for children. The video quickly went viral, triggering a massive governmental response: Federal immigration agents <a href="https://www.theverge.com/news/869824/right-wing-influencers-nick-shirley-slopaganda">descended on the  …</a></p>
+<p><a href="https://www.theverge.com/news/1014989/trump-fraud-tips-program-nick-shirley-influencers">Read the full story at The Verge.</a></p>
+						]]>
+									</content>
+			
+					</entry>
+<entry>
+			
+			<author>
+				<name>Emma Roth</name>
+			</author>
+			
+			<title type="html"><![CDATA[Google’s more personalized Gemini AI is heading to your car]]></title>
+			<link rel="alternate" type="text/html" href="https://www.theverge.com/tech/1014999/google-gemini-ai-cars-android-auto" />
+			<id>https://www.theverge.com/?p=1014999</id>
+			<updated>2026-10-20T18:42:47-04:00</updated>
+			<published>2026-10-20T18:11:34-04:00</published>
+			<category scheme="https://www.theverge.com" term="AI" /><category scheme="https://www.theverge.com" term="Google" /><category scheme="https://www.theverge.com" term="News" /><category scheme="https://www.theverge.com" term="Tech" /><category scheme="https://www.theverge.com" term="Transportation" />
+							<summary type="html"><![CDATA[Google is bringing Personal Intelligence to Gemini AI in your car. With this update, Gemini in Android Auto and cars with Google built-in can tap into your information across Google apps, including Gmail, Calendar, Maps, Photos, YouTube, and Search. As an example, Google says you can ask Gemini about your flight status if you're driving [&#8230;]]]></summary>
+			
+							<content type="html">
+											<![CDATA[
+
+						
+<figure>
+
+<img alt="An image showing Gemini’s Personal Intelligence feature on a car’s display" data-caption="" data-portal-copyright="Image: Google" data-has-syndication-rights="1" src="https://platform.theverge.com/wp-content/uploads/sites/2/2026/10/google-gemini-personal-intelligence.png?quality=90&#038;strip=all&#038;crop=0,0,100,100" />
+	<figcaption>
+		</figcaption>
+</figure>
+<p class="wp-block-paragraph">Google is <a href="https://blog.google/products-and-platforms/platforms/android/android-auto-cars-with-google-built-in-gemini-personal-intelligence/">bringing Personal Intelligence to Gemini AI</a> in your car. With this update, Gemini in Android Auto and cars with Google built-in can tap into your information across Google apps, including Gmail, Calendar, Maps, Photos, YouTube, and Search.</p>
+<p class="wp-block-paragraph">As an example, Google says you can ask Gemini about your flight status if you're driving to the airport. The AI assistant can pull your flight details from a confirmation message in Gmail and then use that information to look up the status. You can also ask Gemini to "take me to my doctor's appointment" instead of pulling up directions manually, or ask it to "find the car wash from the photo I t …</p>
+<p><a href="https://www.theverge.com/tech/1014999/google-gemini-ai-cars-android-auto">Read the full story at The Verge.</a></p>
+						]]>
+									</content>
+			
+					</entry>
+	</feed>

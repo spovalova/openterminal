@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<rss version="2.0" xml:base="http://exa<![CDATA[mp]]>ple.org/blog/"><channel><title>Base</title>
+<item><title>Relative link</title><link>posts/1</link><description>d</description></item>
+</channel></rss>

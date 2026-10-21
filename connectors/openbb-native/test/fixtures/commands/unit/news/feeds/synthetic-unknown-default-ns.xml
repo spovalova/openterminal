@@ -1,0 +1,3 @@
+<?xml version="1.0"?>
+<rss version="2.0" xmlns="http://example.com/foo"><channel><title>Unknown default</title>
+<item><title>In unknown ns</title><link>http://un.com/1</link><description>desc</description><pubDate>Thu, 15 Oct 2026 10:00:00 GMT</pubDate></item></channel></rss>

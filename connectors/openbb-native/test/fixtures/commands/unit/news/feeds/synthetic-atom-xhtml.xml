@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:xhtml="http://www.w3.org/1999/xhtml"><title>X</title>
+<entry><title>Multi children</title><link href="http://x.org/1"/><id>1</id><updated>2026-10-20T10:00:00Z</updated><summary type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml"><p>One</p><p>Two <em>em</em> &amp; <a href="/r">link</a></p></div></summary></entry>
+<entry><title>Two divs</title><link href="http://x.org/2"/><id>2</id><updated>2026-10-19T10:00:00Z</updated><content type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml">first</div><div xmlns="http://www.w3.org/1999/xhtml">second</div></content></entry>
+<entry><title>Prefixed xhtml</title><link href="http://x.org/3"/><id>3</id><updated>2026-10-18T10:00:00Z</updated><content type="xhtml"><xhtml:div><xhtml:p>prefixed <xhtml:b>bold</xhtml:b></xhtml:p></xhtml:div></content></entry>
+<entry><title>Src content</title><link href="http://x.org/4"/><id>4</id><updated>2026-10-17T10:00:00Z</updated><content type="text/html" src="http://x.org/body4"/><summary>sum</summary></entry>
+<entry><title>Text type html w/ literal markup</title><link href="http://x.org/5"/><id>5</id><updated>2026-10-16T10:00:00Z</updated><content type="html"><p>literal <b>children</b></p></content></entry>
+<entry><title type="text">a &lt; b</title><link href="http://x.org/6"/><id>6</id><updated>2026-10-15T10:00:00Z</updated><summary type="text">plain &lt;b&gt;not bold&lt;/b&gt;</summary></entry>
+</feed>

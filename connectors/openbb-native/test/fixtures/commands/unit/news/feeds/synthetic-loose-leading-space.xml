@@ -1,0 +1,6 @@
+
+  <?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Loose</title>
+<item><title>Leading whitespace feed</title><link>http://l.com/1</link><description>desc &nbsp; with nbsp &amp; amp</description><pubDate>Sat, 17 Oct 2026 10:00:00 GMT</pubDate></item>
+<item><title>Second &mdash; dash</title><link>http://l.com/2?a=1&b=2</link><description><![CDATA[<p>cdata para</p><script>x</script>]]></description><pubDate>Sat, 17 Oct 2026 11:00:00 GMT</pubDate></item>
+</channel></rss>
