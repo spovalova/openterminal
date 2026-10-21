@@ -3,6 +3,7 @@
 // to a running OpenBB API for anything not ported. Apache-2.0; see NOTICE.
 import { parseDescriptors, type Descriptor } from '@openterminal/core'
 import catalogJson from '../catalog/openbb.json' with { type: 'json' }
+import COMMANDS from './commands/index.js'
 import { PROVIDERS } from './providers.js'
 import type { NativeHandler, ProviderDef } from './types.js'
 
@@ -10,7 +11,7 @@ export { defineProvider, NativeUnsupported, MissingCredential, type NativeCtx, t
 export { createNativeHttp, NativeHttpError, withQuery, BROWSER_UA, type NativeHttp, type RequestOptions, type Query } from './http.js'
 export { createNativeCtx, type NativeCtxOptions } from './ctx.js'
 export { ROUTE_PROVIDER_PREFERENCE, defaultProvider, withProvider, applicableParams, toQuery, nativeParams } from './params.js'
-export { PROVIDERS }
+export { COMMANDS, PROVIDERS }
 
 const pairKey = (route: string, provider: string): string => `${provider}:${route}`
 
@@ -30,6 +31,15 @@ export function nativeHandler(route: string, provider: string): NativeHandler | 
 
 export function isNative(route: string, provider: string): boolean {
   return handlerMap().has(pairKey(route, provider))
+}
+
+/** The native handler for a route that takes no provider (an extension's own command), if it is ported. */
+export function nativeCommand(route: string): NativeHandler | undefined {
+  return Object.prototype.hasOwnProperty.call(COMMANDS.routes, route) ? COMMANDS.routes[route] : undefined
+}
+
+export function isNativeCommand(route: string): boolean {
+  return nativeCommand(route) !== undefined
 }
 
 export function nativeProvider(name: string): ProviderDef | undefined {
@@ -65,6 +75,10 @@ function nativeByRoute(): Map<string, Descriptor> {
   if (!narrowed) {
     narrowed = new Map()
     for (const d of snapshotDescriptors()) {
+      if (d.providers.length === 0) {
+        if (isNativeCommand(d.route)) narrowed.set(d.route, d)
+        continue
+      }
       const native = d.providers.filter((p) => isNative(d.route, p))
       if (native.length > 0) narrowed.set(d.route, narrowDescriptor(d, native))
     }
@@ -72,12 +86,12 @@ function nativeByRoute(): Map<string, Descriptor> {
   return narrowed
 }
 
-/** The snapshot's routes that have at least one native provider, each narrowed to its native providers. */
+/** The snapshot's routes that have at least one native provider, each narrowed to its native providers, and the native commands. */
 export function nativeDescriptors(): Descriptor[] {
   return [...nativeByRoute().values()]
 }
 
-/** One route's native descriptor, when any of its providers is ported. */
+/** One route's native descriptor, when any of its providers is ported or it is a native command. */
 export function nativeDescriptorFor(route: string): Descriptor | undefined {
   return nativeByRoute().get(route)
 }

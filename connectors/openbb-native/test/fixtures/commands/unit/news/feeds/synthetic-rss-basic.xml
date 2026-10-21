@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel><title>Basic &amp; Co</title><link>http://example.com/</link><description>d</description>
+<atom:link href="http://example.com/feed" rel="self" type="application/rss+xml"/>
+<item><title>First &amp; foremost</title><link>http://example.com/1</link><guid isPermaLink="false">abc-1</guid><pubDate>Tue, 20 Oct 2026 10:00:00 GMT</pubDate><dc:creator>Jane Doe</dc:creator><description><![CDATA[<p>Hello <b>world</b> &amp; friends</p>]]></description></item>
+<item><title><![CDATA[CDATA title &amp; more]]></title><link>http://example.com/2</link><guid>http://example.com/2-guid</guid><pubDate>Tue, 20 Oct 2026 11:00:00 +0200</pubDate><description>&lt;p&gt;Escaped &amp;amp; html&lt;/p&gt;</description><content:encoded><![CDATA[<p>Full content here</p>]]></content:encoded></item>
+<item><title>No link guid permalink</title><guid>http://example.com/3</guid><pubDate>20 Oct 2026 09:00 EST</pubDate><description>plain text only</description></item>
+<item><title>   padded   </title><link> http://example.com/4 </link><description></description><media:content url="http://example.com/a.jpg"><media:description>media desc</media:description></media:content></item>
+<item><link>http://example.com/5</link><description>untitled</description><dc:date>2026-10-19T08:30:00Z</dc:date></item>
+</channel></rss>

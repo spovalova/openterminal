@@ -1,10 +1,11 @@
 // Live parity: every case of the named providers against a running OpenBB API (default http://127.0.0.1:6900).
+// `commands` names the routes that take no provider (src/commands/).
 //   pnpm --filter @openterminal/openbb-native parity cboe finra [--route equity/price/quote] [--case name]
 //        [--record] [--force] [--base URL] [--json report.json] [--concurrency 2] [--verbose]
 // --record writes test/fixtures/<provider>/<case>.json.gz for every passing case (all cases with --force), which
 // the replay tests then check offline. Credentials come from the environment (FRED_API_KEY, …). Exit 1 on a failure.
 import { writeFileSync } from 'node:fs'
-import { PROVIDERS } from '../src/index.js'
+import { COMMANDS, PROVIDERS } from '../src/index.js'
 import { loadCases, type Case } from '../src/harness/cases.js'
 import { pruneBodies, writeFixture } from '../src/harness/fixtures.js'
 import { DEFAULT_OPENBB, runCaseLive, type CaseResult } from '../src/harness/run.js'
@@ -17,12 +18,13 @@ const option = (name: string): string | undefined => {
 }
 const valued = new Set(['route', 'case', 'base', 'json', 'concurrency'])
 const positional = argv.filter((a, i) => !a.startsWith('--') && !(i > 0 && valued.has(argv[i - 1]!.replace(/^--/, ''))))
-const names = positional.includes('all') ? PROVIDERS.map((p) => p.name) : positional
+const SOURCES = [...PROVIDERS, COMMANDS]
+const names = positional.includes('all') ? SOURCES.map((p) => p.name) : positional
 if (names.length === 0) {
   console.error('usage: parity <provider…|all> [--route R] [--case NAME] [--record] [--force] [--base URL] [--json FILE] [--concurrency N] [--verbose]')
   process.exit(2)
 }
-const unknown = names.filter((n) => !PROVIDERS.some((p) => p.name === n))
+const unknown = names.filter((n) => !SOURCES.some((p) => p.name === n))
 if (unknown.length) {
   console.error(`unknown provider(s): ${unknown.join(', ')}`)
   process.exit(2)

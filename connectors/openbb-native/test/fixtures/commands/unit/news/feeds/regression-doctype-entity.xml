@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<!DOCTYPE rss [
+<!ENTITY foo "bar &#169;">
+]>
+<rss version="2.0"><channel><title>Entity</title>
+<item><title>Declared &foo;</title><link>http://d.com/2</link><description>Entity &foo; in text</description></item>
+</channel></rss>

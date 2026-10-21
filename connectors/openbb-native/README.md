@@ -13,6 +13,7 @@ catalog/openbb.json          every OpenBB route: params (with providers and defa
 src/<provider>/index.ts      defineProvider({ name, credentials, status, routes, skipped })
 src/<provider>/<route>.ts    one handler per route (or a few related routes), plus helpers.ts
 src/<provider>/cases.json    the provider's parity cases (cases.<part>.json when a provider is ported in parts)
+src/commands/index.ts        the routes that take no provider (see Commands below), cases in cases.<part>.json
 src/lib/                     csv, xml (fast-xml-parser), xlsx and legacy xls, zip (fflate), pdf-text, html-tables,
                              urlencode, sdmx; node-html-parser for HTML
 test/fixtures/<provider>/    recorded cases (<case>.json.gz) and their response bodies (bodies/<hash>.gz)
@@ -24,6 +25,15 @@ Provider names are OpenBB's `?provider=` values. Most come from a Python package
 |---|---|
 | `eia` | `openbb_us_eia` |
 | `congress_gov`, `us_treasury`, `usda` | `openbb_government_us` |
+
+### Commands
+
+18 catalog routes take no `provider`. They are commands an extension adds on its own router, such as `cboe/options/spreads`, `oecd/list_tables` and `news/rss` (from `openbb_news`). They are kept together as one set named `commands`, defined in `src/commands/index.ts`, and follow the same rules as a provider:
+- Run their parity with `parity commands`.
+- Their recordings go under `test/fixtures/commands/`.
+- They count in `coverage` as their own row.
+
+A command's code goes next to the provider it builds on (`src/cboe/`, `src/oecd/`), or under `src/commands/` when there is none. The connector answers a command natively when no provider is named and the command is ported.
 
 ## A handler
 

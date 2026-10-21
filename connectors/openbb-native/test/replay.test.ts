@@ -1,12 +1,12 @@
 // Every recorded case, offline: the native handler rerun on its recorded upstream responses must give the same rows
 // as when it was recorded, and those rows must still match what OpenBB answered at that moment.
 import { describe, expect, it } from 'vitest'
-import { PROVIDERS } from '../src/index.js'
+import { COMMANDS, PROVIDERS } from '../src/index.js'
 import { loadCases } from '../src/harness/cases.js'
 import { hasFixture, readFixture } from '../src/harness/fixtures.js'
 import { runCaseReplay } from '../src/harness/run.js'
 
-for (const provider of PROVIDERS) {
+for (const provider of [...PROVIDERS, COMMANDS]) {
   const cases = loadCases(provider.name).filter((c) => c.fixture && hasFixture(provider.name, c.name))
   if (cases.length === 0) continue
   describe(`replay ${provider.name}`, () => {

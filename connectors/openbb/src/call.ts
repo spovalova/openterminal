@@ -2,7 +2,7 @@
 // one, else one GET on the local API; the rows through core's `inferFrame` with the route's descriptor. No unit
 // conversion here: frames carry provider values and the annotations say what they are.
 import { inferFrame, type Ctx, type Descriptor, type Frame, type ValidatedParams } from '@openterminal/core'
-import { ROUTE_PROVIDER_PREFERENCE, MissingCredential, applicableParams, createNativeCtx, defaultProvider, isNative, nativeDescriptorFor, nativeHandler, nativeParams, toQuery, withProvider } from '@openterminal/openbb-native'
+import { ROUTE_PROVIDER_PREFERENCE, MissingCredential, applicableParams, createNativeCtx, defaultProvider, isNative, nativeCommand, nativeDescriptorFor, nativeHandler, nativeParams, toQuery, withProvider, type NativeHandler } from '@openterminal/openbb-native'
 import { descriptorFor, type LoadOptions } from './descriptors.js'
 import { get, isDown, type Config } from './openbb-api.js'
 
@@ -54,13 +54,13 @@ export async function routeDescriptor(ctx: Ctx<Config>, route: string, opts: Loa
   return extra.length ? { ...live, providers: [...live.providers, ...extra] } : live
 }
 
-async function callNative(route: string, provider: string, sent: ValidatedParams, ctx: Ctx<Config>, opts: CallOptions): Promise<unknown> {
-  const handler = nativeHandler(route, provider)!
+/** Run a native handler; `source` (the provider, or the route's extension for a command) prefixes its log lines. */
+async function callNative(handler: NativeHandler, source: string, sent: ValidatedParams, ctx: Ctx<Config>, opts: CallOptions): Promise<unknown> {
   const native = createNativeCtx({
     ...(opts.fetch ? { fetch: opts.fetch } : {}),
     credentials: ctx.config.credentials,
     env: opts.env ?? process.env,
-    log: (m) => ctx.log(`${provider}: ${m}`),
+    log: (m) => ctx.log(`${source}: ${m}`),
     ...(ctx.signal ? { signal: ctx.signal } : {}),
   })
   return handler(nativeParams(sent), native)
@@ -70,8 +70,9 @@ const message = (err: unknown): string => (err instanceof Error ? err.message : 
 
 /**
  * Answer a route: natively when the chosen provider is ported (PLAN.md section 19), else `GET /api/v1/<route>?…` on
- * the local OpenBB API. With no provider named, a ported one is preferred. A native failure is retried on the API
- * when it may be running; `results` that is one object (a few routes) becomes one row.
+ * the local OpenBB API. With no provider named, a ported one is preferred; a route that takes no provider (an
+ * extension's own command) is native when the command is ported. A native failure is retried on the API when it may
+ * be running; `results` that is one object (a few routes) becomes one row.
  */
 export async function callRoute(route: string, params: ValidatedParams, ctx: Ctx<Config>, opts: CallOptions = {}): Promise<Frame> {
   const mode = ctx.config.native
@@ -79,17 +80,19 @@ export async function callRoute(route: string, params: ValidatedParams, ctx: Ctx
   const ported = (provider: string): boolean => mode !== 'off' && isNative(route, provider)
   const sent = applicableParams(descriptor, withProvider(descriptor, params, ctx.config.providers?.[route], ported))
   const provider = typeof sent.provider === 'string' ? sent.provider : undefined
+  const handler = provider ? (ported(provider) ? nativeHandler(route, provider) : undefined) : mode !== 'off' ? nativeCommand(route) : undefined
+  const source = provider ?? route.split('/')[0]!
   let results: unknown
-  if (provider && ported(provider)) {
+  if (handler) {
     try {
-      results = await callNative(route, provider, sent, ctx, opts)
+      results = await callNative(handler, source, sent, ctx, opts)
     } catch (err) {
       if (mode === 'only' || err instanceof MissingCredential || isDown() || ctx.signal?.aborted) throw err
-      ctx.log(`native ${provider} ${route} failed (${message(err)}); asking the OpenBB API`)
+      ctx.log(`native ${source} ${route} failed (${message(err)}); asking the OpenBB API`)
       try {
         results = await get<unknown>(ctx, `/${route.replace(/^\/+/, '')}`, toQuery(sent))
       } catch (apiErr) {
-        throw new Error(`${provider} ${route}: ${message(err)} (OpenBB API: ${message(apiErr).split('\n')[0]})`, { cause: apiErr })
+        throw new Error(`${source} ${route}: ${message(err)} (OpenBB API: ${message(apiErr).split('\n')[0]})`, { cause: apiErr })
       }
     }
   } else {
