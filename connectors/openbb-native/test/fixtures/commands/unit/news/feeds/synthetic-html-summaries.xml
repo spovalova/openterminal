@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<rss version="2.0" xml:base="http://base.example.com/dir/"><channel><title>HTML</title>
+<item><title>h1</title><link>rel/path</link><description>&lt;img src="pic.jpg"&gt; &lt;a href="/abs"&gt;a&lt;/a&gt; &lt;a href="javascript:evil()"&gt;j&lt;/a&gt; &lt;script&gt;alert(1)&lt;/script&gt; &lt;iframe src="x"&gt;&lt;/iframe&gt; &lt;style&gt;p{}&lt;/style&gt; text</description></item>
+<item><title>h2</title><link>http://h.com/2</link><description><![CDATA[<div onclick="x()" style="color:red;position:absolute"><p class="c" id="i">styled</p><table><tr><td>cell</td></tr></table><!-- comment --><br/><hr/><input type="text" value="v"></div>]]></description></item>
+<item><title>h3</title><link>http://h.com/3</link><description><![CDATA[<svg xmlns="http://www.w3.org/2000/svg" width="10"><path d="M0 0"/></svg><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>x</mi></math>after]]></description></item>
+<item><title>h4</title><link>http://h.com/4</link><description><![CDATA[<p>Unclosed <i>italic<p>next para &#8217; &#x2014; &bogus; &amp;amp; &lt;]]></description></item>
+<item><title>h5</title><link>http://h.com/5</link><description><![CDATA[<!DOCTYPE x> text <?pi x?> end]]></description></item>
+<item><title>h6 literal child markup</title><link>http://h.com/6</link><description><p>Literal <b>markup</b> in description</p></description></item>
+</channel></rss>

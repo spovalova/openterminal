@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<rss version="2.0" xml:base="http://[::1]:8080/blog/"><channel><title>V6</title>
+<item><title>Relative link</title><link>posts/1</link><description>&lt;a href="x"&gt;l&lt;/a&gt;</description></item>
+</channel></rss>

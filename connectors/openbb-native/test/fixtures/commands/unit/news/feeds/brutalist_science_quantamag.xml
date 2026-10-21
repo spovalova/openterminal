@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"
+  xmlns:content="http://purl.org/rss/1.0/modules/content/"
+  xmlns:media="http://search.yahoo.com/mrss/"
+  xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+  xmlns:dc="http://purl.org/dc/elements/1.1/"
+  xmlns:atom="http://www.w3.org/2005/Atom"
+  xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+  xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+	>
+
+<channel>
+	<title>Quanta Magazine &#8211; Illuminating science</title>
+	<atom:link href="https://www.quantamagazine.org/quanta/feed/" rel="self" type="application/rss+xml"></atom:link>
+	<link>https://www.quantamagazine.org</link>
+	<description>Illuminating science</description>
+	<lastBuildDate>Tue, 20 Oct 2026 13:31:18 -0400</lastBuildDate>
+	<language>en-US</language>
+	<sy:updatePeriod>hourly</sy:updatePeriod>
+	<sy:updateFrequency>1</sy:updateFrequency>
+	<generator>https://wordpress.org/?v=7.1.2</generator>
+	<item>
+		<title>Quanta</title>
+		<link>https://www.quantamagazine.org/</link>
+		<comments>https://www.quantamagazine.org/#respond</comments>
+		<pubDate>Wed, 10 Jul 2013 23:09:24 +0000</pubDate>
+    <dc:creator><![CDATA[Quanta Magazine]]></dc:creator>
+		
+		<guid isPermaLink="false">https://www.quantamagazine.org/?page_id=5165</guid>
+		<description><![CDATA[            <p>The post <a href="https://www.quantamagazine.org/" target="_blank">Quanta</a> first appeared on <a href="https://www.quantamagazine.org" target="_blank">Quanta Magazine</a></p>]]></description>
+				<content:encoded><![CDATA[            <p>The post <a href="https://www.quantamagazine.org/" target="_blank">Quanta</a> first appeared on <a href="https://www.quantamagazine.org" target="_blank">Quanta Magazine</a></p>]]></content:encoded>
+			<wfw:commentRss>https://www.quantamagazine.org/quanta/feed/</wfw:commentRss>
+		<slash:comments>0</slash:comments>
+
+	</item>
+	</channel>
+</rss>
+

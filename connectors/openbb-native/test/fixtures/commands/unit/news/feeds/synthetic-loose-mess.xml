@@ -1,0 +1,5 @@
+<rss version="2.0"><channel><title>Mess</title>
+<item><title>Unclosed <b>tag in title</title><link>http://m.com/1</link><description>Stray < sign and & amp &#xZZ; &nbsp</description><pubDate>Tue, 13 Oct 2026 10:00:00 GMT</pubDate></item>
+<item><title>Second</title><link>http://m.com/2</link><description><![CDATA[a]]b]]></description><pubDate>Tue, 13 Oct 2026 09:00:00 GMT</pubDate></item>
+<item><title>Third<br>with br</title><link>http://m.com/3</link><description>&lt;p&gt;escaped in loose&lt;/p&gt;</description><pubDate>Tue, 13 Oct 2026 08:00:00 GMT</pubDate></item>
+</channel></rss>

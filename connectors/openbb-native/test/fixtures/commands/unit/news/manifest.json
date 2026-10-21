@@ -1,0 +1,926 @@
+{
+ "feeds": [
+  {
+   "name": "bbc_world",
+   "file": "feeds/bbc_world.xml",
+   "key": "bbc_world"
+  },
+  {
+   "name": "fortune",
+   "file": "feeds/fortune.xml",
+   "key": "fortune"
+  },
+  {
+   "name": "brutalist_culture_vox",
+   "file": "feeds/brutalist_culture_vox.xml",
+   "key": "brutalist_culture_vox"
+  },
+  {
+   "name": "brutalist_tech_verge",
+   "file": "feeds/brutalist_tech_verge.xml",
+   "key": "brutalist_tech_verge"
+  },
+  {
+   "name": "wired_business",
+   "file": "feeds/wired_business.xml",
+   "key": "wired_business"
+  },
+  {
+   "name": "google_news_us",
+   "file": "feeds/google_news_us.xml",
+   "key": "google_news_us"
+  },
+  {
+   "name": "pr_newswire_global",
+   "file": "feeds/pr_newswire_global.xml",
+   "key": "pr_newswire_global"
+  },
+  {
+   "name": "drudge_report",
+   "file": "feeds/drudge_report.xml",
+   "key": "drudge_report"
+  },
+  {
+   "name": "brutalist_tech_appleinsider",
+   "file": "feeds/brutalist_tech_appleinsider.xml",
+   "key": "brutalist_tech_appleinsider"
+  },
+  {
+   "name": "brutalist_science_scientificamerican",
+   "file": "feeds/brutalist_science_scientificamerican.xml",
+   "key": "brutalist_science_scientificamerican"
+  },
+  {
+   "name": "brutalist_news_guardian",
+   "file": "feeds/brutalist_news_guardian.xml",
+   "key": "brutalist_news_guardian"
+  },
+  {
+   "name": "brutalist_sports_yahoosports",
+   "file": "feeds/brutalist_sports_yahoosports.xml",
+   "key": "brutalist_sports_yahoosports"
+  },
+  {
+   "name": "brutalist_science_quantamag",
+   "file": "feeds/brutalist_science_quantamag.xml",
+   "key": "brutalist_science_quantamag"
+  },
+  {
+   "name": "drugs_com_medical_news",
+   "file": "feeds/drugs_com_medical_news.xml",
+   "key": "drugs_com_medical_news"
+  },
+  {
+   "name": "fox_news_latest",
+   "file": "feeds/fox_news_latest.xml",
+   "key": "fox_news_latest"
+  },
+  {
+   "name": "brutalist_gaming_kotaku",
+   "file": "feeds/brutalist_gaming_kotaku.xml",
+   "key": "brutalist_gaming_kotaku"
+  },
+  {
+   "name": "brutalist_politics_salon",
+   "file": "feeds/brutalist_politics_salon.xml",
+   "key": "brutalist_politics_salon"
+  },
+  {
+   "name": "regression-bad-pi-target",
+   "file": "feeds/regression-bad-pi-target.xml",
+   "key": "cbc_world"
+  },
+  {
+   "name": "regression-base64-content",
+   "file": "feeds/regression-base64-content.xml",
+   "key": "cbc_canada"
+  },
+  {
+   "name": "regression-cdata-end-in-text",
+   "file": "feeds/regression-cdata-end-in-text.xml",
+   "key": "cbc_business"
+  },
+  {
+   "name": "regression-declared-ascii-utf8",
+   "file": "feeds/regression-declared-ascii-utf8.xml",
+   "key": "cbc_politics"
+  },
+  {
+   "name": "regression-declared-latin1-utf8",
+   "file": "feeds/regression-declared-latin1-utf8.xml",
+   "key": "cbc_technology"
+  },
+  {
+   "name": "regression-doctype-entity",
+   "file": "feeds/regression-doctype-entity.xml",
+   "key": "cbc_health"
+  },
+  {
+   "name": "regression-ip-literal-base",
+   "file": "feeds/regression-ip-literal-base.xml",
+   "key": "cbc_arts"
+  },
+  {
+   "name": "regression-namespace-with-space",
+   "file": "feeds/regression-namespace-with-space.xml",
+   "key": "cbc_indigenous"
+  },
+  {
+   "name": "regression-two-doctypes",
+   "file": "feeds/regression-two-doctypes.xml",
+   "key": "cbc_thenational"
+  },
+  {
+   "name": "regression-unclosed-title",
+   "file": "feeds/regression-unclosed-title.xml",
+   "key": "cbc_canada_britishcolumbia"
+  },
+  {
+   "name": "regression-xml-base-ipv6",
+   "file": "feeds/regression-xml-base-ipv6.xml",
+   "key": "cbc_canada_calgary"
+  },
+  {
+   "name": "synthetic-atom-basic",
+   "file": "feeds/synthetic-atom-basic.xml",
+   "key": "cbc_canada_edmonton"
+  },
+  {
+   "name": "synthetic-atom-links",
+   "file": "feeds/synthetic-atom-links.xml",
+   "key": "cbc_canada_hamilton"
+  },
+  {
+   "name": "synthetic-atom-xhtml",
+   "file": "feeds/synthetic-atom-xhtml.xml",
+   "key": "cbc_canada_kamloops"
+  },
+  {
+   "name": "synthetic-authors",
+   "file": "feeds/synthetic-authors.xml",
+   "key": "cbc_canada_kitchenerwaterloo"
+  },
+  {
+   "name": "synthetic-channel-misc",
+   "file": "feeds/synthetic-channel-misc.xml",
+   "key": "cbc_canada_london"
+  },
+  {
+   "name": "synthetic-dates",
+   "file": "feeds/synthetic-dates.xml",
+   "key": "cbc_canada_manitoba"
+  },
+  {
+   "name": "synthetic-dup-attr",
+   "file": "feeds/synthetic-dup-attr.xml",
+   "key": "cbc_canada_montreal"
+  },
+  {
+   "name": "synthetic-enc-bom-utf8",
+   "file": "feeds/synthetic-enc-bom-utf8.xml",
+   "key": "cbc_canada_newbrunswick"
+  },
+  {
+   "name": "synthetic-enc-cp1252-bytes",
+   "file": "feeds/synthetic-enc-cp1252-bytes.xml",
+   "key": "cbc_canada_newfoundland"
+  },
+  {
+   "name": "synthetic-enc-latin1",
+   "file": "feeds/synthetic-enc-latin1.xml",
+   "key": "cbc_canada_north"
+  },
+  {
+   "name": "synthetic-enc-mojibake",
+   "file": "feeds/synthetic-enc-mojibake.xml",
+   "key": "cbc_canada_novascotia"
+  },
+  {
+   "name": "synthetic-enc-utf16",
+   "file": "feeds/synthetic-enc-utf16.xml",
+   "key": "cbc_canada_ottawa"
+  },
+  {
+   "name": "synthetic-html-edge",
+   "file": "feeds/synthetic-html-edge.xml",
+   "key": "cbc_canada_pei"
+  },
+  {
+   "name": "synthetic-html-summaries",
+   "file": "feeds/synthetic-html-summaries.xml",
+   "key": "cbc_canada_saskatchewan"
+  },
+  {
+   "name": "synthetic-loose-leading-space",
+   "file": "feeds/synthetic-loose-leading-space.xml",
+   "key": "cbc_canada_saskatoon"
+  },
+  {
+   "name": "synthetic-loose-mess",
+   "file": "feeds/synthetic-loose-mess.xml",
+   "key": "cbc_canada_sudbury"
+  },
+  {
+   "name": "synthetic-loose-undefined-entity",
+   "file": "feeds/synthetic-loose-undefined-entity.xml",
+   "key": "cbc_canada_thunderbay"
+  },
+  {
+   "name": "synthetic-many-items-ties",
+   "file": "feeds/synthetic-many-items-ties.xml",
+   "key": "cbc_canada_toronto"
+  },
+  {
+   "name": "synthetic-mismatched-tag",
+   "file": "feeds/synthetic-mismatched-tag.xml",
+   "key": "cbc_canada_windsor"
+  },
+  {
+   "name": "synthetic-ns-prefix-variants",
+   "file": "feeds/synthetic-ns-prefix-variants.xml",
+   "key": "cbc_sports_nhl"
+  },
+  {
+   "name": "synthetic-ns-variants",
+   "file": "feeds/synthetic-ns-variants.xml",
+   "key": "cbc_sports_nba"
+  },
+  {
+   "name": "synthetic-rdf-rss10",
+   "file": "feeds/synthetic-rdf-rss10.xml",
+   "key": "cbc_sports_nfl"
+  },
+  {
+   "name": "synthetic-rss-basic",
+   "file": "feeds/synthetic-rss-basic.xml",
+   "key": "cbc_sports_mlb"
+  },
+  {
+   "name": "synthetic-rss-content-first",
+   "file": "feeds/synthetic-rss-content-first.xml",
+   "key": "cbc_sports_soccer"
+  },
+  {
+   "name": "synthetic-rss-two-descriptions",
+   "file": "feeds/synthetic-rss-two-descriptions.xml",
+   "key": "pr_newswire_global"
+  },
+  {
+   "name": "synthetic-rss10-no-rdf",
+   "file": "feeds/synthetic-rss10-no-rdf.xml",
+   "key": "pr_newswire_apac"
+  },
+  {
+   "name": "synthetic-unknown-default-ns",
+   "file": "feeds/synthetic-unknown-default-ns.xml",
+   "key": "pr_newswire_apac_zh"
+  }
+ ],
+ "cases": [
+  {
+   "name": "bbc_world-summaries",
+   "feed": "bbc_world",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "fortune-summaries",
+   "feed": "fortune",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "brutalist_culture_vox-summaries",
+   "feed": "brutalist_culture_vox",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "brutalist_tech_verge-summaries",
+   "feed": "brutalist_tech_verge",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "wired_business-summaries",
+   "feed": "wired_business",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "google_news_us-summaries",
+   "feed": "google_news_us",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "pr_newswire_global-summaries",
+   "feed": "pr_newswire_global",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "drudge_report-summaries",
+   "feed": "drudge_report",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "brutalist_tech_appleinsider-summaries",
+   "feed": "brutalist_tech_appleinsider",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "brutalist_science_scientificamerican-summaries",
+   "feed": "brutalist_science_scientificamerican",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "brutalist_news_guardian-summaries",
+   "feed": "brutalist_news_guardian",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "brutalist_sports_yahoosports-summaries",
+   "feed": "brutalist_sports_yahoosports",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "brutalist_science_quantamag-summaries",
+   "feed": "brutalist_science_quantamag",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "drugs_com_medical_news-summaries",
+   "feed": "drugs_com_medical_news",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "fox_news_latest-summaries",
+   "feed": "fox_news_latest",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "brutalist_gaming_kotaku-summaries",
+   "feed": "brutalist_gaming_kotaku",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "brutalist_politics_salon-summaries",
+   "feed": "brutalist_politics_salon",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-bad-pi-target-summaries",
+   "feed": "regression-bad-pi-target",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-base64-content-summaries",
+   "feed": "regression-base64-content",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-cdata-end-in-text-summaries",
+   "feed": "regression-cdata-end-in-text",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-declared-ascii-utf8-summaries",
+   "feed": "regression-declared-ascii-utf8",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-declared-latin1-utf8-summaries",
+   "feed": "regression-declared-latin1-utf8",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-doctype-entity-summaries",
+   "feed": "regression-doctype-entity",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-ip-literal-base-summaries",
+   "feed": "regression-ip-literal-base",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-namespace-with-space-summaries",
+   "feed": "regression-namespace-with-space",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-two-doctypes-summaries",
+   "feed": "regression-two-doctypes",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-unclosed-title-summaries",
+   "feed": "regression-unclosed-title",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-xml-base-ipv6-summaries",
+   "feed": "regression-xml-base-ipv6",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-atom-basic-summaries",
+   "feed": "synthetic-atom-basic",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-atom-links-summaries",
+   "feed": "synthetic-atom-links",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-atom-xhtml-summaries",
+   "feed": "synthetic-atom-xhtml",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-authors-summaries",
+   "feed": "synthetic-authors",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-channel-misc-summaries",
+   "feed": "synthetic-channel-misc",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-dates-summaries",
+   "feed": "synthetic-dates",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-dup-attr-summaries",
+   "feed": "synthetic-dup-attr",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-enc-bom-utf8-summaries",
+   "feed": "synthetic-enc-bom-utf8",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-enc-cp1252-bytes-summaries",
+   "feed": "synthetic-enc-cp1252-bytes",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-enc-latin1-summaries",
+   "feed": "synthetic-enc-latin1",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-enc-mojibake-summaries",
+   "feed": "synthetic-enc-mojibake",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-enc-utf16-summaries",
+   "feed": "synthetic-enc-utf16",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-html-edge-summaries",
+   "feed": "synthetic-html-edge",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-html-summaries-summaries",
+   "feed": "synthetic-html-summaries",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-loose-leading-space-summaries",
+   "feed": "synthetic-loose-leading-space",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-loose-mess-summaries",
+   "feed": "synthetic-loose-mess",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-loose-undefined-entity-summaries",
+   "feed": "synthetic-loose-undefined-entity",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-many-items-ties-summaries",
+   "feed": "synthetic-many-items-ties",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-mismatched-tag-summaries",
+   "feed": "synthetic-mismatched-tag",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-ns-prefix-variants-summaries",
+   "feed": "synthetic-ns-prefix-variants",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-ns-variants-summaries",
+   "feed": "synthetic-ns-variants",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-rdf-rss10-summaries",
+   "feed": "synthetic-rdf-rss10",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-rss-basic-summaries",
+   "feed": "synthetic-rss-basic",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-rss-content-first-summaries",
+   "feed": "synthetic-rss-content-first",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-rss-two-descriptions-summaries",
+   "feed": "synthetic-rss-two-descriptions",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-rss10-no-rdf-summaries",
+   "feed": "synthetic-rss10-no-rdf",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-unknown-default-ns-summaries",
+   "feed": "synthetic-unknown-default-ns",
+   "limit": 3,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-bad-pi-target-all",
+   "feed": "regression-bad-pi-target",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-base64-content-all",
+   "feed": "regression-base64-content",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-cdata-end-in-text-all",
+   "feed": "regression-cdata-end-in-text",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-declared-ascii-utf8-all",
+   "feed": "regression-declared-ascii-utf8",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-declared-latin1-utf8-all",
+   "feed": "regression-declared-latin1-utf8",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-doctype-entity-all",
+   "feed": "regression-doctype-entity",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-ip-literal-base-all",
+   "feed": "regression-ip-literal-base",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-namespace-with-space-all",
+   "feed": "regression-namespace-with-space",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-two-doctypes-all",
+   "feed": "regression-two-doctypes",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-unclosed-title-all",
+   "feed": "regression-unclosed-title",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "regression-xml-base-ipv6-all",
+   "feed": "regression-xml-base-ipv6",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-atom-basic-all",
+   "feed": "synthetic-atom-basic",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-atom-links-all",
+   "feed": "synthetic-atom-links",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-atom-xhtml-all",
+   "feed": "synthetic-atom-xhtml",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-authors-all",
+   "feed": "synthetic-authors",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-channel-misc-all",
+   "feed": "synthetic-channel-misc",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-dates-all",
+   "feed": "synthetic-dates",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-dup-attr-all",
+   "feed": "synthetic-dup-attr",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-enc-bom-utf8-all",
+   "feed": "synthetic-enc-bom-utf8",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-enc-cp1252-bytes-all",
+   "feed": "synthetic-enc-cp1252-bytes",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-enc-latin1-all",
+   "feed": "synthetic-enc-latin1",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-enc-mojibake-all",
+   "feed": "synthetic-enc-mojibake",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-enc-utf16-all",
+   "feed": "synthetic-enc-utf16",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-html-edge-all",
+   "feed": "synthetic-html-edge",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-html-summaries-all",
+   "feed": "synthetic-html-summaries",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-loose-leading-space-all",
+   "feed": "synthetic-loose-leading-space",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-loose-mess-all",
+   "feed": "synthetic-loose-mess",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-loose-undefined-entity-all",
+   "feed": "synthetic-loose-undefined-entity",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-many-items-ties-all",
+   "feed": "synthetic-many-items-ties",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-mismatched-tag-all",
+   "feed": "synthetic-mismatched-tag",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-ns-prefix-variants-all",
+   "feed": "synthetic-ns-prefix-variants",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-ns-variants-all",
+   "feed": "synthetic-ns-variants",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-rdf-rss10-all",
+   "feed": "synthetic-rdf-rss10",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-rss-basic-all",
+   "feed": "synthetic-rss-basic",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-rss-content-first-all",
+   "feed": "synthetic-rss-content-first",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-rss-two-descriptions-all",
+   "feed": "synthetic-rss-two-descriptions",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-rss10-no-rdf-all",
+   "feed": "synthetic-rss10-no-rdf",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "synthetic-unknown-default-ns-all",
+   "feed": "synthetic-unknown-default-ns",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "bbc-world-bodies",
+   "feed": "bbc_world",
+   "limit": 4,
+   "fetch_body": true,
+   "pages": [
+    "article-basic.html",
+    null,
+    "jsonld-body.html",
+    "malformed.html"
+   ]
+  },
+  {
+   "name": "drugs-com-bodies",
+   "feed": "drugs_com_medical_news",
+   "limit": 4,
+   "fetch_body": true,
+   "pages": [
+    "drugs-com.html",
+    null,
+    "article-basic.html",
+    "drugs-com.html"
+   ]
+  },
+  {
+   "name": "wired-bodies",
+   "feed": "wired_business",
+   "limit": 4,
+   "fetch_body": true,
+   "pages": [
+    "jsonld-graph.html",
+    "too-few-paragraphs.html",
+    "main-fallback.html",
+    "article-template-marker.html"
+   ]
+  },
+  {
+   "name": "verge-bodies",
+   "feed": "brutalist_tech_verge",
+   "limit": 4,
+   "fetch_body": true,
+   "pages": [
+    "article-longest.html",
+    "inline-image-no-hero.html",
+    "img-in-article.html",
+    "article-image-fallback.html"
+   ]
+  },
+  {
+   "name": "google-news-bodies",
+   "feed": "google_news_us",
+   "limit": 4,
+   "fetch_body": true,
+   "pages": [
+    "empty.html",
+    "whitespace-only.html",
+    "no-article.html",
+    "jsonld-template-marker.html"
+   ]
+  },
+  {
+   "name": "fortune-bodies-one-fails",
+   "feed": "fortune",
+   "limit": 2,
+   "fetch_body": true,
+   "pages": [
+    "article-basic.html"
+   ]
+  },
+  {
+   "name": "bbc-limit-one",
+   "feed": "bbc_world",
+   "limit": 1,
+   "fetch_body": false
+  },
+  {
+   "name": "ties-limit-twenty",
+   "feed": "synthetic-many-items-ties",
+   "limit": 20,
+   "fetch_body": false
+  },
+  {
+   "name": "ties-limit-five",
+   "feed": "synthetic-many-items-ties",
+   "limit": 5,
+   "fetch_body": false
+  }
+ ]
+}

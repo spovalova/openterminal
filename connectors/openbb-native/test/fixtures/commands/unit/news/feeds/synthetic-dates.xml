@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<rss version="2.0"><channel><title>Dates</title>
+<item><title>d1</title><link>http://d.com/1</link><pubDate>Tue, 20 Oct 26 10:00:00 GMT</pubDate></item>
+<item><title>d2</title><link>http://d.com/2</link><pubDate>2026-10-20T10:00:00.123+02:00</pubDate></item>
+<item><title>d3</title><link>http://d.com/3</link><pubDate>2026-10-20 10:00:00</pubDate></item>
+<item><title>d4</title><link>http://d.com/4</link><pubDate>Thu, 31 Dec 2026 23:59:59 PST</pubDate></item>
+<item><title>d5</title><link>http://d.com/5</link><pubDate>garbage date</pubDate></item>
+<item><title>d6</title><link>http://d.com/6</link><pubDate>Mon Oct 19 10:00:00 2026</pubDate></item>
+<item><title>d7</title><link>http://d.com/7</link><pubDate>20261019</pubDate></item>
+<item><title>d8</title><link>http://d.com/8</link><pubDate>Wed, 21 Oct 2026 10:00 +0530</pubDate></item>
+<item><title>d9</title><link>http://d.com/9</link><pubDate>Tue, 20 Oct 2026 10:00:00 GMT-05:00</pubDate></item>
+<item><title>d10</title><link>http://d.com/10</link><pubDate></pubDate></item>
+<item><title>d11</title><link>http://d.com/11</link></item>
+</channel></rss>

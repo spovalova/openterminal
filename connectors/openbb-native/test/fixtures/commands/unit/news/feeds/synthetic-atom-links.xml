@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Links</title><link rel="self" href="http://al.com/feed"/>
+<entry><title>Many links</title><link rel="related" href="http://al.com/related"/><link rel="alternate" type="application/pdf" href="http://al.com/pdf"/><link rel="alternate" type="text/html" href="http://al.com/html"/><link rel="replies" href="http://al.com/replies"/><id>http://al.com/id</id><updated>2026-10-11T10:00:00Z</updated></entry>
+<entry><title>No alternate</title><link rel="self" href="http://al.com/self"/><id>http://al.com/id2</id><updated>2026-10-10T10:00:00Z</updated></entry>
+<entry><title>Only id</title><id>http://al.com/id3</id><updated>2026-10-09T10:00:00Z</updated></entry>
+</feed>

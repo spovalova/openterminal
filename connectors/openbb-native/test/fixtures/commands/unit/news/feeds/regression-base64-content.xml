@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>B64</title>
+<entry><title>Odd type</title><link href="http://b.com/1"/><id>1</id><updated>2026-10-18T09:00:00Z</updated><content type<br>="xhtml"><div xmlns="http://www.w3.org/1999/xhtml"><p>Xhtml content</p></div></content></entry>
+<entry><title>Real base64</title><link href="http://b.com/2"/><id>2</id><updated>2026-10-17T09:00:00Z</updated><content type="application/octet-stream" mode="base64">SGVsbG8gd29ybGQ=</content></entry>
+</feed>

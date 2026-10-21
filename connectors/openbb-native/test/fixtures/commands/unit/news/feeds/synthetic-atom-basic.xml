@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:base="http://example.org/blog/"><title type="text">Atom feed</title><updated>2026-10-20T10:00:00Z</updated><id>urn:feed</id>
+<entry><title type="html">Entry &amp;lt;one&amp;gt;</title><link rel="alternate" href="posts/1"/><link rel="enclosure" href="a.mp3" type="audio/mpeg"/><id>urn:1</id><updated>2026-10-20T09:00:00Z</updated><published>2026-10-19T09:00:00-05:00</published><author><name>Ann</name><email>ann@example.org</email></author><summary type="html">&lt;p&gt;Summary &lt;em&gt;html&lt;/em&gt; with &lt;a href="/rel"&gt;rel link&lt;/a&gt;&lt;/p&gt;</summary><content type="html">&lt;p&gt;Content html&lt;/p&gt;</content></entry>
+<entry><title type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml">Xhtml <b>title</b></div></title><link href="http://example.org/2"/><id>urn:2</id><updated>2026-10-18T09:00:00Z</updated><content type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml"><p>Xhtml content <a href="x/y">link</a></p></div></content></entry>
+<entry><title>Text only</title><link href="http://example.org/3" rel="alternate" type="text/html"/><id>urn:3</id><updated>2026-10-17</updated><summary>just text &amp; stuff</summary><contributor><name>Bob</name></contributor></entry>
+<entry><title>No summary but content</title><link href="http://example.org/4"/><id>urn:4</id><updated>2026-10-16T00:00:00+01:00</updated><content>plain content</content><author><name>Cy</name></author></entry>
+</feed>

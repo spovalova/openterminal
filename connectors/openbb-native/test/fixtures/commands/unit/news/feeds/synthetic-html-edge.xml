@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<rss version="2.0"><channel><title>HE</title>
+<item><title>e1</title><link>http://he.com/1</link><description><![CDATA[<a href="//cdn.com/p">proto</a> <a href="data:text/plain,x">data</a> <a href="mailto:a@b.c">mail</a> <a href="tel:123">tel</a> <a href="HTTP://UP.COM/X">upper</a> <a href="   spaced  ">sp</a>]]></description><pubDate>Sun, 11 Oct 2026 10:00:00 GMT</pubDate></item>
+<item><title>e2</title><link>http://he.com/2</link><description><![CDATA[<ul><li>a<ul><li>nested</li></ul></li><li>b</li></ul><pre>  pre
+ text </pre><code>c</code><blockquote>q</blockquote>]]></description><pubDate>Sun, 11 Oct 2026 09:00:00 GMT</pubDate></item>
+<item><title>e3</title><link>http://he.com/3</link><description><![CDATA[<p>&nbsp;&nbsp;lead &amp;nbsp; &#38; &#60; &lt; &gt; &quot; &apos; &#39; &#34; &hearts; &unknown; &#128512; &#x1F600;</p>]]></description><pubDate>Sun, 11 Oct 2026 08:00:00 GMT</pubDate></item>
+<item><title>e4</title><link>http://he.com/4</link><description><![CDATA[<img src="a.jpg" alt='single "q" alt' title=notquoted data-x=1 /><br /><IMG SRC="UP.JPG"><A HREF="X">upper tags</A>]]></description><pubDate>Sun, 11 Oct 2026 07:00:00 GMT</pubDate></item>
+<item><title>e5</title><link>http://he.com/5</link><description><![CDATA[<video src="v.mp4" poster="p.jpg"></video><audio src="a.mp3"></audio><object data="o"></object><embed src="e"><form action="/do"><input type="submit" value="Go"></form>]]></description><pubDate>Sun, 11 Oct 2026 06:00:00 GMT</pubDate></item>
+<item><title>e6</title><link>http://he.com/6</link><description><![CDATA[<div><span style="font-weight:bold;color:#ff0000">styled <b style="expression(alert(1))">x</b></span></div><p style="margin: 0 auto">m</p>]]></description><pubDate>Sun, 11 Oct 2026 05:00:00 GMT</pubDate></item>
+</channel></rss>
