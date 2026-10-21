@@ -9,7 +9,7 @@ import { optionsCommands } from './options.js'
 export default defineProvider({
   name: 'commands',
   credentials: ['eia_api_key'],
-  status: 'todo',
+  status: 'ported',
   routes: {
     ...optionsCommands.routes,
     ...metadataCommands.routes,
