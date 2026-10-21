@@ -6,12 +6,11 @@ import { equityProfile, equityQuote, equitySearch, marketsQuotes } from './equit
 import { etfEquityExposure, etfHoldings, etfInfo, etfSearch } from './etf.js'
 import { priceTarget, priceTargetConsensus } from './estimates.js'
 import { indexSearch, indexSnapshots, marketMovers, marketStatus } from './markets.js'
+import { nordicDividends, nordicFundamentals, nordicInfo } from './nordic-factsheet.js'
 import { nordicBondYields, nordicHistorical, nordicHistoricalTrades, nordicHolidays, nordicIndexFactors, nordicKnockedOut, nordicMortgageRates, nordicMovers, nordicNews, nordicScreener, nordicTradingHours } from './nordic.js'
 import { optionsChains } from './options.js'
 import { cryptoHistorical, equityHistorical, etfHistorical, indexHistorical } from './prices.js'
 import { equityScreener } from './screener.js'
-
-const PDF_FACTSHEET = 'Needs PDF text by glyph position: OpenBB reads Morningstar\'s co-branded fact sheet PDF with pdfplumber; left to the OpenBB API until it is ported on src/lib/pdf-text.ts, which landed after this port.'
 
 export default defineProvider({
   name: 'nasdaq',
@@ -54,10 +53,13 @@ export default defineProvider({
     'nasdaq/markets/quotes': marketsQuotes,
     'nasdaq/markets/status': marketStatus,
     'nasdaq/nordic/bond_yields': nordicBondYields,
+    'nasdaq/nordic/dividends': nordicDividends,
+    'nasdaq/nordic/fundamentals': nordicFundamentals,
     'nasdaq/nordic/historical': nordicHistorical,
     'nasdaq/nordic/historical_trades': nordicHistoricalTrades,
     'nasdaq/nordic/holidays': nordicHolidays,
     'nasdaq/nordic/index_factors': nordicIndexFactors,
+    'nasdaq/nordic/info': nordicInfo,
     'nasdaq/nordic/knocked_out': nordicKnockedOut,
     'nasdaq/nordic/mortgage_rates': nordicMortgageRates,
     'nasdaq/nordic/movers': nordicMovers,
@@ -66,10 +68,5 @@ export default defineProvider({
     'nasdaq/nordic/trading_hours': nordicTradingHours,
     'news/company': companyNews,
     'tmx/markets/movers': marketMovers,
-  },
-  skipped: {
-    'nasdaq/nordic/dividends': PDF_FACTSHEET,
-    'nasdaq/nordic/fundamentals': PDF_FACTSHEET,
-    'nasdaq/nordic/info': `${PDF_FACTSHEET} Its Profile rows come from the same sheet.`,
   },
 })

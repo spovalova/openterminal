@@ -169,7 +169,7 @@ const pageRows = (payload: Dict): Dict[] => {
 
 // --- the instrument directory ----------------------------------------------------------------------------------
 
-type Instrument = { orderbook_id: string; asset_class: string; listing: string; name?: string; isin?: string }
+export type Instrument = { orderbook_id: string; asset_class: string; listing: string; name?: string; isin?: string }
 
 /** Every `(listing, path, filter)` a listing is fetched by. */
 function directoryRequests(listing: string): [string, string][] {
@@ -202,7 +202,7 @@ async function directoryPage(ctx: NativeCtx, path: string, query: string, page: 
 }
 
 /** Resolve a Nasdaq Nordic symbol to its orderbook id and asset class (`resolve_nordic_instrument`). */
-async function resolveNordicInstrument(ctx: NativeCtx, symbol: string): Promise<Instrument> {
+export async function resolveNordicInstrument(ctx: NativeCtx, symbol: string): Promise<Instrument> {
   const wanted = symbol.trim().toUpperCase()
   return ctx.cache(`nasdaq:nordic:${wanted}`, 24 * 3600 * 1000, async () => {
     for (const listing of NORDIC_PROBE_ORDER) {
