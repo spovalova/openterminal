@@ -500,13 +500,14 @@ export function fitNss(points: [number, number][], weights: number[]): Nss | nul
       })
       const betas = solve4(ata, aty)
       if (betas === null) continue
-      let sse = 0
-      points.forEach(([t, z], k) => {
-        const f = nssBasis(t, tau1, tau2)
-        let fit = 0
-        f.forEach((fi, i) => (fit += betas[i]! * fi))
-        sse += weights[k]! * (fit - z) ** 2
-      })
+      // Python's sum() is compensated in 3.12, so the fit and the error are summed the same way here.
+      const sse = pySum(
+        points.map(([t, z], k) => {
+          const f = nssBasis(t, tau1, tau2)
+          const fit = pySum(f.map((fi, i) => betas[i]! * fi))
+          return weights[k]! * (fit - z) ** 2
+        }),
+      )
       if (best === null || sse < best.sse) best = { sse, betas, tau1, tau2 }
     }
   }
@@ -518,9 +519,7 @@ export function fitNss(points: [number, number][], weights: number[]): Nss | nul
 /** Continuously-compounded zero rate from a fitted Svensson parameter set (`nss_zero`). */
 export function nssZero(params: Nss, t: number): number {
   const f = nssBasis(t, params[4], params[5])
-  let total = 0
-  for (let i = 0; i < 4; i++) total += params[i]! * f[i]!
-  return total
+  return pySum([0, 1, 2, 3].map((i) => params[i]! * f[i]!))
 }
 
 /** Dense discount-factor grid from a Svensson fit, weighted by trade count (`smooth_forward_dfs`). */

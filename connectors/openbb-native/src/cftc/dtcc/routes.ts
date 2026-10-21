@@ -3,7 +3,7 @@ import type { NativeHandler } from '../../types.js'
 import { historicalFixings, oisCurve, oisCurveHistory, oisForwardCurve, oisPolicyPath } from './curve-routes.js'
 import { fxForwardCurve, fxForwardPoints, fxImpliedVol } from './fx-routes.js'
 import { answerEmpty } from './params.js'
-import { cdsIndexTrades, fxForwardTrades, fxOptionTrades } from './print-routes.js'
+import { cdsIndexTrades, fxForwardTrades, fxOptionTrades } from './trade-routes.js'
 import { swapTrades } from './swap-trades.js'
 import { swapSummary, swapValuation } from './swap-valuation.js'
 
