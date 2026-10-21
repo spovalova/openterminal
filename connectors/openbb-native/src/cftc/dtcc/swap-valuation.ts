@@ -1,7 +1,8 @@
 // cftc/swap_valuation and cftc/swap_summary, provider cftc. Ported from openbb_cftc/models/swap_valuation.py and
 // swap_summary.py (OpenBB Platform 5.0.0, Apache-2.0); modified: plain rows instead of pydantic models (model.ts), slices
 // are memoised with ctx.cache, and the on-disk record store is gone: a named trade is found by walking the published
-// files, as the Python does when its store has never seen the trade.
+// files, as the Python does when its store has never seen the trade (and, for the summary, the forex files too, where
+// the store would hold an FX print). The trade date the summary prints is read off the record, as the store gives it.
 import { pyRound } from '../helpers.js'
 import type { NativeCtx, NativeHandler, NativeParams, Row } from '../../types.js'
 import { oisIndices } from './constants.js'

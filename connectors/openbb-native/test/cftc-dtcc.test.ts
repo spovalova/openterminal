@@ -9,8 +9,10 @@ import { parseSliceCsv } from '../src/cftc/dtcc/dtcc.js'
 import { compoundFixings } from '../src/cftc/dtcc/fixings.js'
 import { pyCommaFixed, pyFixed, pyRepr } from '../src/cftc/dtcc/format.js'
 import { calibrateSabr, cipForwardRate, erf, garmanKohlhagen, impliedVol, sabrVol } from '../src/cftc/dtcc/fx-theory.js'
+import { getInflationIndex } from '../src/cftc/dtcc/inflation.js'
 import { toDateString, toDatetimeString } from '../src/cftc/dtcc/model.js'
 import { pyUnquote } from '../src/cftc/dtcc/search.js'
+import { createNativeCtx } from '../src/ctx.js'
 
 type Pairs<T = string> = [number, T][]
 type Vectors = {
@@ -95,5 +97,41 @@ describe('pydantic date strings', () => {
   it.each(v.date)('date %s', (text, expected) => {
     if (expected === 'ERR') expect(() => toDateString(text)).toThrow()
     else expect(toDateString(text)).toBe(expected)
+  })
+})
+
+describe('BLS inflation index (the key-free public API)', () => {
+  const now = new Date('2026-10-21T09:00:00Z')
+  const bls = (windows: Record<string, unknown>) => {
+    const asked: string[] = []
+    const fetchImpl: typeof fetch = async (_input, init) => {
+      const body = JSON.parse(String(init?.body)) as { seriesid: string[]; startyear: string; endyear: string }
+      asked.push(`${body.seriesid[0]} ${body.startyear}-${body.endyear}`)
+      const answer = windows[`${body.startyear}-${body.endyear}`] ?? { status: 'REQUEST_NOT_PROCESSED', message: ['daily threshold reached'], Results: {} }
+      return new Response(JSON.stringify(answer), { headers: { 'content-type': 'application/json' } })
+    }
+    return { asked, ctx: createNativeCtx({ fetch: fetchImpl, now: () => now, cache: new Map() }) }
+  }
+  const series = (rows: [string, string, string][]) => ({ Results: { series: [{ data: rows.map(([year, period, value]) => ({ year, period, value })) }] } })
+
+  it('asks in ten-year windows from thirty years back, skips annual and half-year rows, and fills a skipped month', async () => {
+    const { asked, ctx } = bls({
+      '1996-2005': series([['2005', 'M12', '190.3']]),
+      '2006-2015': series([['2015', 'M12', '234.8']]),
+      '2016-2025': series([['2025', 'M12', '315.6'], ['2025', 'M13', '310.0'], ['2025', 'S01', '300.0']]),
+      '2026-2026': series([['2026', 'M01', '320'], ['2026', 'M03', '324'], ['2026', 'M04', 'x']]),
+    })
+    const levels = await getInflationIndex(ctx, 'USCPI')
+    expect(asked.sort()).toEqual(['CUUR0000SA0 1996-2005', 'CUUR0000SA0 2006-2015', 'CUUR0000SA0 2016-2025', 'CUUR0000SA0 2026-2026'])
+    expect(levels.get('2026-01-01')).toBe(320)
+    expect(levels.get('2026-02-01')).toBe(322)
+    expect(levels.get('2026-03-01')).toBe(324)
+    expect(levels.has('2026-04-01')).toBe(false)
+    expect(levels.get('2025-12-01')).toBe(315.6)
+  })
+
+  it('reports what BLS says when it answers without the series', async () => {
+    const { ctx } = bls({})
+    await expect(getInflationIndex(ctx, 'USCPI')).rejects.toThrow('The BLS API did not return CUUR0000SA0 -> daily threshold reached')
   })
 })

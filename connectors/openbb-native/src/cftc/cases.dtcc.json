@@ -20,7 +20,7 @@
   {"name": "fixings-myor", "route": "cftc/historical_fixings", "params": {"index": "MYOR", "start_date": "2026-09-01", "end_date": "2026-09-30"}},
   {"name": "fixings-klibor", "route": "cftc/historical_fixings", "params": {"index": "KLIBOR", "start_date": "2026-09-01", "end_date": "2026-09-30"}},
   {"name": "fixings-bbsw", "route": "cftc/historical_fixings", "params": {"index": "BBSW", "start_date": "2026-09-01", "end_date": "2026-09-30"}},
-  {"name": "fixings-jibar", "route": "cftc/historical_fixings", "params": {"index": "JIBAR", "start_date": "2026-09-01", "end_date": "2026-09-30"}},
+  {"name": "fixings-jibar", "route": "cftc/historical_fixings", "params": {"index": "JIBAR", "start_date": "2026-09-01", "end_date": "2026-09-30", "use_cache": false}},
   {"name": "fixings-krwcd", "route": "cftc/historical_fixings", "params": {"index": "KRWCD", "start_date": "2026-09-01", "end_date": "2026-09-30"}},
   {"name": "fixings-kofr", "route": "cftc/historical_fixings", "params": {"index": "KOFR", "start_date": "2026-09-01", "end_date": "2026-09-30"}},
   {"name": "fixings-bubor", "route": "cftc/historical_fixings", "params": {"index": "BUBOR", "start_date": "2026-09-01", "end_date": "2026-09-30"}},
