@@ -3,7 +3,7 @@
 // `openbb-api` when one runs, described by its own OpenAPI document. Rows become frames through core's `inferFrame`.
 // Keyless by default (yfinance, nasdaq, sec, finra, cboe, federal_reserve, oecd, …). See README.md.
 import { defineConnector } from '@openterminal/core'
-import { mergeNativeDescriptors, nativeDescriptors, nativePairs } from '@openterminal/openbb-native'
+import { mergeNativeDescriptors, nativeDescriptors } from '@openterminal/openbb-native'
 import { callRoute } from './call.js'
 import { descriptorsFor } from './descriptors.js'
 import { ConfigSchema, probeProviders, type Config } from './openbb-api.js'
@@ -19,7 +19,7 @@ export default defineConnector<Config>({
   // Native routes need nothing running. GET /coverage/providers: small, proves the prefix, and lists what the OpenBB
   // side has installed; when it is down and routes are native, that is fine and the detail says so.
   health: async (ctx) => {
-    const native = ctx.config.native === 'off' ? 0 : nativePairs().length
+    const native = ctx.config.native === 'off' ? 0 : nativeDescriptors().length
     const nativeLine = native ? `${native} routes native` : ''
     if (ctx.config.native === 'only') return nativeLine || 'no native routes yet'
     let providers: string[]
