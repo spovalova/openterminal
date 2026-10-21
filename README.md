@@ -93,7 +93,7 @@ curl -fsSL https://terminal.spova.ai/install | sh          # macOS, Linux
 irm https://terminal.spova.ai/install.ps1 | iex             # Windows (PowerShell)
 ```
 
-Nothing else to install: the app carries its own runtime, the server, the web app and the Python runtime for transforms (Pyodide with pandas, numpy and scipy). Or download it from [Releases](https://github.com/spovalova/openterminal/releases/latest): `OpenTerminal-mac-arm64.dmg` (Apple silicon), `-mac-x64.dmg` (Intel), `-win-x64-setup.exe`, `-linux-x86_64.AppImage`, `-linux-amd64.deb` and the arm64 builds. The builds are not signed: the install script avoids the macOS and Windows warnings a browser download gets. The app works with no keys: quotes, charts, search, option chains and fundamentals come from Yahoo through the built-in `yahoo` connector. The first time, it asks for an Anthropic or OpenAI key so the agent can answer; skip it to start with a sample workspace. Closing the window keeps it in the tray or menu bar; it updates itself from GitHub Releases.
+Nothing else to install: the app carries its own runtime, the server, the web app, OpenBB's data providers (ported to TypeScript, below) and the Python runtime for transforms (Pyodide with pandas, numpy and scipy). Or download it from [Releases](https://github.com/spovalova/openterminal/releases/latest): `OpenTerminal-mac-arm64.dmg` (Apple silicon), `-mac-x64.dmg` (Intel), `-win-x64-setup.exe`, `-linux-x86_64.AppImage`, `-linux-amd64.deb` and the arm64 builds. The builds are not signed: the install script avoids the macOS and Windows warnings a browser download gets. The app works with no data keys: OpenBB's providers and Yahoo answer quotes, charts, search, option chains, fundamentals, filings, news and macro from inside it. The first time, it asks for an Anthropic or OpenAI key so the agent can answer; skip it to start with a sample workspace. Closing the window keeps it in the tray or menu bar; it updates itself from GitHub Releases.
 
 With Node 22.13 or later, the same app runs in your browser:
 
@@ -132,7 +132,7 @@ llm:
 
 Without one, the app explains how to add it and you can still build workspaces by hand in the widget editor (a recipe, a route from the catalog, or a transform).
 
-**Add news** with a free [Finnhub](https://finnhub.io) key on the Data page in the app. It is saved to the same file. Finnhub also answers quotes and the earnings calendar, so tables survive a Yahoo outage.
+**Add Finnhub** (optional) with a free [Finnhub](https://finnhub.io) key on the Data page in the app. It is saved to the same file and adds a second source for news, quotes and the earnings calendar.
 
 **OpenBB's data, built in.** The `openbb` connector answers OpenBB Platform's routes itself: its providers are ported to TypeScript in [connectors/openbb-native](connectors/openbb-native/README.md) (Apache-2.0, like OpenBB since V5), so nothing is installed and no Python runs. 883 of OpenBB 5.0.0's 912 route-provider pairs are native, checked against OpenBB's own answers by parity tests that are recorded and replayed offline in CI (the FRED and EIA routes that need a key are checked against OpenBB's Python on sample responses until one is available). yfinance, nasdaq, cboe, sec, finra, federal_reserve, bls, oecd, imf, ecb, tmx and the rest need no key. FRED, EIA and older Congress.gov data need yours, in `config.yml`:
 

@@ -154,6 +154,13 @@ const header = [
 const ioskeley = join(repo, 'packages/ui/src/fonts/ioskeley/LICENSE')
 const body = unique.map((n) => `${'='.repeat(78)}\n${n.id}${n.license ? ` (${n.license})` : ''}\n${'-'.repeat(78)}\n${n.text}\n`)
 if (existsSync(ioskeley)) body.push(`${'='.repeat(78)}\nIoskeley Mono (OFL-1.1), vendored in the web app\n${'-'.repeat(78)}\n${readFileSync(ioskeley, 'utf8').trim()}\n`)
+// The OpenBB providers ported to TypeScript are Apache-2.0 derivative work: their NOTICE and the license go with them.
+const openbbNative = join(repo, 'connectors/openbb-native')
+if (Object.keys(main.metafile.inputs).some((f) => resolve(repo, f).startsWith(openbbNative + sep))) {
+  const notice = readFileSync(join(openbbNative, 'NOTICE'), 'utf8').trim()
+  const license = readFileSync(join(openbbNative, 'LICENSE'), 'utf8').trim()
+  body.push(`${'='.repeat(78)}\n@openterminal/openbb-native (Apache-2.0), ports of OpenBB Platform providers, in cli.mjs\n${'-'.repeat(78)}\n${notice}\n\n${license}\n`)
+}
 writeFileSync(join(LIB_DIR, 'THIRD-PARTY-NOTICES.txt'), header.join('\n') + '\n' + body.join('\n'))
 
 // ---- 5. report ----

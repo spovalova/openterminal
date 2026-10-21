@@ -46,7 +46,7 @@ export type CallOptions = LoadOptions & {
 export async function routeDescriptor(ctx: Ctx<Config>, route: string, opts: LoadOptions = {}): Promise<Descriptor | undefined> {
   const mode = ctx.config.native
   if (mode === 'only') return nativeDescriptorFor(route)
-  const live = await descriptorFor(ctx, route, opts)
+  const live = await descriptorFor(ctx, route, mode === 'prefer' ? { ...opts, optional: true } : opts)
   if (mode === 'off') return live
   const native = nativeDescriptorFor(route)
   if (!live || !native) return live ?? native

@@ -38,7 +38,8 @@ export default defineConnector<Config>({
   descriptors: async (ctx) => {
     const mode = ctx?.config.native ?? 'prefer'
     if (mode === 'only') return nativeDescriptors()
-    const live = await descriptorsFor(ctx)
+    // With native routes the API is optional, so its being down is not worth a log line on every catalog load.
+    const live = await descriptorsFor(ctx, { optional: mode === 'prefer' })
     return mode === 'off' ? live : mergeNativeDescriptors(live)
   },
   // A ported provider answers in process; anything else is `GET /api/v1/<route>?…` on the local API.
