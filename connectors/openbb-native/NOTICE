@@ -13,5 +13,12 @@ implementation on top of yahoo-finance2 (MIT) that reproduces the output
 schema of OpenBB's public API; the AGPL-licensed openbb-yfinance package was
 not used as a source.
 
+src/deribit/erf.ts follows fdlibm's s_erf.c, which carries this notice:
+
+  Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+  Developed at SunPro, a Sun Microsystems, Inc. business.
+  Permission to use, copy, modify, and distribute this software is freely
+  granted, provided that this notice is preserved.
+
 The route catalog in catalog/openbb.json is generated from the OpenAPI
 document that OpenBB Platform 5.0.0 serves.
